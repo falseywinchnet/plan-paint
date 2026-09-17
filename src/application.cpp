@@ -3,6 +3,7 @@
 #include "conv.hpp"
 #include "gui_scope.hpp"
 #include "imgui_impl_sdlrenderer3.h"
+#include "paths.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -11,7 +12,7 @@
 #include <stdexcept>
 namespace paint {
 static std::string display_filename(const std::string& path) {
-    std::u8string name = std::filesystem::u8path(path).filename().u8string();
+    std::u8string name = path_from_utf8(path).filename().u8string();
     return std::string(name.begin(), name.end());
 }
 ImU32 packed(Color color) {
@@ -86,6 +87,8 @@ void Application::file_results() {
     } else if (result.action == FileAction::Open) {
         document.replace(load_image(result.path), result.path);
         recent_files.remember(result.path);
+        text_active = false;
+        curve_points.clear();
         texture_dirty = true;
     } else if (result.action == FileAction::Paste) {
         document.paste(load_image(result.path));
@@ -157,7 +160,7 @@ void Application::execute(Command requested) {
             finish_curve();
             document.paste(load_image(acquired));
             std::error_code removal_error;
-            std::filesystem::remove(std::filesystem::u8path(acquired), removal_error);
+            std::filesystem::remove(path_from_utf8(acquired), removal_error);
             status = "Acquired picture. Move it, then press Escape to place it.";
         } else {
 #ifdef _WIN32
@@ -173,7 +176,7 @@ void Application::execute(Command requested) {
         finish_curve();
         document.commit_path();
         compose_email(window, desktop_export(document.visible_image(), "Email"));
-        status = "The mail application opens a draft with your picture attached.";
+        status = "Requested a mail draft with your picture attached.";
         break;
     }
     case Command::WallpaperFill:

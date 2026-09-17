@@ -1,6 +1,7 @@
 #include "desktop.hpp"
 #include "codecs.hpp"
 #include "conv.hpp"
+#include "paths.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -22,7 +23,7 @@ void RecentFiles::load() {
     if (storage_path.empty()) {
         return;
     }
-    std::ifstream input(std::filesystem::u8path(storage_path), std::ios::binary);
+    std::ifstream input(path_from_utf8(storage_path), std::ios::binary);
     std::vector<std::string> loaded;
     // Length-prefixed records preserve spaces, backslashes and embedded newlines.
     for (int index = 0; index < 12 && input; ++index) {
@@ -52,7 +53,7 @@ void RecentFiles::remember(const std::string& path) {
     if (storage_path.empty()) {
         return;
     }
-    std::ofstream output(std::filesystem::u8path(storage_path), std::ios::binary | std::ios::trunc);
+    std::ofstream output(path_from_utf8(storage_path), std::ios::binary | std::ios::trunc);
     for (const std::string& item : paths) {
         const std::uint32_t length = static_cast<std::uint32_t>(item.size());
         output.write(reinterpret_cast<const char*>(&length), sizeof(length));

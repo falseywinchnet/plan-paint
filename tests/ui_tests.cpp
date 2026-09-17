@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "imgui_impl_sdlrenderer3.h"
+#include "paths.hpp"
 #include <chrono>
 #include <filesystem>
 #include <iostream>
@@ -259,7 +260,7 @@ void recent_files_and_desktop_layouts(UiFixture& ui) {
     require(recent.paths.size() == 12 && recent.paths[0] == "19", "recent files did not bound history");
     paint::Application& app = *ui.app;
     app.execute(paint::Command::New);
-    encoded = (directory / std::filesystem::u8path("日本語.png")).u8string();
+    encoded = (directory / paint::path_from_utf8("日本語.png")).u8string();
     const std::string picture_path(encoded.begin(), encoded.end());
     app.save_to(picture_path);
     require(app.recent_files.paths.front() == picture_path && app.status.find("日本語") != std::string::npos,

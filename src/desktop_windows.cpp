@@ -1,4 +1,5 @@
 #include "desktop.hpp"
+#include "paths.hpp"
 #include <array>
 #include <filesystem>
 #include <stdexcept>
@@ -18,6 +19,8 @@ class ComSession {
             throw std::runtime_error("The Windows image acquisition service could not start.");
         }
     }
+    ComSession(const ComSession&) = delete;
+    ComSession& operator=(const ComSession&) = delete;
     ~ComSession() {
         if (SUCCEEDED(result_)) {
             CoUninitialize();
@@ -28,6 +31,9 @@ class ComSession {
     HRESULT result_;
 };
 struct AutomationValue {
+    AutomationValue() = default;
+    AutomationValue(const AutomationValue&) = delete;
+    AutomationValue& operator=(const AutomationValue&) = delete;
     VARIANT value{};
     ~AutomationValue() {
         VariantClear(&value);
@@ -87,7 +93,7 @@ bool acquire_picture(std::string& acquired_path) {
         return false;
     }
     acquired_path = preference_directory() + "Capture-" + std::to_string(SDL_GetTicksNS()) + ".bmp";
-    std::wstring native_path = std::filesystem::u8path(acquired_path).wstring();
+    std::wstring native_path = path_from_utf8(acquired_path).wstring();
     AutomationValue destination;
     destination.value.vt = VT_BSTR;
     destination.value.bstrVal = SysAllocString(native_path.c_str());
@@ -96,6 +102,7 @@ bool acquire_picture(std::string& acquired_path) {
     return true;
 }
 void compose_email(SDL_Window* window, const std::string& path) {
+    std::wstring native_path = path_from_utf8(path).wstring();
     HMODULE module = LoadLibraryExW(L"MAPI32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
     if (!module) {
         throw std::runtime_error("Install and configure a desktop mail application to attach this picture.");
@@ -105,7 +112,6 @@ void compose_email(SDL_Window* window, const std::string& path) {
         FreeLibrary(module);
         throw std::runtime_error("The installed mail service does not support Unicode attachments.");
     }
-    std::wstring native_path = std::filesystem::u8path(path).wstring();
     MapiFileDescW attachment{};
     attachment.nPosition = static_cast<ULONG>(-1);
     attachment.lpszPathName = native_path.data();
@@ -123,7 +129,7 @@ void compose_email(SDL_Window* window, const std::string& path) {
     }
 }
 void set_wallpaper(const std::string& path) {
-    std::wstring native_path = std::filesystem::u8path(path).wstring();
+    std::wstring native_path = path_from_utf8(path).wstring();
     if (!SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, native_path.data(),
                                SPIF_UPDATEINIFILE | SPIF_SENDCHANGE)) {
         throw std::runtime_error("Windows could not change the desktop background.");

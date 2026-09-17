@@ -1,5 +1,6 @@
 #include "platform.hpp"
 #include "codecs.hpp"
+#include "paths.hpp"
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
@@ -49,7 +50,7 @@ static void file_dialog_result(void* userdata, const char* const* files, int fil
             dialog.result = {FileAction::None, "", SDL_GetError()};
         } else if (files[0]) {
             std::string path = files[0];
-            if (dialog.requested == FileAction::Save && std::filesystem::u8path(path).extension().empty()) {
+            if (dialog.requested == FileAction::Save && path_from_utf8(path).extension().empty()) {
                 path += save_extensions[filter >= 0 && filter < 7 ? filter : 0];
             }
             dialog.result = {dialog.requested, path, ""};
