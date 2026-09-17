@@ -66,7 +66,7 @@ void Application::event(const SDL_Event& event_value) {
 }
 void Application::save_to(const std::string& path) {
     finish_text();
-    finish_curve();
+    document.sync_curve();
     document.sync_path();
     document.commit_selection();
     document.sync_atlas();
@@ -115,7 +115,7 @@ void Application::file_results() {
         open_image(result.path);
         recent_files.remember(result.path);
         text_active = false;
-        curve_points.clear();
+        clear_curve_controls();
         texture_dirty = true;
     } else if (result.action == FileAction::Paste) {
         document.paste(load_image(result.path));
@@ -154,7 +154,7 @@ void Application::execute(Command requested) {
     case Command::New:
         document.new_image();
         text_active = false;
-        curve_points.clear();
+        clear_curve_controls();
         break;
     case Command::Open:
         dialog.show(window, FileAction::Open, document.filename);
@@ -163,7 +163,7 @@ void Application::execute(Command requested) {
         open_image(recent_to_open);
         recent_files.remember(recent_to_open);
         text_active = false;
-        curve_points.clear();
+        clear_curve_controls();
         break;
     case Command::Save:
         if (document.filename.empty() || !writable_image_path(document.filename)) {
@@ -186,7 +186,7 @@ void Application::execute(Command requested) {
     }
     case Command::PrintPreview:
         finish_text();
-        finish_curve();
+        document.sync_curve();
         document.sync_path();
         print_preview = true;
         break;
@@ -197,7 +197,7 @@ void Application::execute(Command requested) {
         std::string acquired;
         if (acquire_picture(acquired)) {
             finish_text();
-            finish_curve();
+            document.sync_curve();
             document.paste(load_image(acquired));
             std::error_code removal_error;
             std::filesystem::remove(path_from_utf8(acquired), removal_error);
@@ -213,7 +213,7 @@ void Application::execute(Command requested) {
     }
     case Command::Email: {
         finish_text();
-        finish_curve();
+        document.sync_curve();
         document.sync_path();
         compose_email(window, desktop_export(document.visible_image(), "Email"));
         status = "Requested a mail draft with your picture attached.";
@@ -223,7 +223,7 @@ void Application::execute(Command requested) {
     case Command::WallpaperTile:
     case Command::WallpaperCenter: {
         finish_text();
-        finish_curve();
+        document.sync_curve();
         document.sync_path();
         const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(SDL_GetDisplayForWindow(window));
         if (!mode) {
@@ -239,7 +239,7 @@ void Application::execute(Command requested) {
     }
     case Command::Print: {
         finish_text();
-        finish_curve();
+        document.sync_curve();
         document.sync_path();
         Image printable = document.visible_image();
         if (!print_image(printable)) {
@@ -257,6 +257,10 @@ void Application::execute(Command requested) {
         break;
     }
     case Command::Undo:
+        if (document.curve.base && !document.curve.line_set) {
+            finish_curve();
+            break;
+        }
         rotation_active = false;
         rotation_dragging = false;
         rotation_commit_pending = false;
@@ -271,7 +275,7 @@ void Application::execute(Command requested) {
         reshape_render_pending = false;
         reshape_commit_pending = false;
         text_active = false;
-        curve_points.clear();
+        clear_curve_controls();
         preview_active = false;
         document.undo();
         path_preview_paused = true;
@@ -280,6 +284,7 @@ void Application::execute(Command requested) {
         }
         break;
     case Command::Redo:
+        clear_curve_controls();
         document.redo();
         path_preview_paused = true;
         if (document.path.session != 0) {
@@ -292,6 +297,7 @@ void Application::execute(Command requested) {
         copy_to_clipboard(copied);
         if (requested == Command::Cut) {
             document.commit_path();
+            finish_curve();
             if (document.selection.active) {
                 document.delete_selection();
             } else {
@@ -353,6 +359,7 @@ void Application::execute(Command requested) {
         break;
     case Command::Delete:
         document.commit_path();
+        finish_curve();
         if (document.selection.active) {
             document.delete_selection();
         } else {
@@ -393,8 +400,8 @@ void Application::choose_tool(Tool tool) {
         return;
     }
     finish_text();
-    finish_curve();
     if (tool != document.tool) {
+        finish_curve();
         document.commit_path();
     }
     if (tool != Tool::Select && tool != Tool::Lasso && tool != Tool::Reshape) {
@@ -722,12 +729,8 @@ void Application::begin_gesture(Point point, bool right) {
             begin_gesture(point, right);
             return;
         }
-        if (document.shape == Shape::Curve && !curve_points.empty()) {
-            curve_points.push_back(point);
-            if (curve_points.size() == 4) {
-                finish_curve();
-            }
-            dragging = false;
+        if (document.shape == Shape::Bezier || document.shape == Shape::Arc) {
+            begin_curve_gesture(point, right);
         } else {
             gesture_base = document.image;
             preview = gesture_base;
@@ -817,6 +820,11 @@ void Application::update_gesture(Point point) {
     if (!dragging) {
         return;
     }
+    if (document.curve.base && !document.curve.line_set) {
+        update_curve_gesture(point);
+        last = point;
+        return;
+    }
     if (reshape_active && active_mesh_node >= 0) {
         Point target{point.x - reshape_origin.x, point.y - reshape_origin.y};
         if (move_reshape_node(reshape_mesh, static_cast<std::size_t>(active_mesh_node), target)) {
@@ -861,7 +869,7 @@ void Application::update_gesture(Point point) {
         preview = gesture_base;
         Point end = point;
         if (ImGui::GetIO().KeyShift) {
-            if (document.shape == Shape::Line || document.shape == Shape::Curve) {
+            if (document.shape == Shape::Line) {
                 end = constrained(down, point);
             } else {
                 Rect bounds = drag_bounds(down, point, true);
@@ -891,15 +899,12 @@ void Application::end_gesture(Point point) {
         moving_selection = false;
         return;
     }
-    if (document.tool == Tool::Shape && preview_active) {
-        if (document.shape == Shape::Curve) {
-            curve_points = {down, point};
-            status = "Curve: click twice to bend the line. Escape finishes it.";
-        } else {
-            document.checkpoint();
-            document.image = std::move(preview);
-            preview_active = false;
-        }
+    if (document.curve.base && !document.curve.line_set) {
+        end_curve_gesture(point);
+    } else if (document.tool == Tool::Shape && preview_active) {
+        document.checkpoint();
+        document.image = std::move(preview);
+        preview_active = false;
     } else if (document.tool == Tool::Select || document.tool == Tool::Lasso) {
         Rect bounds = drag_bounds(down, point, false);
         if (document.tool == Tool::Lasso && lasso.size() > 2) {
@@ -917,28 +922,6 @@ void Application::end_gesture(Point point) {
         }
         lasso.clear();
     }
-    texture_dirty = true;
-}
-void Application::finish_curve() {
-    if (curve_points.empty()) {
-        return;
-    }
-    document.checkpoint();
-    std::vector<Point> samples;
-    Point p0 = curve_points[0], p3 = curve_points[1];
-    Point p1 =
-        curve_points.size() > 2 ? curve_points[2] : Point{(2 * p0.x + p3.x) / 3, (2 * p0.y + p3.y) / 3};
-    Point p2 =
-        curve_points.size() > 3 ? curve_points[3] : Point{(p0.x + 2 * p3.x) / 3, (p0.y + 2 * p3.y) / 3};
-    for (int i = 0; i <= 120; ++i) {
-        double t = i / 120.0, u = 1.0 - t;
-        samples.push_back(
-            {u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
-             u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y});
-    }
-    polygon(document.image, samples, document.ink, true, false, false);
-    curve_points.clear();
-    preview_active = false;
     texture_dirty = true;
 }
 void Application::canvas(float width, float height) {
@@ -1006,8 +989,9 @@ void Application::canvas(float width, float height) {
         hotspot_pick = false;
         return;
     }
-    bool over_handle = rotation_control(
-        origin, point, ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem));
+    bool window_hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+    bool over_curve_handle = curve_control(point, window_hovered);
+    bool over_handle = rotation_control(origin, point, window_hovered) || over_curve_handle;
     Rect active_bounds = document.selection.active
                              ? Rect{document.selection.x, document.selection.y,
                                     document.selection.image.width, document.selection.image.height}
@@ -1015,7 +999,7 @@ void Application::canvas(float width, float height) {
     const double handle_x[8] = {0, 0.5, 1, 1, 1, 0.5, 0, 0};
     const double handle_y[8] = {0, 0, 0, 0.5, 1, 1, 1, 0.5};
     for (int i = 0; i < 8; ++i) {
-        if (text_active || reshape_active || rotation_active || transform_active ||
+        if (document.curve.base || text_active || reshape_active || rotation_active || transform_active ||
             (!document.selection.active && document.fixed_canvas())) {
             break;
         }
@@ -1098,7 +1082,8 @@ void Application::canvas(float width, float height) {
         char location[64] = {};
         std::snprintf(location, sizeof(location), "%d, %d px", static_cast<int>(point.x),
                       static_cast<int>(point.y));
-        if (!dragging && document.tool != Tool::Stamp && document.tool != Tool::Path) {
+        if (!dragging && !document.curve.base && document.tool != Tool::Stamp &&
+            document.tool != Tool::Path) {
             status = location;
         }
     }
@@ -1115,6 +1100,7 @@ void Application::canvas(float width, float height) {
                        ImGui::GetScrollY() + float(point.y) * (zoom - previous_zoom)};
         zoom_scroll_pending = true;
     }
+    refresh_curve_preview(point, over && inside);
     Point path_next;
     bool show_path_next = false;
     if (document.tool == Tool::Path && !document.path.nodes.empty()) {
@@ -1281,6 +1267,7 @@ void Application::canvas(float width, float height) {
             }
         }
     }
+    draw_curve_controls(draw, origin);
     if (dragging && (document.tool == Tool::Select || document.tool == Tool::Lasso) && !moving_selection) {
         if (document.tool == Tool::Select) {
             Rect bounds = drag_bounds(down, point, false);

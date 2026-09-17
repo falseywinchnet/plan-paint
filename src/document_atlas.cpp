@@ -30,6 +30,7 @@ bool Document::fixed_canvas() const {
 }
 void Document::assign_canvas(Image replacement) {
     commit_path();
+    commit_curve();
     bool icon = atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor;
     if ((fixed_canvas() || (icon && (replacement.width > 256 || replacement.height > 256))) &&
         (replacement.width != image.width || replacement.height != image.height)) {
@@ -112,6 +113,7 @@ void Document::sync_atlas() {
 void Document::configure_atlas(const AtlasGrid& grid) {
     commit_selection();
     commit_path();
+    commit_curve();
     sync_atlas();
     Image sheet = atlas.kind == AtlasKind::Sheet ? atlas.sheet : image;
     grid.validate(sheet);
@@ -129,6 +131,7 @@ void Document::configure_atlas(const AtlasGrid& grid) {
 void Document::leave_atlas() {
     commit_selection();
     commit_path();
+    commit_curve();
     sync_atlas();
     std::uint64_t previous_revision = revision;
     checkpoint();
@@ -148,6 +151,7 @@ void Document::atlas_select(int index, bool control) {
     }
     commit_selection();
     commit_path();
+    commit_curve();
     sync_atlas();
     if (control && index >= 0) {
         if (atlas.sequence.empty() && atlas.active >= 0 && atlas.active != index) {
@@ -189,6 +193,7 @@ void Document::make_icon_sizes(const std::vector<int>& sizes, bool cursor) {
     }
     commit_selection();
     commit_path();
+    commit_curve();
     sync_atlas();
     ImageContainer result;
     result.kind = cursor ? ContainerKind::Cursor : ContainerKind::Icon;

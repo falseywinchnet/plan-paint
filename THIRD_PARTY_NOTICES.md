@@ -9,7 +9,8 @@ Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail
 - libtiff: permissive TIFF license. https://gitlab.com/libtiff/libtiff/-/blob/master/LICENSE.md
 - libavif 1.4.0, commit bcfcd821dab042c83dbb83ef72121f59b3c00661: BSD-2-Clause. See packaging/licenses/libavif-LICENSE.
 - dav1d AV1 decoder: BSD-2-Clause. See packaging/licenses/dav1d-COPYING.
-- resvg 0.47.0, commit 898b377cb4f1b55f6f7b1dde4d0448277179812f: MIT or Apache-2.0. The static rasterizer and its dependency license texts are included in packaging/licenses/svg; components.json records versions and upstream repositories.
+- LunaSVG 3.5.0, commit 83c58df8103dc7dca423dfd824992af94d49bed6, and its bundled PlutoVG 1.3.1: MIT. PlutoVG includes FreeType rasterizer code and stb components under their permissive terms. See packaging/licenses/svg. This software uses portions of the FreeType Project (https://freetype.org), copyright David Turner, Robert Wilhelm and Werner Lemberg.
+- TinyXML-2 11.0.0: zlib license. Used to check SVG features and resolve local image resources. See packaging/licenses/svg/tinyxml2-LICENSE.txt.
 - libwebp: BSD-style license. https://chromium.googlesource.com/webm/libwebp/+/HEAD/COPYING
 - Portsmouth Regular, Bold, Italic, Bold Italic and Mono: embedded font family. Original source-font copyright and license notices are preserved in [packaging/licenses/Portsmouth-source-notices.txt](packaging/licenses/Portsmouth-source-notices.txt). System fonts selected for artwork are not redistributed.
 - The vendored Dear ImGui source tree also contains Droid Sans under Apache License 2.0; it is not the application interface font.

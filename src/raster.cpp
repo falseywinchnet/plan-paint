@@ -12,7 +12,7 @@ const char* brush_names[brush_count] = {
     "Brush",  "Calligraphy brush 1", "Calligraphy brush 2", "Airbrush",      "Oil brush",   "Crayon",
     "Marker", "Natural pencil",      "Watercolor brush",    "Bristle brush", "Soft pastel", "Charcoal"};
 const char* shape_names[shape_count] = {"Line",
-                                        "Curve",
+                                        "Bézier",
                                         "Oval",
                                         "Rectangle",
                                         "Rounded rectangle",
@@ -46,7 +46,8 @@ const char* shape_names[shape_count] = {"Line",
                                         "Teardrop",
                                         "Leaf",
                                         "Eight-point star",
-                                        "Burst"};
+                                        "Burst",
+                                        "Arc"};
 Color patterned(const Ink& ink, int x, int y) {
     const int bayer[8][8] = {{0, 48, 12, 60, 3, 51, 15, 63}, {32, 16, 44, 28, 35, 19, 47, 31},
                              {8, 56, 4, 52, 11, 59, 7, 55},  {40, 24, 36, 20, 43, 27, 39, 23},
@@ -347,7 +348,7 @@ std::vector<Point> shape_points(Shape shape, Point start, Point end) {
         top = end.y < start.y ? start.y - diameter : start.y;
     }
     std::vector<Point> normalized;
-    if (shape == Shape::Line || shape == Shape::Curve) {
+    if (shape == Shape::Line || shape == Shape::Bezier || shape == Shape::Arc) {
         return {start, end};
     }
     switch (shape) {
@@ -509,7 +510,8 @@ std::vector<Point> shape_points(Shape shape, Point start, Point end) {
 void draw_shape(Image& image, Shape shape, Point start, Point end, const Ink& ink, bool outline, bool fill,
                 Brush fill_brush) {
     std::vector<Point> points = shape_points(shape, start, end);
-    polygon(image, points, ink, outline, fill, shape != Shape::Line && shape != Shape::Curve, fill_brush);
+    polygon(image, points, ink, outline, fill,
+            shape != Shape::Line && shape != Shape::Bezier && shape != Shape::Arc, fill_brush);
 }
 Image make_stamp(const Image& image, Rect bounds, StampShape shape, bool transparent, Color key) {
     Image result = cropped(image, bounds);

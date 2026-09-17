@@ -73,13 +73,17 @@ void Application::help(float x, float y, float width, float height) {
         "The bottom slider goes up to 1600%. The pencil previews the exact pixel under its tip before you "
         "click. "
         "Hover previews and zoom do not change your saved picture.");
-    help_topic("4. Lines, curves and shapes",
-               "Choose a shape in the little gallery. Hold the mouse button where it should start, drag, "
-               "then release. Outline uses Color 1; Fill uses Color 2. Their menus let you turn either part "
-               "off. Size sets outline thickness. Hold Shift for constrained lines and equal-sided "
-               "shapes.\n\nA curve begins as a dragged line. Click once to bend its first control point, "
-               "then again for its second control point. Escape finishes the curve early. A polygon is made "
-               "by clicking corners; clicking the first corner closes it. Escape also finishes it.");
+    help_topic(
+        "4. Lines, curves and shapes",
+        "Choose a shape in the little gallery. Hold the mouse button where it should start, drag, "
+        "then release. Outline uses Color 1; Fill uses Color 2. Their menus let you turn either part "
+        "off. Size sets outline thickness. Hold Shift for constrained lines and equal-sided "
+        "shapes.\n\nChoose Bézier or Arc. Drag the starting line, or click its two endpoints. "
+        "Bézier has a draggable control handle from each endpoint; Arc has one middle handle. "
+        "Keep dragging the handles until the curve is right. Undo and Redo keep the controls editable. "
+        "Escape or choosing another tool releases the curve and keeps the drawing. If you only placed "
+        "the first point, Escape cancels it without leaving a mark. A polygon is made "
+        "by clicking corners; clicking the first corner closes it. Escape also finishes it.");
     help_topic(
         "5. The continuous junction path",
         "Choose Path in Patterns & tools or at the right of Home. Click to "

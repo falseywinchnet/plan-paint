@@ -8,7 +8,7 @@ namespace paint {
 void Application::open_image(const std::string& path) {
     document.replace_container(load_container(path), path);
     text_active = false;
-    curve_points.clear();
+    clear_curve_controls();
     hotspot_pick = false;
     texture_dirty = true;
     atlas_grid_dialog = document.atlas.kind == AtlasKind::None && sprite_sheet_filename(path);

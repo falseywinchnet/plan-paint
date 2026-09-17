@@ -51,7 +51,7 @@ enum class Brush {
 inline constexpr int brush_count = 12;
 enum class Shape {
     Line,
-    Curve,
+    Bezier,
     Oval,
     Rectangle,
     RoundedRectangle,
@@ -85,9 +85,10 @@ enum class Shape {
     Teardrop,
     Leaf,
     Star8,
-    Burst
+    Burst,
+    Arc
 };
-inline constexpr int shape_count = 36;
+inline constexpr int shape_count = 37;
 enum class StampShape { Circle, Pill, Square, Rectangle };
 extern const char* pattern_names[18];
 extern const char* brush_names[brush_count];

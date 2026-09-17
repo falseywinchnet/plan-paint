@@ -34,7 +34,13 @@ void imports() {
             "SVG clip or gradient differs");
     require(svg.get(80, 20).g > 250 && svg.get(80, 20).a >= 126 && svg.get(80, 20).a <= 129,
             "SVG transform or unpremultiplication differs");
-    require(svg.get(114, 24).a > 0 && svg.get(114, 24).a < 180, "SVG filter not rasterized");
+    bool filters_rejected = false;
+    try {
+        paint::load_image(root + "/filters.svg");
+    } catch (const std::exception& exception) {
+        filters_rejected = std::string(exception.what()).find("filters") != std::string::npos;
+    }
+    require(filters_rejected, "unsupported SVG filters disappeared silently");
     int text = 0;
     for (int y = 65; y < 95; ++y) {
         for (int x = 5; x < 65; ++x) {

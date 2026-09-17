@@ -5,6 +5,17 @@
 #include <filesystem>
 #include <stdexcept>
 namespace paint {
+void Application::choose_shape(Shape shape) {
+    if (shape != document.shape) {
+        finish_curve();
+    }
+    if (document.continuous_path) {
+        document.commit_path();
+    }
+    choose_tool(shape == Shape::Polygon ? Tool::Path : Tool::Shape);
+    document.continuous_path = false;
+    document.shape = shape;
+}
 namespace {
 // Ribbon coordinates begin at the tabs; the native window owns the only title bar.
 void ribbon_cursor(ImVec2 position) {
@@ -83,9 +94,15 @@ void classic_icon(ImDrawList& draw, int icon, ImVec2 position, float size, ImU32
           edge = IM_COL32(76, 88, 101, 255);
     if (icon >= 100 && icon < 100 + shape_count) {
         Shape shape = static_cast<Shape>(icon - 100);
-        if (shape == Shape::Curve) {
+        if (shape == Shape::Bezier) {
             draw.AddBezierCubic({x + 1, y + s - 3}, {x + s * .35f, y - s * .4f}, {x + s * .65f, y + s * 1.4f},
                                 {x + s - 1, y + 3}, color, 1.3f);
+            return;
+        }
+        if (shape == Shape::Arc) {
+            draw.PathArcTo({x + s * .5f, y + s * .75f}, s * .43f, 3.14159265f, 6.2831853f, 16);
+            draw.PathStroke(color, 0, 1.3f);
+            draw.AddCircleFilled({x + s * .5f, y + s * .32f}, 2, blue);
             return;
         }
         std::vector<Point> points = shape_points(shape, {x + 2, y + (shape == Shape::Oval ? s * 0.24f : 2)},
@@ -800,18 +817,20 @@ void Application::ribbon(float width) {
                        IM_COL32(255, 255, 255, 255));
     draw.AddRect(ImVec2(base.x + 418, base.y + 60), ImVec2(base.x + 597, base.y + 132),
                  IM_COL32(177, 186, 198, 255));
+    const Shape home_shapes[21] = {Shape::Line,       Shape::Bezier,         Shape::Arc,
+                                   Shape::Oval,       Shape::Rectangle,      Shape::RoundedRectangle,
+                                   Shape::Polygon,    Shape::Triangle,       Shape::RightTriangle,
+                                   Shape::Diamond,    Shape::Pentagon,       Shape::Hexagon,
+                                   Shape::RightArrow, Shape::LeftArrow,      Shape::UpArrow,
+                                   Shape::DownArrow,  Shape::Star4,          Shape::Star5,
+                                   Shape::Star6,      Shape::RoundedCallout, Shape::Circle};
     for (int i = 0; i < 21; ++i) {
-        int shape_index = i == 20 ? static_cast<int>(Shape::Circle) : i;
+        int shape_index = static_cast<int>(home_shapes[i]);
         if (ribbon_button(shape_names[shape_index], nullptr, 100 + shape_index,
                           {419.0f + (i % 7) * 25.0f, 61.0f + (i / 7) * 23.0f}, {25, 23},
                           document.tool == Tool::Shape && static_cast<int>(document.shape) == shape_index,
                           shape_names[shape_index])) {
-            if (document.continuous_path) {
-                document.commit_path();
-            }
-            choose_tool(i == 5 ? Tool::Path : Tool::Shape);
-            document.continuous_path = false;
-            document.shape = static_cast<Shape>(shape_index);
+            choose_shape(home_shapes[i]);
         }
     }
     if (ribbon_button("More shapes", "▼", -1, {596, 60}, {15, 72})) {
@@ -827,12 +846,7 @@ void Application::ribbon(float width) {
             if (ImGui::Selectable("##Shape",
                                   document.tool == Tool::Shape && static_cast<int>(document.shape) == i,
                                   ImGuiSelectableFlags_None, {104, 70})) {
-                if (document.continuous_path) {
-                    document.commit_path();
-                }
-                choose_tool(i == 5 ? Tool::Path : Tool::Shape);
-                document.continuous_path = false;
-                document.shape = static_cast<Shape>(i);
+                choose_shape(static_cast<Shape>(i));
             }
             ImVec2 a = ImGui::GetItemRectMin();
             ImDrawList& gallery = *ImGui::GetWindowDrawList();

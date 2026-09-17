@@ -203,7 +203,8 @@ void test_materials_and_shapes() {
     for (int i = static_cast<int>(paint::Shape::Circle); i < paint::shape_count; ++i) {
         std::vector<paint::Point> points =
             paint::shape_points(static_cast<paint::Shape>(i), {0, 0}, {100, 100});
-        require(points.size() >= 3, "new shape has no closed outline");
+        require(points.size() >= (static_cast<paint::Shape>(i) == paint::Shape::Arc ? 2 : 3),
+                "shape has no valid outline");
         for (std::size_t j = 0; j < points.size(); ++j) {
             require(std::isfinite(points[j].x) && std::isfinite(points[j].y),
                     "new shape has invalid geometry");
@@ -319,6 +320,98 @@ void test_continuous_geometry_coverage() {
                     "fill/outline edge differs from independent area integration");
         }
     }
+}
+void test_curves() {
+    paint::CurveGeometry curve;
+    curve.set_line({10, 10}, {110, 10});
+    curve.move_handle(0, {10, 110});
+    curve.move_handle(1, {110, 110});
+    paint::Point quarter = curve.at(0.25), middle = curve.at(0.5);
+    require(std::abs(quarter.x - 25.625) < 1e-10 && std::abs(quarter.y - 66.25) < 1e-10 && middle.x == 60 &&
+                middle.y == 85 && curve.handle_count() == 2,
+            "cubic Bézier does not follow its independent endpoint controls");
+    curve.set_line({0, 0}, {100, 0});
+    curve.move_handle(0, {-200, 0});
+    curve.move_handle(1, {300, 0});
+    std::vector<paint::Point> samples = curve.samples();
+    double left = 0, right = 100;
+    for (std::size_t i = 0; i < samples.size(); ++i) {
+        paint::Point point = samples[i];
+        left = std::min(left, point.x);
+        right = std::max(right, point.x);
+    }
+    require(left < -40 && right > 140, "Bézier flattening discarded collinear control reversals");
+
+    curve.kind = paint::CurveKind::Arc;
+    curve.set_line({-50, 0}, {50, 0});
+    curve.move_handle(0, {20, 50});
+    require(curve.handle_count() == 1 && curve.handle(0).x == 0 && curve.handle(0).y == 50,
+            "arc midpoint left the perpendicular bisector");
+    quarter = curve.at(0.25);
+    require(std::abs(quarter.x + 50 / std::sqrt(2.0)) < 1e-10 &&
+                std::abs(quarter.y - 50 / std::sqrt(2.0)) < 1e-10,
+            "arc is not a circular semicircle through its midpoint handle");
+    samples = curve.samples();
+    for (std::size_t i = 1; i < samples.size(); ++i) {
+        paint::Point point = samples[i], previous = samples[i - 1];
+        require(std::abs(std::hypot(point.x, point.y) - 50) < 1e-9, "arc samples left the circle");
+        double chord_radius = std::hypot((point.x + previous.x) / 2, (point.y + previous.y) / 2);
+        require(50 - chord_radius <= 0.125, "arc sampling exceeded its pixel error tolerance");
+    }
+    curve.move_handle(0, {0, -50});
+    require(curve.at(0.5).y == -50 && curve.at(0.25).y < 0, "arc cannot bend across the baseline");
+    curve.move_handle(0, {0, 100});
+    samples = curve.samples();
+    for (std::size_t i = 0; i < samples.size(); ++i) {
+        paint::Point point = samples[i];
+        require(std::abs(std::hypot(point.x, point.y - 37.5) - 62.5) < 1e-9,
+                "major arc radius or center is incorrect");
+    }
+    curve.move_handle(0, {0, 1e-8});
+    require(std::isfinite(curve.at(0.25).y) && std::abs(curve.at(0.25).y) < 1e-7,
+            "nearly straight arc is numerically unstable");
+    curve.set_line({4, 10}, {4, 110});
+    curve.move_handle(0, {-46, 60});
+    require(curve.at(0.5).x == -46 && curve.at(0.5).y == 60, "vertical arc handle is misplaced");
+
+    paint::Document doc;
+    doc.new_image(128, 128);
+    doc.ink.primary = {20, 70, 140, 130};
+    doc.ink.size = 4;
+    doc.begin_curve(paint::CurveKind::Bezier, {10, 20});
+    require(!doc.dirty() && doc.undo_history.empty(), "first curve click changed the picture or history");
+    require(!doc.establish_curve({10, 20}) && doc.undo_history.empty(), "zero-length curve was accepted");
+    doc.commit_curve();
+    require(!doc.curve.base && !doc.dirty(), "releasing a lone anchor preserved a mark");
+    doc.begin_curve(paint::CurveKind::Bezier, {10, 20});
+    require(doc.establish_curve({110, 20}), "curve starting line was not accepted");
+    paint::Image baseline = doc.image;
+    doc.checkpoint();
+    doc.curve.geometry.move_handle(0, {10, 110});
+    doc.sync_curve();
+    paint::Image bent = doc.image;
+    doc.undo();
+    require(doc.curve.line_set && doc.curve.geometry.first_control.y == 20 &&
+                std::equal(baseline.pixels.begin(), baseline.pixels.end(), doc.image.pixels.begin(),
+                           paint::equal),
+            "curve undo failed to restore both its editable handle and its raster");
+    doc.redo();
+    require(doc.curve.line_set && doc.curve.geometry.first_control.y == 110 &&
+                std::equal(bent.pixels.begin(), bent.pixels.end(), doc.image.pixels.begin(), paint::equal),
+            "curve redo lost its editable geometry or raster");
+    doc.saved_revision = doc.revision;
+    doc.sync_curve();
+    require(!doc.dirty() && doc.curve.line_set, "saved curve was flattened or left dirty");
+    doc.commit_curve();
+    require(!doc.curve.base &&
+                std::equal(bent.pixels.begin(), bent.pixels.end(), doc.image.pixels.begin(), paint::equal),
+            "releasing a curve repainted translucent coverage");
+    doc.undo();
+    require(!doc.curve.base && std::equal(baseline.pixels.begin(), baseline.pixels.end(),
+                                          doc.image.pixels.begin(), paint::equal),
+            "undo after curve release resurrected handles or lost the prior raster");
+    doc.undo();
+    require(!doc.curve.base && doc.image.get(50, 20).r == 255, "curve baseline undo failed");
 }
 void test_path_history() {
     paint::Document doc;
@@ -449,6 +542,7 @@ int main() {
         test_eraser_and_pixel_target();
         test_continuous_geometry_coverage();
         test_path_history();
+        test_curves();
         test_codecs();
         std::cout << "Color, CONV, editing and seven-format codec tests passed.\n";
         return 0;

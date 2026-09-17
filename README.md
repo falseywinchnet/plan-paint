@@ -24,7 +24,8 @@ The Mac application is ad-hoc signed; its installer is unsigned and has no Devel
 
 ## Make something
 
-- **Draw and paint.** Pencil, twelve brushes, 36 shapes (including a constrained circle), curves, flood fill, eraser, eyedropper and adjustable outlines. Use solid colors or eighteen two-color patterns.
+- **Draw and paint.** Pencil, twelve brushes, 37 shapes (including a constrained circle, Bézier and Arc), flood fill, eraser, eyedropper and adjustable outlines. Use solid colors or eighteen two-color patterns.
+- **Bend a curve.** Choose Bézier or Arc, then drag a starting line or click its two endpoints. Bézier has one control handle from each end; Arc has one middle handle. Drag them repeatedly to adjust the curve. Undo and Redo retain the controls. Escape or choosing another tool releases them and keeps the accepted drawing; a lone first click is cancelled without leaving a mark.
 - **Edit sprite sheets.** Set rows and columns in Atlas, choose a sprite from the ribbon, and use Left / Right to step through frames. Ctrl-click holds a sequence; Expand gallery preserves the sheet’s two-dimensional arrangement. Save writes the complete sheet.
 - **Edit pictures.** Rectangular and free-form selections, crop, copy/paste, resize, rotate, flip and undo/redo. Drop an image into the window to place it as a movable selection.
 - **Add text and color.** Move and resize text boxes, toggle word wrap, and choose a font, size, bold, italic, underline or strikeout. Place or cancel from the floating toolbar. Mix colors with RGB, hex or OKLab controls and save sixteen custom swatches.
@@ -44,7 +45,7 @@ Print and page setup use the system dialog. Scanner capture, email drafts and de
 | --- | --- |
 | PNG, JPEG, BMP, static GIF, TIFF, TGA, WebP, PSD composite, PNM, HDR, PIC, AVIF, SVG, ICO, CUR; HEIC/HEIF on macOS | PNG, JPEG, BMP, static GIF, TIFF, TGA, lossless WebP, multi-size ICO and CUR |
 
-PNG, TIFF, TGA and WebP preserve transparency. JPEG, BMP and GIF flatten onto white; GIF also reduces the palette. Animated GIF and APNG are rejected. SVG is rasterized on import, including text, clipping, gradients and filters. AVIF and HEIC/HEIF import to an 8-bit canvas and save to an existing raster format; HEIC/HEIF uses the codecs available through macOS ImageIO. HDR is converted to 8-bit RGBA.
+PNG, TIFF, TGA and WebP preserve transparency. JPEG, BMP and GIF flatten onto white; GIF also reduces the palette. Animated GIF and APNG are rejected. SVG is rasterized on import, using LunaSVG, including text, clipping, masks and gradients. SVG filters are rejected with an explanation; export those pictures as PNG from their source application to preserve the effects. AVIF and HEIC/HEIF import to an 8-bit canvas and save to an existing raster format; HEIC/HEIF uses the codecs available through macOS ImageIO. HDR is converted to 8-bit RGBA.
 
 ICO and CUR open every stored size in Atlas. CUR retains per-image hotspots, editable numerically or by clicking the canvas. Save As from a picture offers standard icon sizes. Legacy AND/XOR cursor pixels are retained; these background-dependent pixels cannot be combined with partial-alpha pixels in one legacy bitmap. Erase or paint over XOR pixels before lifting selections or resampling; exact flips and quarter-turns retain them. Exporting an ICO/CUR entry to a regular raster format exports the current image; saving the container retains every entry.
 
@@ -60,12 +61,12 @@ Reshape uses a triangle mesh and rejects folds. Final antialiasing uses bounded 
 
 ## Build
 
-Requires **C++20**, **CMake 3.24+**, **SDL3**, **libtiff**, **libwebp**, **dav1d**, and **Rust 1.87+ / Cargo**. Linux also requires GTK 3. Dear ImGui, stb and gif-h are vendored. CMake downloads pinned libavif and resvg sources; resvg and its locked Rust dependencies build into a static library.
+Requires **C++20**, **CMake 3.24+**, **SDL3**, **libtiff**, **libwebp**, **dav1d**. Linux also requires GTK 3. Dear ImGui, stb and gif-h are vendored. CMake downloads pinned libavif, LunaSVG (with PlutoVG) and TinyXML-2 sources. All build as native C/C++ libraries; no Rust toolchain is needed.
 
 On an Apple Silicon Mac with Homebrew:
 
 ```sh
-brew install cmake sdl3 libtiff webp dav1d rust
+brew install cmake sdl3 libtiff webp dav1d
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure

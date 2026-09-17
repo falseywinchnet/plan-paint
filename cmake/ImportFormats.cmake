@@ -13,33 +13,15 @@ FetchContent_Declare(avif
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(avif)
 
-find_program(RAINSTAR_CARGO cargo REQUIRED)
-FetchContent_Declare(resvg
-  URL https://codeload.github.com/linebender/resvg/tar.gz/898b377cb4f1b55f6f7b1dde4d0448277179812f
-  URL_HASH SHA256=536805f37545c90981b818b45d5537d95668fa08696ca4f4226fca89845d8a74
+set(LUNASVG_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(lunasvg
+  URL https://codeload.github.com/sammycage/lunasvg/tar.gz/83c58df8103dc7dca423dfd824992af94d49bed6
+  URL_HASH SHA256=37f051e6f95ca53d4d17aebb548eaea14536de87edaf105073260d5e5f6ffd1a
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
-FetchContent_MakeAvailable(resvg)
-set(resvg_target "${CMAKE_CURRENT_BINARY_DIR}/rust-resvg")
-set(resvg_environment "CARGO_PROFILE_RELEASE_LTO=true" "CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1")
-if(WIN32)
-  set(resvg_library "${resvg_target}/release/resvg.lib")
-  list(APPEND resvg_environment "RUSTFLAGS=-C target-feature=+crt-static")
-else()
-  set(resvg_library "${resvg_target}/release/libresvg.a")
-endif()
-add_custom_command(OUTPUT "${resvg_library}"
-  COMMAND ${CMAKE_COMMAND} -E env ${resvg_environment} ${RAINSTAR_CARGO} build
-    --manifest-path "${resvg_SOURCE_DIR}/crates/c-api/Cargo.toml" --release --locked
-    --no-default-features --features text,system-fonts,raster-images --target-dir "${resvg_target}"
-  DEPENDS "${resvg_SOURCE_DIR}/Cargo.lock" "${resvg_SOURCE_DIR}/crates/c-api/Cargo.toml"
-  COMMENT "Building the pinned static SVG rasterizer" VERBATIM)
-add_custom_target(rainstar_resvg_build DEPENDS "${resvg_library}")
-add_library(rainstar_resvg STATIC IMPORTED GLOBAL)
-set_target_properties(rainstar_resvg PROPERTIES IMPORTED_LOCATION "${resvg_library}"
-  INTERFACE_INCLUDE_DIRECTORIES "${resvg_SOURCE_DIR}/crates/c-api")
-add_dependencies(rainstar_resvg rainstar_resvg_build)
-if(WIN32)
-  set_property(TARGET rainstar_resvg PROPERTY INTERFACE_LINK_LIBRARIES "ntdll;userenv;ws2_32;bcrypt;advapi32")
-elseif(UNIX AND NOT APPLE)
-  set_property(TARGET rainstar_resvg PROPERTY INTERFACE_LINK_LIBRARIES "m;dl;pthread")
-endif()
+FetchContent_MakeAvailable(lunasvg)
+set(tinyxml2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(tinyxml2
+  URL https://codeload.github.com/leethomason/tinyxml2/tar.gz/11.0.0
+  URL_HASH SHA256=5556deb5081fb246ee92afae73efd943c889cef0cafea92b0b82422d6a18f289
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+FetchContent_MakeAvailable(tinyxml2)

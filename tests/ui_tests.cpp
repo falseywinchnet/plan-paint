@@ -1029,6 +1029,112 @@ void arbitrary_rotation(UiFixture& ui) {
             "obsolete rotation compilation survived Undo");
     require(app.error.empty(), app.error.c_str());
 }
+void curve_interactions(UiFixture& ui, const std::string& screenshot = "") {
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    app.document.new_image(960, 640);
+    app.zoom = 1;
+    app.show_rulers = false;
+    app.atlas_tab = app.patterns_tab = app.view_tab = app.text_tab = false;
+    app.document.ink.primary = {20, 75, 145, 170};
+    app.document.ink.size = 5;
+    app.document.ink.brush = paint::Brush::Round;
+    app.document.ink.pattern = paint::Pattern::Solid;
+    app.choose_shape(paint::Shape::Bezier);
+    ui.frame();
+    ui.move(300, 350);
+    float ox = 300 - static_cast<float>(app.hover.x), oy = 350 - static_cast<float>(app.hover.y);
+    paint::Image blank = app.document.image;
+    ui.click(ox + 100, oy + 150);
+    ui.move(ox + 450, oy + 250);
+    require(app.document.curve.base && !app.document.curve.line_set && app.document.undo_history.empty() &&
+                !app.document.dirty(),
+            "first curve anchor modified the document");
+    ui.key(ImGuiKey_Escape);
+    require(!app.document.curve.base && !app.preview_active &&
+                std::equal(blank.pixels.begin(), blank.pixels.end(), app.document.image.pixels.begin(),
+                           paint::equal),
+            "Escape preserved a lone curve anchor or its hover line");
+    ui.move(ox + 100, oy + 150);
+    ImGui::GetIO().AddMouseButtonEvent(0, true);
+    ui.frame();
+    ui.move(ox + 450, oy + 150);
+    ui.key(ImGuiKey_Escape);
+    ImGui::GetIO().AddMouseButtonEvent(0, false);
+    ui.frame();
+    require(!app.document.curve.base && app.document.undo_history.empty() && !app.document.dirty(),
+            "Escape during an unset baseline drag preserved a line");
+    ui.click(ox + 100, oy + 200);
+    ui.click(ox + 700, oy + 200);
+    require(app.document.curve.line_set && app.document.curve.geometry.handle_count() == 2,
+            "two endpoint clicks did not establish a Bézier with two handles");
+    paint::Image baseline = app.document.image;
+    ui.drag(ox + 300, oy + 200, ox + 150, oy + 50);
+    require(std::abs(app.document.curve.geometry.first_control.x - 150) < .01 &&
+                std::abs(app.document.curve.geometry.first_control.y - 50) < .01,
+            "first Bézier control did not follow its drag");
+    ui.drag(ox + 500, oy + 200, ox + 650, oy + 350);
+    require(std::abs(app.document.curve.geometry.second_control.y - 350) < .01,
+            "second Bézier control did not follow its drag");
+    require(app.document.undo_history.size() == 3, "handle movements were not one undo step per drag");
+    app.command(paint::Command::Undo);
+    ui.frame();
+    require(app.document.curve.line_set && app.document.curve.geometry.second_control.y == 200,
+            "Bézier Undo did not restore an editable handle");
+    app.command(paint::Command::Redo);
+    ui.frame();
+    require(app.document.curve.geometry.second_control.y == 350, "Bézier Redo lost its control");
+    ui.drag(ox + 150, oy + 50, ox + 180, oy + 80);
+    require(app.document.curve.geometry.first_control.x == 180,
+            "Bézier handle stopped accepting repeated drags");
+    std::filesystem::path path = std::filesystem::temp_directory_path() / "rainstar-editable-curve.png";
+    app.save_to(path.string());
+    require(app.error.empty(), app.error.c_str());
+    require(app.document.curve.line_set && !app.document.dirty(), "Save released the editable curve");
+    paint::Image saved = paint::load_image(path.string());
+    require(
+        std::equal(saved.pixels.begin(), saved.pixels.end(), app.document.image.pixels.begin(), paint::equal),
+        "Save differs from accepted curve pixels");
+    std::filesystem::remove(path);
+    if (!screenshot.empty()) {
+        ui.move(1100, 600);
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot + ".bezier.png");
+    }
+    paint::Image accepted = app.document.image;
+    ui.key(ImGuiKey_Escape);
+    require(!app.document.curve.base && !app.preview_active &&
+                std::equal(accepted.pixels.begin(), accepted.pixels.end(), app.document.image.pixels.begin(),
+                           paint::equal),
+            "Escape changed an accepted curve or retained its handles");
+    app.choose_shape(paint::Shape::Arc);
+    ui.drag(ox + 100, oy + 420, ox + 700, oy + 420);
+    require(app.document.curve.line_set && app.document.curve.geometry.handle_count() == 1,
+            "dragged baseline did not establish an arc with one handle");
+    ui.drag(ox + 400, oy + 420, ox + 480, oy + 570);
+    paint::Point middle = app.document.curve.geometry.handle(0);
+    require(std::abs(middle.x - 400) < .01 && std::abs(middle.y - 570) < .01,
+            "arc handle did not constrain to the chord midpoint normal");
+    require(app.document.image.get(400, 570).b < 245, "arc missed its middle control");
+    ui.drag(ox + 400, oy + 570, ox + 400, oy + 510);
+    require(app.document.curve.geometry.bulge == 90, "arc handle stopped after one adjustment");
+    if (!screenshot.empty()) {
+        ui.move(1100, 600);
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot);
+    }
+    accepted = app.document.image;
+    app.choose_shape(paint::Shape::Bezier);
+    require(!app.document.curve.base && std::equal(accepted.pixels.begin(), accepted.pixels.end(),
+                                                   app.document.image.pixels.begin(), paint::equal),
+            "switching curve forms did not preserve the accepted arc");
+    ui.click(ox + 100, oy + 100);
+    app.choose_tool(paint::Tool::Pencil);
+    require(!app.document.curve.base && std::equal(accepted.pixels.begin(), accepted.pixels.end(),
+                                                   app.document.image.pixels.begin(), paint::equal),
+            "changing tools preserved an unset curve anchor");
+    app.document.new_image();
+    app.texture_dirty = true;
+    ui.frame();
+}
 void atlas_interactions(UiFixture& ui, const std::string& screenshot = "") {
     paint::Application& app = *ui.app;
     app.document.new_image(96, 96);
@@ -1135,18 +1241,22 @@ void atlas_interactions(UiFixture& ui, const std::string& screenshot = "") {
 } // namespace
 int main(int argc, char** argv) {
     try {
+        bool curves_render = argc >= 2 && std::string(argv[1]) == "--curves-render-test";
         bool path_render = argc >= 2 && std::string(argv[1]) == "--path-render-test";
         bool atlas_render = argc >= 2 && std::string(argv[1]) == "--atlas-render-test";
         bool text_render = argc >= 2 && std::string(argv[1]) == "--text-render-test";
         bool geometry_render = argc >= 2 && std::string(argv[1]) == "--geometry-render-test";
         bool pointed_render = argc >= 2 && std::string(argv[1]) == "--pointed-render-test";
         bool material_render = argc >= 2 && std::string(argv[1]) == "--materials-render-test";
-        bool native = path_render || atlas_render || geometry_render || pointed_render || material_render ||
-                      text_render || (argc >= 2 && std::string(argv[1]) == "--native-render-test");
+        bool native = curves_render || path_render || atlas_render || geometry_render || pointed_render ||
+                      material_render || text_render ||
+                      (argc >= 2 && std::string(argv[1]) == "--native-render-test");
         UiFixture ui(native);
         if (native) {
             std::string screenshot = argc >= 3 ? argv[2] : "";
-            if (path_render) {
+            if (curves_render) {
+                curve_interactions(ui, screenshot);
+            } else if (path_render) {
                 path_session_and_escape(ui, screenshot);
             } else if (atlas_render) {
                 atlas_interactions(ui, screenshot);
@@ -1161,7 +1271,8 @@ int main(int argc, char** argv) {
             } else {
                 retina_rendering(ui, screenshot);
             }
-            std::cout << (path_render
+            std::cout << (curves_render ? "Native editable Bézier and circular Arc controls passed with "
+                          : path_render
                               ? "Native retained paths, segment history, stamp reset and Escape passed with "
                           : atlas_render
                               ? "Native Atlas sequence, gallery, painting and cursor controls passed with "
@@ -1178,6 +1289,7 @@ int main(int argc, char** argv) {
         drawing_and_controls(ui);
         path_and_selection(ui);
         path_session_and_escape(ui);
+        curve_interactions(ui);
         stamp_and_reshape(ui);
         text_and_stale_transform(ui);
         text_object_controls(ui);

@@ -1,5 +1,6 @@
 #pragma once
 #include "atlas.hpp"
+#include "curve.hpp"
 #include "raster.hpp"
 #include <deque>
 #include <memory>
@@ -38,11 +39,19 @@ struct EditablePath {
     bool outline = true, fill = false, continuous = false;
     Brush fill_brush = Brush::Round;
 };
+struct EditableCurve {
+    CurveGeometry geometry;
+    std::shared_ptr<const Image> base;
+    std::uint64_t session = 0;
+    bool line_set = false, secondary = false;
+    Ink ink;
+};
 struct Snapshot {
     Image image;
     AtlasState atlas;
     std::uint64_t revision = 0;
     EditablePath path;
+    EditableCurve curve;
     std::size_t bytes() const;
 };
 struct Document {
@@ -62,6 +71,8 @@ struct Document {
     bool continuous_path = false;
     EditablePath path;
     std::uint64_t next_path_session = 1;
+    EditableCurve curve;
+    std::uint64_t next_curve_session = 1;
     std::string filename;
     std::uint64_t revision = 0, saved_revision = 0, next_revision = 1;
     std::deque<Snapshot> undo_history, redo_history;
@@ -104,6 +115,12 @@ struct Document {
     void sync_path();
     void restore_path(const EditablePath& previous);
     Image path_image(const Point* next = nullptr) const;
+    void begin_curve(CurveKind kind, Point start, bool secondary = false);
+    bool establish_curve(Point end);
+    void sync_curve();
+    void commit_curve();
+    void restore_curve(const EditableCurve& previous);
+    Image curve_image(const Point* pending_end = nullptr) const;
     Image visible_image() const;
 };
 } // namespace paint

@@ -100,7 +100,10 @@ struct Application {
     bool path_preview_paused = false;
     Point down, last, hover, selection_start;
     std::vector<Point> lasso;
-    std::vector<Point> curve_points;
+    Point curve_pending_end, curve_handle_offset;
+    int curve_handle = -1;
+    bool curve_handle_checkpoint = false;
+    std::string curve_preview_signature;
     float zoom = 1.0f;
     int stamp_width = 80, stamp_height = 80;
     double stamp_scale = 1.0, stamp_angle = 0.0;
@@ -186,6 +189,7 @@ struct Application {
     void command(Command command);
     void execute(Command command);
     void choose_tool(Tool tool);
+    void choose_shape(Shape shape);
     void begin_color();
     void edit_color(Color color);
     void color_editor();
@@ -197,6 +201,13 @@ struct Application {
     void end_gesture(Point point);
     void finish_text();
     void finish_curve();
+    void clear_curve_controls();
+    void begin_curve_gesture(Point point, bool right);
+    void update_curve_gesture(Point point);
+    void end_curve_gesture(Point point);
+    bool curve_control(Point point, bool window_hovered);
+    void draw_curve_controls(ImDrawList& draw, ImVec2 origin);
+    void refresh_curve_preview(Point point, bool over);
     void regenerate_stamp();
     void file_results();
     void save_to(const std::string& path);

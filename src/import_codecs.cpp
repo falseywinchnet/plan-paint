@@ -7,9 +7,11 @@
 #include <cmath>
 #include <cstring>
 #include <filesystem>
+#include <lunasvg.h>
 #include <memory>
-#include <resvg.h>
+#include <regex>
 #include <stdexcept>
+#include <tinyxml2.h>
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreGraphics/CoreGraphics.h>
@@ -158,49 +160,105 @@ Image decode_avif(const void* data, std::size_t size) {
     }
     return image;
 }
+namespace {
+std::string svg_local_name(const char* name) {
+    const char* colon = std::strchr(name, ':');
+    return colon ? colon + 1 : name;
+}
+std::string svg_base64(const std::vector<std::uint8_t>& bytes) {
+    const char* alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string result = "data:application/octet-stream;base64,";
+    for (std::size_t i = 0; i < bytes.size(); i += 3) {
+        std::uint32_t value = std::uint32_t(bytes[i]) << 16;
+        if (i + 1 < bytes.size()) {
+            value |= std::uint32_t(bytes[i + 1]) << 8;
+        }
+        if (i + 2 < bytes.size()) {
+            value |= bytes[i + 2];
+        }
+        result += alphabet[(value >> 18) & 63];
+        result += alphabet[(value >> 12) & 63];
+        result += i + 1 < bytes.size() ? alphabet[(value >> 6) & 63] : '=';
+        result += i + 2 < bytes.size() ? alphabet[value & 63] : '=';
+    }
+    return result;
+}
+void prepare_svg_element(tinyxml2::XMLElement& element, const std::filesystem::path& directory) {
+    const char* filter_error = "This SVG uses filters, which LunaSVG does not render. Export it as PNG in "
+                               "its source application to preserve those effects.";
+    std::string name = svg_local_name(element.Name());
+    if (name == "filter") {
+        throw std::runtime_error(filter_error);
+    }
+    static const std::regex css_filter(R"((^|[;{\s])filter\s*:)", std::regex::icase);
+    if (name == "style" && element.GetText() && std::regex_search(element.GetText(), css_filter)) {
+        throw std::runtime_error(filter_error);
+    }
+    std::string image_attribute, image_source;
+    for (const tinyxml2::XMLAttribute* attribute = element.FirstAttribute(); attribute;
+         attribute = (*attribute).Next()) {
+        std::string key = svg_local_name((*attribute).Name()), value = (*attribute).Value();
+        if ((key == "filter" && value != "none" && !value.empty()) ||
+            (key == "style" && std::regex_search(value, css_filter))) {
+            throw std::runtime_error(filter_error);
+        }
+        if (name == "image" && key == "href" && value.compare(0, 5, "data:") != 0) {
+            image_attribute = (*attribute).Name();
+            image_source = value;
+        }
+    }
+    if (!image_source.empty()) {
+        if (image_source.find("://") != std::string::npos || image_source.compare(0, 2, "//") == 0) {
+            throw std::runtime_error("SVG images must be embedded or stored locally beside the SVG.");
+        }
+        std::filesystem::path file =
+            directory / std::filesystem::path(std::u8string(image_source.begin(), image_source.end()));
+        std::u8string encoded = file.u8string();
+        std::string resource(encoded.begin(), encoded.end());
+        std::string embedded = svg_base64(read_image_bytes(resource));
+        element.SetAttribute(image_attribute.c_str(), embedded.c_str());
+    }
+    for (tinyxml2::XMLElement* child = element.FirstChildElement(); child;
+         child = (*child).NextSiblingElement()) {
+        prepare_svg_element(*child, directory);
+    }
+}
+} // namespace
 Image rasterize_svg(const std::string& path, int width, int height) {
     std::vector<std::uint8_t> bytes = read_image_bytes(path);
-    std::unique_ptr<resvg_options, void (*)(resvg_options*)> options(resvg_options_create(),
-                                                                     resvg_options_destroy);
-    if (!options) {
-        throw std::runtime_error("Could not allocate SVG rasterizer.");
+    tinyxml2::XMLDocument xml;
+    if (xml.Parse(reinterpret_cast<const char*>(bytes.data()), bytes.size()) != tinyxml2::XML_SUCCESS ||
+        !xml.RootElement()) {
+        throw std::runtime_error("SVG could not be parsed.");
     }
-    resvg_options_load_system_fonts(options.get());
-#ifdef __linux__
-    resvg_options_set_font_family(options.get(), "DejaVu Sans");
-#else
-    resvg_options_set_font_family(options.get(), "Arial");
-#endif
     std::filesystem::path directory =
         std::filesystem::path(std::u8string(path.begin(), path.end())).parent_path();
-    std::u8string directory_bytes = directory.u8string();
-    std::string resources(directory_bytes.begin(), directory_bytes.end());
-    resvg_options_set_resources_dir(options.get(), resources.c_str());
-    resvg_render_tree* raw_tree = nullptr;
-    int error = resvg_parse_tree_from_data(reinterpret_cast<const char*>(bytes.data()), bytes.size(),
-                                           options.get(), &raw_tree);
-    if (error || !raw_tree) {
-        throw std::runtime_error("SVG could not be parsed (error " + std::to_string(error) + ").");
+    prepare_svg_element(*xml.RootElement(), directory);
+    tinyxml2::XMLPrinter prepared;
+    xml.Print(&prepared);
+    std::unique_ptr<lunasvg::Document> tree = lunasvg::Document::loadFromData(prepared.CStr());
+    if (!tree) {
+        throw std::runtime_error("SVG could not be parsed by LunaSVG.");
     }
-    std::unique_ptr<resvg_render_tree, void (*)(resvg_render_tree*)> tree(raw_tree, resvg_tree_destroy);
-    resvg_size size = resvg_get_image_size(tree.get());
-    if (!std::isfinite(size.width) || !std::isfinite(size.height) || size.width <= 0 || size.height <= 0 ||
-        size.width > 16384 || size.height > 16384) {
+    double intrinsic_width = (*tree).width(), intrinsic_height = (*tree).height();
+    if (!std::isfinite(intrinsic_width) || !std::isfinite(intrinsic_height) || intrinsic_width <= 0 ||
+        intrinsic_height <= 0 || intrinsic_width > 16384 || intrinsic_height > 16384) {
         throw std::runtime_error("SVG dimensions are invalid or exceed the canvas limit.");
     }
     if (width <= 0) {
-        width = static_cast<int>(std::ceil(size.width));
+        width = static_cast<int>(std::ceil(intrinsic_width));
     }
     if (height <= 0) {
-        height = static_cast<int>(std::ceil(size.height));
+        height = static_cast<int>(std::ceil(intrinsic_height));
     }
     Image image;
     image.reset(width, height, {0, 0, 0, 0});
-    resvg_transform transform = resvg_transform_identity();
-    transform.a = width / size.width;
-    transform.d = height / size.height;
-    resvg_render(tree.get(), transform, width, height, reinterpret_cast<char*>(image.pixels.data()));
-    unpremultiply(image);
+    lunasvg::Bitmap bitmap(reinterpret_cast<std::uint8_t*>(image.pixels.data()), width, height, width * 4);
+    if (bitmap.isNull()) {
+        throw std::runtime_error("Could not allocate SVG rasterizer.");
+    }
+    (*tree).render(bitmap, lunasvg::Matrix(width / intrinsic_width, 0, 0, height / intrinsic_height, 0, 0));
+    bitmap.convertToRGBA();
     return image;
 }
 Image decode_native_heif(const void* data, std::size_t size) {
