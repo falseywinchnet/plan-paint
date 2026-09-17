@@ -1,4 +1,5 @@
 #include "codecs.hpp"
+#include "import_codecs.hpp"
 #define STBI_WINDOWS_UTF8
 #define STBIW_WINDOWS_UTF8
 #define STB_IMAGE_IMPLEMENTATION
@@ -45,7 +46,7 @@ static int utf8_fopen_s(FILE** file, const char* path, const char* mode) {
 #include <webp/encode.h>
 
 namespace paint {
-static std::string extension(const std::string& path) {
+std::string image_extension(const std::string& path) {
     std::string result = std::filesystem::path(std::u8string(path.begin(), path.end())).extension().string();
     for (char& value : result) {
         value = static_cast<char>(std::tolower(static_cast<unsigned char>(value)));
@@ -58,6 +59,21 @@ Image decode_image(const void* data, std::size_t size) {
     }
     int width = 0, height = 0, channels = 0;
     const unsigned char* bytes = static_cast<const unsigned char*>(data);
+    reject_animation(bytes, size);
+    if (is_avif(data, size)) {
+        return decode_avif(data, size);
+    }
+    if (size >= 6 && bytes[0] == 0 && bytes[1] == 0 && (bytes[2] == 1 || bytes[2] == 2) && bytes[3] == 0) {
+        ImageContainer icons = decode_icon_container(data, size);
+        int best = 0;
+        for (std::size_t i = 1; i < icons.frames.size(); ++i) {
+            if (icons.frames[i].image.width * icons.frames[i].image.height >
+                icons.frames[best].image.width * icons.frames[best].image.height) {
+                best = static_cast<int>(i);
+            }
+        }
+        return icons.frames[best].image;
+    }
     if (!stbi_info_from_memory(bytes, static_cast<int>(size), &width, &height, &channels)) {
         if (!WebPGetInfo(bytes, size, &width, &height)) {
             throw std::runtime_error("This image format could not be decoded.");
@@ -90,7 +106,7 @@ static TIFF* open_tiff(const std::string& path, const char* mode) {
 #endif
 }
 Image load_image(const std::string& path) {
-    std::string ext = extension(path);
+    std::string ext = image_extension(path);
     if (ext == ".tif" || ext == ".tiff") {
         TIFF* file = open_tiff(path, "r");
         if (!file) {
@@ -125,6 +141,16 @@ Image load_image(const std::string& path) {
             throw;
         }
     }
+    if (ext == ".svg" || ext == ".svgz") {
+        return rasterize_svg(path);
+    }
+    std::vector<std::uint8_t> bytes = read_image_bytes(path);
+    if (ext == ".heic" || ext == ".heif" || ext == ".hif") {
+        return decode_native_heif(bytes.data(), bytes.size());
+    }
+    return decode_image(bytes.data(), bytes.size());
+}
+std::vector<std::uint8_t> read_image_bytes(const std::string& path) {
     std::ifstream file(std::filesystem::path(std::u8string(path.begin(), path.end())),
                        std::ios::binary | std::ios::ate);
     if (!file) {
@@ -139,9 +165,54 @@ Image load_image(const std::string& path) {
     if (!file.read(reinterpret_cast<char*>(bytes.data()), size)) {
         throw std::runtime_error("Could not read complete image.");
     }
-    Image result = decode_image(bytes.data(), bytes.size());
+    return bytes;
+}
+bool writable_image_path(const std::string& path) {
+    std::string ext = image_extension(path);
+    return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif" ||
+           ext == ".tif" || ext == ".tiff" || ext == ".tga" || ext == ".webp" || ext == ".ico" ||
+           ext == ".cur";
+}
+ImageContainer load_container(const std::string& path) {
+    std::string ext = image_extension(path);
+    if (ext == ".ico" || ext == ".cur") {
+        std::vector<std::uint8_t> bytes = read_image_bytes(path);
+        return decode_icon_container(bytes.data(), bytes.size());
+    }
+    ImageContainer result;
+    result.frames.push_back({load_image(path), 0, 0, {}});
     return result;
 }
+void save_encoded_bytes(const std::vector<std::uint8_t>& bytes, const std::string& path) {
+    static std::atomic<unsigned> sequence{0};
+    std::string temporary = path + ".rainstar-container-" +
+                            std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
+                            "-" + std::to_string(sequence.fetch_add(1));
+    std::filesystem::path native(std::u8string(temporary.begin(), temporary.end()));
+    try {
+        std::ofstream file(native, std::ios::binary);
+        file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+        file.close();
+        if (!file) {
+            throw std::runtime_error("Could not write image container.");
+        }
+        std::filesystem::rename(native, std::filesystem::path(std::u8string(path.begin(), path.end())));
+    } catch (...) {
+        std::error_code ignored;
+        std::filesystem::remove(native, ignored);
+        throw;
+    }
+}
+void save_container(const ImageContainer& container, const std::string& path) {
+    std::string ext = image_extension(path);
+    if (ext != ".ico" && ext != ".cur") {
+        throw std::runtime_error("An icon collection must be saved as ICO or CUR.");
+    }
+    ImageContainer output = container;
+    output.kind = ext == ".cur" ? ContainerKind::Cursor : ContainerKind::Icon;
+    save_encoded_bytes(encode_icon_container(output), path);
+}
+
 static void png_write(void* context, void* data, int size) {
     std::vector<std::uint8_t>& bytes = *static_cast<std::vector<std::uint8_t>*>(context);
     std::uint8_t* first = static_cast<std::uint8_t*>(data);
@@ -241,13 +312,20 @@ static void write_encoded(const Image& source, const std::string& path, const st
     }
 }
 void save_image(const Image& image, const std::string& path, int quality) {
+    if (image_extension(path) == ".ico" || image_extension(path) == ".cur") {
+        ImageContainer container;
+        container.kind = image_extension(path) == ".cur" ? ContainerKind::Cursor : ContainerKind::Icon;
+        container.frames.push_back({image, 0, 0, {}});
+        save_container(container, path);
+        return;
+    }
     // Write alongside the destination, then rename. Failed encoding preserves old artwork.
     static std::atomic<unsigned> sequence{0};
     std::chrono::steady_clock::duration tick = std::chrono::steady_clock::now().time_since_epoch();
     std::string temporary = path + ".rainstar-writing-" + std::to_string(tick.count()) + "-" +
                             std::to_string(sequence.fetch_add(1));
     try {
-        write_encoded(image, temporary, extension(path), std::clamp(quality, 1, 100));
+        write_encoded(image, temporary, image_extension(path), std::clamp(quality, 1, 100));
         std::filesystem::rename(std::filesystem::path(std::u8string(temporary.begin(), temporary.end())),
                                 std::filesystem::path(std::u8string(path.begin(), path.end())));
     } catch (...) {

@@ -92,7 +92,7 @@ void Application::rotation_result(WarpResult& result) {
         return;
     }
     if (result.task == WarpTask::CommitRotation && rotation_whole_image) {
-        document.image = std::move(result.image);
+        document.assign_canvas(std::move(result.image));
         document.selection = {};
     } else {
         document.selection.image = std::move(result.image);

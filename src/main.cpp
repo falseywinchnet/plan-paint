@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
                                  text_style, {31, 73, 125, 255}, {}, "");
                 app.texture_dirty = true;
             } else if (!argument.starts_with("--")) {
-                app.document.replace(paint::load_image(argument), argument);
+                app.open_image(argument);
             }
         }
         if (demo_rotation) {

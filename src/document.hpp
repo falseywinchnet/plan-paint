@@ -1,4 +1,5 @@
 #pragma once
+#include "atlas.hpp"
 #include "raster.hpp"
 #include <deque>
 namespace paint {
@@ -26,10 +27,13 @@ struct FloatingSelection {
 };
 struct Snapshot {
     Image image;
+    AtlasState atlas;
     std::uint64_t revision = 0;
 };
 struct Document {
     Image image;
+    AtlasState atlas;
+    std::uint64_t atlas_epoch = 0;
     FloatingSelection selection;
     Image stamp;
     Ink ink;
@@ -48,6 +52,20 @@ struct Document {
     std::size_t history_bytes = 0;
     Document();
     bool dirty() const;
+    void replace_container(ImageContainer replacement, const std::string& path);
+    void configure_atlas(const AtlasGrid& grid);
+    void leave_atlas();
+    void sync_atlas();
+    void atlas_select(int index, bool control = false);
+    void atlas_step(int direction);
+    void make_icon_sizes(const std::vector<int>& sizes, bool cursor);
+    void set_hotspot(int x, int y);
+    Image output_image() const;
+    ImageContainer output_container(bool cursor) const;
+    void assign_canvas(Image replacement);
+    bool fixed_canvas() const;
+    bool has_legacy_xor() const;
+    void require_rgba_transform() const;
     void checkpoint();
     void undo();
     void redo();

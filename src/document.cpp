@@ -1,6 +1,7 @@
 #include "document.hpp"
 #include "conv.hpp"
 #include <algorithm>
+#include <stdexcept>
 namespace paint {
 Document::Document() {
     image.reset(960, 640);
@@ -9,12 +10,13 @@ bool Document::dirty() const {
     return revision != saved_revision || selection.active || !path.empty();
 }
 void Document::checkpoint() {
-    Snapshot snapshot{image, revision};
-    history_bytes += snapshot.image.pixels.size() * sizeof(Color);
+    Snapshot snapshot{image, atlas, revision};
+    history_bytes += snapshot.image.pixels.size() * sizeof(Color) + snapshot.atlas.bytes();
     undo_history.push_back(std::move(snapshot));
     redo_history.clear();
     while (history_bytes > 256u * 1024u * 1024u && undo_history.size() > 1) {
-        history_bytes -= undo_history.front().image.pixels.size() * sizeof(Color);
+        history_bytes -=
+            undo_history.front().image.pixels.size() * sizeof(Color) + undo_history.front().atlas.bytes();
         undo_history.pop_front();
     }
     revision = next_revision++;
@@ -25,9 +27,12 @@ void Document::undo() {
     }
     commit_selection();
     commit_path();
-    redo_history.push_back({std::move(image), revision});
-    history_bytes -= undo_history.back().image.pixels.size() * sizeof(Color);
+    redo_history.push_back({std::move(image), std::move(atlas), revision});
+    history_bytes -=
+        undo_history.back().image.pixels.size() * sizeof(Color) + undo_history.back().atlas.bytes();
     image = std::move(undo_history.back().image);
+    atlas = std::move(undo_history.back().atlas);
+    ++atlas_epoch;
     revision = undo_history.back().revision;
     undo_history.pop_back();
 }
@@ -37,15 +42,19 @@ void Document::redo() {
     }
     selection = {};
     path.clear();
-    history_bytes += image.pixels.size() * sizeof(Color);
-    undo_history.push_back({std::move(image), revision});
+    history_bytes += image.pixels.size() * sizeof(Color) + atlas.bytes();
+    undo_history.push_back({std::move(image), std::move(atlas), revision});
     image = std::move(redo_history.back().image);
+    atlas = std::move(redo_history.back().atlas);
+    ++atlas_epoch;
     revision = redo_history.back().revision;
     redo_history.pop_back();
 }
 void Document::replace(Image replacement, const std::string& path_name) {
     image = std::move(replacement);
     filename = path_name;
+    atlas = {};
+    ++atlas_epoch;
     selection = {};
     path.clear();
     undo_history.clear();
@@ -64,7 +73,7 @@ void Document::paste(const Image& pasted, int x, int y) {
     commit_selection();
     commit_path();
     checkpoint();
-    if (pasted.width > image.width || pasted.height > image.height) {
+    if (atlas.kind == AtlasKind::None && (pasted.width > image.width || pasted.height > image.height)) {
         Image larger;
         larger.reset(std::max(image.width, pasted.width), std::max(image.height, pasted.height),
                      ink.secondary);
@@ -75,6 +84,7 @@ void Document::paste(const Image& pasted, int x, int y) {
     tool = Tool::Select;
 }
 void Document::select(Rect bounds, const std::vector<Point>& lasso) {
+    require_rgba_transform();
     commit_selection();
     int right = std::clamp(bounds.x + bounds.w, 0, image.width);
     int bottom = std::clamp(bounds.y + bounds.h, 0, image.height);
@@ -157,6 +167,10 @@ void Document::invert_selection() {
     selection = {std::move(lifted), 0, 0, true, std::move(coverage), {}};
 }
 void Document::crop() {
+    if (atlas.kind == AtlasKind::Sheet) {
+        throw std::runtime_error(
+            "Leave Atlas before cropping the sheet. Sprite dimensions belong to the grid.");
+    }
     if (!selection.active) {
         return;
     }
@@ -165,6 +179,16 @@ void Document::crop() {
     image = std::move(replacement);
 }
 void Document::resize(int width, int height, bool scale) {
+    require_rgba_transform();
+    if (!selection.active && atlas.kind == AtlasKind::Sheet &&
+        (width != image.width || height != image.height)) {
+        throw std::runtime_error(
+            "Leave Atlas before resizing the sheet. Resize a selection to scale artwork inside a sprite.");
+    }
+    if (!selection.active && (atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor) &&
+        (width > 256 || height > 256)) {
+        throw std::runtime_error("ICO and CUR images must be at most 256 by 256 pixels.");
+    }
     const Image& input = selection.active ? selection.image : image;
     Image replacement;
     if (scale) {
@@ -188,9 +212,27 @@ void Document::rotate(int turns) {
         selection.coverage.clear();
         selection.outline.clear();
     } else {
+        sync_atlas();
         Image replacement = rotate_quarter(image, turns);
         checkpoint();
-        image = std::move(replacement);
+        if ((atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor) && atlas.active >= 0) {
+            IconFrame& frame = atlas.icons[atlas.active];
+            int normalized = (turns % 4 + 4) % 4;
+            for (int i = 0; i < normalized; ++i) {
+                int x = frame.hotspot_x;
+                frame.hotspot_x = frame.image.height - 1 - frame.hotspot_y;
+                frame.hotspot_y = x;
+                std::swap(frame.image.width, frame.image.height);
+            }
+            frame.image = image;
+            if (!frame.xor_pixels.empty()) {
+                Image mask = image;
+                mask.pixels = frame.xor_pixels;
+                frame.xor_pixels = rotate_quarter(mask, turns).pixels;
+            }
+            frame.image = replacement;
+        }
+        assign_canvas(std::move(replacement));
     }
 }
 void Document::flip(bool horizontal) {
@@ -199,8 +241,23 @@ void Document::flip(bool horizontal) {
         selection.coverage.clear();
         selection.outline.clear();
     } else {
+        sync_atlas();
         Image replacement = flipped(image, horizontal);
         checkpoint();
+        if ((atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor) && atlas.active >= 0) {
+            IconFrame& frame = atlas.icons[atlas.active];
+            if (horizontal) {
+                frame.hotspot_x = image.width - 1 - frame.hotspot_x;
+            } else {
+                frame.hotspot_y = image.height - 1 - frame.hotspot_y;
+            }
+            if (!frame.xor_pixels.empty()) {
+                Image mask = image;
+                mask.pixels = frame.xor_pixels;
+                frame.xor_pixels = flipped(mask, horizontal).pixels;
+            }
+            frame.image = replacement;
+        }
         image = std::move(replacement);
     }
 }

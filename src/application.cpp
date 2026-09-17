@@ -37,6 +37,7 @@ Application::~Application() {
     SDL_DestroyTexture(stamp_texture);
     SDL_DestroyTexture(text_texture);
     SDL_DestroyTexture(material_texture);
+    SDL_DestroyTexture(atlas_texture);
 }
 void Application::report(const std::exception& exception) {
     error = exception.what();
@@ -68,7 +69,28 @@ void Application::save_to(const std::string& path) {
     finish_curve();
     document.commit_path();
     document.commit_selection();
-    save_image(document.image, path, jpeg_quality);
+    document.sync_atlas();
+    std::string extension = image_extension(path);
+    bool container = extension == ".ico" || extension == ".cur";
+    bool collection = document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor;
+    if (container && !collection) {
+        icon_save_path = path;
+        icon_sizes_dialog = true;
+        return;
+    }
+    if (container) {
+        save_container(document.output_container(extension == ".cur"), path);
+    } else {
+        save_image(document.output_image(), path, jpeg_quality);
+    }
+    if (collection && !container) {
+        status = "Exported current Atlas image to " + display_filename(path);
+        deferred_after_save = false;
+        return;
+    }
+    if (container) {
+        document.atlas.kind = extension == ".cur" ? AtlasKind::Cursor : AtlasKind::Icon;
+    }
     document.filename = path;
     document.saved_revision = document.revision;
     recent_files.remember(path);
@@ -90,7 +112,7 @@ void Application::file_results() {
     if (result.action == FileAction::Save) {
         save_to(result.path);
     } else if (result.action == FileAction::Open) {
-        document.replace(load_image(result.path), result.path);
+        open_image(result.path);
         recent_files.remember(result.path);
         text_active = false;
         curve_points.clear();
@@ -138,21 +160,30 @@ void Application::execute(Command requested) {
         dialog.show(window, FileAction::Open, document.filename);
         break;
     case Command::OpenRecent:
-        document.replace(load_image(recent_to_open), recent_to_open);
+        open_image(recent_to_open);
         recent_files.remember(recent_to_open);
         text_active = false;
         curve_points.clear();
         break;
     case Command::Save:
-        if (document.filename.empty()) {
-            dialog.show(window, FileAction::Save, "Untitled.png");
+        if (document.filename.empty() || !writable_image_path(document.filename)) {
+            std::filesystem::path suggested =
+                path_from_utf8(document.filename.empty() ? "Untitled.png" : document.filename);
+            suggested.replace_extension(".png");
+            dialog.show(window, FileAction::Save, path_to_utf8(suggested));
         } else {
             save_to(document.filename);
         }
         break;
-    case Command::SaveAs:
-        dialog.show(window, FileAction::Save, document.filename.empty() ? "Untitled.png" : document.filename);
+    case Command::SaveAs: {
+        std::filesystem::path suggested =
+            path_from_utf8(document.filename.empty() ? "Untitled.png" : document.filename);
+        if (!writable_image_path(path_to_utf8(suggested))) {
+            suggested.replace_extension(".png");
+        }
+        dialog.show(window, FileAction::Save, path_to_utf8(suggested));
         break;
+    }
     case Command::PrintPreview:
         finish_text();
         finish_curve();
@@ -381,6 +412,15 @@ void Application::keyboard() {
         show_help = !show_help;
     }
     if (ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
+        if (atlas_gallery_active && !io.WantTextInput && !dragging && !transform_active && !reshape_active &&
+            !rotation_active) {
+            if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) {
+                step_atlas(-1);
+            }
+            if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) {
+                step_atlas(1);
+            }
+        }
         return;
     }
     if (text_active) {
@@ -486,6 +526,15 @@ void Application::keyboard() {
         }
         if (changed) {
             regenerate_stamp();
+        }
+    }
+    if (document.atlas.kind != AtlasKind::None && !document.selection.active && !dragging &&
+        !reshape_active && !rotation_active && !transform_active) {
+        if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) {
+            step_atlas(-1);
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) {
+            step_atlas(1);
         }
     }
     if (document.selection.active) {
@@ -853,7 +902,7 @@ void Application::finish_curve() {
     texture_dirty = true;
 }
 void Application::canvas(float width, float height) {
-    ImGui::SetCursorPos(ImVec2(0, 131));
+    ImGui::SetCursorPos(ImVec2(0, atlas_tab ? 154.0f : 131.0f));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(207, 219, 234, 255));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(7, 7));
     ImGui::SetNextWindowContentSize({document.image.width * zoom + 22 + (show_rulers ? 25 : 0),
@@ -908,6 +957,12 @@ void Application::canvas(float width, float height) {
     if (over && (io.KeyCtrl || io.KeySuper) && io.MouseWheel != 0) {
         zoom = std::clamp(zoom * (io.MouseWheel > 0 ? 1.25f : 0.8f), 0.125f, 16.0f);
     }
+    if (hotspot_pick && document.atlas.kind == AtlasKind::Cursor && over && inside &&
+        ImGui::IsMouseClicked(0)) {
+        document.set_hotspot(static_cast<int>(point.x), static_cast<int>(point.y));
+        hotspot_pick = false;
+        return;
+    }
     bool over_handle = rotation_control(
         origin, point, ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem));
     Rect active_bounds = document.selection.active
@@ -917,7 +972,8 @@ void Application::canvas(float width, float height) {
     const double handle_x[8] = {0, 0.5, 1, 1, 1, 0.5, 0, 0};
     const double handle_y[8] = {0, 0, 0, 0.5, 1, 1, 1, 0.5};
     for (int i = 0; i < 8; ++i) {
-        if (text_active || reshape_active || rotation_active || transform_active) {
+        if (text_active || reshape_active || rotation_active || transform_active ||
+            (!document.selection.active && document.fixed_canvas())) {
             break;
         }
         if (!document.selection.active && i != 3 && i != 4 && i != 5) {
@@ -1093,6 +1149,7 @@ void Application::canvas(float width, float height) {
     }
     draw.AddImage(static_cast<ImTextureID>(reinterpret_cast<std::uintptr_t>(canvas_texture)), origin,
                   ImVec2(origin.x + image_width, origin.y + image_height));
+    atlas_overlay(draw, origin);
     if (show_grid && zoom >= 4) {
         for (int x = 0; x <= document.image.width; ++x) {
             draw.AddLine(ImVec2(origin.x + x * zoom, origin.y),
@@ -1276,6 +1333,7 @@ void Application::canvas(float width, float height) {
 }
 void Application::dialogs() {
     color_editor();
+    atlas_dialogs();
     if (resize_dialog) {
         ImGui::OpenPopup("Resize and Skew");
         resize_dialog = false;
@@ -1494,10 +1552,11 @@ void Application::frame() {
         ribbon(io.DisplaySize.x);
         float sidebar_width = show_help ? std::min(370.0f, io.DisplaySize.x * 0.38f) : 0.0f;
         float status_height = show_status ? 27.0f : 0.0f;
-        canvas(io.DisplaySize.x - sidebar_width, io.DisplaySize.y - 131 - status_height);
+        float ribbon_height = atlas_tab ? 154.0f : 131.0f;
+        canvas(io.DisplaySize.x - sidebar_width, io.DisplaySize.y - ribbon_height - status_height);
         if (show_help) {
-            help(io.DisplaySize.x - sidebar_width, 131, sidebar_width,
-                 io.DisplaySize.y - 131 - status_height);
+            help(io.DisplaySize.x - sidebar_width, ribbon_height, sidebar_width,
+                 io.DisplaySize.y - ribbon_height - status_height);
         }
         if (show_status) {
             ImDrawList& status_draw = *ImGui::GetWindowDrawList();

@@ -179,7 +179,7 @@ void Application::poll_warp() {
                 document.selection.y += result.bounds.y;
             } else {
                 document.checkpoint();
-                document.image = std::move(result.image);
+                document.assign_canvas(std::move(result.image));
             }
             transform_active = false;
             texture_dirty = true;
@@ -210,6 +210,7 @@ void Application::poll_warp() {
     }
 }
 void Application::request_skew(int width, int height) {
+    document.require_rgba_transform();
     if (warp_worker.busy()) {
         throw std::runtime_error("Finish the current transform first.");
     }

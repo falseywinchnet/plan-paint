@@ -844,19 +844,125 @@ void arbitrary_rotation(UiFixture& ui) {
             "obsolete rotation compilation survived Undo");
     require(app.error.empty(), app.error.c_str());
 }
+void atlas_interactions(UiFixture& ui, const std::string& screenshot = "") {
+    paint::Application& app = *ui.app;
+    app.document.new_image(96, 96);
+    app.zoom = 8;
+    app.texture_dirty = true;
+    app.choose_tool(paint::Tool::Pencil);
+    for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 3; ++column) {
+            for (int y = 2; y < 30; ++y) {
+                for (int x = 2; x < 30; ++x) {
+                    if ((x - 16) * (x - 16) + (y - 16) * (y - 16) < 150) {
+                        app.document.image.set(column * 32 + x, row * 32 + y,
+                                               {static_cast<std::uint8_t>(70 + column * 60),
+                                                static_cast<std::uint8_t>(60 + row * 70), 190, 255});
+                    }
+                }
+            }
+        }
+    }
+    paint::AtlasGrid grid;
+    grid.rows = 3;
+    grid.columns = 3;
+    app.document.configure_atlas(grid);
+    ui.click(367, 13);
+    require(app.atlas_tab, "Atlas tab did not activate");
+    ui.click(210, 85);
+    require(app.document.atlas.active == 1, "ribbon thumbnail did not select a frame");
+    ui.key(ImGuiKey_RightArrow);
+    require(app.document.atlas.active == 2, "right arrow did not step Atlas");
+    ui.key(ImGuiKey_LeftArrow);
+    require(app.document.atlas.active == 1, "left arrow did not step Atlas");
+    ui.click(90, 13);
+    require(!app.atlas_tab, "Home did not leave Atlas ribbon");
+    app.document.ink.primary = {10, 20, 30, 255};
+    ui.click(44, 174);
+    ui.key(ImGuiKey_RightArrow);
+    require(app.document.atlas.active == 2, "Atlas keys failed while painting in Home");
+    ui.key(ImGuiKey_LeftArrow);
+    require(app.document.image.get(4, 4).r == 10, "paint edit lost while switching frames");
+    ui.click(367, 13);
+    ui.click(265, 44);
+    ui.frame();
+    require(ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+            "Atlas gallery did not expand");
+    ImGuiContext& context = *ImGui::GetCurrentContext();
+    ImGuiWindow* grid_window = nullptr;
+    for (int i = 0; i < context.Windows.Size; ++i) {
+        if (std::strstr((*context.Windows[i]).Name, "Atlas grid gallery")) {
+            grid_window = context.Windows[i];
+        }
+    }
+    require(grid_window != nullptr, "expanded 2D gallery missing");
+    ImVec2 start = (*grid_window).Pos;
+    ImGui::GetIO().AddKeyEvent(ImGuiMod_Ctrl, true);
+    ui.frame();
+    ui.click(start.x + 80, start.y + 85);
+    ui.click(start.x + 80, start.y + 155);
+    ImGui::GetIO().AddKeyEvent(ImGuiMod_Ctrl, false);
+    ui.frame();
+    require(app.document.atlas.sequence == std::vector<int>({1, 4, 7}),
+            "Ctrl-click did not select a vertical sequence");
+    if (!screenshot.empty()) {
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot + ".gallery.png");
+    }
+    ui.key(ImGuiKey_RightArrow);
+    require(app.document.atlas.active == 1, "selected vertical sequence did not wrap");
+    ui.click(start.x + 20, start.y + 255);
+    ui.frame();
+    if (!screenshot.empty()) {
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot);
+    }
+    std::filesystem::path path = std::filesystem::temp_directory_path() / "rainstar-atlas-save.png";
+    app.save_to(path.string());
+    paint::Image saved = paint::load_image(path.string());
+    require(saved.width == 96 && saved.height == 96 && saved.get(36, 4).r == 10,
+            "Save wrote one sprite instead of the sheet");
+    std::filesystem::remove(path);
+    require(app.error.empty(), app.error.c_str());
+    app.document.make_icon_sizes({16, 32, 48}, true);
+    app.document.atlas_select(1, false);
+    app.texture_dirty = true;
+    ui.frame();
+    ui.click(1140, 122);
+    require(app.hotspot_pick, "cursor hotspot picker did not activate");
+    ui.click(51, 221);
+    require(app.document.atlas.icons[1].hotspot_x == 5 && app.document.atlas.icons[1].hotspot_y == 7,
+            "canvas cursor hotspot coordinate differs");
+    if (!screenshot.empty()) {
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot + ".cursor.png");
+    }
+    path = std::filesystem::temp_directory_path() / "rainstar-atlas-save.cur";
+    app.save_to(path.string());
+    paint::ImageContainer saved_cursor = paint::load_container(path.string());
+    require(saved_cursor.frames.size() == 3 && saved_cursor.frames[1].hotspot_x == 5 &&
+                saved_cursor.frames[1].hotspot_y == 7,
+            "UI save lost cursor sizes or hotspot");
+    std::filesystem::remove(path);
+    app.document.new_image();
+    app.atlas_tab = false;
+    app.zoom = 1;
+    app.texture_dirty = true;
+    ui.frame();
+}
 } // namespace
 int main(int argc, char** argv) {
     try {
+        bool atlas_render = argc >= 2 && std::string(argv[1]) == "--atlas-render-test";
         bool text_render = argc >= 2 && std::string(argv[1]) == "--text-render-test";
         bool geometry_render = argc >= 2 && std::string(argv[1]) == "--geometry-render-test";
         bool pointed_render = argc >= 2 && std::string(argv[1]) == "--pointed-render-test";
         bool material_render = argc >= 2 && std::string(argv[1]) == "--materials-render-test";
-        bool native = geometry_render || pointed_render || material_render || text_render ||
+        bool native = atlas_render || geometry_render || pointed_render || material_render || text_render ||
                       (argc >= 2 && std::string(argv[1]) == "--native-render-test");
         UiFixture ui(native);
         if (native) {
             std::string screenshot = argc >= 3 ? argv[2] : "";
-            if (geometry_render) {
+            if (atlas_render) {
+                atlas_interactions(ui, screenshot);
+            } else if (geometry_render) {
                 geometry_preview(ui, screenshot);
             } else if (pointed_render) {
                 pointed_tools(ui, screenshot);
@@ -867,7 +973,9 @@ int main(int argc, char** argv) {
             } else {
                 retina_rendering(ui, screenshot);
             }
-            std::cout << (geometry_render ? "Native path preview/commit and geometry coverage passed with "
+            std::cout << (atlas_render
+                              ? "Native Atlas sequence, gallery, painting and cursor controls passed with "
+                          : geometry_render ? "Native path preview/commit and geometry coverage passed with "
                           : pointed_render
                               ? "Native pencil preview, pink eraser and anchored magnifier passed with "
                           : material_render ? "Native material ribbon, Circle and swatches passed with "
@@ -890,6 +998,7 @@ int main(int argc, char** argv) {
         arbitrary_rotation(ui);
         retina_rendering(ui);
         idle_rendering(ui);
+        atlas_interactions(ui);
         std::cout << "Ribbon/canvas, palettes, cursor requests, paths, selections, stamps, free rotation and "
                      "reshape passed.\n";
         return 0;

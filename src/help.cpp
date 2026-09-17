@@ -25,6 +25,19 @@ void Application::help(float x, float y, float width, float height) {
                            "click and how to try again. Press F1 to hide or show this book.");
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
+    help_topic("Atlas: sprite sheets, icons and cursors",
+               "Open a sprite sheet and choose Rows and Columns. Filenames containing sprite, sheet, atlas, "
+               "tileset, walk or idle offer this setup automatically; use Atlas > Set up grid for any other "
+               "image. Margins and spacing handle padded sheets.\n\nClick a sprite in the ribbon to edit it. "
+               "Left / Right steps through frames, even after returning to Home to paint. Ctrl-click several "
+               "sprites to hold a sequence. Expand gallery shows the original rows and columns so a vertical "
+               "sequence is easy to select. All frames restores the full sequence. Save writes the complete "
+               "sheet. Each sprite is one flat canvas; no layers or animation container are created.\n\nICO "
+               "and CUR open every stored size. CUR hotspots can be entered as X/Y pixels or chosen with "
+               "Pick on canvas. Save preserves all entries. Save As from a picture to ICO or CUR offers "
+               "standard sizes. Save to PNG or another ordinary image format exports the current icon "
+               "image.\n\nSVG is rasterized on import. AVIF and macOS HEIC/HEIF also import to the canvas; "
+               "Save chooses a supported raster output. Animated GIF and APNG are not supported.");
     help_topic("1. Make your first picture",
                "Click Pencil in Home, then hold the mouse button and move it on the white paper. Let go to "
                "stop. Try Brushes for wider marks. Pick a little colored square to change your "
@@ -137,8 +150,10 @@ void Application::help(float x, float y, float width, float height) {
         "you choose a new name or format. PNG, TIFF, TGA and lossless WebP can preserve transparency. JPEG "
         "is smaller for photographs but loses detail each time it is re-encoded. BMP, JPEG and GIF use a "
         "white background for transparent areas. GIF uses a limited palette.\n\nYou can open PNG, JPEG, BMP, "
-        "GIF, TIFF, TGA, WebP, PSD composite images, PNM, HDR and PIC. Animated GIF imports its first frame. "
-        "Saving exports a single picture, not an editable project.\n\nThe application asks before replacing "
+        "static GIF, TIFF, TGA, WebP, PSD composite images, PNM, HDR, PIC, SVG, AVIF, ICO and CUR, plus "
+        "HEIC/HEIF on macOS. Animated GIF and APNG are not supported. "
+        "Saving exports flat raster artwork; ICO and CUR retain their multiple images.\n\nThe application "
+        "asks before replacing "
         "unsaved work. Cancel keeps you here. Printing uses the system's print dialog where available. Keep "
         "a saved copy of pictures you care about.\n\nRecent pictures remembers your last twelve opened or "
         "saved files. From scanner or camera uses Windows Image Acquisition on Windows. On a Mac it opens "

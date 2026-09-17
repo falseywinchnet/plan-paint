@@ -7,6 +7,9 @@ Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail
 - gif-h, commit 70b645280d5e687f5217177c9cfa2889b0a2ad5f: MIT, Charlie Tangora. License is at the top of vendor/gif-h/gif.h.
 - SDL3: zlib license. https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt
 - libtiff: permissive TIFF license. https://gitlab.com/libtiff/libtiff/-/blob/master/LICENSE.md
+- libavif 1.4.0, commit bcfcd821dab042c83dbb83ef72121f59b3c00661: BSD-2-Clause. See packaging/licenses/libavif-LICENSE.
+- dav1d AV1 decoder: BSD-2-Clause. See packaging/licenses/dav1d-COPYING.
+- resvg 0.47.0, commit 898b377cb4f1b55f6f7b1dde4d0448277179812f: MIT or Apache-2.0. The static rasterizer and its dependency license texts are included in packaging/licenses/svg; components.json records versions and upstream repositories.
 - libwebp: BSD-style license. https://chromium.googlesource.com/webm/libwebp/+/HEAD/COPYING
 - Portsmouth Regular, Bold, Italic, Bold Italic and Mono: embedded font family. Original source-font copyright and license notices are preserved in [packaging/licenses/Portsmouth-source-notices.txt](packaging/licenses/Portsmouth-source-notices.txt). System fonts selected for artwork are not redistributed.
 - The vendored Dear ImGui source tree also contains Droid Sans under Apache License 2.0; it is not the application interface font.

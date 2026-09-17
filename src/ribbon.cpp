@@ -400,26 +400,36 @@ void Application::ribbon(float width) {
         ImGui::OpenPopup("File");
     }
     draw.AddText(ImVec2(base.x + 16, base.y + 32), IM_COL32(255, 255, 255, 255), "File");
-    if (ribbon_tab("Home tab", "Home", 59, 58, !view_tab && !text_tab && !patterns_tab)) {
+    if (ribbon_tab("Home tab", "Home", 59, 58, !view_tab && !text_tab && !patterns_tab && !atlas_tab)) {
+        atlas_tab = false;
         view_tab = false;
         text_tab = false;
         patterns_tab = false;
     }
     if (ribbon_tab("View tab", "View", 118, 56, view_tab)) {
+        atlas_tab = false;
         view_tab = true;
         text_tab = false;
         patterns_tab = false;
     }
     if (text_active && ribbon_tab("Text tab", "Text", 175, 56, text_tab)) {
         text_tab = true;
+        atlas_tab = false;
         view_tab = false;
         patterns_tab = false;
     }
     if (ribbon_tab("Patterns and tools tab", "Patterns & tools", text_active ? 235.0f : 175.0f, 162,
                    patterns_tab)) {
         patterns_tab = true;
+        atlas_tab = false;
         view_tab = false;
         text_tab = false;
+    }
+    if (ribbon_tab("Atlas tab", "Atlas", text_active ? 399.0f : 339.0f, 64, atlas_tab)) {
+        atlas_tab = true;
+        view_tab = false;
+        text_tab = false;
+        patterns_tab = false;
     }
     if (ribbon_button("Help", "?", -1, {width - 29, 28}, {25, 23}, show_help, "Help (F1)")) {
         show_help = !show_help;
@@ -456,6 +466,10 @@ void Application::ribbon(float width) {
         ImGui::Separator();
         command_menu("About Rainstar Paint", nullptr, *this, Command::About);
         command_menu("Exit", nullptr, *this, Command::Quit);
+    }
+    if (atlas_tab) {
+        atlas_ribbon(width);
+        return;
     }
     if (patterns_tab) {
         if (ribbon_button("Ribbon stamp", "Stamp", 20, {8, 58}, {66, 65}, document.tool == Tool::Stamp)) {
