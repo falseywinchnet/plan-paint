@@ -3,6 +3,7 @@
 #include "idle_render.hpp"
 #include "imgui.h"
 #include "paths.hpp"
+#include <SDL3/SDL.h>
 #include <algorithm>
 #include <cstring>
 #include <filesystem>

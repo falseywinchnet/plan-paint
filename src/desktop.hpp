@@ -1,6 +1,6 @@
 #pragma once
 #include "image.hpp"
-#include <SDL3/SDL.h>
+struct SDL_Window;
 #include <array>
 namespace paint {
 enum class WallpaperLayout { Fill, Tile, Center };

@@ -6,6 +6,7 @@
 #include "platform.hpp"
 #include "text.hpp"
 #include "warp_session.hpp"
+#include <SDL3/SDL.h>
 namespace paint {
 enum class Command {
     New,

@@ -1,6 +1,7 @@
 #pragma once
 #include "image.hpp"
-#include <SDL3/SDL.h>
+struct SDL_Window;
+struct SDL_Cursor;
 #include <mutex>
 namespace paint {
 enum class FileAction { None, Open, Paste, Save };

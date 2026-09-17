@@ -1,5 +1,6 @@
 #include "desktop.hpp"
 #include "paths.hpp"
+#include <SDL3/SDL.h>
 #include <array>
 #include <filesystem>
 #include <stdexcept>

@@ -2,6 +2,7 @@
 #include "codecs.hpp"
 #include "conv.hpp"
 #include "paths.hpp"
+#include <SDL3/SDL.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
