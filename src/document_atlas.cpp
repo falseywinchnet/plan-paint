@@ -29,6 +29,7 @@ bool Document::fixed_canvas() const {
     return atlas.kind == AtlasKind::Sheet;
 }
 void Document::assign_canvas(Image replacement) {
+    commit_path();
     bool icon = atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor;
     if ((fixed_canvas() || (icon && (replacement.width > 256 || replacement.height > 256))) &&
         (replacement.width != image.width || replacement.height != image.height)) {

@@ -398,6 +398,16 @@ void test_path_history() {
     doc.redo();
     require(doc.path.nodes.size() == 2 && doc.path.extending && doc.image.get(2, 2).r == 10,
             "redo through earlier image edits lost the still-active path session");
+    paint::Image transformed;
+    transformed.reset(32, 32, {40, 80, 120, 255});
+    doc.checkpoint();
+    doc.assign_canvas(transformed);
+    doc.sync_path();
+    require(doc.path.session == 0 && doc.image.width == 32 && doc.image.get(8, 8).b == 120,
+            "live path controls overwrote a whole-image transform result");
+    doc.undo();
+    require(doc.path.session == 0 && doc.image.width == 64 && doc.image.get(2, 2).r == 10,
+            "transform undo lost the source drawing or restored obsolete path controls");
 }
 void test_codecs() {
     paint::Image image;
