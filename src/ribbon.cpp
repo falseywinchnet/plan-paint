@@ -635,15 +635,27 @@ void Application::ribbon(float width) {
             document.shape_fill = false;
         }
         if (ImGui::MenuItem("Solid color", nullptr,
-                            document.shape_fill && document.ink.pattern == Pattern::Solid)) {
+                            document.shape_fill && document.ink.pattern == Pattern::Solid &&
+                                document.shape_fill_brush == Brush::Round)) {
             document.shape_fill = true;
             document.ink.pattern = Pattern::Solid;
+            document.shape_fill_brush = Brush::Round;
         }
+        for (int i = 4; i < 9; ++i) {
+            if (ImGui::MenuItem(brush_names[i], nullptr,
+                                document.shape_fill && static_cast<int>(document.shape_fill_brush) == i)) {
+                document.shape_fill = true;
+                document.shape_fill_brush = static_cast<Brush>(i);
+                document.ink.pattern = Pattern::Solid;
+            }
+        }
+        ImGui::Separator();
         for (int i = 1; i < 18; ++i) {
             if (ImGui::MenuItem(pattern_names[i], nullptr,
                                 document.shape_fill && static_cast<int>(document.ink.pattern) == i)) {
                 document.shape_fill = true;
                 document.ink.pattern = static_cast<Pattern>(i);
+                document.shape_fill_brush = Brush::Round;
             }
         }
     }

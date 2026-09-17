@@ -66,9 +66,10 @@ void stroke(Image& image, Point start, Point end, const Ink& ink, bool erase = f
 void flood(Image& image, int x, int y, const Ink& ink);
 bool inside_polygon(const std::vector<Point>& points, double x, double y);
 void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, bool outline, bool fill,
-             bool closed = true);
+             bool closed = true, Brush fill_brush = Brush::Round);
 std::vector<Point> shape_points(Shape shape, Point start, Point end);
-void draw_shape(Image& image, Shape shape, Point start, Point end, const Ink& ink, bool outline, bool fill);
+void draw_shape(Image& image, Shape shape, Point start, Point end, const Ink& ink, bool outline, bool fill,
+                Brush fill_brush = Brush::Round);
 Image make_stamp(const Image& image, Rect bounds, StampShape shape, bool transparent, Color key);
 Image rotate_quarter(const Image& image, int turns);
 Image flipped(const Image& image, bool horizontal);

@@ -86,13 +86,14 @@ struct AtlasBuilder {
         return (x > 0) - (x < 0);
     }
     double base_control(Index id, int ch) {
-        int x = id % lw, y = id / lw, cx = std::min(sw - 2, x / 5), cy = std::min(sh - 2, y / 5);
+        int x = static_cast<int>(id % lw), y = static_cast<int>(id / lw), cx = std::min(sw - 2, x / 5),
+            cy = std::min(sh - 2, y / 5);
         double u = (x - 5 * cx) / 5.0, v = (y - 5 * cy) / 5.0;
         return (1 - u) * (1 - v) * src(cx, cy, ch) + u * (1 - v) * src(cx + 1, cy, ch) +
                (1 - u) * v * src(cx, cy + 1, ch) + u * v * src(cx + 1, cy + 1, ch);
     }
     int owner(Index id) {
-        int x = id % lw, y = id / lw, rx = x % 5, ry = y % 5;
+        int x = static_cast<int>(id % lw), y = static_cast<int>(id / lw), rx = x % 5, ry = y % 5;
         if (!rx && !ry) {
             return -1;
         }
@@ -586,7 +587,7 @@ struct AtlasBuilder {
             Index cell = static_cast<std::size_t>(y) * (sw - 1) + x;
             if (phase == 0) {
                 n = normals(x, y, ch, ns);
-                cone_counts[cell] = n;
+                cone_counts[cell] = static_cast<Byte>(n);
                 native_diagnostic[3] += n > 0;
                 for (int k = 0; k < std::min(2, n); k++) {
                     cone_cache[cell * 4 + 2 * k] = ns[k].x;

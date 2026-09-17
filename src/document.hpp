@@ -39,6 +39,7 @@ struct Document {
     bool stamp_transparent = true;
     bool transparent_selection = false;
     bool shape_outline = true, shape_fill = false;
+    Brush shape_fill_brush = Brush::Round;
     bool continuous_path = false;
     std::vector<Point> path;
     std::string filename;

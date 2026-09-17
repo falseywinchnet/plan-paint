@@ -645,7 +645,8 @@ void Application::update_gesture(Point point) {
                 end = {static_cast<double>(bounds.x + bounds.w), static_cast<double>(bounds.y + bounds.h)};
             }
         }
-        draw_shape(preview, document.shape, down, end, ink, document.shape_outline, document.shape_fill);
+        draw_shape(preview, document.shape, down, end, ink, document.shape_outline, document.shape_fill,
+                   document.shape_fill_brush);
         texture_dirty = true;
     } else if (document.tool == Tool::Lasso) {
         lasso.push_back(point);
@@ -785,6 +786,16 @@ void Application::canvas(float width, float height) {
     if (show_rulers) {
         origin.x += 25;
         ImGui::SetCursorScreenPos(origin);
+        draw.AddRectFilled({origin.x - 25, origin.y}, {origin.x, origin.y + document.image.height * zoom},
+                           IM_COL32(247, 248, 250, 255));
+        for (int pixel = 0; pixel < document.image.height; pixel += 50) {
+            float tick_y = origin.y + pixel * zoom;
+            draw.AddLine({origin.x - 7, tick_y}, {origin.x, tick_y}, IM_COL32(70, 80, 95, 255));
+            char label[24] = {};
+            std::snprintf(label, sizeof(label), "%d", pixel);
+            draw.AddText(ImGui::GetFont(), 13.0f, {origin.x - 24, tick_y + 2}, IM_COL32(60, 65, 75, 255),
+                         label);
+        }
     }
     float image_width = document.image.width * zoom, image_height = document.image.height * zoom;
     ImGui::InvisibleButton("Drawing canvas", ImVec2(image_width + 8, image_height + 8),

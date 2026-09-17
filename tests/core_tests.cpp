@@ -100,6 +100,14 @@ void test_editing() {
     require(doc.image.get(0, 0).r == 0, "selection transaction undo failed");
     paint::Image stamp = paint::make_stamp(doc.image, {0, 0, 10, 10}, paint::StampShape::Circle, false, {});
     require(stamp.get(0, 0).a == 0 && stamp.get(5, 5).a == 255, "stamp mask failed");
+    paint::Image textured;
+    textured.reset(20, 20);
+    paint::Ink fill_ink;
+    fill_ink.secondary = {0, 0, 0, 255};
+    paint::draw_shape(textured, paint::Shape::Rectangle, {1, 1}, {18, 18}, fill_ink, false, true,
+                      paint::Brush::Watercolor);
+    require(textured.get(10, 10).r > 180 && textured.get(10, 10).r < 250,
+            "watercolor shape fill ignored its medium");
 }
 void test_codecs() {
     paint::Image image;

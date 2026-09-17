@@ -217,7 +217,7 @@ void Document::invert_colors() {
 }
 void Document::commit_path() {
     if (path.size() > 1) {
-        polygon(image, path, ink, shape_outline, shape_fill, !continuous_path);
+        polygon(image, path, ink, shape_outline, shape_fill, !continuous_path, shape_fill_brush);
     }
     path.clear();
 }

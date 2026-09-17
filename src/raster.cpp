@@ -207,7 +207,7 @@ bool inside_polygon(const std::vector<Point>& points, double x, double y) {
     return inside;
 }
 void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, bool outline, bool fill,
-             bool closed) {
+             bool closed, Brush fill_brush) {
     if (points.empty()) {
         return;
     }
@@ -227,7 +227,23 @@ void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, boo
             for (int x = std::max(0, static_cast<int>(std::floor(min_x)));
                  x <= std::min(image.width - 1, static_cast<int>(std::ceil(max_x))); ++x) {
                 if (inside_polygon(points, x + 0.5, y + 0.5)) {
-                    image.blend(x, y, patterned(fill_ink, x, y));
+                    Color color = patterned(fill_ink, x, y);
+                    std::uint32_t noise = noise_at(x, y, ink.noise) % 100;
+                    if (fill_brush == Brush::Crayon && noise > 65) {
+                        continue;
+                    }
+                    double opacity = 1.0;
+                    if (fill_brush == Brush::Oil) {
+                        opacity = 0.5 + 0.5 * noise / 100.0;
+                    } else if (fill_brush == Brush::Watercolor) {
+                        opacity = 0.14;
+                    } else if (fill_brush == Brush::Marker) {
+                        opacity = 0.55;
+                    } else if (fill_brush == Brush::Pencil) {
+                        opacity = 0.35 + 0.6 * noise / 100.0;
+                    }
+                    color.a = static_cast<std::uint8_t>(color.a * opacity);
+                    image.blend(x, y, color);
                 }
             }
         }
@@ -342,9 +358,10 @@ std::vector<Point> shape_points(Shape shape, Point start, Point end) {
     }
     return normalized;
 }
-void draw_shape(Image& image, Shape shape, Point start, Point end, const Ink& ink, bool outline, bool fill) {
+void draw_shape(Image& image, Shape shape, Point start, Point end, const Ink& ink, bool outline, bool fill,
+                Brush fill_brush) {
     std::vector<Point> points = shape_points(shape, start, end);
-    polygon(image, points, ink, outline, fill, shape != Shape::Line && shape != Shape::Curve);
+    polygon(image, points, ink, outline, fill, shape != Shape::Line && shape != Shape::Curve, fill_brush);
 }
 Image make_stamp(const Image& image, Rect bounds, StampShape shape, bool transparent, Color key) {
     Image result = cropped(image, bounds);
