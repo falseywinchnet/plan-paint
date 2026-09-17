@@ -115,7 +115,10 @@ void Application::regenerate_stamp() {
 void Application::poll_warp() {
     WarpResult result;
     if (warp_worker.take(result)) {
-        if (!result.error.empty()) {
+        if (result.task == WarpTask::CompileRotation || result.task == WarpTask::PreviewRotation ||
+            result.task == WarpTask::CommitRotation) {
+            rotation_result(result);
+        } else if (!result.error.empty()) {
             error = result.error;
             reshape_commit_pending = false;
             reshape_render_pending = false;
@@ -185,7 +188,13 @@ void Application::poll_warp() {
     if (warp_worker.busy()) {
         return;
     }
-    if (reshape_active && reshape_field && reshape_render_pending) {
+    if (rotation_active && rotation_field && rotation_render_pending) {
+        const AffineMap map = rotation_map();
+        const Rect bounds = affine_bounds(*rotation_field, map);
+        warp_worker.affine(rotation_commit_pending ? WarpTask::CommitRotation : WarpTask::PreviewRotation,
+                           rotation_field, map, bounds, rotation_generation);
+        rotation_render_pending = false;
+    } else if (reshape_active && reshape_field && reshape_render_pending) {
         Rect bounds = mesh_bounds(reshape_mesh);
         warp_worker.mesh(reshape_commit_pending ? WarpTask::CommitMesh : WarpTask::PreviewMesh, reshape_field,
                          reshape_mesh, bounds, mesh_generation);

@@ -1,5 +1,6 @@
 #include "platform.hpp"
 #include "codecs.hpp"
+#include "imgui.h"
 #include "paths.hpp"
 #include <algorithm>
 #include <cstring>
@@ -7,6 +8,46 @@
 #include <memory>
 #include <stdexcept>
 namespace paint {
+MouseCursorState::MouseCursorState() : cursors_(ImGuiMouseCursor_COUNT, nullptr) {}
+MouseCursorState::~MouseCursorState() {
+    for (SDL_Cursor* cursor : cursors_) {
+        SDL_DestroyCursor(cursor);
+    }
+}
+void MouseCursorState::update(int requested) {
+    SDL_Window* focus = SDL_GetMouseFocus();
+    if (focus != focus_) {
+        focus_ = focus;
+        previous_ = -2;
+        visibility_ = -1;
+    }
+    if (requested == ImGuiMouseCursor_None) {
+        if (visibility_ != 0) {
+            SDL_HideCursor();
+            visibility_ = 0;
+        }
+        return;
+    }
+    requested = std::clamp(requested, 0, ImGuiMouseCursor_COUNT - 1);
+    if (requested != previous_) {
+        static const SDL_SystemCursor shapes[ImGuiMouseCursor_COUNT] = {
+            SDL_SYSTEM_CURSOR_DEFAULT,     SDL_SYSTEM_CURSOR_TEXT,       SDL_SYSTEM_CURSOR_MOVE,
+            SDL_SYSTEM_CURSOR_NS_RESIZE,   SDL_SYSTEM_CURSOR_EW_RESIZE,  SDL_SYSTEM_CURSOR_NESW_RESIZE,
+            SDL_SYSTEM_CURSOR_NWSE_RESIZE, SDL_SYSTEM_CURSOR_POINTER,    SDL_SYSTEM_CURSOR_WAIT,
+            SDL_SYSTEM_CURSOR_PROGRESS,    SDL_SYSTEM_CURSOR_NOT_ALLOWED};
+        if (!cursors_[requested]) {
+            cursors_[requested] = SDL_CreateSystemCursor(shapes[requested]);
+        }
+        if (cursors_[requested]) {
+            SDL_SetCursor(cursors_[requested]);
+        }
+        previous_ = requested;
+    }
+    if (visibility_ != 1) {
+        SDL_ShowCursor();
+        visibility_ = 1;
+    }
+}
 std::vector<std::string> installed_fonts() {
     std::vector<std::string> result;
 #ifdef __APPLE__

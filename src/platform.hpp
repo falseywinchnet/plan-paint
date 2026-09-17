@@ -19,6 +19,21 @@ struct FileDialog {
     void show(SDL_Window* window, FileAction action, const std::string& initial);
     FileResult take();
 };
+// Apply native cursor changes only on transitions, after the current UI frame.
+class MouseCursorState {
+  public:
+    MouseCursorState();
+    ~MouseCursorState();
+    MouseCursorState(const MouseCursorState&) = delete;
+    MouseCursorState& operator=(const MouseCursorState&) = delete;
+    void update(int requested);
+
+  private:
+    std::vector<SDL_Cursor*> cursors_;
+    int previous_ = -2;
+    int visibility_ = -1;
+    SDL_Window* focus_ = nullptr;
+};
 void copy_to_clipboard(const Image& image);
 bool paste_from_clipboard(Image& image);
 bool print_image(const Image& image);

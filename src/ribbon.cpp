@@ -4,6 +4,45 @@
 #include <cmath>
 #include <filesystem>
 namespace paint {
+void Application::reset_stamp() {
+    if (warp_worker.busy()) {
+        status = "Wait for the current stamp preparation to finish.";
+        return;
+    }
+    document.stamp = {};
+    stamp_field.reset();
+    stamp_preview = {};
+    stamp_render_pending = false;
+    stamp_scale = 1;
+    stamp_angle = 0;
+    ++stamp_generation;
+    SDL_DestroyTexture(stamp_texture);
+    stamp_texture = nullptr;
+    choose_tool(Tool::Stamp);
+    status = "Click the picture to lift a new stamp. The old stamp has been cleared.";
+}
+void Application::stamp_controls() {
+    ImGui::BeginDisabled(warp_worker.busy());
+    bool reset = ImGui::Button("Lift a new stamp", {245, 28});
+    ImGui::EndDisabled();
+    if (reset) {
+        reset_stamp();
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::TextDisabled("Next click picks up a fresh sample.");
+    ImGui::Separator();
+    int stamp = static_cast<int>(document.stamp_shape);
+    const char* stamp_names[] = {"Circle", "Pill", "Square", "Rectangle"};
+    if (ImGui::Combo("Stamp outline", &stamp, stamp_names, 4)) {
+        document.stamp_shape = static_cast<StampShape>(stamp);
+    }
+    ImGui::SliderInt("Stamp width", &stamp_width, 4, 500);
+    if (document.stamp_shape == StampShape::Pill || document.stamp_shape == StampShape::Rectangle) {
+        ImGui::SliderInt("Stamp height", &stamp_height, 4, 500);
+    }
+    ImGui::Checkbox("Transparent stamp (skip Color 2)", &document.stamp_transparent);
+    ImGui::TextDisabled("R rotates; Shift+R turns back; +/- scales.");
+}
 void classic_icon(ImDrawList& draw, int icon, ImVec2 position, float size, ImU32 color) {
     float x = position.x, y = position.y, s = size;
     ImU32 blue = IM_COL32(60, 135, 203, 255), gold = IM_COL32(233, 174, 55, 255),
@@ -411,24 +450,7 @@ void Application::ribbon(float width) {
         }
         ImGui::Checkbox("Transparent second pattern color", &document.ink.transparent_pattern);
         ImGui::Separator();
-        int stamp = static_cast<int>(document.stamp_shape);
-        const char* stamp_names[] = {"Circle", "Pill", "Square", "Rectangle"};
-        if (ImGui::Combo("Stamp outline", &stamp, stamp_names, 4)) {
-            document.stamp_shape = static_cast<StampShape>(stamp);
-        }
-        ImGui::SliderInt("Stamp width", &stamp_width, 4, 500);
-        if (document.stamp_shape == StampShape::Pill || document.stamp_shape == StampShape::Rectangle) {
-            ImGui::SliderInt("Stamp height", &stamp_height, 4, 500);
-        }
-        ImGui::Checkbox("Transparent stamp (skip Color 2)", &document.stamp_transparent);
-        if (ImGui::Button("Lift a new stamp") && !warp_worker.busy()) {
-            document.stamp = {};
-            stamp_field.reset();
-            stamp_render_pending = false;
-            choose_tool(Tool::Stamp);
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::TextDisabled("Click to lift; click again to repeat. R rotates; +/- scales.");
+        stamp_controls();
     }
     if (view_tab) {
         if (ribbon_button("Zoom in", "Zoom in", 12, {8, 57}, {65, 70})) {
@@ -523,18 +545,18 @@ void Application::ribbon(float width) {
         command_menu("Paste", "Ctrl+V", *this, Command::Paste);
         command_menu("Paste from...", nullptr, *this, Command::PasteFrom);
     }
-    if (ribbon_button("Cut", "Cut", 1, {55, 60}, {50, 24})) {
+    if (ribbon_button("Cut", "Cut", 1, {55, 60}, {62, 24})) {
         command(Command::Cut);
     }
-    if (ribbon_button("Copy", "Copy", 2, {55, 86}, {50, 24})) {
+    if (ribbon_button("Copy", "Copy", 2, {55, 86}, {62, 24})) {
         command(Command::Copy);
     }
-    group_label(0, 111, "Clipboard");
-    if (ribbon_button("Select", "Select", 3, {116, 57}, {48, 67},
+    group_label(0, 123, "Clipboard");
+    if (ribbon_button("Select", "Select", 3, {128, 57}, {48, 67},
                       document.tool == Tool::Select || document.tool == Tool::Lasso)) {
         choose_tool(Tool::Select);
     }
-    if (ribbon_button("Selection menu", "▼", -1, {118, 126}, {44, 13})) {
+    if (ribbon_button("Selection menu", "▼", -1, {130, 126}, {44, 13})) {
         ImGui::OpenPopup("Selection");
     }
     if (ImGui::BeginPopup("Selection")) {
@@ -551,17 +573,30 @@ void Application::ribbon(float width) {
         command_menu("Delete", "Del", *this, Command::Delete);
         ImGui::MenuItem("Transparent selection", nullptr, &document.transparent_selection);
     }
-    if (ribbon_button("Crop", "Crop", 4, {171, 58}, {72, 23})) {
+    if (ribbon_button("Crop", "Crop", 4, {183, 58}, {72, 23})) {
         command(Command::Crop);
     }
-    if (ribbon_button("Resize", "Resize", 5, {171, 84}, {72, 23})) {
+    if (ribbon_button("Resize", "Resize", 5, {183, 84}, {72, 23})) {
         command(Command::Resize);
     }
-    if (ribbon_button("Rotate", "Rotate ▼", 6, {171, 110}, {76, 23})) {
+    if (ribbon_button("Rotate", "Rotate", 6, {183, 110}, {80, 23})) {
         ImGui::OpenPopup("Rotate");
     }
+    draw.AddTriangleFilled({base.x + 257, base.y + 119}, {base.x + 263, base.y + 119},
+                           {base.x + 260, base.y + 122}, IM_COL32(40, 60, 85, 255));
     if (ImGui::BeginPopup("Rotate")) {
         GuiScope popup_scope(GuiEnd::Popup);
+        ImGui::SetNextItemWidth(150);
+        ImGui::InputDouble("Angle (degrees)", &requested_rotation, 1, 15, "%.2f");
+        ImGui::BeginDisabled(rotation_active || warp_worker.busy());
+        bool rotate = ImGui::Button("Rotate with CONV");
+        ImGui::EndDisabled();
+        if (rotate) {
+            request_rotation(requested_rotation);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::TextDisabled("Positive turns clockwise. Drag a selection's round handle for free rotation.");
+        ImGui::Separator();
         command_menu("Rotate right 90 degrees", nullptr, *this, Command::RotateRight);
         command_menu("Rotate left 90 degrees", nullptr, *this, Command::RotateLeft);
         command_menu("Rotate 180 degrees", nullptr, *this, Command::Rotate180);
@@ -569,21 +604,21 @@ void Application::ribbon(float width) {
         command_menu("Flip vertical", nullptr, *this, Command::FlipVertical);
         command_menu("Flip horizontal", nullptr, *this, Command::FlipHorizontal);
     }
-    group_label(111, 253, "Image");
+    group_label(123, 265, "Image");
     const Tool tools[6] = {Tool::Pencil, Tool::Fill, Tool::Text, Tool::Eraser, Tool::Picker, Tool::Magnifier};
     const char* names[6] = {"Pencil", "Fill with color", "Text", "Eraser", "Color picker", "Magnifier"};
     for (int i = 0; i < 6; ++i) {
-        ImVec2 tile(base.x + 261.0f + (i % 3) * 25, base.y + 63.0f + (i / 3) * 28);
-        draw.AddRectFilledMultiColor(tile, {tile.x + 24, tile.y + 25}, IM_COL32(253, 255, 255, 255),
+        ImVec2 tile(base.x + 269.0f + (i % 3) * 22, base.y + 63.0f + (i / 3) * 28);
+        draw.AddRectFilledMultiColor(tile, {tile.x + 21, tile.y + 25}, IM_COL32(253, 255, 255, 255),
                                      IM_COL32(253, 255, 255, 255), IM_COL32(225, 234, 243, 255),
                                      IM_COL32(225, 234, 243, 255));
-        draw.AddRect(tile, {tile.x + 24, tile.y + 25}, IM_COL32(173, 194, 215, 255));
-        if (ribbon_button(names[i], nullptr, 7 + i, {261.0f + (i % 3) * 25.0f, 63.0f + (i / 3) * 28.0f},
-                          {24, 25}, document.tool == tools[i], names[i])) {
+        draw.AddRect(tile, {tile.x + 21, tile.y + 25}, IM_COL32(173, 194, 215, 255));
+        if (ribbon_button(names[i], nullptr, 7 + i, {269.0f + (i % 3) * 22.0f, 63.0f + (i / 3) * 28.0f},
+                          {21, 25}, document.tool == tools[i], names[i])) {
             choose_tool(tools[i]);
         }
     }
-    group_label(253, 341, "Tools");
+    group_label(265, 341, "Tools");
     if (ribbon_button("Brushes", "Brushes\n▼", 13, {346, 57}, {58, 68}, document.tool == Tool::Brush)) {
         choose_tool(Tool::Brush);
         ImGui::OpenPopup("Brushes");
@@ -711,14 +746,8 @@ void Application::ribbon(float width) {
                      IM_COL32(128, 143, 160, 255));
     }
     // Office 2007/2010 theme accents and their light tints, in the classic Paint grid.
-    const unsigned colors[30] = {
-        0x000000, 0xFFFFFF, 0x1F497D, 0xEEECE1, 0x4F81BD, 0xC0504D, 0x9BBB59, 0x8064A2, 0x4BACC6, 0xF79646,
-        0x7F7F7F, 0xF2F2F2, 0xC6D9F1, 0xDDD9C3, 0xDBE5F1, 0xF2DCDB, 0xEBF1DE, 0xE4DFEC, 0xDBEEF3, 0xFDE9D9,
-        0xBFBFBF, 0xD9D9D9, 0x8DB3E2, 0xC4BD97, 0xB8CCE4, 0xE5B9B7, 0xD7E3BC, 0xCCC1D9, 0xB7DEE8, 0xFBD5B5};
     for (int i = 0; i < 30; ++i) {
-        unsigned value = colors[i];
-        Color color{static_cast<std::uint8_t>(value >> 16), static_cast<std::uint8_t>(value >> 8),
-                    static_cast<std::uint8_t>(value), 255};
+        Color color = office_color(i);
         ImVec2 pos(871.0f + (i % 10) * 21.0f, 60.0f + (i / 10) * 23.0f);
         ImGui::SetCursorPos(pos);
         ImGui::PushID(i);
@@ -760,6 +789,14 @@ void Application::ribbon(float width) {
         if (ribbon_button("Stamp shortcut", "Stamp", 20, {1145, 58}, {58, 66},
                           document.tool == Tool::Stamp)) {
             choose_tool(Tool::Stamp);
+        }
+        if (ribbon_button("Stamp options", "▼", -1, {1148, 124}, {52, 14}, false,
+                          "Stamp outline, dimensions, transparency, and Lift a new stamp")) {
+            ImGui::OpenPopup("Stamp options");
+        }
+        if (ImGui::BeginPopup("Stamp options")) {
+            GuiScope popup_scope(GuiEnd::Popup);
+            stamp_controls();
         }
         if (ribbon_button("Path shortcut", "Path", 21, {1206, 58}, {58, 66},
                           document.tool == Tool::Path && document.continuous_path)) {

@@ -5,7 +5,18 @@
 #include <string>
 #include <thread>
 namespace paint {
-enum class WarpTask { None, CompileSelection, CompileStamp, PreviewMesh, CommitMesh, Stamp, Transform };
+enum class WarpTask {
+    None,
+    CompileSelection,
+    CompileStamp,
+    CompileRotation,
+    PreviewMesh,
+    CommitMesh,
+    Stamp,
+    Transform,
+    PreviewRotation,
+    CommitRotation
+};
 struct WarpResult {
     WarpTask task = WarpTask::None;
     std::shared_ptr<const ConvWarpField> field;

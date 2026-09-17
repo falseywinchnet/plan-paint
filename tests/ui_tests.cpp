@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "imgui_impl_sdlrenderer3.h"
+#include "imgui_internal.h"
 #include "paths.hpp"
 #include <chrono>
 #include <filesystem>
@@ -98,7 +99,8 @@ class UiFixture {
     void wait_work() {
         std::chrono::steady_clock::time_point limit =
             std::chrono::steady_clock::now() + std::chrono::seconds(20);
-        while ((*app).warp_worker.busy() || (*app).stamp_render_pending || (*app).reshape_render_pending) {
+        while ((*app).warp_worker.busy() || (*app).stamp_render_pending || (*app).reshape_render_pending ||
+               (*app).rotation_render_pending || (*app).rotation_commit_pending) {
             frame();
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             require(std::chrono::steady_clock::now() < limit, "asynchronous transform timed out");
@@ -283,6 +285,107 @@ void recent_files_and_desktop_layouts(UiFixture& ui) {
             "recent-picture command did not load the selected document");
     std::filesystem::remove_all(directory);
 }
+void custom_colors_and_cursor(UiFixture& ui) {
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    app.choose_tool(paint::Tool::Pencil);
+    ui.move(400, 350);
+    require(ImGui::GetMouseCursor() == ImGuiMouseCursor_None,
+            "painting cursor did not use its canvas preview");
+    ui.move(90, 40);
+    for (int frame = 0; frame < 20; ++frame) {
+        ui.frame();
+        require(ImGui::GetMouseCursor() == ImGuiMouseCursor_Arrow, "menu cursor request was unstable");
+    }
+    app.begin_color();
+    ui.frame();
+    ui.frame();
+    app.edit_color({18, 52, 86, 255});
+    ImGuiWindow* dialog = ImGui::FindWindowByName("Edit Colors");
+    require(dialog != nullptr, "Edit Colors dialog did not open");
+    const ImVec2 position = (*dialog).Pos;
+    ui.click(position.x + 136, position.y + 289);
+    require((app.custom_colors.occupied & 1) && paint::equal(app.custom_colors.colors[0], {18, 52, 86, 255}),
+            "Add to custom colors did not retain the edited color");
+    app.edit_color({200, 20, 50, 255});
+    ui.click(position.x + 26, position.y + 221);
+    require(std::string(app.edited_hex) == "#123456", "saved custom swatch did not restore its color");
+    ui.click(position.x + 64, position.y + (*dialog).Size.y - 26);
+    require(paint::equal(app.document.ink.primary, {18, 52, 86, 255}),
+            "Edit Colors OK did not apply the saved color");
+    app.begin_color();
+    ui.frame();
+    app.edit_color({240, 20, 40, 255});
+    ui.key(ImGuiKey_Escape);
+    require(paint::equal(app.document.ink.primary, {18, 52, 86, 255}), "Cancel changed the drawing color");
+    std::filesystem::path file = std::filesystem::temp_directory_path() /
+                                 ("rainstar-colors-" + std::to_string(SDL_GetTicksNS()) + ".bin");
+    const std::u8string encoded = file.u8string();
+    paint::CustomColors saved;
+    saved.storage_path = std::string(encoded.begin(), encoded.end());
+    saved.store(0, {18, 52, 86, 255});
+    saved.store(15, {207, 121, 52, 255});
+    paint::CustomColors loaded;
+    loaded.storage_path = saved.storage_path;
+    loaded.load();
+    require(loaded.occupied == 0x8001 && paint::equal(loaded.colors[0], saved.colors[0]) &&
+                paint::equal(loaded.colors[15], saved.colors[15]),
+            "custom colors did not survive reload");
+    std::filesystem::remove(file);
+    app.stamp_angle = 90;
+    app.stamp_scale = 2;
+    app.reset_stamp();
+    require(app.document.stamp.pixels.empty() && app.stamp_preview.pixels.empty() && !app.stamp_field &&
+                app.stamp_angle == 0 && app.stamp_scale == 1 && app.document.tool == paint::Tool::Stamp,
+            "Lift a new stamp did not reset the material, rotation and scale");
+}
+void arbitrary_rotation(UiFixture& ui) {
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    app.choose_tool(paint::Tool::Select);
+    for (int y = 40; y < 80; ++y) {
+        for (int x = 40; x < 120; ++x) {
+            app.document.image.set(x, y, {static_cast<std::uint8_t>(x), 100, 200, 255});
+        }
+    }
+    app.document.select({40, 40, 80, 40});
+    app.texture_dirty = true;
+    ui.frame();
+    ui.drag(145, 187, 155, 239);
+    ui.wait_work();
+    require(!app.rotation_active && app.document.selection.active &&
+                app.document.selection.image.height > 60 && app.rotation_angle > 30 &&
+                app.rotation_angle < 60,
+            "selection corner handle did not perform an arbitrary CONV rotation");
+    require(app.document.selection.image.pixels.front().a == 0, "rotation lost its transparent corners");
+    ui.key(ImGuiKey_Escape);
+    require(!app.document.selection.active, "Escape did not place the rotated selection");
+    app.command(paint::Command::Undo);
+    require(app.document.image.get(40, 40).r == 40, "Undo did not restore the pre-rotation object");
+    app.document.new_image(64, 32);
+    app.request_rotation(37);
+    ui.wait_work();
+    require(!app.rotation_active && !app.document.selection.active && app.document.image.width > 64 &&
+                app.document.image.height > 32,
+            "precise whole-picture rotation did not expand its canvas");
+    app.document.new_image();
+    app.document.select({40, 40, 80, 40});
+    ImGui::GetIO().AddKeyEvent(ImGuiMod_Shift, true);
+    ui.frame();
+    ui.drag(145, 187, 150, 250);
+    ImGui::GetIO().AddKeyEvent(ImGuiMod_Shift, false);
+    ui.wait_work();
+    require(std::abs(std::remainder(app.rotation_angle, 15.0)) < 1e-8,
+            "Shift did not constrain the rotation handle to 15-degree steps");
+    ui.key(ImGuiKey_Escape);
+    app.document.select({8, 8, 24, 24});
+    app.start_rotation();
+    app.command(paint::Command::Undo);
+    ui.wait_work();
+    require(!app.rotation_active && !app.rotation_field && !app.document.selection.active,
+            "obsolete rotation compilation survived Undo");
+    require(app.error.empty(), app.error.c_str());
+}
 } // namespace
 int main() {
     try {
@@ -292,8 +395,10 @@ int main() {
         stamp_and_reshape(ui);
         text_and_stale_transform(ui);
         recent_files_and_desktop_layouts(ui);
-        std::cout
-            << "Isolated ribbon/canvas, paths, selections, F1, stamp and reshape interactions passed.\n";
+        custom_colors_and_cursor(ui);
+        arbitrary_rotation(ui);
+        std::cout << "Ribbon/canvas, palettes, cursor requests, paths, selections, stamps, free rotation and "
+                     "reshape passed.\n";
         return 0;
     } catch (const std::exception& exception) {
         std::cerr << exception.what() << '\n';

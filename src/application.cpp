@@ -24,8 +24,11 @@ Application::Application(SDL_Window* input_window, SDL_Renderer* input_renderer,
         try {
             recent_files.storage_path = preference_directory() + "recent-files.bin";
             recent_files.load();
+            custom_colors.storage_path = preference_directory() + "custom-colors.bin";
+            custom_colors.load();
         } catch (const std::exception&) {
             recent_files.storage_path.clear();
+            custom_colors.storage_path.clear();
         }
     }
 }
@@ -43,7 +46,7 @@ void Application::event(const SDL_Event& event_value) {
             command(Command::Quit);
         }
         if (event_value.type == SDL_EVENT_DROP_FILE && event_value.drop.data) {
-            if (reshape_active || transform_active) {
+            if (reshape_active || rotation_active || transform_active) {
                 status = "Finish reshaping before dropping another picture.";
                 return;
             }
@@ -97,6 +100,10 @@ void Application::file_results() {
 }
 void Application::command(Command requested) {
     try {
+        if (rotation_active && requested != Command::Undo) {
+            status = "Release the rotation handle and wait for the CONV result before another command.";
+            return;
+        }
         if (transform_active || reshape_commit_pending) {
             status = "Please wait for the current transform.";
             return;
@@ -217,6 +224,14 @@ void Application::execute(Command requested) {
         break;
     }
     case Command::Undo:
+        rotation_active = false;
+        rotation_dragging = false;
+        rotation_commit_pending = false;
+        rotation_render_pending = false;
+        rotation_place_pending = false;
+        rotation_field.reset();
+        rotation_original = {};
+        ++rotation_generation;
         reshape_active = false;
         reshape_field.reset();
         reshape_mesh = {};
@@ -316,6 +331,10 @@ void Application::execute(Command requested) {
     texture_dirty = true;
 }
 void Application::choose_tool(Tool tool) {
+    if (rotation_active) {
+        finish_rotation();
+        return;
+    }
     if (reshape_active) {
         finish_reshape();
         return;
@@ -341,19 +360,26 @@ void Application::choose_tool(Tool tool) {
 }
 void Application::begin_color() {
     Color color = primary_slot ? document.ink.primary : document.ink.secondary;
+    original_color = color;
+    edit_color(color);
+    color_dialog = true;
+}
+void Application::edit_color(Color color) {
     edited_lab = to_oklab(color);
     edited_rgb[0] = color.r / 255.0f;
     edited_rgb[1] = color.g / 255.0f;
     edited_rgb[2] = color.b / 255.0f;
     std::string hex = to_hex(color);
     std::snprintf(edited_hex, sizeof(edited_hex), "%s", hex.c_str());
-    color_dialog = true;
 }
 void Application::keyboard() {
     ImGuiIO& io = ImGui::GetIO();
     bool shortcut = io.KeyCtrl || io.KeySuper;
     if (ImGui::IsKeyPressed(ImGuiKey_F1)) {
         show_help = !show_help;
+    }
+    if (ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
+        return;
     }
     if (ImGui::IsKeyPressed(ImGuiKey_Escape) && text_active) {
         finish_text();
@@ -413,6 +439,10 @@ void Application::keyboard() {
         command(Command::SaveAs);
     }
     if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        if (rotation_active) {
+            finish_rotation(true);
+            return;
+        }
         if (reshape_active) {
             finish_reshape();
             return;
@@ -878,7 +908,8 @@ void Application::canvas(float width, float height) {
     if (over && (io.KeyCtrl || io.KeySuper) && io.MouseWheel != 0) {
         zoom = std::clamp(zoom * (io.MouseWheel > 0 ? 1.25f : 0.8f), 0.125f, 8.0f);
     }
-    bool over_handle = false;
+    bool over_handle = rotation_control(
+        origin, point, ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem));
     Rect active_bounds = document.selection.active
                              ? Rect{document.selection.x, document.selection.y,
                                     document.selection.image.width, document.selection.image.height}
@@ -886,7 +917,7 @@ void Application::canvas(float width, float height) {
     const double handle_x[8] = {0, 0.5, 1, 1, 1, 0.5, 0, 0};
     const double handle_y[8] = {0, 0, 0, 0.5, 1, 1, 1, 0.5};
     for (int i = 0; i < 8; ++i) {
-        if (reshape_active || transform_active) {
+        if (reshape_active || rotation_active || transform_active) {
             break;
         }
         if (!document.selection.active && i != 3 && i != 4 && i != 5) {
@@ -956,7 +987,8 @@ void Application::canvas(float width, float height) {
             selection_original = {};
         }
     }
-    if (over && inside && !text_active && !over_handle && resize_handle < 0 && canvas_handle < 0) {
+    if (over && inside && !text_active && !over_handle && !rotation_active && resize_handle < 0 &&
+        canvas_handle < 0) {
         ImGui::SetMouseCursor(document.tool == Tool::Select ? ImGuiMouseCursor_Arrow : ImGuiMouseCursor_None);
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
             begin_gesture(point, false);
@@ -1027,7 +1059,7 @@ void Application::canvas(float width, float height) {
     }
     draw.AddRect(ImVec2(origin.x - 1, origin.y - 1), ImVec2(origin.x + image_width, origin.y + image_height),
                  IM_COL32(150, 162, 176, 255));
-    if (document.selection.active && !reshape_active) {
+    if (document.selection.active && !reshape_active && !rotation_active) {
         FloatingSelection& selected = document.selection;
         ImVec2 a(origin.x + selected.x * zoom, origin.y + selected.y * zoom);
         ImVec2 b(a.x + selected.image.width * zoom, a.y + selected.image.height * zoom);
@@ -1040,7 +1072,7 @@ void Application::canvas(float width, float height) {
             draw.AddRect(ImVec2(handles[i].x - 3, handles[i].y - 3),
                          ImVec2(handles[i].x + 3, handles[i].y + 3), IM_COL32(30, 95, 160, 255));
         }
-    } else {
+    } else if (!rotation_active) {
         ImVec2 handles[3] = {{origin.x + image_width, origin.y + image_height / 2},
                              {origin.x + image_width / 2, origin.y + image_height},
                              {origin.x + image_width, origin.y + image_height}};
@@ -1051,6 +1083,7 @@ void Application::canvas(float width, float height) {
                          IM_COL32(95, 112, 135, 255));
         }
     }
+    draw_rotation_control(origin);
     if (resize_handle >= 0 || canvas_handle >= 0) {
         ImVec2 a(origin.x + handle_preview.x * zoom, origin.y + handle_preview.y * zoom);
         ImVec2 b(a.x + handle_preview.w * zoom, a.y + handle_preview.h * zoom);
@@ -1179,65 +1212,7 @@ void Application::canvas(float width, float height) {
     }
 }
 void Application::dialogs() {
-    if (color_dialog) {
-        ImGui::OpenPopup("Edit Colors");
-        color_dialog = false;
-    }
-    if (ImGui::BeginPopupModal("Edit Colors", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        GuiScope popup_scope(GuiEnd::Popup);
-        ImGui::TextUnformatted("Choose Color 1 or Color 2, then enter a color.");
-        if (ImGui::ColorPicker3("##Picker", edited_rgb,
-                                ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_NoSmallPreview)) {
-            Color color{static_cast<std::uint8_t>(std::round(edited_rgb[0] * 255)),
-                        static_cast<std::uint8_t>(std::round(edited_rgb[1] * 255)),
-                        static_cast<std::uint8_t>(std::round(edited_rgb[2] * 255)), 255};
-            edited_lab = to_oklab(color);
-            std::snprintf(edited_hex, sizeof(edited_hex), "%s", to_hex(color).c_str());
-        }
-        bool lab_changed = false;
-        ImGui::SetNextItemWidth(160);
-        lab_changed |= ImGui::InputDouble("OKLab L (0 to 1)", &edited_lab.l, 0.01, 0.1, "%.5f");
-        ImGui::SetNextItemWidth(160);
-        lab_changed |= ImGui::InputDouble("OKLab a", &edited_lab.a, 0.01, 0.1, "%.5f");
-        ImGui::SetNextItemWidth(160);
-        lab_changed |= ImGui::InputDouble("OKLab b", &edited_lab.b, 0.01, 0.1, "%.5f");
-        if (lab_changed && std::isfinite(edited_lab.l) && std::isfinite(edited_lab.a) &&
-            std::isfinite(edited_lab.b)) {
-            edited_lab.l = std::clamp(edited_lab.l, 0.0, 1.0);
-            edited_lab.a = std::clamp(edited_lab.a, -1.0, 1.0);
-            edited_lab.b = std::clamp(edited_lab.b, -1.0, 1.0);
-            Color color = from_oklab(edited_lab);
-            edited_rgb[0] = color.r / 255.0f;
-            edited_rgb[1] = color.g / 255.0f;
-            edited_rgb[2] = color.b / 255.0f;
-            std::snprintf(edited_hex, sizeof(edited_hex), "%s", to_hex(color).c_str());
-        }
-        if (ImGui::InputText("Hex #RRGGBB", edited_hex, sizeof(edited_hex))) {
-            Color color;
-            if (from_hex(edited_hex, color)) {
-                edited_lab = to_oklab(color);
-                edited_rgb[0] = color.r / 255.0f;
-                edited_rgb[1] = color.g / 255.0f;
-                edited_rgb[2] = color.b / 255.0f;
-            }
-        }
-        ImGui::TextDisabled("Out-of-gamut OKLab values clip to displayable sRGB.");
-        if (ImGui::Button("OK", ImVec2(90, 0))) {
-            Color color{static_cast<std::uint8_t>(std::round(edited_rgb[0] * 255)),
-                        static_cast<std::uint8_t>(std::round(edited_rgb[1] * 255)),
-                        static_cast<std::uint8_t>(std::round(edited_rgb[2] * 255)), 255};
-            if (primary_slot) {
-                document.ink.primary = color;
-            } else {
-                document.ink.secondary = color;
-            }
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(90, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-    }
+    color_editor();
     if (resize_dialog) {
         ImGui::OpenPopup("Resize and Skew");
         resize_dialog = false;
@@ -1481,7 +1456,10 @@ void Application::frame() {
             title += " *";
         }
         title += " - Rainstar Paint";
-        SDL_SetWindowTitle(window, title.c_str());
+        if (title != last_window_title) {
+            SDL_SetWindowTitle(window, title.c_str());
+            last_window_title = title;
+        }
     } catch (const std::exception& exception) {
         report(exception);
     }

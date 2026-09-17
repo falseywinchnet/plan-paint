@@ -38,7 +38,10 @@ void Application::help(float x, float y, float width, float height) {
         "colors.\n\nThe swatches use the classic Microsoft Office theme and its pastel tints. Edit colors "
         "opens a big color chooser. You can type RGB values, a six-digit hex code such as #4F81BD, or OKLab "
         "L, a and b. L is lightness from 0 to 1. The other two numbers steer the hue. Colors outside the "
-        "screen's range are clipped to sRGB.\n\nBrushes includes round, two calligraphy nibs, airbrush, oil, "
+        "screen's range are clipped to sRGB. The sixteen Custom colors boxes remember colors after Paint "
+        "closes. Click a slot, choose your color, then Add to custom colors. Click a saved box to use it "
+        "again. Original restores the color you started with; OK applies your choice and Cancel leaves "
+        "the drawing color alone.\n\nBrushes includes round, two calligraphy nibs, airbrush, oil, "
         "crayon, marker, natural pencil and watercolor. Size changes the width. Patterns & tools lets "
         "brushes and the bucket use two-color dots, stripes, checks, bricks, woven cloth, houndstooth and "
         "seven dither densities. Transparent second pattern color leaves those spaces untouched.");
@@ -83,14 +86,21 @@ void Application::help(float x, float y, float width, float height) {
         "way. + makes it bigger and - makes it smaller. These keys change the stamp, not the "
         "canvas.\n\nTransparent stamp preserves transparent pixels and skips pixels matching Color 2. Turn "
         "it off to include that background color. The outside of a circle or pill is always transparent. "
-        "Lift a new stamp clears the old stamp and lets the next click pick another.");
+        "Click the small arrow below Stamp, then Lift a new stamp, to clear the old sample and reset its "
+        "rotation and scale. The next canvas click picks another. The same controls are in Patterns & "
+        "tools.");
     help_topic(
         "8. Resize, rotate and the canvas",
         "Resize accepts percentages or pixel dimensions. Keep Maintain aspect ratio checked to avoid "
         "stretching. Scale artwork uses CONV* to reconstruct the image; turn it off to change only "
         "the canvas boundary. Smaller boundaries crop. Larger ones add Color 2 around the existing "
-        "picture.\n\nRotate offers exact quarter turns, a half turn, and horizontal or vertical "
-        "flips. With a selection, only that content changes. Without one, the whole picture changes. "
+        "picture.\n\nThe round handle just outside a selection's upper-right corner turns it freely. "
+        "Drag it around the object; hold Shift for 15-degree steps. Release to finish the rotation, "
+        "then press Escape when you want to place the selection. Rotate also lets you enter any angle, "
+        "with positive numbers turning clockwise. CONV prepares the original material once and reuses "
+        "it while you drag. Large selections may take a moment to prepare.\n\nThe same menu keeps exact "
+        "quarter turns, a half turn, and horizontal or vertical flips. With a selection, only that "
+        "content changes. Without one, the whole picture rotates into an expanded canvas. "
         "Resize also has horizontal and vertical Skew angles. Drag the little handles around a selection "
         "to resize its pixels, or the three handles on the canvas edge to change the paper boundary. "
         "Properties shows dimensions and lets you change the canvas size and JPEG quality.");

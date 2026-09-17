@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
     io.IniFilename = nullptr;
     ImFontConfig font_config;
     font_config.FontDataOwnedByAtlas = false;
@@ -66,8 +67,10 @@ int main(int argc, char** argv) {
     int exit_code = 0;
     try {
         paint::Application app(window, renderer);
+        paint::MouseCursorState mouse_cursor;
         bool trace = false;
         bool demo_reshape = false;
+        bool demo_rotation = false;
         for (int i = 1; i < argc; ++i) {
             std::string argument = argv[i];
             if (argument == "--trace") {
@@ -77,10 +80,14 @@ int main(int argc, char** argv) {
                 app.screenshot_frame = 8;
             } else if (argument == "--demo-reshape") {
                 demo_reshape = true;
+            } else if (argument == "--demo-rotation") {
+                demo_rotation = true;
             } else if (argument == "--view-tab") {
                 app.view_tab = true;
             } else if (argument == "--help-sidebar") {
                 app.show_help = true;
+            } else if (argument == "--edit-colors") {
+                app.begin_color();
             } else if (argument == "--demo") {
                 app.document.new_image(960, 640);
                 paint::Ink ink;
@@ -105,6 +112,22 @@ int main(int argc, char** argv) {
             } else if (!argument.starts_with("--")) {
                 app.document.replace(paint::load_image(argument), argument);
             }
+        }
+        if (demo_rotation) {
+            app.document.new_image(960, 640);
+            paint::TextStyle text_style;
+            text_style.size = 30;
+            paint::draw_text(app.document.image, {80, 25}, "A little freedom to turn things around.",
+                             text_style, {31, 73, 125, 255}, {}, "");
+            paint::Image material;
+            material.reset(326, 251, {0, 0, 0, 0});
+            paint::Ink ink;
+            ink.primary = {79, 129, 189, 255};
+            ink.secondary = {219, 229, 241, 255};
+            ink.size = 3;
+            paint::draw_shape(material, paint::Shape::RoundedRectangle, {6, 6}, {320, 245}, ink, true, true);
+            app.document.paste(material, 270, 200);
+            app.request_rotation(-25);
         }
         if (demo_reshape) {
             std::vector<paint::Point> outline;
@@ -145,12 +168,14 @@ int main(int argc, char** argv) {
             ImGui::NewFrame();
             app.frame();
             ImGui::Render();
+            mouse_cursor.update(ImGui::GetMouseCursor());
             SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255);
             SDL_RenderClear(renderer);
             ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
             ++app.rendered_frames;
             if (!app.screenshot_path.empty() && app.rendered_frames >= app.screenshot_frame &&
-                (!demo_reshape || (!app.warp_worker.busy() && !app.reshape_render_pending))) {
+                (!demo_reshape || (!app.warp_worker.busy() && !app.reshape_render_pending)) &&
+                (!demo_rotation || (!app.warp_worker.busy() && !app.rotation_active))) {
                 SDL_Surface* surface = SDL_RenderReadPixels(renderer, nullptr);
                 if (surface) {
                     SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);

@@ -79,7 +79,7 @@ void WarpWorker::run(WarpWorker& worker) {
     result.bounds = worker.bounds_;
     try {
         if (worker.task_ == WarpTask::CompileSelection || worker.task_ == WarpTask::CompileStamp ||
-            worker.task_ == WarpTask::Transform) {
+            worker.task_ == WarpTask::CompileRotation || worker.task_ == WarpTask::Transform) {
             std::shared_ptr<ConvWarpField> field = std::make_shared<ConvWarpField>();
             (*field).compile(worker.source_);
             result.field = std::move(field);
@@ -90,8 +90,11 @@ void WarpWorker::run(WarpWorker& worker) {
         } else if (worker.task_ == WarpTask::PreviewMesh || worker.task_ == WarpTask::CommitMesh) {
             render_mesh(*worker.field_, worker.mesh_, worker.bounds_.w, worker.bounds_.h, result.image,
                         worker.task_ == WarpTask::PreviewMesh ? WarpSampling::Point : WarpSampling::Area);
-        } else if (worker.task_ == WarpTask::Stamp) {
-            render_affine(*worker.field_, worker.map_, worker.bounds_.w, worker.bounds_.h, result.image);
+        } else if (worker.task_ == WarpTask::Stamp || worker.task_ == WarpTask::PreviewRotation ||
+                   worker.task_ == WarpTask::CommitRotation) {
+            render_affine(*worker.field_, worker.map_, worker.bounds_.w, worker.bounds_.h, result.image,
+                          worker.task_ == WarpTask::PreviewRotation ? WarpSampling::Point
+                                                                    : WarpSampling::Area);
         }
     } catch (const std::exception& exception) {
         result.error = exception.what();

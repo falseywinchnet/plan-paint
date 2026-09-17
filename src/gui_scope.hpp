@@ -1,7 +1,7 @@
 #pragma once
 #include "imgui.h"
 namespace paint {
-enum class GuiEnd { Window, Child, Popup, Menu };
+enum class GuiEnd { Window, Child, Popup, Menu, Table };
 // Balances the foreign immediate-mode UI stack when an editing operation fails.
 class GuiScope {
   public:
@@ -16,6 +16,8 @@ class GuiScope {
             ImGui::EndChild();
         } else if (end_ == GuiEnd::Menu) {
             ImGui::EndMenu();
+        } else if (end_ == GuiEnd::Table) {
+            ImGui::EndTable();
         } else {
             ImGui::EndPopup();
         }
