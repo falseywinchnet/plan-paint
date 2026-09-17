@@ -44,8 +44,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python scripts/check-style.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & build/Release/rainstar-paint.exe --demo --screenshot "$env:TEMP/rainstar-windows.png"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $paintProcess = Start-Process -FilePath build/Release/rainstar-paint.exe -ArgumentList '--demo', '--screenshot', "$env:TEMP/rainstar-windows.png" -Wait -PassThru
+          if ($paintProcess.ExitCode -ne 0) { exit $paintProcess.ExitCode }
           if (!(Test-Path "$env:TEMP/rainstar-windows.png")) { throw "GUI startup did not produce a screenshot" }
       - name: Package portable folder
         shell: pwsh
