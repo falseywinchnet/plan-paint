@@ -228,6 +228,12 @@ void text_and_stale_transform(UiFixture& ui) {
     require(app.error.empty(), app.error.c_str());
 }
 void recent_files_and_desktop_layouts(UiFixture& ui) {
+    paint::Application& app = *ui.app;
+    app.zoom = 1;
+    ui.click(1258, 837);
+    require(app.zoom == 2, "status-bar zoom-in button failed");
+    ui.click(1088, 837);
+    require(app.zoom == 1, "status-bar zoom-out button failed");
     paint::Image material;
     material.reset(2, 2, {10, 30, 60, 255});
     paint::Image tiled = paint::wallpaper_image(material, 7, 5, paint::WallpaperLayout::Tile);
@@ -258,7 +264,6 @@ void recent_files_and_desktop_layouts(UiFixture& ui) {
         recent.remember(std::to_string(index));
     }
     require(recent.paths.size() == 12 && recent.paths[0] == "19", "recent files did not bound history");
-    paint::Application& app = *ui.app;
     app.execute(paint::Command::New);
     encoded = (directory / paint::path_from_utf8("日本語.png")).u8string();
     const std::string picture_path(encoded.begin(), encoded.end());

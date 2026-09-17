@@ -1448,15 +1448,31 @@ void Application::frame() {
                  io.DisplaySize.y - 158 - status_height);
         }
         if (show_status) {
+            ImDrawList& status_draw = *ImGui::GetWindowDrawList();
+            status_draw.PushClipRect({8, io.DisplaySize.y - 27},
+                                     {std::max(380.0f, io.DisplaySize.x - 445), io.DisplaySize.y}, true);
             ImGui::SetCursorPos(ImVec2(8, io.DisplaySize.y - 22));
             ImGui::TextUnformatted(status.c_str());
+            status_draw.PopClipRect();
             ImGui::SetCursorPos(ImVec2(std::max(390.0f, io.DisplaySize.x - 420), io.DisplaySize.y - 22));
             ImGui::Text("%d x %d px", document.image.width, document.image.height);
-            ImGui::SameLine(0, 35);
+            ImGui::SetCursorPos({io.DisplaySize.x - 265, io.DisplaySize.y - 22});
             ImGui::Text("%.0f%%", zoom * 100);
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(130);
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {4, 1});
+            ImGui::SetCursorPos({io.DisplaySize.x - 203, io.DisplaySize.y - 24});
+            if (ImGui::Button("-##Zoom out", {22, 20})) {
+                zoom = std::max(0.125f, zoom / 2);
+            }
+            ImGui::SetItemTooltip("Zoom out");
+            ImGui::SetCursorPos({io.DisplaySize.x - 178, io.DisplaySize.y - 24});
+            ImGui::SetNextItemWidth(140);
             ImGui::SliderFloat("##Zoom", &zoom, 0.125f, 8.0f, "", ImGuiSliderFlags_Logarithmic);
+            ImGui::SetCursorPos({io.DisplaySize.x - 33, io.DisplaySize.y - 24});
+            if (ImGui::Button("+##Zoom in", {22, 20})) {
+                zoom = std::min(8.0f, zoom * 2);
+            }
+            ImGui::SetItemTooltip("Zoom in");
+            ImGui::PopStyleVar();
         }
         dialogs();
 
