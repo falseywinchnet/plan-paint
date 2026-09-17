@@ -1,10 +1,10 @@
 #include "platform.hpp"
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
-#include <windows.h>
-#include <commdlg.h>
 #include <algorithm>
+#include <commdlg.h>
 #include <stdexcept>
+#include <windows.h>
 namespace paint {
 static HGLOBAL print_mode = nullptr;
 static HGLOBAL print_names = nullptr;
@@ -58,9 +58,9 @@ bool print_image(const Image& image) {
         bitmap.bmiHeader.biBitCount = 32;
         bitmap.bmiHeader.biCompression = BI_RGB;
         SetStretchBltMode(context, HALFTONE);
-        int result = StretchDIBits(context, (page_width - width) / 2, (page_height - height) / 2,
-                                  width, height, 0, 0, image.width, image.height, flat.pixels.data(),
-                                  &bitmap, DIB_RGB_COLORS, SRCCOPY);
+        int result =
+            StretchDIBits(context, (page_width - width) / 2, (page_height - height) / 2, width, height, 0, 0,
+                          image.width, image.height, flat.pixels.data(), &bitmap, DIB_RGB_COLORS, SRCCOPY);
         success = result != GDI_ERROR && EndPage(context) > 0;
     }
     if (success) {

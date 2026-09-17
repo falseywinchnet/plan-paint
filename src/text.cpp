@@ -3,8 +3,24 @@
 #include "stb_truetype.h"
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 namespace paint {
+EmbeddedFont portsmouth_face(const TextStyle& style) {
+    if (style.mono) {
+        return {embedded_font_mono, embedded_font_mono_size};
+    }
+    if (style.bold && style.italic) {
+        return {embedded_font_bolditalic, embedded_font_bolditalic_size};
+    }
+    if (style.bold) {
+        return {embedded_font_bold, embedded_font_bold_size};
+    }
+    if (style.italic) {
+        return {embedded_font_italic, embedded_font_italic_size};
+    }
+    return {embedded_font, embedded_font_size};
+}
 static std::uint32_t next_codepoint(const std::string& text, std::size_t& cursor) {
     std::uint32_t value = static_cast<unsigned char>(text[cursor++]);
     if (value < 128) {
@@ -24,7 +40,8 @@ static std::uint32_t next_codepoint(const std::string& text, std::size_t& cursor
 void draw_text(Image& image, Point origin, const std::string& text, const TextStyle& style, Color color,
                Color background, const std::string& font_path) {
     std::vector<unsigned char> font_bytes;
-    std::ifstream file(font_path, std::ios::binary | std::ios::ate);
+    std::ifstream file(std::filesystem::path(std::u8string(font_path.begin(), font_path.end())),
+                       std::ios::binary | std::ios::ate);
     if (file) {
         std::streamoff size = file.tellg();
         if (size > 0 && size < 32000000) {
@@ -33,7 +50,8 @@ void draw_text(Image& image, Point origin, const std::string& text, const TextSt
             file.read(reinterpret_cast<char*>(font_bytes.data()), size);
         }
     }
-    const unsigned char* data = font_bytes.empty() ? embedded_font : font_bytes.data();
+    EmbeddedFont face = portsmouth_face(style);
+    const unsigned char* data = font_bytes.empty() ? face.data : font_bytes.data();
     stbtt_fontinfo font{};
     if (!stbtt_InitFont(&font, data, stbtt_GetFontOffsetForIndex(data, 0))) {
         return;
@@ -77,9 +95,13 @@ void draw_text(Image& image, Point origin, const std::string& text, const TextSt
             stbtt_FreeBitmap(bitmap, nullptr);
         }
         if (style.underline || style.strikeout) {
-            int y = style.underline ? baseline + 2 : baseline - static_cast<int>(ascent * scale * 0.35);
             for (int x = pen; x < pen + advance_pixels; ++x) {
-                image.blend(x, y, color);
+                if (style.underline) {
+                    image.blend(x, baseline + 2, color);
+                }
+                if (style.strikeout) {
+                    image.blend(x, baseline - static_cast<int>(ascent * scale * 0.35), color);
+                }
             }
         }
         pen += advance_pixels;

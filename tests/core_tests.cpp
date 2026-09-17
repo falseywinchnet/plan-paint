@@ -110,6 +110,7 @@ void test_codecs() {
         std::filesystem::path file =
             std::filesystem::temp_directory_path() / (std::string("rainstar-codec-test.") + format);
         paint::save_image(image, file.string());
+        paint::save_image(image, file.string()); // Replacing an existing picture must work too.
         paint::Image loaded = paint::load_image(file.string());
         require(loaded.width == 17 && loaded.height == 13, "codec dimensions failed");
         if (std::string(format) != "jpg" && std::string(format) != "gif") {

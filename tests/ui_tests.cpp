@@ -34,10 +34,18 @@ class UiFixture {
         io.DisplaySize = {1280, 850};
         io.DeltaTime = 1.0f / 60;
         io.IniFilename = nullptr;
-        (*io.Fonts).AddFontDefault();
+        static const ImWchar ranges[] = {0x20, 0x024f, 0x2000, 0x2199, 0x25b2, 0x25c0, 0};
+        ImFontConfig font_config;
+        font_config.FontDataOwnedByAtlas = false;
+        ImFont* font =
+            (*io.Fonts).AddFontFromMemoryTTF(const_cast<unsigned char*>(paint::embedded_font),
+                                             paint::embedded_font_size, 18.0f, &font_config, ranges);
         unsigned char* atlas = nullptr;
         int width = 0, height = 0;
         (*io.Fonts).GetTexDataAsRGBA32(&atlas, &width, &height);
+        require((*font).FindGlyphNoFallback(0x25bc) && (*font).FindGlyphNoFallback(0x25b2) &&
+                    (*font).FindGlyphNoFallback(0x25b6) && (*font).FindGlyphNoFallback(0x25c0),
+                "Portsmouth navigation glyphs are missing from embedded UI font");
         app = std::make_unique<paint::Application>(window, renderer);
         frame();
         frame();

@@ -37,13 +37,9 @@ int main(int argc, char** argv) {
     io.IniFilename = nullptr;
     ImFontConfig font_config;
     font_config.FontDataOwnedByAtlas = false;
-    std::string font_path = paint::default_font_path();
-    if (std::filesystem::exists(font_path)) {
-        (*io.Fonts).AddFontFromFileTTF(font_path.c_str(), 13.0f);
-    } else {
-        (*io.Fonts).AddFontFromMemoryTTF(const_cast<unsigned char*>(paint::embedded_font),
-                                         paint::embedded_font_size, 13.0f, &font_config);
-    }
+    const ImWchar interface_ranges[] = {0x20, 0x024F, 0x2000, 0x2199, 0x25B2, 0x25C0, 0};
+    (*io.Fonts).AddFontFromMemoryTTF(const_cast<unsigned char*>(paint::embedded_font),
+                                     paint::embedded_font_size, 18.0f, &font_config, interface_ranges);
     ImGui::StyleColorsLight();
     ImGuiStyle& style = ImGui::GetStyle();
     style.WindowRounding = 0;
@@ -76,6 +72,8 @@ int main(int argc, char** argv) {
             } else if (argument == "--screenshot" && i + 1 < argc) {
                 app.screenshot_path = argv[++i];
                 app.screenshot_frame = 8;
+            } else if (argument == "--view-tab") {
+                app.view_tab = true;
             } else if (argument == "--help-sidebar") {
                 app.show_help = true;
             } else if (argument == "--demo") {
@@ -97,7 +95,7 @@ int main(int argc, char** argv) {
                 paint::TextStyle text_style;
                 text_style.size = 30;
                 paint::draw_text(app.document.image, {80, 25}, "A little room for a big imagination.",
-                                 text_style, {31, 73, 125, 255}, {}, paint::default_font_path());
+                                 text_style, {31, 73, 125, 255}, {}, "");
                 app.texture_dirty = true;
             } else if (!argument.starts_with("--")) {
                 app.document.replace(paint::load_image(argument), argument);
@@ -115,6 +113,7 @@ int main(int argc, char** argv) {
                 ImGui_ImplSDL3_ProcessEvent(&event);
                 app.event(event);
             }
+            app.prepare_text_font();
             ImGui_ImplSDLRenderer3_NewFrame();
             ImGui_ImplSDL3_NewFrame();
             ImGui::NewFrame();

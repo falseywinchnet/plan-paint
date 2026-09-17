@@ -2,6 +2,7 @@
 #include "codecs.hpp"
 #include "conv.hpp"
 #include "gui_scope.hpp"
+#include "imgui_impl_sdlrenderer3.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -118,6 +119,12 @@ void Application::execute(Command requested) {
     case Command::SaveAs:
         dialog.show(window, FileAction::Save, document.filename.empty() ? "Untitled.png" : document.filename);
         break;
+    case Command::PrintPreview:
+        finish_text();
+        finish_curve();
+        document.commit_path();
+        print_preview = true;
+        break;
     case Command::PageSetup:
         page_setup();
         break;
@@ -227,6 +234,8 @@ void Application::execute(Command requested) {
         }
         break;
     case Command::Properties:
+        document.commit_selection();
+        black_white = false;
         resize_width = document.image.width;
         resize_height = document.image.height;
         properties_dialog = true;
@@ -281,7 +290,7 @@ void Application::keyboard() {
         finish_text();
         return;
     }
-    if (io.WantTextInput) {
+    if (io.WantTextInput || transform_active || reshape_commit_pending) {
         return;
     }
     if (shortcut) {
@@ -706,6 +715,37 @@ void Application::finish_curve() {
     preview_active = false;
     texture_dirty = true;
 }
+void Application::prepare_text_font() {
+    if (!text_active) {
+        return;
+    }
+    std::string face = text_style.face_path;
+    std::string signature = face + "@" + std::to_string(text_style.size) + (text_style.mono ? "m" : "p") +
+                            (text_style.bold ? "b" : "r") + (text_style.italic ? "i" : "n");
+    if (signature == text_font_signature) {
+        return;
+    }
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui_ImplSDLRenderer3_DestroyFontsTexture();
+    (*io.Fonts).Clear();
+    ImFontConfig config;
+    config.FontDataOwnedByAtlas = false;
+    static const ImWchar interface_ranges[] = {0x20, 0x024F, 0x2000, 0x2199, 0x25B2, 0x25C0, 0};
+    io.FontDefault = (*io.Fonts).AddFontFromMemoryTTF(const_cast<unsigned char*>(embedded_font),
+                                                      embedded_font_size, 18.0f, &config, interface_ranges);
+    if (!face.empty() &&
+        std::filesystem::exists(std::filesystem::path(std::u8string(face.begin(), face.end())))) {
+        text_ui_font = (*io.Fonts).AddFontFromFileTTF(face.c_str(), static_cast<float>(text_style.size));
+    } else {
+        EmbeddedFont font = portsmouth_face(text_style);
+        text_ui_font =
+            (*io.Fonts).AddFontFromMemoryTTF(const_cast<unsigned char*>(font.data), font.size,
+                                             static_cast<float>(text_style.size), &config, interface_ranges);
+    }
+    (*io.Fonts).Build();
+    ImGui_ImplSDLRenderer3_CreateFontsTexture();
+    text_font_signature = signature;
+}
 void Application::finish_text() {
     if (!text_active) {
         return;
@@ -713,8 +753,7 @@ void Application::finish_text() {
     if (text_buffer[0]) {
         document.checkpoint();
         draw_text(document.image, text_origin, text_buffer, text_style, document.ink.primary,
-                  document.ink.secondary,
-                  default_font_path(text_style.mono, text_style.bold, text_style.italic));
+                  document.ink.secondary, text_style.face_path);
     }
     text_active = false;
     text_tab = false;
@@ -1034,7 +1073,15 @@ void Application::canvas(float width, float height) {
         ImGui::SetCursorScreenPos(ImVec2(origin.x + static_cast<float>(text_origin.x) * zoom,
                                          origin.y + static_cast<float>(text_origin.y) * zoom));
         ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(255, 255, 255, 235));
-        ImGui::InputTextMultiline("##Canvas text", text_buffer, sizeof(text_buffer), ImVec2(360, 130));
+        if (text_ui_font) {
+            ImGui::PushFont(text_ui_font);
+        }
+        ImGui::PushStyleColor(ImGuiCol_Text, packed(document.ink.primary));
+        ImGui::InputTextMultiline("##Canvas text", text_buffer, sizeof(text_buffer), ImVec2(440, 160));
+        ImGui::PopStyleColor();
+        if (text_ui_font) {
+            ImGui::PopFont();
+        }
         ImGui::PopStyleColor();
         if (ImGui::Button("Place text")) {
             finish_text();
@@ -1147,11 +1194,23 @@ void Application::dialogs() {
         skew_horizontal = std::clamp(skew_horizontal, -80.0, 80.0);
         skew_vertical = std::clamp(skew_vertical, -80.0, 80.0);
         if (ImGui::Button("OK", ImVec2(90, 0))) {
+            double intended_width = resize_percent
+                                        ? static_cast<double>(resize_original_width) * resize_width / 100.0
+                                        : resize_width;
+            double intended_height = resize_percent
+                                         ? static_cast<double>(resize_original_height) * resize_height / 100.0
+                                         : resize_height;
+            if (intended_width < 1 || intended_width > 32768 || intended_height < 1 ||
+                intended_height > 32768) {
+                throw std::runtime_error("Choose dimensions between 1 and 32768 pixels.");
+            }
             int width = resize_percent
-                            ? static_cast<int>(std::round(resize_original_width * resize_width / 100.0))
+                            ? static_cast<int>(std::round(static_cast<double>(resize_original_width) *
+                                                          resize_width / 100.0))
                             : resize_width;
             int height = resize_percent
-                             ? static_cast<int>(std::round(resize_original_height * resize_height / 100.0))
+                             ? static_cast<int>(std::round(static_cast<double>(resize_original_height) *
+                                                           resize_height / 100.0))
                              : resize_height;
             if (skew_horizontal != 0.0 || skew_vertical != 0.0) {
                 request_skew(width, height);
@@ -1166,6 +1225,39 @@ void Application::dialogs() {
             ImGui::CloseCurrentPopup();
         }
     }
+    if (print_preview) {
+        ImGui::OpenPopup("Print preview");
+        print_preview = false;
+    }
+    ImGui::SetNextWindowSize({650, 640}, ImGuiCond_Appearing);
+    if (ImGui::BeginPopupModal("Print preview", nullptr, ImGuiWindowFlags_NoResize)) {
+        GuiScope popup_scope(GuiEnd::Popup);
+        if (ImGui::Button("Print...")) {
+            command(Command::Print);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Page setup...")) {
+            page_setup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Close preview")) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::TextWrapped(
+            "Artwork preview. The system print dialog controls paper, orientation and copies.");
+        ImVec2 available = ImGui::GetContentRegionAvail();
+        float factor =
+            std::min((available.x - 24) / document.image.width, (available.y - 24) / document.image.height);
+        ImVec2 start = ImGui::GetCursorScreenPos();
+        start.x += (available.x - document.image.width * factor) / 2;
+        start.y += 12;
+        ImVec2 end(start.x + document.image.width * factor, start.y + document.image.height * factor);
+        ImDrawList& draw = *ImGui::GetWindowDrawList();
+        draw.AddRectFilled({start.x + 4, start.y + 4}, {end.x + 4, end.y + 4}, IM_COL32(160, 171, 184, 255));
+        draw.AddRectFilled(start, end, IM_COL32(255, 255, 255, 255));
+        draw.AddImage(reinterpret_cast<ImTextureID>(canvas_texture), start, end);
+        draw.AddRect(start, end, IM_COL32(90, 108, 130, 255));
+    }
     if (properties_dialog) {
         ImGui::OpenPopup("Image Properties");
         properties_dialog = false;
@@ -1177,8 +1269,18 @@ void Application::dialogs() {
         ImGui::InputInt("Canvas width", &resize_width);
         ImGui::InputInt("Canvas height", &resize_height);
         ImGui::SliderInt("JPEG quality", &jpeg_quality, 1, 100);
+        ImGui::Checkbox("Convert to black and white", &black_white);
         if (ImGui::Button("OK", ImVec2(90, 0))) {
             document.resize(resize_width, resize_height, false);
+            if (black_white) {
+                for (Color& pixel : document.image.pixels) {
+                    unsigned brightness = 54u * pixel.r + 183u * pixel.g + 19u * pixel.b;
+                    std::uint8_t value = brightness >= 128u * 256u ? 255 : 0;
+                    pixel.r = value;
+                    pixel.g = value;
+                    pixel.b = value;
+                }
+            }
             texture_dirty = true;
             ImGui::CloseCurrentPopup();
         }

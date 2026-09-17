@@ -12,6 +12,7 @@ enum class Command {
     SaveAs,
     Print,
     PageSetup,
+    PrintPreview,
     Quit,
     Undo,
     Redo,
@@ -45,6 +46,7 @@ struct Application {
     bool texture_dirty = true, preview_active = false, dragging = false, moving_selection = false;
     bool color_dialog = false, resize_dialog = false, properties_dialog = false, about_dialog = false;
     bool text_active = false, unsaved_dialog = false;
+    bool print_preview = false, black_white = false;
     Command deferred_command = Command::New;
     bool deferred_after_save = false;
     bool primary_slot = true;
@@ -70,6 +72,10 @@ struct Application {
     int rendered_frames = 0;
     char text_buffer[8192] = {};
     TextStyle text_style;
+    std::vector<std::string> font_paths;
+    ImFont* text_ui_font = nullptr;
+    std::string text_font_signature;
+    void prepare_text_font();
     Point text_origin;
     Lab edited_lab;
     float edited_rgb[3] = {};

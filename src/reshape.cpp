@@ -128,8 +128,8 @@ void Application::poll_warp() {
         } else if (result.task == WarpTask::CompileSelection) {
             if (reshape_active) {
                 reshape_field = std::move(result.field);
+                status = "Drag the blue knobs. A red warning means the mesh would fold. Escape commits.";
             }
-            status = "Drag the blue knobs. A red warning means the mesh would fold. Escape commits.";
         } else if (result.task == WarpTask::CompileStamp) {
             stamp_field = std::move(result.field);
         } else if (result.task == WarpTask::PreviewMesh || result.task == WarpTask::CommitMesh) {
@@ -203,8 +203,8 @@ void Application::request_skew(int width, int height) {
     if (warp_worker.busy()) {
         throw std::runtime_error("Finish the current transform first.");
     }
-    if (!std::isfinite(skew_horizontal) || !std::isfinite(skew_vertical) ||
-        std::abs(skew_horizontal) > 80 || std::abs(skew_vertical) > 80) {
+    if (!std::isfinite(skew_horizontal) || !std::isfinite(skew_vertical) || std::abs(skew_horizontal) > 80 ||
+        std::abs(skew_vertical) > 80) {
         throw std::runtime_error("Skew angles must be between -80 and 80 degrees.");
     }
     const Image& input = document.selection.active ? document.selection.image : document.image;

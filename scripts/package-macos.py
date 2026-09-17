@@ -3,6 +3,7 @@
 from pathlib import Path
 import argparse
 import json
+import plistlib
 import shutil
 import subprocess
 
@@ -29,10 +30,16 @@ def main():
     executable = app / "Contents/MacOS/rainstar-paint"
     frameworks = app / "Contents/Frameworks"
     resources = app / "Contents/Resources"
+    plist_path = app / "Contents/Info.plist"
+    plist = plistlib.loads(plist_path.read_bytes())
+    plist["LSMinimumSystemVersion"] = "26.0"
+    plist["CFBundleDocumentTypes"] = [{"CFBundleTypeName": "Image", "CFBundleTypeRole": "Editor", "LSHandlerRank": "Alternate", "LSItemContentTypes": ["public.image"]}]
+    plist_path.write_bytes(plistlib.dumps(plist))
     frameworks.mkdir(exist_ok=True)
     resources.mkdir(exist_ok=True)
     shutil.copy2(ROOT / "LICENSE", resources)
     shutil.copy2(ROOT / "THIRD_PARTY_NOTICES.md", resources)
+    shutil.copy2(ROOT / "assets/fonts/PROJECT.md", resources / "Portsmouth-PROJECT.md")
     notices = resources / "licenses"
     if (ROOT / "packaging/licenses").exists():
         shutil.copytree(ROOT / "packaging/licenses", notices, dirs_exist_ok=True)

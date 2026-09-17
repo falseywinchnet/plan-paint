@@ -8,6 +8,9 @@ Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail
 - SDL3: zlib license. https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt
 - libtiff: permissive TIFF license. https://gitlab.com/libtiff/libtiff/-/blob/master/LICENSE.md
 - libwebp: BSD-style license. https://chromium.googlesource.com/webm/libwebp/+/HEAD/COPYING
-- Droid Sans font embedded as fallback: Apache License 2.0, Google/Ascender. See vendor/imgui/docs/FONTS.md and the upstream Droid font license. System fonts are used when installed; they are not redistributed.
+- Portsmouth Regular, Bold, Italic, Bold Italic and Mono: the project owner's supplied font family, embedded unmodified. The source identities, original metadata, and construction record are preserved in assets/fonts/PROJECT.md. Portsmouth supplies the interface text and custom navigation glyphs. System fonts selected for artwork are not redistributed.
+- The vendored Dear ImGui source tree also contains Droid Sans under Apache License 2.0; it is not the application interface font.
 
 Microsoft, Windows and Paint names identify the reference application and belong to their respective owner. Rainstar Paint is independent and uses newly drawn icons.
+
+Binary packages also carry the notices for their bundled codec dependencies. macOS bundles zstd under its BSD option, liblzma under 0BSD, and libjpeg-turbo under the IJG/BSD terms. This software is based in part on the work of the Independent JPEG Group. Windows packages include each installed vcpkg dependency's copyright notice. Linux uses the host GTK 3 desktop print service; GTK is not part of the MIT application and is not redistributed in the portable folder.

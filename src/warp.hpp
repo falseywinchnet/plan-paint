@@ -21,7 +21,7 @@ struct WarpSample {
 // compile() prepares a replacement before publishing; old state survives failure.
 class ConvWarpField {
   public:
-    void compile(const Image &source);
+    void compile(const Image& source);
     [[nodiscard]] WarpSample sample_premultiplied(Point source_position) const;
     [[nodiscard]] Color sample(Point source_position) const;
     [[nodiscard]] int width() const {
@@ -46,9 +46,9 @@ enum class WarpSampling { Point, Area };
 // All output pixels are replaced. Invalid maps leave destination unchanged.
 // affine_bounds includes every target pixel basin intersecting the transformed
 // source footprint. Subtract returned x/y from map.tx/map.ty before rendering.
-[[nodiscard]] Rect affine_bounds(const ConvWarpField &field, const AffineMap &source_to_target);
-void render_affine(const ConvWarpField &field, const AffineMap &source_to_target, int width, int height,
-                   Image &destination, WarpSampling sampling = WarpSampling::Area);
+[[nodiscard]] Rect affine_bounds(const ConvWarpField& field, const AffineMap& source_to_target);
+void render_affine(const ConvWarpField& field, const AffineMap& source_to_target, int width, int height,
+                   Image& destination, WarpSampling sampling = WarpSampling::Area);
 
 struct MeshNode {
     Point source;
@@ -66,15 +66,15 @@ struct ReshapeMesh {
 // A simple lasso outline in local image coordinates. Counterclockwise and
 // clockwise input are accepted; self-intersections and zero area are rejected.
 // Boundary edges are subdivided and interior points inserted at spacing.
-[[nodiscard]] ReshapeMesh make_reshape_mesh(const std::vector<Point> &outline, double spacing);
+[[nodiscard]] ReshapeMesh make_reshape_mesh(const std::vector<Point>& outline, double spacing);
 // Rectangle helper; use the polygon overload for the actual lasso outline.
-[[nodiscard]] ReshapeMesh make_reshape_mesh(const Image &source, double spacing);
+[[nodiscard]] ReshapeMesh make_reshape_mesh(const Image& source, double spacing);
 // Rejects inverted/near-degenerate triangles and intersecting boundary edges.
 // Mesh topology must come from make_reshape_mesh; only target nodes may change.
 // Failure preserves the previous target point.
-[[nodiscard]] bool move_reshape_node(ReshapeMesh &mesh, std::size_t node, Point target);
-[[nodiscard]] bool reshape_mesh_valid(const ReshapeMesh &mesh);
+[[nodiscard]] bool move_reshape_node(ReshapeMesh& mesh, std::size_t node, Point target);
+[[nodiscard]] bool reshape_mesh_valid(const ReshapeMesh& mesh);
 // Mesh geometry is piecewise affine. Pixel values always use the CONV* atlas.
-void render_mesh(const ConvWarpField &field, const ReshapeMesh &mesh, int width, int height,
-                 Image &destination, WarpSampling sampling = WarpSampling::Area);
+void render_mesh(const ConvWarpField& field, const ReshapeMesh& mesh, int width, int height,
+                 Image& destination, WarpSampling sampling = WarpSampling::Area);
 } // namespace paint

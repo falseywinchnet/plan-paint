@@ -2,6 +2,7 @@
 #include "gui_scope.hpp"
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 namespace paint {
 void classic_icon(ImDrawList& draw, int icon, ImVec2 position, float size, ImU32 color) {
     float x = position.x, y = position.y, s = size;
@@ -9,6 +10,11 @@ void classic_icon(ImDrawList& draw, int icon, ImVec2 position, float size, ImU32
           edge = IM_COL32(76, 88, 101, 255);
     if (icon >= 100 && icon < 123) {
         Shape shape = static_cast<Shape>(icon - 100);
+        if (shape == Shape::Curve) {
+            draw.AddBezierCubic({x + 1, y + s - 3}, {x + s * .35f, y - s * .4f}, {x + s * .65f, y + s * 1.4f},
+                                {x + s - 1, y + 3}, color, 1.3f);
+            return;
+        }
         std::vector<Point> points = shape_points(shape, {x + 2, y + 2}, {x + s - 2, y + s - 2});
         for (std::size_t i = 1; i < points.size(); ++i) {
             draw.AddLine(ImVec2(static_cast<float>(points[i - 1].x), static_cast<float>(points[i - 1].y)),
@@ -23,14 +29,25 @@ void classic_icon(ImDrawList& draw, int icon, ImVec2 position, float size, ImU32
         return;
     }
     switch (icon) {
-    case 0: // clipboard
-        draw.AddRectFilled(ImVec2(x + s * .2f, y + s * .1f), ImVec2(x + s * .8f, y + s * .94f), gold, 1);
-        draw.AddRect(ImVec2(x + s * .2f, y + s * .1f), ImVec2(x + s * .8f, y + s * .94f), edge);
-        draw.AddRectFilled(ImVec2(x + s * .38f, y), ImVec2(x + s * .63f, y + s * .2f),
-                           IM_COL32(190, 198, 203, 255), 2);
-        draw.AddRectFilled(ImVec2(x + s * .4f, y + s * .32f), ImVec2(x + s * .98f, y + s * .98f),
-                           IM_COL32(255, 255, 255, 255));
-        draw.AddRect(ImVec2(x + s * .4f, y + s * .32f), ImVec2(x + s * .98f, y + s * .98f), blue);
+    case 0: // Clipboard with bevelled clip and ruled paper.
+        draw.AddRectFilled({x + s * .16f, y + s * .12f}, {x + s * .87f, y + s * .96f},
+                           IM_COL32(120, 78, 44, 255), 2);
+        draw.AddRectFilledMultiColor({x + s * .20f, y + s * .15f}, {x + s * .83f, y + s * .91f},
+                                     IM_COL32(225, 179, 105, 255), IM_COL32(190, 135, 71, 255),
+                                     IM_COL32(149, 97, 51, 255), IM_COL32(202, 154, 89, 255));
+        draw.AddRectFilled({x + s * .27f, y + s * .24f}, {x + s * .77f, y + s * .85f},
+                           IM_COL32(250, 253, 255, 255));
+        draw.AddRect({x + s * .27f, y + s * .24f}, {x + s * .77f, y + s * .85f},
+                     IM_COL32(107, 136, 157, 255));
+        for (int line = 0; line < 6; ++line) {
+            float ly = y + s * (.34f + line * .075f);
+            draw.AddLine({x + s * .33f, ly}, {x + s * .7f, ly}, IM_COL32(184, 204, 219, 255));
+        }
+        draw.AddRectFilledMultiColor({x + s * .35f, y + s * .08f}, {x + s * .68f, y + s * .26f},
+                                     IM_COL32(250, 251, 247, 255), IM_COL32(236, 241, 242, 255),
+                                     IM_COL32(130, 148, 158, 255), IM_COL32(187, 200, 206, 255));
+        draw.AddRect({x + s * .35f, y + s * .08f}, {x + s * .68f, y + s * .26f}, edge, 1);
+        draw.AddCircleFilled({x + s * .51f, y + s * .08f}, s * .065f, IM_COL32(150, 164, 174, 255));
         break;
     case 1: // scissors
         draw.AddCircle(ImVec2(x + s * .2f, y + s * .75f), s * .13f, blue, 10, 1.7f);
@@ -108,14 +125,29 @@ void classic_icon(ImDrawList& draw, int icon, ImVec2 position, float size, ImU32
         draw.AddCircle(ImVec2(x + s * .4f, y + s * .4f), s * .28f, blue, 20, 2);
         draw.AddLine(ImVec2(x + s * .61f, y + s * .61f), ImVec2(x + s * .91f, y + s * .91f), edge, 3);
         break;
-    case 13:
-        draw.AddLine(ImVec2(x + s * .75f, y + s * .05f), ImVec2(x + s * .45f, y + s * .54f),
-                     IM_COL32(160, 96, 48, 255), s * .17f);
-        draw.AddQuadFilled(ImVec2(x + s * .25f, y + s * .48f), ImVec2(x + s * .56f, y + s * .62f),
-                           ImVec2(x + s * .46f, y + s * .92f), ImVec2(x + s * .1f, y + s * .79f),
-                           IM_COL32(41, 92, 157, 255));
-        draw.AddLine(ImVec2(x + s * .27f, y + s * .49f), ImVec2(x + s * .55f, y + s * .61f),
-                     IM_COL32(166, 183, 194, 255), s * .13f);
+    case 13: // Paint stroke, varnished handle, metal ferrule and bristles.
+        draw.AddBezierCubic({x + s * .4f, y + s * .16f}, {x - s * .17f, y + s * .30f},
+                            {x + s * .08f, y + s * .94f}, {x + s * .68f, y + s * .83f},
+                            IM_COL32(232, 119, 27, 255), s * .11f);
+        draw.AddQuadFilled({x + s * .73f, y + s * .02f}, {x + s * .91f, y + s * .16f},
+                           {x + s * .59f, y + s * .61f}, {x + s * .39f, y + s * .46f},
+                           IM_COL32(99, 65, 41, 255));
+        draw.AddQuadFilled({x + s * .75f, y + s * .05f}, {x + s * .85f, y + s * .13f},
+                           {x + s * .54f, y + s * .54f}, {x + s * .46f, y + s * .47f},
+                           IM_COL32(213, 158, 93, 255));
+        draw.AddQuadFilled({x + s * .46f, y + s * .39f}, {x + s * .68f, y + s * .55f},
+                           {x + s * .57f, y + s * .71f}, {x + s * .33f, y + s * .54f},
+                           IM_COL32(117, 147, 169, 255));
+        draw.AddLine({x + s * .45f, y + s * .44f}, {x + s * .61f, y + s * .56f}, IM_COL32(235, 247, 255, 255),
+                     s * .07f);
+        draw.AddQuadFilled({x + s * .32f, y + s * .53f}, {x + s * .58f, y + s * .71f},
+                           {x + s * .39f, y + s * .96f}, {x + s * .13f, y + s * .79f},
+                           IM_COL32(141, 92, 51, 255));
+        for (int line = 0; line < 4; ++line) {
+            float shift = line * s * .052f;
+            draw.AddLine({x + s * .30f + shift, y + s * .57f + shift * .6f},
+                         {x + s * .18f + shift, y + s * .78f + shift * .6f}, IM_COL32(220, 173, 103, 255), 1);
+        }
         break;
     case 14:
         draw.AddRectFilled(ImVec2(x + s * .08f, y + s * .05f), ImVec2(x + s * .92f, y + s * .95f),
@@ -192,11 +224,14 @@ bool ribbon_button(const char* id, const char* label, int icon, ImVec2 position,
     ImDrawList& draw = *ImGui::GetWindowDrawList();
     ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
     if (hovered || selected) {
-        draw.AddRectFilled(a, b, selected ? IM_COL32(204, 228, 249, 255) : IM_COL32(229, 241, 252, 255));
-        draw.AddRect(a, b, selected ? IM_COL32(125, 174, 217, 255) : IM_COL32(169, 204, 232, 255));
+        ImU32 top = selected ? IM_COL32(255, 237, 186, 255) : IM_COL32(255, 249, 228, 255);
+        ImU32 bottom = selected ? IM_COL32(255, 207, 102, 255) : IM_COL32(255, 228, 157, 255);
+        draw.AddRectFilledMultiColor(a, b, top, top, bottom, bottom);
+        draw.AddRect(a, b, selected ? IM_COL32(196, 147, 50, 255) : IM_COL32(219, 182, 109, 255), 2);
+        draw.AddRect({a.x + 1, a.y + 1}, {b.x - 1, b.y - 1}, IM_COL32(255, 255, 238, 215), 1);
     }
     bool tall = size.y > 40;
-    float icon_size = tall ? 28.0f : 16.0f;
+    float icon_size = tall ? 32.0f : 16.0f;
     if (icon >= 0) {
         classic_icon(
             draw, icon,
@@ -204,12 +239,19 @@ bool ribbon_button(const char* id, const char* label, int icon, ImVec2 position,
             icon_size);
     }
     if (label && label[0]) {
-        ImVec2 text = ImGui::CalcTextSize(label);
-        draw.AddText(ImVec2(a.x + (tall       ? (size.x - text.x) / 2
-                                   : icon < 0 ? (size.x - text.x) / 2
-                                              : 25),
-                            a.y + (tall ? 38 : (size.y - text.y) / 2)),
-                     IM_COL32(35, 49, 64, 255), label);
+        const char* line = label;
+        float text_y = a.y + (tall ? 38.0f : (size.y - ImGui::GetFontSize()) / 2);
+        while (*line) {
+            const char* end = line;
+            while (*end && *end != '\n') {
+                ++end;
+            }
+            ImVec2 text = ImGui::CalcTextSize(line, end);
+            float text_x = a.x + ((tall || icon < 0) ? (size.x - text.x) / 2 : 25);
+            draw.AddText({std::floor(text_x), std::floor(text_y)}, IM_COL32(35, 49, 64, 255), line, end);
+            text_y += 15.0f;
+            line = *end ? end + 1 : end;
+        }
     }
     if (hovered && tooltip) {
         ImGui::SetTooltip("%s", tooltip);
@@ -217,13 +259,37 @@ bool ribbon_button(const char* id, const char* label, int icon, ImVec2 position,
     ImGui::PopID();
     return clicked;
 }
+static bool ribbon_tab(const char* id, const char* label, float left, float width, bool active) {
+    ImGui::SetCursorPos({left, 27});
+    bool clicked = ImGui::InvisibleButton(id, {width, 26});
+    ImDrawList& draw = *ImGui::GetWindowDrawList();
+    ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
+    if (active) {
+        draw.AddRectFilled({a.x + 2, a.y - 1}, {b.x + 2, b.y}, IM_COL32(129, 151, 175, 95), 3);
+        draw.AddRectFilledMultiColor({a.x, a.y - 1}, {b.x, b.y + 1}, IM_COL32(255, 255, 255, 255),
+                                     IM_COL32(255, 255, 255, 255), IM_COL32(247, 251, 255, 255),
+                                     IM_COL32(247, 251, 255, 255));
+        draw.AddLine({a.x, a.y + 2}, {a.x, b.y}, IM_COL32(125, 157, 192, 255));
+        draw.AddLine({b.x, a.y + 2}, {b.x, b.y}, IM_COL32(125, 157, 192, 255));
+        draw.AddLine({a.x + 1, a.y}, {b.x - 1, a.y}, IM_COL32(131, 161, 193, 255));
+        draw.AddLine({a.x + 1, b.y}, {b.x - 1, b.y}, IM_COL32(247, 251, 255, 255), 2);
+    } else if (ImGui::IsItemHovered()) {
+        draw.AddRectFilled({a.x, a.y + 1}, b, IM_COL32(226, 239, 252, 255), 2);
+        draw.AddRect({a.x, a.y + 1}, b, IM_COL32(158, 184, 211, 255), 2);
+    }
+    ImVec2 text = ImGui::CalcTextSize(label);
+    draw.AddText({std::floor(a.x + (width - text.x) / 2), a.y + 4}, IM_COL32(29, 51, 77, 255), label);
+    return clicked;
+}
 static void group_label(float left, float right, const char* label) {
     ImDrawList& draw = *ImGui::GetWindowDrawList();
     ImVec2 base = ImGui::GetWindowPos();
     draw.AddLine(ImVec2(base.x + right, base.y + 57), ImVec2(base.x + right, base.y + 148),
-                 IM_COL32(210, 215, 221, 255));
+                 IM_COL32(170, 191, 213, 255));
+    draw.AddLine(ImVec2(base.x + right + 1, base.y + 57), ImVec2(base.x + right + 1, base.y + 148),
+                 IM_COL32(255, 255, 255, 235));
     ImVec2 size = ImGui::CalcTextSize(label);
-    draw.AddText(ImVec2(base.x + (left + right - size.x) / 2, base.y + 139), IM_COL32(88, 103, 121, 255),
+    draw.AddText(ImVec2(base.x + (left + right - size.x) / 2, base.y + 137), IM_COL32(88, 103, 121, 255),
                  label);
 }
 static bool command_menu(const char* name, const char* shortcut, Application& app, Command command,
@@ -240,11 +306,13 @@ void Application::ribbon(float width) {
     draw.AddRectFilledMultiColor(ImVec2(base.x, base.y), ImVec2(base.x + width, base.y + 27),
                                  IM_COL32(225, 237, 250, 255), IM_COL32(239, 245, 252, 255),
                                  IM_COL32(214, 229, 245, 255), IM_COL32(213, 231, 249, 255));
-    draw.AddRectFilled(ImVec2(base.x, base.y + 27), ImVec2(base.x + width, base.y + 52),
-                       IM_COL32(246, 248, 250, 255));
+    draw.AddRectFilledMultiColor(ImVec2(base.x, base.y + 27), ImVec2(base.x + width, base.y + 53),
+                                 IM_COL32(191, 211, 234, 255), IM_COL32(208, 224, 242, 255),
+                                 IM_COL32(181, 203, 227, 255), IM_COL32(178, 202, 228, 255));
+    draw.AddLine({base.x, base.y + 52}, {base.x + width, base.y + 52}, IM_COL32(132, 158, 188, 255));
     draw.AddRectFilledMultiColor(ImVec2(base.x, base.y + 52), ImVec2(base.x + width, base.y + 157),
-                                 IM_COL32(250, 251, 252, 255), IM_COL32(250, 251, 252, 255),
-                                 IM_COL32(230, 236, 244, 255), IM_COL32(230, 236, 244, 255));
+                                 IM_COL32(247, 251, 255, 255), IM_COL32(247, 251, 255, 255),
+                                 IM_COL32(216, 228, 241, 255), IM_COL32(216, 228, 241, 255));
     draw.AddLine(ImVec2(base.x, base.y + 157), ImVec2(base.x + width, base.y + 157),
                  IM_COL32(168, 184, 204, 255));
     classic_icon(draw, 13, ImVec2(base.x + 8, base.y + 4), 18);
@@ -266,19 +334,19 @@ void Application::ribbon(float width) {
         ImGui::OpenPopup("File");
     }
     draw.AddText(ImVec2(base.x + 16, base.y + 32), IM_COL32(255, 255, 255, 255), "File");
-    if (ribbon_button("Home tab", "Home", -1, {59, 27}, {58, 25}, !view_tab && !text_tab)) {
+    if (ribbon_tab("Home tab", "Home", 59, 58, !view_tab && !text_tab)) {
         view_tab = false;
         text_tab = false;
     }
-    if (ribbon_button("View tab", "View", -1, {118, 27}, {56, 25}, view_tab)) {
+    if (ribbon_tab("View tab", "View", 118, 56, view_tab)) {
         view_tab = true;
         text_tab = false;
     }
-    if (text_active && ribbon_button("Text tab", "Text", -1, {175, 27}, {56, 25}, text_tab)) {
+    if (text_active && ribbon_tab("Text tab", "Text", 175, 56, text_tab)) {
         text_tab = true;
         view_tab = false;
     }
-    if (ribbon_button("Extras menu", "Patterns & tools", -1, {text_active ? 235.0f : 183.0f, 27}, {112, 25},
+    if (ribbon_button("Extras menu", "Patterns & tools", -1, {text_active ? 235.0f : 183.0f, 27}, {145, 25},
                       false, "Pattern fills, continuous paths, rubber stamps and reshape")) {
         ImGui::OpenPopup("Extra tools");
     }
@@ -294,6 +362,7 @@ void Application::ribbon(float width) {
         ImGui::Separator();
         command_menu("Print...", "Ctrl+P", *this, Command::Print);
         command_menu("Page setup...", nullptr, *this, Command::PageSetup);
+        command_menu("Print preview", nullptr, *this, Command::PrintPreview);
         command_menu("Properties", "Ctrl+E", *this, Command::Properties);
         ImGui::Separator();
         command_menu("About Rainstar Paint", nullptr, *this, Command::About);
@@ -374,11 +443,31 @@ void Application::ribbon(float width) {
     }
     if (text_tab && text_active) {
         ImGui::SetCursorPos({12, 63});
-        const char* fonts[] = {"Arial / Sans serif", "Courier / Monospace"};
-        int font = text_style.mono ? 1 : 0;
+        if (font_paths.empty()) {
+            font_paths = installed_fonts();
+        }
+        std::string font_name = text_style.face_path.empty()
+                                    ? (text_style.mono ? "Portsmouth Mono" : "Portsmouth")
+                                    : std::filesystem::path(text_style.face_path).stem().string();
         ImGui::SetNextItemWidth(185);
-        if (ImGui::Combo("##Font", &font, fonts, 2)) {
-            text_style.mono = font == 1;
+        if (ImGui::BeginCombo("##Font", font_name.c_str())) {
+            if (ImGui::Selectable("Portsmouth")) {
+                text_style.face_path.clear();
+                text_style.mono = false;
+            }
+            if (ImGui::Selectable("Portsmouth Mono")) {
+                text_style.face_path.clear();
+                text_style.mono = true;
+            }
+            for (const std::string& path : font_paths) {
+                std::string name = std::filesystem::path(path).stem().string();
+                ImGui::PushID(path.c_str());
+                if (ImGui::Selectable(name.c_str(), text_style.face_path == path)) {
+                    text_style.face_path = path;
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndCombo();
         }
         ImGui::SetCursorPos({12, 96});
         ImGui::SetNextItemWidth(90);
@@ -408,7 +497,7 @@ void Application::ribbon(float width) {
     if (ribbon_button("Paste", "Paste", 0, {5, 57}, {48, 68}, false, "Paste an image from the clipboard")) {
         command(Command::Paste);
     }
-    if (ribbon_button("Paste dropdown", "v", -1, {7, 126}, {43, 13})) {
+    if (ribbon_button("Paste dropdown", "▼", -1, {7, 126}, {43, 13})) {
         ImGui::OpenPopup("Paste choices");
     }
     if (ImGui::BeginPopup("Paste choices")) {
@@ -427,7 +516,7 @@ void Application::ribbon(float width) {
                       document.tool == Tool::Select || document.tool == Tool::Lasso)) {
         choose_tool(Tool::Select);
     }
-    if (ribbon_button("Selection menu", "v", -1, {118, 126}, {44, 13})) {
+    if (ribbon_button("Selection menu", "▼", -1, {118, 126}, {44, 13})) {
         ImGui::OpenPopup("Selection");
     }
     if (ImGui::BeginPopup("Selection")) {
@@ -450,7 +539,7 @@ void Application::ribbon(float width) {
     if (ribbon_button("Resize", "Resize", 5, {171, 84}, {72, 23})) {
         command(Command::Resize);
     }
-    if (ribbon_button("Rotate", "Rotate v", 6, {171, 110}, {76, 23})) {
+    if (ribbon_button("Rotate", "Rotate ▼", 6, {171, 110}, {76, 23})) {
         ImGui::OpenPopup("Rotate");
     }
     if (ImGui::BeginPopup("Rotate")) {
@@ -466,13 +555,18 @@ void Application::ribbon(float width) {
     const Tool tools[6] = {Tool::Pencil, Tool::Fill, Tool::Text, Tool::Eraser, Tool::Picker, Tool::Magnifier};
     const char* names[6] = {"Pencil", "Fill with color", "Text", "Eraser", "Color picker", "Magnifier"};
     for (int i = 0; i < 6; ++i) {
+        ImVec2 tile(base.x + 261.0f + (i % 3) * 25, base.y + 63.0f + (i / 3) * 28);
+        draw.AddRectFilledMultiColor(tile, {tile.x + 24, tile.y + 25}, IM_COL32(253, 255, 255, 255),
+                                     IM_COL32(253, 255, 255, 255), IM_COL32(225, 234, 243, 255),
+                                     IM_COL32(225, 234, 243, 255));
+        draw.AddRect(tile, {tile.x + 24, tile.y + 25}, IM_COL32(173, 194, 215, 255));
         if (ribbon_button(names[i], nullptr, 7 + i, {261.0f + (i % 3) * 25.0f, 63.0f + (i / 3) * 28.0f},
                           {24, 25}, document.tool == tools[i], names[i])) {
             choose_tool(tools[i]);
         }
     }
     group_label(253, 341, "Tools");
-    if (ribbon_button("Brushes", "Brushes", 13, {346, 57}, {58, 68}, document.tool == Tool::Brush)) {
+    if (ribbon_button("Brushes", "Brushes\n▼", 13, {346, 57}, {58, 68}, document.tool == Tool::Brush)) {
         choose_tool(Tool::Brush);
         ImGui::OpenPopup("Brushes");
     }
@@ -500,7 +594,7 @@ void Application::ribbon(float width) {
             document.shape = static_cast<Shape>(i);
         }
     }
-    if (ribbon_button("More shapes", "v", -1, {596, 60}, {15, 72})) {
+    if (ribbon_button("More shapes", "▼", -1, {596, 60}, {15, 72})) {
         ImGui::OpenPopup("Shape gallery");
     }
     if (ImGui::BeginPopup("Shape gallery")) {
@@ -513,7 +607,7 @@ void Application::ribbon(float width) {
             }
         }
     }
-    if (ribbon_button("Outline", "Outline v", -1, {614, 61}, {78, 25})) {
+    if (ribbon_button("Outline", "Outline ▼", -1, {614, 61}, {78, 25})) {
         ImGui::OpenPopup("Outline style");
     }
     if (ImGui::BeginPopup("Outline style")) {
@@ -532,7 +626,7 @@ void Application::ribbon(float width) {
             }
         }
     }
-    if (ribbon_button("Fill", "Fill v", -1, {614, 88}, {78, 25})) {
+    if (ribbon_button("Fill", "Fill ▼", -1, {614, 88}, {78, 25})) {
         ImGui::OpenPopup("Fill style");
     }
     if (ImGui::BeginPopup("Fill style")) {
@@ -554,7 +648,7 @@ void Application::ribbon(float width) {
         }
     }
     group_label(410, 701, "Shapes");
-    if (ribbon_button("Size", "Size", -1, {708, 57}, {49, 76})) {
+    if (ribbon_button("Size", "Size\n▼", -1, {708, 57}, {49, 76})) {
         ImGui::OpenPopup("Stroke size");
     }
     for (int i = 0; i < 4; ++i) {
@@ -576,7 +670,7 @@ void Application::ribbon(float width) {
     group_label(701, 765, "");
     for (int slot = 0; slot < 2; ++slot) {
         float x = 771.0f + slot * 47;
-        if (ribbon_button(slot == 0 ? "Color1" : "Color2", slot == 0 ? "Color 1" : "Color 2", -1, {x, 57},
+        if (ribbon_button(slot == 0 ? "Color1" : "Color2", slot == 0 ? "Color\n1" : "Color\n2", -1, {x, 57},
                           {44, 75}, primary_slot == (slot == 0))) {
             primary_slot = slot == 0;
         }

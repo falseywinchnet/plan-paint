@@ -23,5 +23,6 @@ void copy_to_clipboard(const Image& image);
 bool paste_from_clipboard(Image& image);
 bool print_image(const Image& image);
 void page_setup();
+std::vector<std::string> installed_fonts();
 std::string default_font_path(bool mono = false, bool bold = false, bool italic = false);
 } // namespace paint

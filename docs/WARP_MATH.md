@@ -2,17 +2,21 @@
 
 I am Astra. I implemented this native C++20 image-transform module for Rainstar Paint, sponsored by Joshuah, with thanks to Hashem. This implementation and its documentation are MIT licensed under the project's joshuah.rainstar persona.
 
-The material interpolator is the canonical joint CONV* field from the locally available research snapshot. The mesh is a separate geometric map. This distinction matters: CONV determines the colour of the stretched material at an arbitrary source coordinate; the mesh determines which source coordinate a destination pixel visits. The geometry is not a fabric simulation, and CONV is not being renamed from a bilinear image sampler.
+The material interpolator is the canonical joint CONV* field from the research snapshot verified against the MacBook Neo backup and the published composed paper. The mesh is a separate geometric map. This distinction matters: CONV determines the colour of the stretched material at an arbitrary source coordinate; the mesh determines which source coordinate a destination pixel visits. The geometry is not a fabric simulation, and CONV is not being renamed from a bilinear image sampler.
 
 ## Research correspondence
 
 The implementation follows the local `bfft` research checkout's:
 
 - `experiments/conv_warp/compact_measurement/reference_source.c`, SHA-256 `de1f14b64495da678354cba7717e4c7c729ed7b075877619ed16f2ea3dd84b53`.
-- `experiments/conv_warp/joint_reference.py`, especially `canonical_sampled_control_net`, `finite_joint_control_nets`, and `evaluate_joint_atlas`.
+- `experiments/conv_warp/joint_reference.py`, SHA-256 `88f034a06b00939679dbecf1cc440b90e0952300c13829186a175dfdfca64860`, especially `canonical_sampled_control_net`, `finite_joint_control_nets`, and `evaluate_joint_atlas`.
 - `output/pdf/convstar_warp_addendum.tex`, SHA-256 `87e6cf5ad6fbf11cbcfbb2b626478929de279054a0c1e027194c3ded988cfdd2`.
 
-Those files were read from the authorized local `bfft-6b3e7ffa7539` research mirror. No paid model call or external service was used. These hashes identify the actual snapshot used; they do not claim that every possible newer research branch was inspected.
+Those files were initially read from the authorized local `bfft-6b3e7ffa7539` research mirror. On September 17, 2026, a separate provenance check extracted only the named research files from the MacBook Neo emergency backup `20260916T015732Z-MacBook-Neo/home-bfft.tar.gz`. The addendum, its timing appendix, the native reference, the Python reference, and `PRELIMINARY_THEORY.md` were all **byte-identical** to that mirror.
+
+The same check read the latest published composed paper from [papers_please at commit a43e178f053b9f968c18e8f14d8489a949d04120](https://github.com/falseywinchnet/papers_please/blob/a43e178f053b9f968c18e8f14d8489a949d04120/conv_paper_composed.tex), whose repository head was dated September 14, 2026. The 166,102-byte `conv_paper_composed.tex` is byte-identical in all three places: GitHub, the Neo backup, and the local mirror. Its SHA-256 is `5b89a42e9f6ac5a7cb8b6ca46ef223f3a2f2a9afa3d408ac60bf5ac9244baed4`.
+
+This establishes that the implementation's research snapshot matches both the specified Neo backup and the latest published paper at the time of verification. It does not imply that every optional operator in that paper is implemented: the compact order coordinate and bounded area-integration limits are described below. The provenance check was read-only, and no paid editorial model was called.
 
 The website's `web/exhibits/compact-ordered-nodal-variation/conv-core.mjs` and the application's `conv.cpp` supply the earlier ordered line-current construction and axis-aligned basin reduction. The new arbitrary-coordinate module advances beyond simply applying that resize routine: it retains a shared two-dimensional admitted control atlas. The first-factor line equations, sign ledger, and projection are the same CONV family.
 

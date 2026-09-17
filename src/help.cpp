@@ -84,21 +84,34 @@ void Application::help(float x, float y, float width, float height) {
         "canvas.\n\nTransparent stamp preserves transparent pixels and skips pixels matching Color 2. Turn "
         "it off to include that background color. The outside of a circle or pill is always transparent. "
         "Lift a new stamp clears the old stamp and lets the next click pick another.");
-    help_topic("8. Resize, rotate and the canvas",
-               "Resize accepts percentages or pixel dimensions. Keep Maintain aspect ratio checked to avoid "
-               "stretching. Scale artwork uses CONV* to reconstruct the image; turn it off to change only "
-               "the canvas boundary. Smaller boundaries crop. Larger ones add Color 2 around the existing "
-               "picture.\n\nRotate offers exact quarter turns, a half turn, and horizontal or vertical "
-               "flips. With a selection, only that content changes. Without one, the whole picture changes. "
-               "Properties shows dimensions and lets you change the canvas size and JPEG quality.");
-    help_topic("9. Put words in your picture",
+    help_topic(
+        "8. Resize, rotate and the canvas",
+        "Resize accepts percentages or pixel dimensions. Keep Maintain aspect ratio checked to avoid "
+        "stretching. Scale artwork uses CONV* to reconstruct the image; turn it off to change only "
+        "the canvas boundary. Smaller boundaries crop. Larger ones add Color 2 around the existing "
+        "picture.\n\nRotate offers exact quarter turns, a half turn, and horizontal or vertical "
+        "flips. With a selection, only that content changes. Without one, the whole picture changes. "
+        "Resize also has horizontal and vertical Skew angles. Drag the little handles around a selection "
+        "to resize its pixels, or the three handles on the canvas edge to change the paper boundary. "
+        "Properties shows dimensions and lets you change the canvas size and JPEG quality.");
+    help_topic("9. Reshape an object like soft cloth",
+               "Choose Free-form selection from the Select arrow. Draw all the way around your object. "
+               "Then choose Patterns & tools > Reshape selected object. Paint puts a coarse mesh of blue "
+               "knobs around the edge and through the inside. Smaller Mesh spacing gives you more knobs. "
+               "Drag a knob to stretch the object. A red warning means that move would fold the mesh, "
+               "so the last safe shape stays in place. Press Escape to finish, or Undo to restore the "
+               "original object.\n\nThe first preparation can take a few seconds. You may move knobs "
+               "while it prepares. Drag previews use point samples; the finished picture uses CONV area "
+               "sampling. A selected source can contain at most one million pixels. Select a smaller "
+               "object or resize it first if Paint explains that it is too large.");
+    help_topic("10. Put words in your picture",
                "Click the A tool, then click the canvas. Type into the box. The Text tab lets you choose a "
-               "proportional or monospaced font, size, bold, italic, underline, strikeout, and an opaque "
+               "Portsmouth, Portsmouth Mono, or an installed font face, size, bold, italic, underline, strikeout, and an opaque "
                "background. Color 1 colors the letters; Color 2 colors an opaque background. Place text "
                "stamps the words into the picture. Cancel text discards them. Undo removes placed text if "
                "you change your mind.");
     help_topic(
-        "10. Open, save and print",
+        "11. Open, save and print",
         "File > Open replaces the picture with an image from disk. Save writes your picture. Save as lets "
         "you choose a new name or format. PNG, TIFF, TGA and lossless WebP can preserve transparency. JPEG "
         "is smaller for photographs but loses detail each time it is re-encoded. BMP, JPEG and GIF use a "
@@ -108,7 +121,7 @@ void Application::help(float x, float y, float width, float height) {
         "unsaved work. Cancel keeps you here. Printing uses the system's print dialog where available. Keep "
         "a saved copy of pictures you care about.");
     help_topic(
-        "11. View and keyboard guide",
+        "12. View and keyboard guide",
         "View has Zoom in, Zoom out, 100%, rulers, gridlines, the status bar, Full screen and Fit window. "
         "Pixel gridlines appear at 400% zoom and above. Ctrl or Command plus the mouse wheel changes zoom. "
         "F11 toggles full screen.\n\nCtrl / Command shortcuts:\nN: New    O: Open    S: Save\nShift+S or "
@@ -116,7 +129,7 @@ void Application::help(float x, float y, float width, float height) {
         "Print\nE: Properties    W: Resize    I: Invert colors\nG: Gridlines\n\nEscape places a selection or "
         "finishes a path. F1 opens this guide. R and +/- change a loaded stamp.");
     help_topic(
-        "12. How I made this - Astra",
+        "13. How I made this - Astra",
         "I am Astra. I built Rainstar Paint in C++ with Dear ImGui and SDL, following Joshuah's programming "
         "house style: explicit types, named operations and callbacks, clear ownership, and inspectable "
         "numerical loops. I chose the Windows 7/10 Paint ribbon as the visual and behavioral reference.\n\nI "
@@ -127,11 +140,17 @@ void Application::help(float x, float y, float width, float height) {
         "worker storage. Enlargements interpolate the nodal reconstruction. Reductions integrate its quintic "
         "pieces over destination basins. Alpha is premultiplied during resampling to avoid colored fringes. "
         "Lines shorter than five pixels use an explicit short-line interpolation rule because the five-point "
-        "stencil does not exist there.\n\nI use stb, gif-h, libtiff and libwebp for file encoding and "
+        "stencil does not exist there.\n\nFor free deformation I compiled the paper's joint CONV field "
+        "into a shared quintic control atlas, then built a coarse triangle mesh for the geometry. "
+        "The Neo backup and the published paper match the research source I used. The compact beta-star "
+        "variant supplies the material; bounded positive quadrature supplies output pixel areas. "
+        "This is approximate area integration, not the paper's exact moment-bank method. Preparation "
+        "runs on a background worker, and dragging reuses the compiled material.\n\nI use stb, gif-h, "
+        "libtiff and libwebp for file encoding and "
         "decoding. Dear ImGui and the image libraries retain their own permissive license notices. This is "
         "an independent implementation; it does not contain Microsoft's Paint code or artwork.");
     help_topic(
-        "13. Free for everyone",
+        "14. Free for everyone",
         "With thanks to Hashem.\n\nWritten by Astra. Sponsored by Joshuah.\nCopyright (c) 2026 "
         "joshuah.rainstar@gmail.com\n\nRainstar Paint is free and open source under the MIT license. Anyone "
         "may use it, learn from it, change it, and share it, including for commercial work. Keep the "

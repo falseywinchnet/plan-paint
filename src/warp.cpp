@@ -37,19 +37,20 @@ struct AtlasBuilder {
     int constant_channel[4] = {1, 1, 1, 1};
     double inv[6][6] = {}, native_diagnostic[5] = {};
     double channel_minimum = 0.0, completion_ray = 1.0;
-    explicit AtlasBuilder(const Image &image) {
+    explicit AtlasBuilder(const Image& image) {
         sw = std::max(5, image.width);
         sh = std::max(5, image.height);
         lw = 5 * (sw - 1) + 1;
         lh = 5 * (sh - 1) + 1;
         std::size_t pixels = static_cast<std::size_t>(sw) * sh;
-        if (pixels > 1048576)
+        if (pixels > 1048576) {
             throw std::length_error(
                 "CONV warp material exceeds the 1 megapixel atlas limit; split the selection.");
+        }
         native_groups = sh * (sw - 1) + sw * (sh - 1) + (sw - 1) * (sh - 1);
         native_source.resize(pixels * 4);
         native_control.resize(static_cast<std::size_t>(lw) * lh * 4);
-        for (int y = 0; y < sh; ++y)
+        for (int y = 0; y < sh; ++y) {
             for (int x = 0; x < sw; ++x) {
                 Color color = image.get(std::min(x, image.width - 1), std::min(y, image.height - 1));
                 double alpha = color.a / 255.0;
@@ -59,6 +60,7 @@ struct AtlasBuilder {
                 native_source[index + 2] = color.b / 255.0 * alpha;
                 native_source[index + 3] = alpha;
             }
+        }
         stage.resize(std::max(static_cast<std::size_t>(lw) * sh, static_cast<std::size_t>(sw) * lh) * 4);
         beta.resize(pixels);
         ring.resize(static_cast<std::size_t>(lw) * 24);
@@ -91,45 +93,56 @@ struct AtlasBuilder {
     }
     int owner(Index id) {
         int x = id % lw, y = id / lw, rx = x % 5, ry = y % 5;
-        if (!rx && !ry)
+        if (!rx && !ry) {
             return -1;
-        if (!ry)
+        }
+        if (!ry) {
             return (y / 5) * (sw - 1) + x / 5;
+        }
         int horizontal = sh * (sw - 1);
-        if (!rx)
+        if (!rx) {
             return horizontal + (x / 5) * (sh - 1) + y / 5;
+        }
         return horizontal + sw * (sh - 1) + (y / 5) * (sw - 1) + x / 5;
     }
     void inverse_collocation(void) {
         double a[6][12] = {};
         for (int r = 0; r < 6; r++) {
             bernstein(r / 5.0, a[r]);
-            for (int c = 0; c < 6; c++)
+            for (int c = 0; c < 6; c++) {
                 a[r][6 + c] = r == c;
+            }
         }
         for (int c = 0; c < 6; c++) {
             int p = c;
-            for (int r = c + 1; r < 6; r++)
-                if (std::abs(a[r][c]) > std::abs(a[p][c]))
+            for (int r = c + 1; r < 6; r++) {
+                if (std::abs(a[r][c]) > std::abs(a[p][c])) {
                     p = r;
+                }
+            }
             for (int k = 0; k < 12; k++) {
                 double t = a[c][k];
                 a[c][k] = a[p][k];
                 a[p][k] = t;
             }
             double d = a[c][c];
-            for (int k = 0; k < 12; k++)
+            for (int k = 0; k < 12; k++) {
                 a[c][k] /= d;
-            for (int r = 0; r < 6; r++)
+            }
+            for (int r = 0; r < 6; r++) {
                 if (r != c) {
                     double f = a[r][c];
-                    for (int k = 0; k < 12; k++)
+                    for (int k = 0; k < 12; k++) {
                         a[r][k] -= f * a[c][k];
+                    }
                 }
+            }
         }
-        for (int r = 0; r < 6; r++)
-            for (int c = 0; c < 6; c++)
+        for (int r = 0; r < 6; r++) {
+            for (int c = 0; c < 6; c++) {
                 inv[r][c] = a[r][c + 6];
+            }
+        }
     }
     /* Input is the complete original line, including sign witnesses across plateaus. */
     int refine_line(int n) {
@@ -161,25 +174,31 @@ struct AtlasBuilder {
             coarse[i] = signum(line[i + 1] - line[i]);
         }
         int witness = 0;
-        while (witness < intervals && !coarse[witness])
+        while (witness < intervals && !coarse[witness]) {
             witness++;
+        }
         if (witness < intervals) {
-            for (int i = 0; i < witness; i++)
+            for (int i = 0; i < witness; i++) {
                 coarse[i] = coarse[witness];
-            for (int i = witness + 1; i < intervals; i++)
-                if (!coarse[i])
+            }
+            for (int i = witness + 1; i < intervals; i++) {
+                if (!coarse[i]) {
                     coarse[i] = coarse[i - 1];
+                }
+            }
             int count = 0, previous = 0;
-            for (int knot = 1; knot < intervals; knot++)
+            for (int knot = 1; knot < intervals; knot++) {
                 if (coarse[knot - 1] != coarse[knot]) {
                     int centre = 5 * knot, best = centre;
                     double best_cost = 1e300;
                     for (int candidate = std::max(previous + 1, centre - 4);
                          candidate < std::min(5 * intervals, centre + 5); candidate++) {
                         double cost = 0;
-                        for (int k = std::max(0, centre - 5); k < std::min(5 * intervals, centre + 5); k++)
-                            if ((k < candidate ? coarse[knot - 1] : coarse[knot]) * raw[k] < 0)
+                        for (int k = std::max(0, centre - 5); k < std::min(5 * intervals, centre + 5); k++) {
+                            if ((k < candidate ? coarse[knot - 1] : coarse[knot]) * raw[k] < 0) {
                                 cost += raw[k] * raw[k];
+                            }
+                        }
                         if (cost < best_cost) {
                             best_cost = cost;
                             best = candidate;
@@ -189,18 +208,21 @@ struct AtlasBuilder {
                     boundary_sign[count++] = coarse[knot];
                     previous = best;
                 }
+            }
             int boundary = 0, current_sign = coarse[witness];
             for (int cell = 0; cell < intervals; cell++) {
                 int signs[5] = {}, order[5] = {}, masks[6] = {}, mask = 0, mask_count = 0;
                 double target[5] = {}, best_values[5] = {}, best_error = 1e300;
                 for (int k = 0; k < 5; k++) {
-                    while (boundary < count && 5 * cell + k >= locations[boundary])
+                    while (boundary < count && 5 * cell + k >= locations[boundary]) {
                         current_sign = boundary_sign[boundary++];
+                    }
                     signs[k] = current_sign;
                     target[k] = signs[k] * raw[5 * cell + k];
                     order[k] = k;
-                    if (signs[k] > 0)
+                    if (signs[k] > 0) {
                         mask |= 1 << k;
+                    }
                 }
                 for (int k = 1; k < 5; k++) {
                     int e = order[k], p = k;
@@ -210,12 +232,14 @@ struct AtlasBuilder {
                     }
                     order[p] = e;
                 }
-                if (mask)
+                if (mask) {
                     masks[mask_count++] = mask;
+                }
                 for (int k = 0; k < 5; k++) {
                     mask ^= 1 << order[k];
-                    if (mask)
+                    if (mask) {
                         masks[mask_count++] = mask;
+                    }
                 }
                 double total = line[cell + 1] - line[cell];
                 int found = 0;
@@ -223,11 +247,12 @@ struct AtlasBuilder {
                     mask = masks[m];
                     double numerator = -total;
                     int active = 0;
-                    for (int k = 0; k < 5; k++)
+                    for (int k = 0; k < 5; k++) {
                         if (mask & (1 << k)) {
                             numerator += signs[k] * target[k];
                             active++;
                         }
+                    }
                     double lambda = numerator / active, value[5] = {}, mass = 0, error = 0;
                     int valid = 1;
                     for (int k = 0; k < 5; k++) {
@@ -245,17 +270,20 @@ struct AtlasBuilder {
                         error < best_error) {
                         found = 1;
                         best_error = error;
-                        for (int k = 0; k < 5; k++)
+                        for (int k = 0; k < 5; k++) {
                             best_values[k] = value[k];
+                        }
                     }
                 }
-                if (!found)
+                if (!found) {
                     return 1;
-                for (int k = 0; k < 5; k++)
+                }
+                for (int k = 0; k < 5; k++) {
                     admitted[5 * cell + k] = signs[k] * best_values[k];
+                }
             }
         }
-        for (int i = 0; i < intervals; i++)
+        for (int i = 0; i < intervals; i++) {
             for (int r = 0; r < 5; r++) {
                 if (!r) {
                     refined[5 * i] = line[i];
@@ -269,6 +297,7 @@ struct AtlasBuilder {
                 }
                 refined[5 * i + r] = value;
             }
+        }
         refined[5 * intervals] = line[n - 1];
         return 0;
     }
@@ -280,20 +309,23 @@ struct AtlasBuilder {
     }
     double source_jet(int x, int y, int ch, int vertical) {
         int i = vertical ? y : x, n = vertical ? sh : sw;
-        if (i == 0)
+        if (i == 0) {
             return (-3.0 * source_axis_value(x, y, ch, vertical, 0) +
                     4.0 * source_axis_value(x, y, ch, vertical, 1) -
                     source_axis_value(x, y, ch, vertical, 2)) /
                    2.0;
-        if (i == n - 1)
+        }
+        if (i == n - 1) {
             return (3.0 * source_axis_value(x, y, ch, vertical, i) -
                     4.0 * source_axis_value(x, y, ch, vertical, i - 1) +
                     source_axis_value(x, y, ch, vertical, i - 2)) /
                    2.0;
-        if (i == 1 || i == n - 2)
+        }
+        if (i == 1 || i == n - 2) {
             return (source_axis_value(x, y, ch, vertical, i + 1) -
                     source_axis_value(x, y, ch, vertical, i - 1)) /
                    2.0;
+        }
         double value = (source_axis_value(x, y, ch, vertical, i - 2) -
                         8.0 * source_axis_value(x, y, ch, vertical, i - 1) +
                         8.0 * source_axis_value(x, y, ch, vertical, i + 1) -
@@ -317,31 +349,33 @@ struct AtlasBuilder {
     double cross(direction a, direction b) {
         return a.x * b.y - a.y * b.x;
     }
-    int normals(int cx, int cy, int ch, direction *result) {
-        if (constant_channel[ch])
+    int normals(int cx, int cy, int ch, direction* result) {
+        if (constant_channel[ch]) {
             return 0;
+        }
         direction dirs[100] = {}, anchor = {0, 0}, upper = {0, 0}, lower = {0, 0};
         int count = 0, has_upper = 0, has_lower = 0;
         const double witness_tolerance = 16384 * EPS;
         int x0 = std::max(0, cx - 2), x1 = std::min(sw - 1, cx + 3), y0 = std::max(0, cy - 2),
             y1 = std::min(sh - 1, cy + 3);
-        for (int y = y0; y < y1; y++)
+        for (int y = y0; y < y1; y++) {
             for (int x = x0; x < x1; x++) {
                 double a = src(x, y, ch), b = src(x + 1, y, ch), d = src(x, y + 1, ch),
                        e = src(x + 1, y + 1, ch);
                 direction v[4] = {{b - a, d - a}, {b - a, e - b}, {e - d, d - a}, {e - d, e - b}};
                 for (int k = 0; k < 4; k++) {
                     double length = std::sqrt(v[k].x * v[k].x + v[k].y * v[k].y);
-                    if (length <= 2048 * EPS)
+                    if (length <= 2048 * EPS) {
                         continue;
+                    }
                     v[k].x /= length;
                     v[k].y /= length;
                     // Three rays with strictly positive cyclic cross products already span
                     // the plane. More support vectors cannot restore a directional bound.
                     // Keep the original sorted construction for every restricted cone.
-                    if (!count)
+                    if (!count) {
                         anchor = v[k];
-                    else {
+                    } else {
                         double side = cross(anchor, v[k]);
                         if (side > witness_tolerance && (!has_upper || cross(upper, v[k]) > 0)) {
                             upper = v[k];
@@ -351,8 +385,9 @@ struct AtlasBuilder {
                             lower = v[k];
                             has_lower = 1;
                         }
-                        if (has_upper && has_lower && cross(upper, lower) > witness_tolerance)
+                        if (has_upper && has_lower && cross(upper, lower) > witness_tolerance) {
                             return 0;
+                        }
                     }
                     int p = count;
                     while (p > 0 && (half(dirs[p - 1]) > half(v[k]) ||
@@ -364,8 +399,10 @@ struct AtlasBuilder {
                     count++;
                 }
             }
-        if (!count)
+        }
+        if (!count) {
             return 0;
+        }
         direction start = dirs[0], last = dirs[count - 1];
         int cut = -1, opposite = -1;
         double tol = 4096 * EPS;
@@ -376,8 +413,9 @@ struct AtlasBuilder {
                 cut = i;
                 break;
             }
-            if (std::abs(cr) <= tol && dot < 0)
+            if (std::abs(cr) <= tol && dot < 0) {
                 opposite = i;
+            }
         }
         if (cut >= 0) {
             start = dirs[(cut + 1) % count];
@@ -386,15 +424,19 @@ struct AtlasBuilder {
             start = dirs[(opposite + 1) % count];
             last = dirs[opposite];
             result[0] = direction{-start.y, start.x};
-            for (int i = 0; i < count; i++)
-                if (cross(start, dirs[i]) > tol)
+            for (int i = 0; i < count; i++) {
+                if (cross(start, dirs[i]) > tol) {
                     return 1;
+                }
+            }
             result[1] = direction{start.y, -start.x};
             return 2;
         } else {
-            for (int i = 1; i < count; i++)
-                if (std::abs(cross(start, dirs[i])) > tol || start.x * dirs[i].x + start.y * dirs[i].y < 0)
+            for (int i = 1; i < count; i++) {
+                if (std::abs(cross(start, dirs[i])) > tol || start.x * dirs[i].x + start.y * dirs[i].y < 0) {
                     return 0;
+                }
+            }
             result[0] = direction{-start.y, start.x};
             result[1] = direction{start.y, -start.x};
             result[2] = start;
@@ -406,14 +448,16 @@ struct AtlasBuilder {
     }
     void clipped_cell(int cx, int cy) {
         double low[4] = {1e300, 1e300, 1e300, 1e300}, high[4] = {-1e300, -1e300, -1e300, -1e300};
-        for (int y = std::max(0, cy - 2); y <= std::min(sh - 1, cy + 3); y++)
-            for (int x = std::max(0, cx - 2); x <= std::min(sw - 1, cx + 3); x++)
+        for (int y = std::max(0, cy - 2); y <= std::min(sh - 1, cy + 3); y++) {
+            for (int x = std::max(0, cx - 2); x <= std::min(sw - 1, cx + 3); x++) {
                 for (int ch = 0; ch < 4; ch++) {
                     double v = src(x, y, ch);
                     low[ch] = std::min(low[ch], v);
                     high[ch] = std::max(high[ch], v);
                 }
-        for (int j = 0; j < 6; j++)
+            }
+        }
+        for (int j = 0; j < 6; j++) {
             for (int i = 0; i < 6; i++) {
                 Index id = static_cast<std::size_t>(cy * 5 + j) * lw + cx * 5 + i;
                 for (int ch = 0; ch < 4; ch++) {
@@ -424,30 +468,35 @@ struct AtlasBuilder {
                     double v = native_control[id * 4 + ch], bounded = std::clamp(v, low[ch], high[ch]);
                     native_diagnostic[1] += v != bounded;
                     native_control[id * 4 + ch] = bounded;
-                    if (!(i % 5) && !(j % 5))
+                    if (!(i % 5) && !(j % 5)) {
                         native_control[id * 4 + ch] = src(cx + i / 5, cy + j / 5, ch);
+                    }
                 }
             }
+        }
     }
     typedef struct {
         double candidate[36], base[36], limited[36];
         int group[36];
     } admission_patch;
-    void add_constraint_term(Index ids[5], double weights[5], int &count, int x, int y, double value) {
-        if (value == 0.0)
+    void add_constraint_term(Index ids[5], double weights[5], int& count, int x, int y, double value) {
+        if (value == 0.0) {
             return;
+        }
         Index id = static_cast<std::size_t>(y * 6 + x);
         int index = 0;
-        while (index < count && ids[index] != id)
+        while (index < count && ids[index] != id) {
             ++index;
+        }
         if (index == count) {
             ids[count] = id;
             weights[count] = value;
             ++count;
-        } else
+        } else {
             weights[index] += value;
+        }
     }
-    void constraint_row(int i, int j, direction normal, int phase, admission_patch *patch) {
+    void constraint_row(int i, int j, direction normal, int phase, admission_patch* patch) {
         Index ids[5] = {};
         double weights[5] = {};
         int count = 0;
@@ -482,15 +531,17 @@ struct AtlasBuilder {
             Index id = ids[k];
             double a = weights[k], candidate = (*patch).candidate[id];
             candidate_margin += a * candidate;
-            if (phase == 0 || phase == 3)
+            if (phase == 0 || phase == 3) {
                 continue;
+            }
             double base = (*patch).base[id];
             base_margin += a * base;
             int g = (*patch).group[id];
             if (phase == 1 && g >= 0) {
                 int p = 0;
-                while (p < ng && groups[p] != g)
+                while (p < ng && groups[p] != g) {
                     p++;
+                }
                 if (p == ng) {
                     groups[ng] = g;
                     contributions[ng++] = 0;
@@ -509,19 +560,24 @@ struct AtlasBuilder {
         }
         if (phase == 1) {
             double harm = 0;
-            for (int p = 0; p < ng; p++)
+            for (int p = 0; p < ng; p++) {
                 harm += std::max(0.0, -contributions[p]);
+            }
             if (harm > STORAGE_EPS) {
                 double ratio = std::min(1.0, std::max(0.0, base_margin) / harm);
-                for (int p = 0; p < ng; p++)
-                    if (contributions[p] < 0)
+                for (int p = 0; p < ng; p++) {
+                    if (contributions[p] < 0) {
                         capacity[groups[p]] = std::min(capacity[groups[p]], ratio);
+                    }
+                }
             }
         }
-        if (phase == 2 && motion < -STORAGE_EPS)
+        if (phase == 2 && motion < -STORAGE_EPS) {
             completion_ray = std::min(completion_ray, std::max(0.0, limited_margin) / -motion);
-        if (phase == 3)
+        }
+        if (phase == 3) {
             native_diagnostic[2] = std::min(native_diagnostic[2], candidate_margin);
+        }
     }
     void admit_cells(int y, int ch, int phase) {
         for (int x = 0; x < sw - 1; x++) {
@@ -538,17 +594,20 @@ struct AtlasBuilder {
                 }
             } else {
                 n = cone_counts[cell];
-                for (int k = 0; k < std::min(2, n); k++)
+                for (int k = 0; k < std::min(2, n); k++) {
                     ns[k] = direction{cone_cache[cell * 4 + 2 * k], cone_cache[cell * 4 + 2 * k + 1]};
-                if (n == 3)
+                }
+                if (n == 3) {
                     ns[2] = direction{ns[0].y, -ns[0].x};
+                }
             }
-            if (!n)
+            if (!n) {
                 continue;
+            }
             // Every directional row reuses these same 36 values and group owners.
             // In particular, do not reconstruct the bilinear base hundreds of times.
             admission_patch patch{};
-            for (int j = 0; j < 6; j++)
+            for (int j = 0; j < 6; j++) {
                 for (int i = 0; i < 6; i++) {
                     int local = j * 6 + i;
                     Index id = static_cast<std::size_t>(y * 5 + j) * lw + x * 5 + i;
@@ -558,15 +617,20 @@ struct AtlasBuilder {
                         int g = owner(id);
                         patch.base[local] = base;
                         patch.group[local] = g;
-                        if (phase == 2)
+                        if (phase == 2) {
                             patch.limited[local] =
                                 base + (g < 0 ? 0 : capacity[g]) * (patch.candidate[local] - base);
+                        }
                     }
                 }
-            for (int k = 0; k < n; k++)
-                for (int j = 0; j < 6; j++)
-                    for (int i = 0; i < 6; i++)
+            }
+            for (int k = 0; k < n; k++) {
+                for (int j = 0; j < 6; j++) {
+                    for (int i = 0; i < 6; i++) {
                         constraint_row(i, j, ns[k], phase, &patch);
+                    }
+                }
+            }
         }
     }
     int build_native_step(int budget) {
@@ -577,8 +641,9 @@ struct AtlasBuilder {
                 for (int x = 0; x < sw; x++) {
                     double xx = 0, yy = 0;
                     for (int c = 0; c < 4; c++) {
-                        if (src(x, p, c) != src(0, 0, c))
+                        if (src(x, p, c) != src(0, 0, c)) {
                             constant_channel[c] = 0;
+                        }
                         double dx = source_jet(x, p, c, 0), dy = source_jet(x, p, c, 1);
                         xx += dx * dx;
                         yy += dy * dy;
@@ -591,14 +656,18 @@ struct AtlasBuilder {
                 }
             } else if (build_phase == 1) {
                 for (int c = 0; c < 4; c++) {
-                    if (constant_channel[c])
+                    if (constant_channel[c]) {
                         continue;
-                    for (int x = 0; x < sw; x++)
+                    }
+                    for (int x = 0; x < sw; x++) {
                         line[x] = src(x, p, c);
-                    if (refine_line(sw))
+                    }
+                    if (refine_line(sw)) {
                         return -1;
-                    for (int x = 0; x < lw; x++)
+                    }
+                    for (int x = 0; x < lw; x++) {
                         stage[(static_cast<std::size_t>(p) * lw + x) * 4 + c] = refined[x];
+                    }
                 }
                 if (++build_lane == sh) {
                     build_lane = 0;
@@ -606,56 +675,70 @@ struct AtlasBuilder {
                 }
             } else if (build_phase == 2) {
                 for (int c = 0; c < 4; c++) {
-                    if (constant_channel[c])
+                    if (constant_channel[c]) {
                         continue;
-                    for (int y = 0; y < sh; y++)
+                    }
+                    for (int y = 0; y < sh; y++) {
                         line[y] = stage[(static_cast<std::size_t>(y) * lw + p) * 4 + c];
-                    if (refine_line(sh))
+                    }
+                    if (refine_line(sh)) {
                         return -1;
-                    for (int y = 0; y < lh; y++)
+                    }
+                    for (int y = 0; y < lh; y++) {
                         refined[y] *= 1 - blend(p, y);
-                    for (int cy = 0; cy < sh - 1; cy++)
+                    }
+                    for (int cy = 0; cy < sh - 1; cy++) {
                         for (int j = cy ? 1 : 0; j < 6; j++) {
                             double sum = 0;
-                            for (int k = 0; k < 6; k++)
+                            for (int k = 0; k < 6; k++) {
                                 sum += inv[j][k] * refined[5 * cy + k];
+                            }
                             native_control[(static_cast<std::size_t>(5 * cy + j) * lw + p) * 4 + c] = sum;
                         }
+                    }
                 }
                 if (++build_lane == lw) {
                     build_lane = 0;
                     build_phase++;
                 }
             } else if (build_phase == 3) {
-                for (int cx = 0; cx < sw - 1; cx++)
+                for (int cx = 0; cx < sw - 1; cx++) {
                     for (int c = 0; c < 4; c++) {
-                        if (constant_channel[c])
+                        if (constant_channel[c]) {
                             continue;
+                        }
                         double values[6] = {};
-                        for (int k = 0; k < 6; k++)
+                        for (int k = 0; k < 6; k++) {
                             values[k] =
                                 native_control[(static_cast<std::size_t>(p) * lw + 5 * cx + k) * 4 + c];
+                        }
                         for (int i = 0; i < 6; i++) {
                             double sum = 0;
-                            for (int k = 0; k < 6; k++)
+                            for (int k = 0; k < 6; k++) {
                                 sum += inv[i][k] * values[k];
+                            }
                             native_control[(static_cast<std::size_t>(p) * lw + 5 * cx + i) * 4 + c] = sum;
                         }
                     }
+                }
                 if (++build_lane == lh) {
                     build_lane = 0;
                     build_phase++;
                 }
             } else if (build_phase == 4) {
                 for (int c = 0; c < 4; c++) {
-                    if (constant_channel[c])
+                    if (constant_channel[c]) {
                         continue;
-                    for (int y = 0; y < sh; y++)
+                    }
+                    for (int y = 0; y < sh; y++) {
                         line[y] = src(p, y, c);
-                    if (refine_line(sh))
+                    }
+                    if (refine_line(sh)) {
                         return -1;
-                    for (int y = 0; y < lh; y++)
+                    }
+                    for (int y = 0; y < lh; y++) {
                         stage[(static_cast<std::size_t>(y) * sw + p) * 4 + c] = refined[y];
+                    }
                 }
                 if (++build_lane == sw) {
                     build_lane = 0;
@@ -663,48 +746,61 @@ struct AtlasBuilder {
                 }
             } else if (build_phase == 5) {
                 int row = p % 5;
-                if (p && row == 0)
+                if (p && row == 0) {
                     row = 5;
+                }
                 for (int c = 0; c < 4; c++) {
-                    if (constant_channel[c])
+                    if (constant_channel[c]) {
                         continue;
-                    for (int x = 0; x < sw; x++)
+                    }
+                    for (int x = 0; x < sw; x++) {
                         line[x] = stage[(static_cast<std::size_t>(p) * sw + x) * 4 + c];
-                    if (refine_line(sw))
+                    }
+                    if (refine_line(sw)) {
                         return -1;
-                    for (int x = 0; x < lw; x++)
+                    }
+                    for (int x = 0; x < lw; x++) {
                         refined[x] *= blend(x, p);
-                    for (int cx = 0; cx < sw - 1; cx++)
+                    }
+                    for (int cx = 0; cx < sw - 1; cx++) {
                         for (int i = cx ? 1 : 0; i < 6; i++) {
                             double sum = 0;
-                            for (int k = 0; k < 6; k++)
+                            for (int k = 0; k < 6; k++) {
                                 sum += inv[i][k] * refined[5 * cx + k];
+                            }
                             ring[(static_cast<std::size_t>(row) * lw + 5 * cx + i) * 4 + c] = sum;
                         }
+                    }
                 }
                 if (row == 5) {
                     int cy = p / 5 - 1;
-                    for (int j = cy ? 1 : 0; j < 6; j++)
-                        for (int x = 0; x < lw; x++)
+                    for (int j = cy ? 1 : 0; j < 6; j++) {
+                        for (int x = 0; x < lw; x++) {
                             for (int c = 0; c < 4; c++) {
-                                if (constant_channel[c])
+                                if (constant_channel[c]) {
                                     continue;
+                                }
                                 double sum = 0;
-                                for (int k = 0; k < 6; k++)
+                                for (int k = 0; k < 6; k++) {
                                     sum += inv[j][k] * ring[(static_cast<std::size_t>(k) * lw + x) * 4 + c];
+                                }
                                 native_control[(static_cast<std::size_t>(5 * cy + j) * lw + x) * 4 + c] +=
                                     sum;
                             }
-                    for (Index k = 0; k < static_cast<std::size_t>(lw) * 4; k++)
+                        }
+                    }
+                    for (Index k = 0; k < static_cast<std::size_t>(lw) * 4; k++) {
                         ring[k] = ring[static_cast<std::size_t>(5) * lw * 4 + k];
+                    }
                 }
                 if (++build_lane == lh) {
                     build_lane = 0;
                     build_phase++;
                 }
             } else if (build_phase == 6) {
-                for (int x = 0; x < sw - 1; x++)
+                for (int x = 0; x < sw - 1; x++) {
                     clipped_cell(x, p);
+                }
                 if (++build_lane == sh - 1) {
                     build_lane = 0;
                     build_phase++;
@@ -716,12 +812,14 @@ struct AtlasBuilder {
                     build_lane = 0;
                     if (channel_minimum >= -STORAGE_EPS) {
                         native_diagnostic[2] = std::min(native_diagnostic[2], channel_minimum);
-                        if (++build_channel == 4)
+                        if (++build_channel == 4) {
                             build_phase = 12;
+                        }
                         channel_minimum = 1e300;
                     } else {
-                        for (Index k = 0; k < native_groups; k++)
+                        for (Index k = 0; k < native_groups; k++) {
                             capacity[k] = 1;
+                        }
                         build_phase++;
                     }
                 }
@@ -767,15 +865,17 @@ struct AtlasBuilder {
 };
 } // namespace
 
-void ConvWarpField::compile(const Image &source) {
+void ConvWarpField::compile(const Image& source) {
     if (source.width < 1 || source.height < 1 || source.width > 32768 || source.height > 32768 ||
-        source.pixels.size() != static_cast<std::size_t>(source.width) * source.height)
+        source.pixels.size() != static_cast<std::size_t>(source.width) * source.height) {
         throw std::invalid_argument("Invalid CONV source image.");
+    }
     AtlasBuilder builder(source);
     while (builder.build_phase < 12) {
         int status = builder.build_native_step(64);
-        if (status < 0)
+        if (status < 0) {
             throw std::runtime_error("CONV signed-current projection failed.");
+        }
     }
     controls_.swap(builder.native_control);
     width_ = source.width;
@@ -789,8 +889,9 @@ std::size_t ConvWarpField::storage_bytes() const {
 WarpSample ConvWarpField::sample_premultiplied(Point position) const {
     WarpSample sample;
     if (!std::isfinite(position.x) || !std::isfinite(position.y) || position.x < -0.5 || position.y < -0.5 ||
-        position.x >= width_ - 0.5 || position.y >= height_ - 0.5 || controls_.empty())
+        position.x >= width_ - 0.5 || position.y >= height_ - 0.5 || controls_.empty()) {
         return sample;
+    }
     double x = std::clamp(position.x, 0.0, static_cast<double>(width_ - 1));
     double y = std::clamp(position.y, 0.0, static_cast<double>(height_ - 1));
     int cx = std::min(static_cast<int>(x), std::max(0, width_ - 2));
@@ -803,11 +904,13 @@ WarpSample ConvWarpField::sample_premultiplied(Point position) const {
         double row[4] = {};
         for (int i = 0; i < 6; ++i) {
             std::size_t offset = (static_cast<std::size_t>(cy * 5 + j) * lattice_width_ + cx * 5 + i) * 4;
-            for (int c = 0; c < 4; ++c)
+            for (int c = 0; c < 4; ++c) {
                 row[c] += bx[i] * controls_[offset + c];
+            }
         }
-        for (int c = 0; c < 4; ++c)
+        for (int c = 0; c < 4; ++c) {
             values[c] += by[j] * row[c];
+        }
     }
     sample = {values[0], values[1], values[2], values[3]};
     return sample;
@@ -815,8 +918,9 @@ WarpSample ConvWarpField::sample_premultiplied(Point position) const {
 namespace {
 static Color encoded_sample(WarpSample value) {
     double alpha = std::clamp(value.a, 0.0, 1.0);
-    if (alpha < 0.5 / 255.0)
+    if (alpha < 0.5 / 255.0) {
         return {0, 0, 0, 0};
+    }
     Color result{static_cast<std::uint8_t>(std::round(255.0 * std::clamp(value.r / alpha, 0.0, 1.0))),
                  static_cast<std::uint8_t>(std::round(255.0 * std::clamp(value.g / alpha, 0.0, 1.0))),
                  static_cast<std::uint8_t>(std::round(255.0 * std::clamp(value.b / alpha, 0.0, 1.0))),
@@ -831,16 +935,17 @@ Color ConvWarpField::sample(Point position) const {
 }
 
 namespace {
-static Point transformed(Point point, const AffineMap &map) {
+static Point transformed(Point point, const AffineMap& map) {
     Point result{map.xx * point.x + map.xy * point.y + map.tx, map.yx * point.x + map.yy * point.y + map.ty};
     return result;
 }
-static AffineMap inverse_map(const AffineMap &map) {
+static AffineMap inverse_map(const AffineMap& map) {
     double determinant = map.xx * map.yy - map.xy * map.yx;
     double scale = std::max({std::abs(map.xx), std::abs(map.xy), std::abs(map.yx), std::abs(map.yy)});
     if (!std::isfinite(determinant) || !std::isfinite(map.tx) || !std::isfinite(map.ty) || scale == 0.0 ||
-        std::abs(determinant) <= 1.0e-12 * scale * scale)
+        std::abs(determinant) <= 1.0e-12 * scale * scale) {
         throw std::invalid_argument("Warp map is singular or not finite.");
+    }
     AffineMap inverse{map.yy / determinant,  -map.xy / determinant, 0.0,
                       -map.yx / determinant, map.xx / determinant,  0.0};
     inverse.tx = -inverse.xx * map.tx - inverse.xy * map.ty;
@@ -852,20 +957,23 @@ struct SampleRule {
     double offsets[8] = {};
     double weights[8] = {1.0};
 };
-static bool lattice_isometry(const AffineMap &map) {
+static bool lattice_isometry(const AffineMap& map) {
     double tolerance = 1.0e-10;
     double values[6] = {map.xx, map.xy, map.tx, map.yx, map.yy, map.ty};
-    for (double value : values)
-        if (std::abs(value - std::round(value)) > tolerance)
+    for (double value : values) {
+        if (std::abs(value - std::round(value)) > tolerance) {
             return false;
+        }
+    }
     return std::abs(map.xx * map.xx + map.yx * map.yx - 1.0) < tolerance &&
            std::abs(map.xy * map.xy + map.yy * map.yy - 1.0) < tolerance &&
            std::abs(map.xx * map.xy + map.yx * map.yy) < tolerance;
 }
 static SampleRule sample_rule(double footprint, bool point) {
     SampleRule rule;
-    if (point)
+    if (point) {
         return rule;
+    }
     if (footprint <= 1.25) {
         rule.count = 2;
         rule.offsets[0] = -0.28867513459481287;
@@ -897,35 +1005,36 @@ static SampleRule sample_rule(double footprint, bool point) {
     }
     return rule;
 }
-static double map_footprint(const AffineMap &inverse) {
+static double map_footprint(const AffineMap& inverse) {
     double footprint = std::max(std::hypot(inverse.xx, inverse.yx), std::hypot(inverse.xy, inverse.yy));
     return footprint;
 }
-static void add_weighted(WarpSample &sum, WarpSample value, double weight) {
+static void add_weighted(WarpSample& sum, WarpSample value, double weight) {
     sum.r += value.r * weight;
     sum.g += value.g * weight;
     sum.b += value.b * weight;
     sum.a += value.a * weight;
 }
 struct AffineJob {
-    const ConvWarpField &field;
-    const AffineMap &inverse;
-    const SampleRule &rule;
-    Image &output;
+    const ConvWarpField& field;
+    const AffineMap& inverse;
+    const SampleRule& rule;
+    Image& output;
     std::atomic<int> next_row{0};
 };
-static void affine_worker(AffineJob &job) {
+static void affine_worker(AffineJob& job) {
     for (;;) {
         int y = job.next_row.fetch_add(1);
-        if (y >= job.output.height)
+        if (y >= job.output.height) {
             return;
+        }
         double row_x = job.inverse.xy * y + job.inverse.tx;
         double row_y = job.inverse.yy * y + job.inverse.ty;
         std::size_t offset = static_cast<std::size_t>(y) * job.output.width;
         for (int x = 0; x < job.output.width; ++x) {
             Point centre{row_x + job.inverse.xx * x, row_y + job.inverse.yx * x};
             WarpSample total;
-            for (int j = 0; j < job.rule.count; ++j)
+            for (int j = 0; j < job.rule.count; ++j) {
                 for (int i = 0; i < job.rule.count; ++i) {
                     Point position{centre.x + job.inverse.xx * job.rule.offsets[i] +
                                        job.inverse.xy * job.rule.offsets[j],
@@ -934,6 +1043,7 @@ static void affine_worker(AffineJob &job) {
                     WarpSample value = job.field.sample_premultiplied(position);
                     add_weighted(total, value, job.rule.weights[i] * job.rule.weights[j]);
                 }
+            }
             job.output.pixels[offset + x] = encoded_sample(total);
         }
     }
@@ -950,20 +1060,25 @@ static bool edges_cross(Point a, Point b, Point c, Point d) {
     double ab_c = orient(a, b, c), ab_d = orient(a, b, d), cd_a = orient(c, d, a), cd_b = orient(c, d, b);
     // Closed segments: non-neighbouring touching edges are invalid too.
     if (((ab_c > 0.0 && ab_d < 0.0) || (ab_c < 0.0 && ab_d > 0.0)) &&
-        ((cd_a > 0.0 && cd_b < 0.0) || (cd_a < 0.0 && cd_b > 0.0)))
+        ((cd_a > 0.0 && cd_b < 0.0) || (cd_a < 0.0 && cd_b > 0.0))) {
         return true;
+    }
     if (std::abs(ab_c) < 1.0e-9 && c.x >= std::min(a.x, b.x) && c.x <= std::max(a.x, b.x) &&
-        c.y >= std::min(a.y, b.y) && c.y <= std::max(a.y, b.y))
+        c.y >= std::min(a.y, b.y) && c.y <= std::max(a.y, b.y)) {
         return true;
+    }
     if (std::abs(ab_d) < 1.0e-9 && d.x >= std::min(a.x, b.x) && d.x <= std::max(a.x, b.x) &&
-        d.y >= std::min(a.y, b.y) && d.y <= std::max(a.y, b.y))
+        d.y >= std::min(a.y, b.y) && d.y <= std::max(a.y, b.y)) {
         return true;
+    }
     if (std::abs(cd_a) < 1.0e-9 && a.x >= std::min(c.x, d.x) && a.x <= std::max(c.x, d.x) &&
-        a.y >= std::min(c.y, d.y) && a.y <= std::max(c.y, d.y))
+        a.y >= std::min(c.y, d.y) && a.y <= std::max(c.y, d.y)) {
         return true;
+    }
     if (std::abs(cd_b) < 1.0e-9 && b.x >= std::min(c.x, d.x) && b.x <= std::max(c.x, d.x) &&
-        b.y >= std::min(c.y, d.y) && b.y <= std::max(c.y, d.y))
+        b.y >= std::min(c.y, d.y) && b.y <= std::max(c.y, d.y)) {
         return true;
+    }
     return false;
 }
 static bool finite_point(Point point) {
@@ -971,11 +1086,12 @@ static bool finite_point(Point point) {
            std::abs(point.y) <= 1.0e7;
 }
 } // namespace
-Rect affine_bounds(const ConvWarpField &field, const AffineMap &map) {
+Rect affine_bounds(const ConvWarpField& field, const AffineMap& map) {
     AffineMap inverse = inverse_map(map);
     (void)inverse;
-    if (field.width() < 1 || field.height() < 1)
+    if (field.width() < 1 || field.height() < 1) {
         throw std::invalid_argument("Compile the CONV material first.");
+    }
     Point corners[4] = {{-0.5, -0.5},
                         {field.width() - 0.5, -0.5},
                         {field.width() - 0.5, field.height() - 0.5},
@@ -988,18 +1104,20 @@ Rect affine_bounds(const ConvWarpField &field, const AffineMap &map) {
         top = std::min(top, point.y);
         bottom = std::max(bottom, point.y);
     }
-    if (left < -1.0e8 || top < -1.0e8 || right > 1.0e8 || bottom > 1.0e8)
+    if (left < -1.0e8 || top < -1.0e8 || right > 1.0e8 || bottom > 1.0e8) {
         throw std::length_error("Transformed bounds exceed the coordinate limit.");
+    }
     int x = static_cast<int>(std::floor(left + 0.5 + 1.0e-10)),
         y = static_cast<int>(std::floor(top + 0.5 + 1.0e-10));
     Rect result{x, y, static_cast<int>(std::ceil(right + 0.5 - 1.0e-10)) - x,
                 static_cast<int>(std::ceil(bottom + 0.5 - 1.0e-10)) - y};
     return result;
 }
-void render_affine(const ConvWarpField &field, const AffineMap &map, int width, int height,
-                   Image &destination, WarpSampling sampling) {
-    if (field.width() < 1)
+void render_affine(const ConvWarpField& field, const AffineMap& map, int width, int height,
+                   Image& destination, WarpSampling sampling) {
+    if (field.width() < 1) {
         throw std::invalid_argument("Compile the CONV material first.");
+    }
     AffineMap inverse = inverse_map(map);
     Image output;
     output.reset(width, height, {0, 0, 0, 0});
@@ -1007,69 +1125,87 @@ void render_affine(const ConvWarpField &field, const AffineMap &map, int width, 
         sample_rule(map_footprint(inverse), sampling == WarpSampling::Point || lattice_isometry(inverse));
     AffineJob job{field, inverse, rule, output};
     unsigned count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
-    if (output.pixels.size() < 65536)
+    if (output.pixels.size() < 65536) {
         count = 1;
+    }
     std::vector<std::jthread> workers;
     workers.reserve(count);
-    for (unsigned i = 0; i < count; ++i)
+    for (unsigned i = 0; i < count; ++i) {
         workers.emplace_back(affine_worker, std::ref(job));
-    for (std::jthread &worker : workers)
+    }
+    for (std::jthread& worker : workers) {
         worker.join();
+    }
     destination = std::move(output);
 }
 
-bool reshape_mesh_valid(const ReshapeMesh &mesh) {
-    if (mesh.nodes.size() < 3 || mesh.triangles.empty())
+bool reshape_mesh_valid(const ReshapeMesh& mesh) {
+    if (mesh.nodes.size() < 3 || mesh.triangles.empty()) {
         return false;
+    }
     std::size_t boundary_count = 0;
     for (std::size_t i = 0; i < mesh.nodes.size(); ++i) {
-        if (!finite_point(mesh.nodes[i].source) || !finite_point(mesh.nodes[i].target))
+        if (!finite_point(mesh.nodes[i].source) || !finite_point(mesh.nodes[i].target)) {
             return false;
-        if (mesh.nodes[i].boundary)
+        }
+        if (mesh.nodes[i].boundary) {
             ++boundary_count;
+        }
     }
-    for (const MeshTriangle &triangle : mesh.triangles) {
-        for (std::size_t index : triangle.nodes)
-            if (index >= mesh.nodes.size())
+    for (const MeshTriangle& triangle : mesh.triangles) {
+        for (std::size_t index : triangle.nodes) {
+            if (index >= mesh.nodes.size()) {
                 return false;
-        const MeshNode &a = mesh.nodes[triangle.nodes[0]];
-        const MeshNode &b = mesh.nodes[triangle.nodes[1]];
-        const MeshNode &c = mesh.nodes[triangle.nodes[2]];
+            }
+        }
+        const MeshNode& a = mesh.nodes[triangle.nodes[0]];
+        const MeshNode& b = mesh.nodes[triangle.nodes[1]];
+        const MeshNode& c = mesh.nodes[triangle.nodes[2]];
         double source_area = orient(a.source, b.source, c.source);
         double target_area = orient(a.target, b.target, c.target);
-        if (source_area <= 1.0e-10 || target_area <= std::max(1.0e-9, source_area * 1.0e-5))
+        if (source_area <= 1.0e-10 || target_area <= std::max(1.0e-9, source_area * 1.0e-5)) {
             return false;
+        }
     }
-    if (boundary_count < 3)
+    if (boundary_count < 3) {
         return false;
+    }
     for (std::size_t i = 0; i < mesh.nodes.size(); ++i) {
-        if (!mesh.nodes[i].boundary)
+        if (!mesh.nodes[i].boundary) {
             continue;
+        }
         std::size_t next = (i + 1) % mesh.nodes.size();
-        while (!mesh.nodes[next].boundary)
+        while (!mesh.nodes[next].boundary) {
             next = (next + 1) % mesh.nodes.size();
+        }
         for (std::size_t j = i + 1; j < mesh.nodes.size(); ++j) {
-            if (!mesh.nodes[j].boundary)
+            if (!mesh.nodes[j].boundary) {
                 continue;
+            }
             std::size_t after = (j + 1) % mesh.nodes.size();
-            while (!mesh.nodes[after].boundary)
+            while (!mesh.nodes[after].boundary) {
                 after = (after + 1) % mesh.nodes.size();
-            if (next == j || after == i)
+            }
+            if (next == j || after == i) {
                 continue;
+            }
             if (edges_cross(mesh.nodes[i].target, mesh.nodes[next].target, mesh.nodes[j].target,
-                            mesh.nodes[after].target))
+                            mesh.nodes[after].target)) {
                 return false;
+            }
         }
     }
     return true;
 }
-bool move_reshape_node(ReshapeMesh &mesh, std::size_t node, Point target) {
-    if (node >= mesh.nodes.size() || !finite_point(target))
+bool move_reshape_node(ReshapeMesh& mesh, std::size_t node, Point target) {
+    if (node >= mesh.nodes.size() || !finite_point(target)) {
         return false;
+    }
     Point previous = mesh.nodes[node].target;
     mesh.nodes[node].target = target;
-    if (reshape_mesh_valid(mesh))
+    if (reshape_mesh_valid(mesh)) {
         return true;
+    }
     mesh.nodes[node].target = previous;
     return false;
 }
@@ -1080,30 +1216,36 @@ static double incircle(Point a, Point b, Point c, Point d) {
                     (cx * cx + cy * cy) * (ax * by - ay * bx);
     return result;
 }
-static void improve_mesh_angles(ReshapeMesh &mesh) {
+static void improve_mesh_angles(ReshapeMesh& mesh) {
     // Lawson flips improve the ear triangulation without moving the outline.
     // A bounded sweep count affects only triangle quality, never validity.
     for (int pass = 0; pass < 32; ++pass) {
         bool changed = false;
-        for (std::size_t i = 0; i < mesh.triangles.size(); ++i)
+        for (std::size_t i = 0; i < mesh.triangles.size(); ++i) {
             for (std::size_t j = i + 1; j < mesh.triangles.size(); ++j) {
                 MeshTriangle first = mesh.triangles[i], second = mesh.triangles[j];
                 std::size_t shared[2] = {}, count = 0, c = 0, d = 0;
                 for (std::size_t vertex : first.nodes) {
                     bool found = false;
-                    for (std::size_t other : second.nodes)
-                        if (vertex == other)
+                    for (std::size_t other : second.nodes) {
+                        if (vertex == other) {
                             found = true;
-                    if (found && count < 2)
+                        }
+                    }
+                    if (found && count < 2) {
                         shared[count++] = vertex;
-                    else
+                    } else {
                         c = vertex;
+                    }
                 }
-                if (count != 2)
+                if (count != 2) {
                     continue;
-                for (std::size_t vertex : second.nodes)
-                    if (vertex != shared[0] && vertex != shared[1])
+                }
+                for (std::size_t vertex : second.nodes) {
+                    if (vertex != shared[0] && vertex != shared[1]) {
                         d = vertex;
+                    }
+                }
                 std::size_t a = shared[0], b = shared[1];
                 Point pa = mesh.nodes[a].source, pb = mesh.nodes[b].source, pc = mesh.nodes[c].source,
                       pd = mesh.nodes[d].source;
@@ -1111,13 +1253,15 @@ static void improve_mesh_angles(ReshapeMesh &mesh) {
                     std::swap(a, b);
                     std::swap(pa, pb);
                 }
-                if (orient(pc, pd, pa) * orient(pc, pd, pb) >= -1.0e-10)
+                if (orient(pc, pd, pa) * orient(pc, pd, pb) >= -1.0e-10) {
                     continue;
+                }
                 double scale =
                     std::max({std::hypot(pa.x - pd.x, pa.y - pd.y), std::hypot(pb.x - pd.x, pb.y - pd.y),
                               std::hypot(pc.x - pd.x, pc.y - pd.y), 1.0});
-                if (incircle(pa, pb, pc, pd) <= 1.0e-12 * scale * scale * scale * scale)
+                if (incircle(pa, pb, pc, pd) <= 1.0e-12 * scale * scale * scale * scale) {
                     continue;
+                }
                 MeshTriangle left{{c, d, a}}, right{{d, c, b}};
                 if (orient(pc, pd, pa) < 0.0) {
                     left = {{d, c, a}};
@@ -1127,26 +1271,32 @@ static void improve_mesh_angles(ReshapeMesh &mesh) {
                 mesh.triangles[j] = right;
                 changed = true;
             }
-        if (!changed)
+        }
+        if (!changed) {
             break;
+        }
     }
 }
 } // namespace
 
-ReshapeMesh make_reshape_mesh(const std::vector<Point> &outline, double spacing) {
-    if (outline.size() < 3 || outline.size() > 4096 || !std::isfinite(spacing) || spacing < 1.0)
+ReshapeMesh make_reshape_mesh(const std::vector<Point>& outline, double spacing) {
+    if (outline.size() < 3 || outline.size() > 4096 || !std::isfinite(spacing) || spacing < 1.0) {
         throw std::invalid_argument("A reshape lasso needs 3 to 4096 points and spacing at least 1 pixel.");
+    }
     std::vector<Point> points;
     for (Point point : outline) {
-        if (!finite_point(point) || std::abs(point.x) > 1.0e7 || std::abs(point.y) > 1.0e7)
+        if (!finite_point(point) || std::abs(point.x) > 1.0e7 || std::abs(point.y) > 1.0e7) {
             throw std::invalid_argument("Invalid reshape point.");
-        if (!points.empty() && std::hypot(point.x - points.back().x, point.y - points.back().y) < 1.0e-7)
+        }
+        if (!points.empty() && std::hypot(point.x - points.back().x, point.y - points.back().y) < 1.0e-7) {
             continue;
+        }
         points.push_back(point);
     }
     if (points.size() > 1 &&
-        std::hypot(points.front().x - points.back().x, points.front().y - points.back().y) < 1.0e-7)
+        std::hypot(points.front().x - points.back().x, points.front().y - points.back().y) < 1.0e-7) {
         points.pop_back();
+    }
     // Remove collinear lasso samples without changing the polygon boundary.
     bool changed = true;
     while (changed && points.size() > 3) {
@@ -1167,18 +1317,21 @@ ReshapeMesh make_reshape_mesh(const std::vector<Point> &outline, double spacing)
         Point a = points[i], b = points[(i + 1) % points.size()];
         area += a.x * b.y - b.x * a.y;
     }
-    if (std::abs(area) < 1.0e-8 || points.size() < 3)
+    if (std::abs(area) < 1.0e-8 || points.size() < 3) {
         throw std::invalid_argument("The reshape lasso has no area.");
-    if (area < 0.0)
+    }
+    if (area < 0.0) {
         std::reverse(points.begin(), points.end());
+    }
     ReshapeMesh mesh;
     // Start with original boundary vertices: their cyclic node order remains
     // the boundary invariant used by the global injectivity check.
     for (std::size_t i = 0; i < points.size(); ++i) {
         Point a = points[i], b = points[(i + 1) % points.size()];
         double segments = std::ceil(std::hypot(b.x - a.x, b.y - a.y) / spacing);
-        if (segments > 2048.0 || mesh.nodes.size() + static_cast<std::size_t>(segments) > 2048)
+        if (segments > 2048.0 || mesh.nodes.size() + static_cast<std::size_t>(segments) > 2048) {
             throw std::length_error("Use a coarser reshape spacing; mesh limit is 2048 nodes.");
+        }
         int count = std::max(1, static_cast<int>(segments));
         for (int j = 0; j < count; ++j) {
             double t = static_cast<double>(j) / count;
@@ -1187,44 +1340,52 @@ ReshapeMesh make_reshape_mesh(const std::vector<Point> &outline, double spacing)
         }
     }
     // Validate polygon simplicity before ear clipping.
-    for (std::size_t i = 0; i < mesh.nodes.size(); ++i)
+    for (std::size_t i = 0; i < mesh.nodes.size(); ++i) {
         for (std::size_t j = i + 1; j < mesh.nodes.size(); ++j) {
             std::size_t ni = (i + 1) % mesh.nodes.size(), nj = (j + 1) % mesh.nodes.size();
-            if (ni == j || nj == i)
+            if (ni == j || nj == i) {
                 continue;
+            }
             if (edges_cross(mesh.nodes[i].source, mesh.nodes[ni].source, mesh.nodes[j].source,
-                            mesh.nodes[nj].source))
+                            mesh.nodes[nj].source)) {
                 throw std::invalid_argument("The reshape outline crosses itself.");
+            }
         }
+    }
     std::vector<std::size_t> ring;
-    for (std::size_t i = 0; i < mesh.nodes.size(); ++i)
+    for (std::size_t i = 0; i < mesh.nodes.size(); ++i) {
         ring.push_back(i);
+    }
     while (ring.size() > 3) {
         bool found = false;
         for (std::size_t i = 0; i < ring.size(); ++i) {
             std::size_t a = ring[(i + ring.size() - 1) % ring.size()], b = ring[i],
                         c = ring[(i + 1) % ring.size()];
             Point pa = mesh.nodes[a].source, pb = mesh.nodes[b].source, pc = mesh.nodes[c].source;
-            if (orient(pa, pb, pc) <= 1.0e-10)
+            if (orient(pa, pb, pc) <= 1.0e-10) {
                 continue;
+            }
             bool occupied = false;
             for (std::size_t node : ring) {
-                if (node == a || node == b || node == c)
+                if (node == a || node == b || node == c) {
                     continue;
+                }
                 if (within_triangle(mesh.nodes[node].source, pa, pb, pc, 1.0e-10)) {
                     occupied = true;
                     break;
                 }
             }
-            if (occupied)
+            if (occupied) {
                 continue;
+            }
             mesh.triangles.push_back({{a, b, c}});
             ring.erase(ring.begin() + static_cast<std::ptrdiff_t>(i));
             found = true;
             break;
         }
-        if (!found)
+        if (!found) {
             throw std::invalid_argument("Could not triangulate the reshape outline.");
+        }
     }
     mesh.triangles.push_back({{ring[0], ring[1], ring[2]}});
     // Interior lattice insertion. Strict interior tests avoid splitting an
@@ -1237,9 +1398,10 @@ ReshapeMesh make_reshape_mesh(const std::vector<Point> &outline, double spacing)
         bottom = std::max(bottom, point.y);
     }
     double columns = std::ceil((right - left) / spacing), rows = std::ceil((bottom - top) / spacing);
-    if (columns * rows > 16384.0)
+    if (columns * rows > 16384.0) {
         throw std::length_error("Use coarser reshape spacing for this region.");
-    for (double y = top + spacing * 0.5; y < bottom; y += spacing)
+    }
+    for (double y = top + spacing * 0.5; y < bottom; y += spacing) {
         for (double x = left + spacing * 0.47; x < right; x += spacing) {
             Point point{x, y};
             for (std::size_t i = 0; i < mesh.triangles.size(); ++i) {
@@ -1248,10 +1410,12 @@ ReshapeMesh make_reshape_mesh(const std::vector<Point> &outline, double spacing)
                       c = mesh.nodes[triangle.nodes[2]].source;
                 double guard = spacing * spacing * 1.0e-4;
                 if (orient(a, b, point) <= guard || orient(b, c, point) <= guard ||
-                    orient(c, a, point) <= guard)
+                    orient(c, a, point) <= guard) {
                     continue;
-                if (mesh.nodes.size() >= 2048)
+                }
+                if (mesh.nodes.size() >= 2048) {
                     throw std::length_error("Use a coarser reshape spacing; mesh limit is 2048 nodes.");
+                }
                 std::size_t node = mesh.nodes.size();
                 mesh.nodes.push_back({point, point, false});
                 mesh.triangles[i] = {{triangle.nodes[0], triangle.nodes[1], node}};
@@ -1260,14 +1424,17 @@ ReshapeMesh make_reshape_mesh(const std::vector<Point> &outline, double spacing)
                 break;
             }
         }
+    }
     improve_mesh_angles(mesh);
-    if (!reshape_mesh_valid(mesh))
+    if (!reshape_mesh_valid(mesh)) {
         throw std::invalid_argument("Reshape triangulation is degenerate.");
+    }
     return mesh;
 }
-ReshapeMesh make_reshape_mesh(const Image &source, double spacing) {
-    if (source.width < 1 || source.height < 1)
+ReshapeMesh make_reshape_mesh(const Image& source, double spacing) {
+    if (source.width < 1 || source.height < 1) {
         throw std::invalid_argument("An empty image cannot be reshaped.");
+    }
     // The full pixel footprint includes the boundary pixels under identity.
     std::vector<Point> outline{{-0.5, -0.5},
                                {source.width - 0.5, -0.5},
@@ -1277,7 +1444,7 @@ ReshapeMesh make_reshape_mesh(const Image &source, double spacing) {
     return mesh;
 }
 namespace {
-static AffineMap triangle_inverse(const MeshNode &a, const MeshNode &b, const MeshNode &c) {
+static AffineMap triangle_inverse(const MeshNode& a, const MeshNode& b, const MeshNode& c) {
     AffineMap target{b.target.x - a.target.x, c.target.x - a.target.x, a.target.x,
                      b.target.y - a.target.y, c.target.y - a.target.y, a.target.y};
     AffineMap inverse = inverse_map(target);
@@ -1292,20 +1459,24 @@ static AffineMap triangle_inverse(const MeshNode &a, const MeshNode &b, const Me
     return map;
 }
 } // namespace
-void render_mesh(const ConvWarpField &field, const ReshapeMesh &mesh, int width, int height,
-                 Image &destination, WarpSampling sampling) {
-    if (field.width() < 1)
+void render_mesh(const ConvWarpField& field, const ReshapeMesh& mesh, int width, int height,
+                 Image& destination, WarpSampling sampling) {
+    if (field.width() < 1) {
         throw std::invalid_argument("Compile the CONV material first.");
-    if (!reshape_mesh_valid(mesh))
+    }
+    if (!reshape_mesh_valid(mesh)) {
         throw std::invalid_argument("The reshape mesh folds or overlaps.");
+    }
     Image output;
     output.reset(width, height, {0, 0, 0, 0});
     double footprint = 1.0;
     bool identity = true;
-    for (const MeshNode &node : mesh.nodes)
-        if (node.source.x != node.target.x || node.source.y != node.target.y)
+    for (const MeshNode& node : mesh.nodes) {
+        if (node.source.x != node.target.x || node.source.y != node.target.y) {
             identity = false;
-    for (const MeshTriangle &triangle : mesh.triangles) {
+        }
+    }
+    for (const MeshTriangle& triangle : mesh.triangles) {
         AffineMap inverse = triangle_inverse(mesh.nodes[triangle.nodes[0]], mesh.nodes[triangle.nodes[1]],
                                              mesh.nodes[triangle.nodes[2]]);
         footprint = std::max(footprint, map_footprint(inverse));
@@ -1315,10 +1486,10 @@ void render_mesh(const ConvWarpField &field, const ReshapeMesh &mesh, int width,
     // the same point, but exactly one triangle contributes its value.
     std::vector<std::uint64_t> ownership(output.pixels.size(), 0);
     std::vector<WarpSample> totals(output.pixels.size());
-    for (const MeshTriangle &triangle : mesh.triangles) {
-        const MeshNode &a = mesh.nodes[triangle.nodes[0]];
-        const MeshNode &b = mesh.nodes[triangle.nodes[1]];
-        const MeshNode &c = mesh.nodes[triangle.nodes[2]];
+    for (const MeshTriangle& triangle : mesh.triangles) {
+        const MeshNode& a = mesh.nodes[triangle.nodes[0]];
+        const MeshNode& b = mesh.nodes[triangle.nodes[1]];
+        const MeshNode& c = mesh.nodes[triangle.nodes[2]];
         AffineMap inverse = triangle_inverse(a, b, c);
         double area = orient(a.target, b.target, c.target);
         double low_x =
@@ -1331,29 +1502,34 @@ void render_mesh(const ConvWarpField &field, const ReshapeMesh &mesh, int width,
                                    static_cast<double>(height - 1));
         int left = static_cast<int>(std::floor(low_x)), right = static_cast<int>(std::ceil(high_x));
         int top = static_cast<int>(std::floor(low_y)), bottom = static_cast<int>(std::ceil(high_y));
-        for (int y = top; y <= bottom; ++y)
+        for (int y = top; y <= bottom; ++y) {
             for (int x = left; x <= right; ++x) {
                 std::size_t pixel = static_cast<std::size_t>(y) * width + x;
-                for (int j = 0; j < rule.count; ++j)
+                for (int j = 0; j < rule.count; ++j) {
                     for (int i = 0; i < rule.count; ++i) {
                         std::uint64_t bit = std::uint64_t{1} << (j * rule.count + i);
-                        if ((ownership[pixel] & bit) != 0)
+                        if ((ownership[pixel] & bit) != 0) {
                             continue;
+                        }
                         Point point{x + rule.offsets[i], y + rule.offsets[j]};
                         double wb = orient(a.target, point, c.target) / area;
                         double wc = orient(a.target, b.target, point) / area;
                         double wa = 1.0 - wb - wc;
-                        if (wa < -1.0e-10 || wb < -1.0e-10 || wc < -1.0e-10)
+                        if (wa < -1.0e-10 || wb < -1.0e-10 || wc < -1.0e-10) {
                             continue;
+                        }
                         Point source = transformed(point, inverse);
                         WarpSample value = field.sample_premultiplied(source);
                         add_weighted(totals[pixel], value, rule.weights[i] * rule.weights[j]);
                         ownership[pixel] |= bit;
                     }
+                }
             }
+        }
     }
-    for (std::size_t i = 0; i < output.pixels.size(); ++i)
+    for (std::size_t i = 0; i < output.pixels.size(); ++i) {
         output.pixels[i] = encoded_sample(totals[i]);
+    }
     destination = std::move(output);
 }
 } // namespace paint
