@@ -14,11 +14,11 @@ A free drawing application with the familiar Windows 7/10 Paint ribbon, built fo
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-linux-x64.tar.gz) | Ubuntu 22.04 or newer with a graphical desktop and GTK 3. Extract and launch `Rainstar Paint`. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.3/rainstar-paint-0.1.3-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.3/rainstar-paint-0.1.3-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.3/rainstar-paint-0.1.3-linux-x64.tar.gz) | Ubuntu 22.04 or newer with a graphical desktop and GTK 3. Extract and launch `Rainstar Paint`. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.3/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
