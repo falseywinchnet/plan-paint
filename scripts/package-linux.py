@@ -8,7 +8,7 @@ import subprocess
 import tarfile
 
 ROOT = Path(__file__).resolve().parents[1]
-SYSTEM = {"libc.so.6", "libm.so.6", "libpthread.so.0", "libdl.so.2", "librt.so.1", "ld-linux-x86-64.so.2", "linux-vdso.so.1"}
+SYSTEM = {"libstdc++.so.6", "libgcc_s.so.1", "libc.so.6", "libm.so.6", "libpthread.so.0", "libdl.so.2", "librt.so.1", "ld-linux-x86-64.so.2", "linux-vdso.so.1"}
 
 def main():
     parser = argparse.ArgumentParser()

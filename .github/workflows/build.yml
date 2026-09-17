@@ -5,16 +5,27 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   windows:
     runs-on: windows-2022
+    env:
+      VCPKG_BINARY_SOURCES: clear;files,C:/vcpkg-binary-cache,readwrite
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: C:/vcpkg-binary-cache
+          key: vcpkg-windows-static-2026-09-17
       - name: Install native dependencies
         shell: pwsh
-        run: vcpkg install sdl3:x64-windows-static tiff:x64-windows-static libwebp:x64-windows-static
+        run: |
+          New-Item -ItemType Directory -Force C:/vcpkg-binary-cache | Out-Null
+          vcpkg install sdl3:x64-windows-static tiff:x64-windows-static libwebp:x64-windows-static
       - name: Configure
         shell: pwsh
         run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
