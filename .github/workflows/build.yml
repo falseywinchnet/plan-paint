@@ -34,7 +34,7 @@ jobs:
           key: vcpkg-windows-static-2026-09-17
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DRAINSTAR_COMPILER_REPORTS=ON -DRAINSTAR_BENCHMARKS=ON
+        run: cmake -S . -B build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DRAINSTAR_COMPILER_REPORTS=ON -DRAINSTAR_BENCHMARKS=ON
       - name: Compile and test
         shell: pwsh
         run: |
@@ -68,6 +68,7 @@ jobs:
             dist/*.zip
             dist/rainstar-windows.png
             build/compiler-reports/*.asm
+            build/**/*.s
   linux:
     runs-on: ubuntu-22.04
     steps:

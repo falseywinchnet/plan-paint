@@ -63,7 +63,7 @@ ctest --test-dir build --output-on-failure
 open build/rainstar-paint.app
 ```
 
-The [build workflow](.github/workflows/build.yml) provides Windows and Linux recipes, runs the test suite and produces portable packages. Set `RAINSTAR_SYSTEM_SDL=OFF` to build the pinned SDL release and `RAINSTAR_BUNDLED_TIFF=ON` to build pinned TIFF. Packaging scripts are in `scripts/`; all packages read their version from CMake.
+The [build workflow](.github/workflows/build.yml) provides Windows (ClangCL) and Linux recipes, runs the test suite and produces portable packages. Set `RAINSTAR_SYSTEM_SDL=OFF` to build the pinned SDL release and `RAINSTAR_BUNDLED_TIFF=ON` to build pinned TIFF. Packaging scripts are in `scripts/`; all packages read their version from CMake.
 
 Tests cover image editing, formats, numerical transforms, transparency, real UI input, display scaling and idle rendering. Run `python3 scripts/check-style.py` before submitting a change. Optional `RAINSTAR_BENCHMARKS=ON` and `RAINSTAR_COMPILER_REPORTS=ON` produce a timing/checksum harness and compiler assembly reports.
 

@@ -112,7 +112,10 @@ option(RAINSTAR_COMPILER_REPORTS "Save CONV assembly and vectorization diagnosti
 if(RAINSTAR_COMPILER_REPORTS)
   file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/compiler-reports")
   foreach(kernel conv warp)
-    if(MSVC)
+    if(MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      set_property(SOURCE src/${kernel}.cpp APPEND PROPERTY COMPILE_OPTIONS
+        /clang:-save-temps=obj "/clang:-Rpass=loop-vectorize|slp-vectorizer")
+    elseif(MSVC)
       set_property(SOURCE src/${kernel}.cpp APPEND PROPERTY COMPILE_OPTIONS
         /FAs "/Fa${CMAKE_CURRENT_BINARY_DIR}/compiler-reports/${kernel}.asm")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
