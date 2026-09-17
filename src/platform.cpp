@@ -90,9 +90,6 @@ bool paste_from_clipboard(Image& image) {
         throw;
     }
 }
-bool print_image(const Image&) {
-    return false;
-}
 std::string default_font_path(bool mono, bool bold, bool italic) {
 #ifdef _WIN32
     std::string face = mono ? "consola" : "arial";

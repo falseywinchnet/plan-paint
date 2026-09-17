@@ -46,6 +46,9 @@ bool print_image(const Image& image) {
     [native_image release];
     return completed;
 }
+void page_setup() {
+    [[NSPageLayout pageLayout] runModalWithPrintInfo:[NSPrintInfo sharedPrintInfo]];
+}
 std::string default_font_path(bool mono, bool bold, bool italic) {
     std::string name = mono ? "Courier New" : "Arial";
     if (bold && italic) {

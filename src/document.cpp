@@ -71,7 +71,7 @@ void Document::paste(const Image& pasted, int x, int y) {
         composite(larger, image, 0, 0);
         image = std::move(larger);
     }
-    selection = {pasted, x, y, true, std::vector<std::uint8_t>(pasted.pixels.size(), 1)};
+    selection = {pasted, x, y, true, std::vector<std::uint8_t>(pasted.pixels.size(), 1), {}};
     tool = Tool::Select;
 }
 void Document::select(Rect bounds, const std::vector<Point>& lasso) {
@@ -102,7 +102,12 @@ void Document::select(Rect bounds, const std::vector<Point>& lasso) {
             }
         }
     }
-    selection = {std::move(lifted), bounds.x, bounds.y, true, std::move(coverage)};
+    selection = {std::move(lifted), bounds.x, bounds.y, true, std::move(coverage), {}};
+    selection.outline = lasso;
+    for (Point& point : selection.outline) {
+        point.x -= bounds.x;
+        point.y -= bounds.y;
+    }
 }
 void Document::commit_selection() {
     if (!selection.active) {
@@ -149,7 +154,7 @@ void Document::invert_selection() {
             lifted.pixels[index] = {0, 0, 0, 0};
         }
     }
-    selection = {std::move(lifted), 0, 0, true, std::move(coverage)};
+    selection = {std::move(lifted), 0, 0, true, std::move(coverage), {}};
 }
 void Document::crop() {
     if (!selection.active) {
@@ -171,6 +176,7 @@ void Document::resize(int width, int height, bool scale) {
     if (selection.active) {
         selection.image = std::move(replacement);
         selection.coverage.clear();
+        selection.outline.clear();
     } else {
         checkpoint();
         image = std::move(replacement);
@@ -180,6 +186,7 @@ void Document::rotate(int turns) {
     if (selection.active) {
         selection.image = rotate_quarter(selection.image, turns);
         selection.coverage.clear();
+        selection.outline.clear();
     } else {
         Image replacement = rotate_quarter(image, turns);
         checkpoint();
@@ -190,6 +197,7 @@ void Document::flip(bool horizontal) {
     if (selection.active) {
         selection.image = flipped(selection.image, horizontal);
         selection.coverage.clear();
+        selection.outline.clear();
     } else {
         Image replacement = flipped(image, horizontal);
         checkpoint();

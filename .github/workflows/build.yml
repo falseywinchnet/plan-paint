@@ -17,7 +17,7 @@ jobs:
         run: vcpkg install sdl3:x64-windows-static tiff:x64-windows-static libwebp:x64-windows-static
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DWEBP_INCLUDE_DIR=C:/vcpkg/installed/x64-windows-static/include -DWEBP_LIBRARY=C:/vcpkg/installed/x64-windows-static/lib/webp.lib
+        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
       - name: Compile and test
         shell: pwsh
         run: |
@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install native dependencies
-        run: sudo apt-get update && sudo apt-get install -y libtiff-dev libwebp-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgl1-mesa-dev libegl1-mesa-dev xvfb
+        run: sudo apt-get update && sudo apt-get install -y libtiff-dev libwebp-dev libgtk-3-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgl1-mesa-dev libegl1-mesa-dev xvfb
       - name: Configure and compile
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRAINSTAR_SYSTEM_SDL=OFF && cmake --build build --parallel 4
       - name: Test core and graphical startup

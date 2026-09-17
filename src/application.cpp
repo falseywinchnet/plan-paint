@@ -28,6 +28,10 @@ void Application::event(const SDL_Event& event_value) {
             command(Command::Quit);
         }
         if (event_value.type == SDL_EVENT_DROP_FILE && event_value.drop.data) {
+            if (reshape_active || transform_active) {
+                status = "Finish reshaping before dropping another picture.";
+                return;
+            }
             Image pasted = load_image(event_value.drop.data);
             finish_text();
             finish_curve();
@@ -74,6 +78,15 @@ void Application::file_results() {
 }
 void Application::command(Command requested) {
     try {
+        if (transform_active || reshape_commit_pending) {
+            status = "Please wait for the current transform.";
+            return;
+        }
+        if (reshape_active && requested != Command::Undo) {
+            finish_reshape();
+            status = "Press Escape to finish reshaping before another command.";
+            return;
+        }
         if ((requested == Command::New || requested == Command::Open || requested == Command::Quit) &&
             document.dirty()) {
             deferred_command = requested;
@@ -105,7 +118,13 @@ void Application::execute(Command requested) {
     case Command::SaveAs:
         dialog.show(window, FileAction::Save, document.filename.empty() ? "Untitled.png" : document.filename);
         break;
+    case Command::PageSetup:
+        page_setup();
+        break;
     case Command::Print: {
+        finish_text();
+        finish_curve();
+        document.commit_path();
         Image printable = document.visible_image();
         if (!print_image(printable)) {
             status = "Printing canceled or no system print service is available.";
@@ -122,6 +141,11 @@ void Application::execute(Command requested) {
         break;
     }
     case Command::Undo:
+        reshape_active = false;
+        reshape_field.reset();
+        reshape_mesh = {};
+        reshape_render_pending = false;
+        reshape_commit_pending = false;
         text_active = false;
         curve_points.clear();
         preview_active = false;
@@ -214,6 +238,20 @@ void Application::execute(Command requested) {
     texture_dirty = true;
 }
 void Application::choose_tool(Tool tool) {
+    if (reshape_active) {
+        finish_reshape();
+        return;
+    }
+    if (transform_active) {
+        return;
+    }
+    if (tool == Tool::Reshape) {
+        start_reshape();
+        if (reshape_active) {
+            document.tool = tool;
+        }
+        return;
+    }
     finish_text();
     finish_curve();
     document.commit_path();
@@ -297,6 +335,13 @@ void Application::keyboard() {
         command(Command::SaveAs);
     }
     if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        if (reshape_active) {
+            finish_reshape();
+            return;
+        }
+        resize_handle = -1;
+        canvas_handle = -1;
+        selection_original = {};
         finish_text();
         finish_curve();
         document.commit_path();
@@ -391,6 +436,25 @@ void Application::begin_gesture(Point point, bool right) {
     last = point;
     right_gesture = right;
     dragging = true;
+    if (transform_active || reshape_commit_pending) {
+        dragging = false;
+        return;
+    }
+    if (reshape_active) {
+        active_mesh_node = -1;
+        Point local{point.x - reshape_origin.x, point.y - reshape_origin.y};
+        for (std::size_t i = 0; i < reshape_mesh.nodes.size(); ++i) {
+            Point target = reshape_mesh.nodes[i].target;
+            if (std::hypot(target.x - local.x, target.y - local.y) * zoom < 10) {
+                active_mesh_node = static_cast<int>(i);
+                break;
+            }
+        }
+        if (active_mesh_node < 0) {
+            dragging = false;
+        }
+        return;
+    }
     if (document.tool == Tool::Select && document.selection.active) {
         Rect bounds{document.selection.x, document.selection.y, document.selection.image.width,
                     document.selection.image.height};
@@ -496,9 +560,12 @@ void Application::begin_gesture(Point point, bool right) {
                                         document.stamp_transparent, document.ink.secondary);
             stamp_scale = 1.0;
             stamp_angle = 0.0;
+            stamp_field.reset();
             regenerate_stamp();
             status = "Stamp lifted. Click to repeat it; R rotates, + and - change size. Lift again selects "
                      "new content.";
+        } else if (warp_worker.busy() || stamp_render_pending || stamp_preview.pixels.empty()) {
+            status = "The stamp is preparing; it will be ready in a moment.";
         } else {
             document.checkpoint();
             composite(document.image, stamp_preview, static_cast<int>(point.x - stamp_preview.width / 2.0),
@@ -523,6 +590,18 @@ void Application::begin_gesture(Point point, bool right) {
 }
 void Application::update_gesture(Point point) {
     if (!dragging) {
+        return;
+    }
+    if (reshape_active && active_mesh_node >= 0) {
+        Point target{point.x - reshape_origin.x, point.y - reshape_origin.y};
+        if (move_reshape_node(reshape_mesh, static_cast<std::size_t>(active_mesh_node), target)) {
+            ++mesh_generation;
+            reshape_render_pending = true;
+            status = "Drag knobs; Escape commits.";
+        } else {
+            status = "That move would fold the mesh. Keep the blue triangles open.";
+        }
+        last = point;
         return;
     }
     if (moving_selection) {
@@ -569,6 +648,10 @@ void Application::end_gesture(Point point) {
     }
     update_gesture(point);
     dragging = false;
+    if (reshape_active) {
+        active_mesh_node = -1;
+        return;
+    }
     if (moving_selection) {
         moving_selection = false;
         return;
@@ -637,38 +720,6 @@ void Application::finish_text() {
     text_tab = false;
     texture_dirty = true;
 }
-void Application::regenerate_stamp() {
-    if (document.stamp.pixels.empty()) {
-        return;
-    }
-    int width = std::max(1, static_cast<int>(std::round(document.stamp.width * stamp_scale)));
-    int height = std::max(1, static_cast<int>(std::round(document.stamp.height * stamp_scale)));
-    Image scaled;
-    conv_resize(document.stamp, width, height, scaled);
-    double angle = stamp_angle * std::numbers::pi / 180.0;
-    double cosine = std::cos(angle), sine = std::sin(angle);
-    int out_width =
-        std::max(1, static_cast<int>(std::ceil(std::abs(width * cosine) + std::abs(height * sine))));
-    int out_height =
-        std::max(1, static_cast<int>(std::ceil(std::abs(width * sine) + std::abs(height * cosine))));
-    stamp_preview.reset(out_width, out_height, {0, 0, 0, 0});
-    for (int y = 0; y < out_height; ++y) {
-        for (int x = 0; x < out_width; ++x) {
-            double dx = x + 0.5 - out_width * 0.5, dy = y + 0.5 - out_height * 0.5;
-            int sx = static_cast<int>(std::floor(cosine * dx + sine * dy + width * 0.5));
-            int sy = static_cast<int>(std::floor(-sine * dx + cosine * dy + height * 0.5));
-            stamp_preview.set(x, y, scaled.get(sx, sy));
-        }
-    }
-    SDL_DestroyTexture(stamp_texture);
-    stamp_texture =
-        SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, out_width, out_height);
-    if (stamp_texture) {
-        SDL_UpdateTexture(stamp_texture, nullptr, stamp_preview.pixels.data(), out_width * 4);
-        SDL_SetTextureBlendMode(stamp_texture, SDL_BLENDMODE_BLEND);
-        SDL_SetTextureScaleMode(stamp_texture, SDL_SCALEMODE_NEAREST);
-    }
-}
 void Application::canvas(float width, float height) {
     ImGui::SetCursorPos(ImVec2(0, 158));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(207, 219, 234, 255));
@@ -715,6 +766,9 @@ void Application::canvas(float width, float height) {
     const double handle_x[8] = {0, 0.5, 1, 1, 1, 0.5, 0, 0};
     const double handle_y[8] = {0, 0, 0, 0.5, 1, 1, 1, 0.5};
     for (int i = 0; i < 8; ++i) {
+        if (reshape_active || transform_active) {
+            break;
+        }
         if (!document.selection.active && i != 3 && i != 4 && i != 5) {
             continue;
         }
@@ -767,6 +821,7 @@ void Application::canvas(float width, float height) {
                     conv_resize(selection_original, handle_preview.w, handle_preview.h, resized);
                     document.selection.image = std::move(resized);
                     document.selection.coverage.clear();
+                    document.selection.outline.clear();
                     document.selection.x = handle_preview.x;
                     document.selection.y = handle_preview.y;
                 } else {
@@ -852,7 +907,7 @@ void Application::canvas(float width, float height) {
     }
     draw.AddRect(ImVec2(origin.x - 1, origin.y - 1), ImVec2(origin.x + image_width, origin.y + image_height),
                  IM_COL32(150, 162, 176, 255));
-    if (document.selection.active) {
+    if (document.selection.active && !reshape_active) {
         FloatingSelection& selected = document.selection;
         ImVec2 a(origin.x + selected.x * zoom, origin.y + selected.y * zoom);
         ImVec2 b(a.x + selected.image.width * zoom, a.y + selected.image.height * zoom);
@@ -883,6 +938,28 @@ void Application::canvas(float width, float height) {
         char dimensions[64] = {};
         std::snprintf(dimensions, sizeof(dimensions), "%d x %d px", handle_preview.w, handle_preview.h);
         draw.AddText(ImVec2(b.x + 8, b.y + 5), IM_COL32(20, 50, 85, 255), dimensions);
+    }
+    if (reshape_active) {
+        for (const MeshTriangle& triangle : reshape_mesh.triangles) {
+            for (int edge = 0; edge < 3; ++edge) {
+                Point a = reshape_mesh.nodes[triangle.nodes[edge]].target;
+                Point b = reshape_mesh.nodes[triangle.nodes[(edge + 1) % 3]].target;
+                draw.AddLine(ImVec2(origin.x + static_cast<float>(a.x + reshape_origin.x) * zoom,
+                                    origin.y + static_cast<float>(a.y + reshape_origin.y) * zoom),
+                             ImVec2(origin.x + static_cast<float>(b.x + reshape_origin.x) * zoom,
+                                    origin.y + static_cast<float>(b.y + reshape_origin.y) * zoom),
+                             IM_COL32(0, 105, 205, 125));
+            }
+        }
+        for (std::size_t i = 0; i < reshape_mesh.nodes.size(); ++i) {
+            const MeshNode& node = reshape_mesh.nodes[i];
+            ImVec2 center(origin.x + static_cast<float>(node.target.x + reshape_origin.x) * zoom,
+                          origin.y + static_cast<float>(node.target.y + reshape_origin.y) * zoom);
+            draw.AddCircleFilled(center, 6, IM_COL32(255, 255, 255, 255));
+            draw.AddCircleFilled(center, 4.5f,
+                                 static_cast<int>(i) == active_mesh_node ? IM_COL32(245, 155, 20, 255)
+                                                                         : IM_COL32(0, 110, 220, 255));
+        }
     }
     if (document.tool == Tool::Path && !document.path.empty()) {
         for (std::size_t i = 1; i < document.path.size(); ++i) {
@@ -1063,6 +1140,12 @@ void Application::dialogs() {
         ImGui::Checkbox("Maintain aspect ratio", &resize_lock);
         ImGui::Checkbox("Scale artwork (CONV*)", &resize_scale);
         ImGui::TextDisabled("Turn scaling off to change the canvas boundary.");
+        ImGui::Separator();
+        ImGui::TextUnformatted("Skew (degrees)");
+        ImGui::InputDouble("Horizontal angle", &skew_horizontal, 1, 5, "%.1f");
+        ImGui::InputDouble("Vertical angle", &skew_vertical, 1, 5, "%.1f");
+        skew_horizontal = std::clamp(skew_horizontal, -80.0, 80.0);
+        skew_vertical = std::clamp(skew_vertical, -80.0, 80.0);
         if (ImGui::Button("OK", ImVec2(90, 0))) {
             int width = resize_percent
                             ? static_cast<int>(std::round(resize_original_width * resize_width / 100.0))
@@ -1070,7 +1153,11 @@ void Application::dialogs() {
             int height = resize_percent
                              ? static_cast<int>(std::round(resize_original_height * resize_height / 100.0))
                              : resize_height;
-            document.resize(width, height, resize_scale);
+            if (skew_horizontal != 0.0 || skew_vertical != 0.0) {
+                request_skew(width, height);
+            } else {
+                document.resize(width, height, resize_scale);
+            }
             texture_dirty = true;
             ImGui::CloseCurrentPopup();
         }
@@ -1155,6 +1242,7 @@ void Application::dialogs() {
 void Application::frame() {
     try {
         file_results();
+        poll_warp();
         keyboard();
         ImGuiIO& io = ImGui::GetIO();
         ImGui::SetNextWindowPos(ImVec2(0, 0));

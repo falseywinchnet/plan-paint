@@ -293,12 +293,14 @@ void Application::ribbon(float width) {
         command_menu("Save as...", "F12", *this, Command::SaveAs);
         ImGui::Separator();
         command_menu("Print...", "Ctrl+P", *this, Command::Print);
+        command_menu("Page setup...", nullptr, *this, Command::PageSetup);
         command_menu("Properties", "Ctrl+E", *this, Command::Properties);
         ImGui::Separator();
         command_menu("About Rainstar Paint", nullptr, *this, Command::About);
         command_menu("Exit", nullptr, *this, Command::Quit);
     }
     if (ImGui::BeginPopup("Extra tools")) {
+        const double minimum_mesh_spacing = 20.0, maximum_mesh_spacing = 140.0;
         GuiScope popup_scope(GuiEnd::Popup);
         if (ImGui::MenuItem("Continuous junction path", nullptr,
                             document.tool == Tool::Path && document.continuous_path)) {
@@ -313,6 +315,8 @@ void Application::ribbon(float width) {
                             document.selection.active)) {
             choose_tool(Tool::Reshape);
         }
+        ImGui::SliderScalar("Mesh spacing", ImGuiDataType_Double, &mesh_spacing, &minimum_mesh_spacing,
+                            &maximum_mesh_spacing, "%.0f px");
         ImGui::Separator();
         int pattern = static_cast<int>(document.ink.pattern);
         if (ImGui::Combo("Fill / brush pattern", &pattern, pattern_names, 18)) {
@@ -330,8 +334,10 @@ void Application::ribbon(float width) {
             ImGui::SliderInt("Stamp height", &stamp_height, 4, 500);
         }
         ImGui::Checkbox("Transparent stamp (skip Color 2)", &document.stamp_transparent);
-        if (ImGui::Button("Lift a new stamp")) {
+        if (ImGui::Button("Lift a new stamp") && !warp_worker.busy()) {
             document.stamp = {};
+            stamp_field.reset();
+            stamp_render_pending = false;
             choose_tool(Tool::Stamp);
             ImGui::CloseCurrentPopup();
         }

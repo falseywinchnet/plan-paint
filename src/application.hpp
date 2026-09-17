@@ -3,6 +3,7 @@
 #include "imgui.h"
 #include "platform.hpp"
 #include "text.hpp"
+#include "warp_session.hpp"
 namespace paint {
 enum class Command {
     New,
@@ -10,6 +11,7 @@ enum class Command {
     Save,
     SaveAs,
     Print,
+    PageSetup,
     Quit,
     Undo,
     Redo,
@@ -73,6 +75,22 @@ struct Application {
     float edited_rgb[3] = {};
     char edited_hex[16] = {};
     int jpeg_quality = 95;
+    WarpWorker warp_worker;
+    std::shared_ptr<const ConvWarpField> reshape_field;
+    std::shared_ptr<const ConvWarpField> stamp_field;
+    ReshapeMesh reshape_mesh;
+    Point reshape_origin;
+    bool reshape_active = false, reshape_render_pending = false, reshape_commit_pending = false;
+    bool stamp_render_pending = false, transform_selection = false;
+    bool transform_active = false;
+    int active_mesh_node = -1;
+    double mesh_spacing = 60.0;
+    std::uint64_t mesh_generation = 0, stamp_generation = 0;
+    double skew_horizontal = 0.0, skew_vertical = 0.0;
+    void start_reshape();
+    void finish_reshape();
+    void poll_warp();
+    void request_skew(int width, int height);
     explicit Application(SDL_Window* input_window, SDL_Renderer* input_renderer);
     ~Application();
     Application(const Application&) = delete;

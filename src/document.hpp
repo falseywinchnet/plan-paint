@@ -22,6 +22,7 @@ struct FloatingSelection {
     int x = 0, y = 0;
     bool active = false;
     std::vector<std::uint8_t> coverage;
+    std::vector<Point> outline;
 };
 struct Snapshot {
     Image image;
