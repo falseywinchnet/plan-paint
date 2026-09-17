@@ -58,7 +58,7 @@ jobs:
           Get-ChildItem C:/vcpkg/installed/x64-windows-static/share/*/copyright | ForEach-Object {
             Copy-Item $_.FullName ("dist/RainstarPaint/licenses/" + $_.Directory.Name + "-copyright.txt")
           }
-          Compress-Archive -Path dist/RainstarPaint -DestinationPath dist/rainstar-paint-0.1.0-windows-x64.zip
+          Compress-Archive -Path dist/RainstarPaint -DestinationPath dist/rainstar-paint-0.1.1-windows-x64.zip
           Copy-Item "$env:TEMP/rainstar-windows.png" dist/rainstar-windows.png
       - uses: actions/upload-artifact@v4
         with:

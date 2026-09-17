@@ -13,7 +13,7 @@ SYSTEM = {"libstdc++.so.6", "libgcc_s.so.1", "libc.so.6", "libm.so.6", "libpthre
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--build", default="build")
-    parser.add_argument("--version", default="0.1.0")
+    parser.add_argument("--version", default="0.1.1")
     args = parser.parse_args()
     distribution = ROOT / "dist"
     bundle = distribution / "RainstarPaint"

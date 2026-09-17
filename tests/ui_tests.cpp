@@ -1,8 +1,11 @@
 #include "application.hpp"
+#include "codecs.hpp"
 #include "imgui_impl_sdlrenderer3.h"
 #include "imgui_internal.h"
 #include "paths.hpp"
+#include "renderer.hpp"
 #include <chrono>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -19,8 +22,10 @@ class UiFixture {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     std::unique_ptr<paint::Application> app;
-    UiFixture() {
-        SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+    explicit UiFixture(bool native = false) {
+        if (!native) {
+            SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "dummy");
+        }
         if (!SDL_Init(SDL_INIT_VIDEO)) {
             throw std::runtime_error(SDL_GetError());
         }
@@ -28,7 +33,7 @@ class UiFixture {
         if (!window) {
             throw std::runtime_error(SDL_GetError());
         }
-        renderer = SDL_CreateRenderer(window, "software");
+        renderer = SDL_CreateRenderer(window, native ? nullptr : "software");
         if (!renderer) {
             throw std::runtime_error(SDL_GetError());
         }
@@ -107,6 +112,76 @@ class UiFixture {
         }
     }
 };
+paint::Image capture_framebuffer(UiFixture& ui, int width, int height, float scale) {
+    ImGuiIO& io = ImGui::GetIO();
+    io.DisplaySize = {static_cast<float>(width), static_cast<float>(height)};
+    io.DisplayFramebufferScale = {scale, scale};
+    ui.frame();
+    ui.frame();
+    int pixel_width = static_cast<int>(width * scale);
+    int pixel_height = static_cast<int>(height * scale);
+    SDL_Texture* target = SDL_CreateTexture(ui.renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET,
+                                            pixel_width, pixel_height);
+    require(target != nullptr, SDL_GetError());
+    require(SDL_SetRenderTarget(ui.renderer, target), SDL_GetError());
+    paint::render_interface(ui.renderer, ImGui::GetDrawData());
+    SDL_Surface* surface = SDL_RenderReadPixels(ui.renderer, nullptr);
+    require(surface != nullptr, SDL_GetError());
+    SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+    SDL_DestroySurface(surface);
+    require(rgba != nullptr, SDL_GetError());
+    paint::Image capture;
+    capture.reset((*rgba).w, (*rgba).h);
+    const std::uint8_t* pixels = static_cast<const std::uint8_t*>((*rgba).pixels);
+    for (int y = 0; y < capture.height; ++y) {
+        std::memcpy(capture.pixels.data() + static_cast<std::size_t>(y) * capture.width,
+                    pixels + y * (*rgba).pitch, capture.width * 4);
+    }
+    SDL_DestroySurface(rgba);
+    require(SDL_SetRenderTarget(ui.renderer, nullptr), SDL_GetError());
+    SDL_DestroyTexture(target);
+    return capture;
+}
+void retina_rendering(UiFixture& ui, const std::string& screenshot = "") {
+    paint::Application& app = *ui.app;
+    app.document.new_image(960, 1600);
+    app.texture_dirty = true;
+    app.show_help = false;
+    app.show_status = true;
+    app.zoom = 1;
+    ui.move(-100, -100);
+    const int sizes[3][2] = {{1280, 850}, {1160, 600}, {1440, 900}};
+    const float densities[] = {2.0f, 1.5f, 1.0f};
+    for (int size = 0; size < 3; ++size) {
+        int width = sizes[size][0], height = sizes[size][1];
+        paint::Image reference = capture_framebuffer(ui, width, height, 1);
+        const int points[5][2] = {
+            {width - 30, 300}, {80, 400}, {80, height - 16}, {width - 30, 140}, {500, 100}};
+        require(!paint::equal(reference.get(width - 30, 300), {240, 240, 240, 255}),
+                "reference frame does not fill the window");
+        require(reference.get(80, 400).r == 255, "reference canvas is not visible");
+        require(reference.get(80, height - 16).r != 255,
+                "reference canvas is not clipped above the status bar");
+        for (float density : densities) {
+            paint::Image capture = capture_framebuffer(ui, width, height, density);
+            if (size == 0 && density == 2 && !screenshot.empty()) {
+                paint::save_image(capture, screenshot);
+            }
+            require(capture.width == static_cast<int>(width * density) &&
+                        capture.height == static_cast<int>(height * density),
+                    "physical framebuffer dimensions do not match density");
+            for (int point = 0; point < 5; ++point) {
+                int x = points[point][0], y = points[point][1];
+                int physical_x = static_cast<int>((x + 0.5f) * density);
+                int physical_y = static_cast<int>((y + 0.5f) * density);
+                require(paint::equal(reference.get(x, y), capture.get(physical_x, physical_y)),
+                        "Retina pixels differ: window coverage, ribbon or canvas clipping is incorrect");
+            }
+        }
+    }
+    ImGui::GetIO().DisplaySize = {1280, 850};
+    ImGui::GetIO().DisplayFramebufferScale = {1, 1};
+}
 void drawing_and_controls(UiFixture& ui) {
     paint::Application& app = *ui.app;
     ui.click(273, 75);
@@ -387,9 +462,17 @@ void arbitrary_rotation(UiFixture& ui) {
     require(app.error.empty(), app.error.c_str());
 }
 } // namespace
-int main() {
+int main(int argc, char** argv) {
     try {
-        UiFixture ui;
+        bool native = argc >= 2 && std::string(argv[1]) == "--native-render-test";
+        UiFixture ui(native);
+        if (native) {
+            std::string screenshot = argc >= 3 ? argv[2] : "";
+            retina_rendering(ui, screenshot);
+            std::cout << "Native framebuffer coverage and clipping passed at 1x, 1.5x and 2x with "
+                      << SDL_GetRendererName(ui.renderer) << ".\n";
+            return 0;
+        }
         drawing_and_controls(ui);
         path_and_selection(ui);
         stamp_and_reshape(ui);
@@ -397,6 +480,7 @@ int main() {
         recent_files_and_desktop_layouts(ui);
         custom_colors_and_cursor(ui);
         arbitrary_rotation(ui);
+        retina_rendering(ui);
         std::cout << "Ribbon/canvas, palettes, cursor requests, paths, selections, stamps, free rotation and "
                      "reshape passed.\n";
         return 0;

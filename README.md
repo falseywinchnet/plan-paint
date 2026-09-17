@@ -8,15 +8,17 @@ The interface uses the supplied **Portsmouth** family, embedded in the executabl
 
 ## Downloads
 
-[Download release 0.1.0](https://github.com/falseywinchnet/rainstar-paint/releases/tag/v0.1.0)
+[Download release 0.1.1](https://github.com/falseywinchnet/rainstar-paint/releases/tag/v0.1.1)
 
 | Platform | Package | Use |
 |---|---|---|
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.0/rainstar-paint-0.1.0-macos-arm64.pkg) | Install into Applications. Requires macOS 26 or newer because of the bundled native libraries. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.0/rainstar-paint-0.1.0-windows-x64.zip) | Extract the folder, then launch `rainstar-paint.exe`. No installer or separate codec installation. |
-| Linux x64 | [Portable tar.gz](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.0/rainstar-paint-0.1.0-linux-x64.tar.gz) | Extract the folder, then launch `Rainstar Paint`. Targets Ubuntu 22.04 or newer with a graphical desktop and its GTK 3 print service. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.1/rainstar-paint-0.1.1-macos-arm64.pkg) | Install into Applications. Requires macOS 26 or newer because of the bundled native libraries. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.1/rainstar-paint-0.1.1-windows-x64.zip) | Extract the folder, then launch `rainstar-paint.exe`. No installer or separate codec installation. |
+| Linux x64 | [Portable tar.gz](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.1/rainstar-paint-0.1.1-linux-x64.tar.gz) | Extract the folder, then launch `Rainstar Paint`. Targets Ubuntu 22.04 or newer with a graphical desktop and its GTK 3 print service. |
 
-[SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.0/SHA256SUMS) accompany the compiled packages. The bundled Mac application is signed ad hoc; the installer is unsigned, and there is no Developer ID notarization. macOS may require approval in System Settings → Privacy & Security. The Windows 7/10 reference identifies the **Paint design**, not a claim of verified Windows 7 operating-system support.
+[SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.1/SHA256SUMS) accompany the compiled packages. The bundled Mac application is signed ad hoc; the installer is unsigned, and there is no Developer ID notarization. macOS may require approval in System Settings → Privacy & Security. The Windows 7/10 reference identifies the **Paint design**, not a claim of verified Windows 7 operating-system support.
+
+Version 0.1.1 fixes Retina rendering: the ribbon and canvas fill the window at the correct size, and canvas clipping follows the physical framebuffer. Regression checks exercise 1×, 1.5× and 2× density, window resizing, and density changes.
 
 ## Painting
 
@@ -90,7 +92,7 @@ python3 scripts/package-macos.py
 
 The [native build workflow](.github/workflows/build.yml) contains the Windows and Linux recipes. `RAINSTAR_SYSTEM_SDL=OFF` builds the pinned SDL release; `RAINSTAR_BUNDLED_TIFF=ON` builds pinned TIFF with permissive optional codecs. The Linux folder bundles image-codec dependencies and uses the host's desktop/GTK stack. Windows statically links its dependencies and runtime.
 
-The tests cover color round trips, website CONV reference outputs, editing transactions, seven codec round trips and file replacement, mesh validity and numerical invariants, embedded Portsmouth symbols, and actual ImGui input-driven drawing/path/selection/stamp/text/reshape workflows. [Release evidence](docs/RELEASE_VERIFICATION.md) distinguishes native tests, GUI startup checks and untested hardware integration.
+The tests cover color round trips, website CONV reference outputs, editing transactions, seven codec round trips and file replacement, mesh validity and numerical invariants, embedded Portsmouth symbols, and actual ImGui input-driven drawing/path/selection/stamp/text/reshape workflows. [Release evidence](docs/releases/0.1.1/VERIFICATION.md) distinguishes native tests, GUI startup checks and untested hardware integration.
 
 `--demo --screenshot path.png`, `--view-tab`, `--help-sidebar`, `--edit-colors`, `--demo-rotation` and `--demo-reshape` are reproducible app-rendered captures used for these screenshots. They draw through the same application renderer and painting kernels; the screenshots are not mockups.
 

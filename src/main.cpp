@@ -2,6 +2,7 @@
 #include "codecs.hpp"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
+#include "renderer.hpp"
 #include <SDL3/SDL_main.h>
 #include <cmath>
 #include <cstring>
@@ -169,9 +170,7 @@ int main(int argc, char** argv) {
             app.frame();
             ImGui::Render();
             mouse_cursor.update(ImGui::GetMouseCursor());
-            SDL_SetRenderDrawColor(renderer, 240, 240, 240, 255);
-            SDL_RenderClear(renderer);
-            ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
+            paint::render_interface(renderer, ImGui::GetDrawData());
             ++app.rendered_frames;
             if (!app.screenshot_path.empty() && app.rendered_frames >= app.screenshot_frame &&
                 (!demo_reshape || (!app.warp_worker.busy() && !app.reshape_render_pending)) &&
