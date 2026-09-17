@@ -1,0 +1,63 @@
+name: Native builds
+on:
+  push:
+    branches: [main, 'codex/**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native dependencies
+        shell: pwsh
+        run: vcpkg install sdl3:x64-windows-static tiff:x64-windows-static libwebp:x64-windows-static
+      - name: Configure
+        shell: pwsh
+        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DWEBP_INCLUDE_DIR=C:/vcpkg/installed/x64-windows-static/include -DWEBP_LIBRARY=C:/vcpkg/installed/x64-windows-static/lib/webp.lib
+      - name: Compile and test
+        shell: pwsh
+        run: |
+          cmake --build build --config Release --parallel 4
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ctest --test-dir build -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python scripts/check-style.py
+      - name: Package portable folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/RainstarPaint | Out-Null
+          Copy-Item build/Release/rainstar-paint.exe dist/RainstarPaint/
+          Copy-Item LICENSE,THIRD_PARTY_NOTICES.md,README.md dist/RainstarPaint/
+          Copy-Item -Recurse packaging/licenses dist/RainstarPaint/
+          Compress-Archive -Path dist/RainstarPaint -DestinationPath dist/rainstar-paint-0.1.0-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rainstar-paint-windows-x64
+          path: dist/*.zip
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native dependencies
+        run: sudo apt-get update && sudo apt-get install -y libtiff-dev libwebp-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgl1-mesa-dev libegl1-mesa-dev xvfb
+      - name: Configure and compile
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRAINSTAR_SYSTEM_SDL=OFF && cmake --build build --parallel 4
+      - name: Test core and graphical startup
+        run: |
+          ctest --test-dir build --output-on-failure
+          python3 scripts/check-style.py
+          xvfb-run -a build/rainstar-paint --demo --screenshot /tmp/rainstar-linux.png
+      - name: Package portable folder
+        run: |
+          python3 scripts/package-linux.py
+          xvfb-run -a 'dist/RainstarPaint/Rainstar Paint' --demo --screenshot /tmp/rainstar-linux-portable.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rainstar-paint-linux-x64
+          path: |
+            dist/*.tar.gz
+            /tmp/rainstar-linux-portable.png

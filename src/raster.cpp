@@ -1,0 +1,413 @@
+#include "raster.hpp"
+#include <algorithm>
+#include <cmath>
+#include <numbers>
+namespace paint {
+const char* pattern_names[18] = {
+    "Solid",        "Dither 12.5%", "Dither 25%",  "Dither 37.5%", "Dither 50%", "Dither 62.5%",
+    "Dither 75%",   "Dither 87.5%", "Horizontal",  "Vertical",     "Diagonal",   "Crosshatch",
+    "Checkerboard", "Bricks",       "Woven cloth", "Houndstooth",  "Polka dots", "Waves"};
+const char* brush_names[9] = {"Brush",    "Calligraphy brush 1", "Calligraphy brush 2",
+                              "Airbrush", "Oil brush",           "Crayon",
+                              "Marker",   "Natural pencil",      "Watercolor brush"};
+const char* shape_names[23] = {"Line",
+                               "Curve",
+                               "Oval",
+                               "Rectangle",
+                               "Rounded rectangle",
+                               "Polygon",
+                               "Triangle",
+                               "Right triangle",
+                               "Diamond",
+                               "Pentagon",
+                               "Hexagon",
+                               "Right arrow",
+                               "Left arrow",
+                               "Up arrow",
+                               "Down arrow",
+                               "Four-point star",
+                               "Five-point star",
+                               "Six-point star",
+                               "Rounded callout",
+                               "Oval callout",
+                               "Cloud callout",
+                               "Heart",
+                               "Lightning"};
+Color patterned(const Ink& ink, int x, int y) {
+    const int bayer[8][8] = {{0, 48, 12, 60, 3, 51, 15, 63}, {32, 16, 44, 28, 35, 19, 47, 31},
+                             {8, 56, 4, 52, 11, 59, 7, 55},  {40, 24, 36, 20, 43, 27, 39, 23},
+                             {2, 50, 14, 62, 1, 49, 13, 61}, {34, 18, 46, 30, 33, 17, 45, 29},
+                             {10, 58, 6, 54, 9, 57, 5, 53},  {42, 26, 38, 22, 41, 25, 37, 21}};
+    int px = x & 7, py = y & 7;
+    bool front = true;
+    int choice = static_cast<int>(ink.pattern);
+    if (choice >= 1 && choice <= 7) {
+        front = bayer[py][px] < choice * 8;
+    } else {
+        switch (ink.pattern) {
+        case Pattern::Horizontal:
+            front = (py & 3) == 0;
+            break;
+        case Pattern::Vertical:
+            front = (px & 3) == 0;
+            break;
+        case Pattern::Diagonal:
+            front = ((px + py) & 3) == 0;
+            break;
+        case Pattern::Crosshatch:
+            front = ((px + py) & 3) == 0 || ((px - py) & 3) == 0;
+            break;
+        case Pattern::Checker:
+            front = ((px / 4 + py / 4) & 1) == 0;
+            break;
+        case Pattern::Bricks:
+            front = py == 0 || py == 4 || ((px + (py < 4 ? 0 : 4)) & 7) == 0;
+            break;
+        case Pattern::Weave:
+            front = ((px < 4 && py < 4) || (px >= 4 && py >= 4)) ? (px & 1) == 0 : (py & 1) == 0;
+            break;
+        case Pattern::Houndstooth: {
+            const unsigned rows[8] = {0x0f, 0x1e, 0x3c, 0x78, 0xf0, 0xe1, 0xc3, 0x87};
+            front = (rows[py] & (1u << px)) != 0;
+            break;
+        }
+        case Pattern::Dots:
+            front = (px - 3) * (px - 3) + (py - 3) * (py - 3) <= 3;
+            break;
+        case Pattern::Waves:
+            front = (py == ((px < 4 ? px : 7 - px) + 2));
+            break;
+        default:
+            break;
+        }
+    }
+    if (front) {
+        return ink.primary;
+    }
+    if (ink.transparent_pattern) {
+        return {0, 0, 0, 0};
+    }
+    return ink.secondary;
+}
+static std::uint32_t noise_at(int x, int y, std::uint32_t seed) {
+    std::uint32_t value = static_cast<std::uint32_t>(x) * 374761393u +
+                          static_cast<std::uint32_t>(y) * 668265263u + seed * 1274126177u;
+    value = (value ^ (value >> 13)) * 1274126177u;
+    return value ^ (value >> 16);
+}
+void dab(Image& image, Point point, const Ink& ink, bool erase, bool replace) {
+    if (ink.size == 1) {
+        point.x = std::round(point.x);
+        point.y = std::round(point.y);
+    }
+    double radius = std::max(0.5, ink.size * 0.5);
+    int left = std::max(0, static_cast<int>(std::floor(point.x - radius)));
+    int top = std::max(0, static_cast<int>(std::floor(point.y - radius)));
+    int right = std::min(image.width - 1, static_cast<int>(std::ceil(point.x + radius)));
+    int bottom = std::min(image.height - 1, static_cast<int>(std::ceil(point.y + radius)));
+    for (int y = top; y <= bottom; ++y) {
+        for (int x = left; x <= right; ++x) {
+            double dx = x - point.x, dy = y - point.y;
+            bool hit = dx * dx + dy * dy <= radius * radius;
+            if (erase) {
+                hit = std::abs(dx) < radius && std::abs(dy) < radius;
+            } else if (ink.brush == Brush::Calligraphy) {
+                hit = std::abs(dx + dy) < std::max(1.0, radius * 0.3) && std::abs(dx - dy) <= radius * 1.4;
+            } else if (ink.brush == Brush::CalligraphyLeft) {
+                hit = std::abs(dx - dy) < std::max(1.0, radius * 0.3) && std::abs(dx + dy) <= radius * 1.4;
+            } else if (ink.brush == Brush::Marker) {
+                hit = std::abs(dx) < radius && std::abs(dy) < radius;
+            }
+            if (!hit) {
+                continue;
+            }
+            if (erase) {
+                if (!replace || equal(image.get(x, y), ink.primary)) {
+                    image.set(x, y, ink.secondary);
+                }
+                continue;
+            }
+            std::uint32_t noise = noise_at(x, y, ink.noise);
+            if (ink.brush == Brush::Airbrush && noise % 100 > 18) {
+                continue;
+            }
+            if (ink.brush == Brush::Crayon && noise % 100 > 65) {
+                continue;
+            }
+            Color color = patterned(ink, x, y);
+            if (ink.brush == Brush::Watercolor) {
+                color.a = static_cast<std::uint8_t>(color.a * 0.14);
+            } else if (ink.brush == Brush::Marker) {
+                color.a = static_cast<std::uint8_t>(color.a * 0.55);
+            } else if (ink.brush == Brush::Oil) {
+                color.a = static_cast<std::uint8_t>(color.a * (0.5 + 0.5 * (noise % 100) / 100.0));
+            } else if (ink.brush == Brush::Pencil) {
+                color.a = static_cast<std::uint8_t>(color.a * (0.35 + 0.6 * (noise % 100) / 100.0));
+            }
+            image.blend(x, y, color);
+        }
+    }
+}
+void stroke(Image& image, Point start, Point end, const Ink& ink, bool erase, bool replace) {
+    double dx = end.x - start.x, dy = end.y - start.y;
+    int steps = std::max(1, static_cast<int>(std::ceil(std::hypot(dx, dy) * 1.5)));
+    for (int i = 0; i <= steps; ++i) {
+        Point point{start.x + dx * i / steps, start.y + dy * i / steps};
+        dab(image, point, ink, erase, replace);
+    }
+}
+void flood(Image& image, int x, int y, const Ink& ink) {
+    if (!image.contains(x, y)) {
+        return;
+    }
+    Color target = image.get(x, y);
+    // Discover against immutable source; a patterned fill may contain the target color.
+    std::vector<std::uint8_t> visited(image.pixels.size(), 0);
+    std::vector<int> queue;
+    queue.reserve(std::min<std::size_t>(image.pixels.size(), 65536));
+    int first = y * image.width + x;
+    queue.push_back(first);
+    visited[first] = 1;
+    for (std::size_t cursor = 0; cursor < queue.size(); ++cursor) {
+        int index = queue[cursor], px = index % image.width, py = index / image.width;
+        const int nx[4] = {px - 1, px + 1, px, px};
+        const int ny[4] = {py, py, py - 1, py + 1};
+        for (int direction = 0; direction < 4; ++direction) {
+            if (!image.contains(nx[direction], ny[direction])) {
+                continue;
+            }
+            int next = ny[direction] * image.width + nx[direction];
+            if (!visited[next] && equal(image.pixels[next], target)) {
+                visited[next] = 1;
+                queue.push_back(next);
+            }
+        }
+    }
+    for (int index : queue) {
+        image.blend(index % image.width, index / image.width,
+                    patterned(ink, index % image.width, index / image.width));
+    }
+}
+bool inside_polygon(const std::vector<Point>& points, double x, double y) {
+    if (points.size() < 3) {
+        return false;
+    }
+    bool inside = false;
+    std::size_t previous = points.size() - 1;
+    for (std::size_t i = 0; i < points.size(); ++i) {
+        Point a = points[i], b = points[previous];
+        if ((a.y > y) != (b.y > y)) {
+            double crossing = (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x;
+            if (x < crossing) {
+                inside = !inside;
+            }
+        }
+        previous = i;
+    }
+    return inside;
+}
+void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, bool outline, bool fill,
+             bool closed) {
+    if (points.empty()) {
+        return;
+    }
+    if (fill && points.size() > 2) {
+        double min_x = points[0].x, max_x = min_x, min_y = points[0].y, max_y = min_y;
+        for (Point p : points) {
+            min_x = std::min(min_x, p.x);
+            max_x = std::max(max_x, p.x);
+            min_y = std::min(min_y, p.y);
+            max_y = std::max(max_y, p.y);
+        }
+        Ink fill_ink = ink;
+        fill_ink.primary = ink.secondary;
+        fill_ink.secondary = ink.primary;
+        for (int y = std::max(0, static_cast<int>(std::floor(min_y)));
+             y <= std::min(image.height - 1, static_cast<int>(std::ceil(max_y))); ++y) {
+            for (int x = std::max(0, static_cast<int>(std::floor(min_x)));
+                 x <= std::min(image.width - 1, static_cast<int>(std::ceil(max_x))); ++x) {
+                if (inside_polygon(points, x + 0.5, y + 0.5)) {
+                    image.blend(x, y, patterned(fill_ink, x, y));
+                }
+            }
+        }
+    }
+    if (outline) {
+        for (std::size_t i = 1; i < points.size(); ++i) {
+            stroke(image, points[i - 1], points[i], ink);
+        }
+        if (closed && points.size() > 2) {
+            stroke(image, points.back(), points.front(), ink);
+        }
+    }
+}
+std::vector<Point> shape_points(Shape shape, Point start, Point end) {
+    double left = std::min(start.x, end.x), top = std::min(start.y, end.y), width = std::abs(end.x - start.x),
+           height = std::abs(end.y - start.y);
+    std::vector<Point> normalized;
+    if (shape == Shape::Line || shape == Shape::Curve) {
+        return {start, end};
+    }
+    switch (shape) {
+    case Shape::Rectangle:
+        normalized = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+        break;
+    case Shape::Triangle:
+        normalized = {{0.5, 0}, {1, 1}, {0, 1}};
+        break;
+    case Shape::RightTriangle:
+        normalized = {{0, 0}, {1, 1}, {0, 1}};
+        break;
+    case Shape::Diamond:
+        normalized = {{0.5, 0}, {1, 0.5}, {0.5, 1}, {0, 0.5}};
+        break;
+    case Shape::Lightning:
+        normalized = {{0.35, 0}, {1, 0.1}, {0.6, 0.42}, {0.95, 0.48}, {0.12, 1}, {0.38, 0.58}, {0, 0.55}};
+        break;
+    case Shape::RightArrow:
+    case Shape::LeftArrow:
+    case Shape::UpArrow:
+    case Shape::DownArrow:
+        normalized = {{0, 0.25}, {0.6, 0.25}, {0.6, 0}, {1, 0.5}, {0.6, 1}, {0.6, 0.75}, {0, 0.75}};
+        for (Point& point : normalized) {
+            if (shape == Shape::LeftArrow) {
+                point.x = 1.0 - point.x;
+            } else if (shape == Shape::UpArrow || shape == Shape::DownArrow) {
+                double x = point.x;
+                point.x = point.y;
+                point.y = shape == Shape::UpArrow ? 1.0 - x : x;
+            }
+        }
+        break;
+    case Shape::RoundedRectangle:
+    case Shape::RoundedCallout:
+        for (int corner = 0; corner < 4; ++corner) {
+            double cx = (corner == 0 || corner == 3) ? 0.15 : 0.85;
+            double cy = corner < 2 ? 0.15 : 0.85;
+            for (int step = 0; step <= 12; ++step) {
+                double angle = std::numbers::pi * (1.0 + corner * 0.5 + step / 24.0);
+                normalized.push_back({cx + 0.15 * std::cos(angle), cy + 0.15 * std::sin(angle)});
+            }
+        }
+        if (shape == Shape::RoundedCallout) {
+            normalized.insert(normalized.begin() + 36, {{0.4, 0.99}, {0.2, 1.25}, {0.2, 0.98}});
+        }
+        break;
+    default: {
+        int count = 96;
+        if (shape == Shape::Pentagon) {
+            count = 5;
+        }
+        if (shape == Shape::Hexagon) {
+            count = 6;
+        }
+        if (shape == Shape::Star4) {
+            count = 8;
+        }
+        if (shape == Shape::Star5) {
+            count = 10;
+        }
+        if (shape == Shape::Star6) {
+            count = 12;
+        }
+        for (int i = 0; i < count; ++i) {
+            double angle = -std::numbers::pi / 2 + 2 * std::numbers::pi * i / count;
+            double radius = 0.5;
+            if ((shape == Shape::Star4 || shape == Shape::Star5 || shape == Shape::Star6) && i % 2 == 1) {
+                radius = 0.21;
+            }
+            Point point{0.5 + radius * std::cos(angle), 0.5 + radius * std::sin(angle)};
+            if (shape == Shape::Heart) {
+                double t = 2 * std::numbers::pi * i / count;
+                point = {
+                    0.5 + 0.5 * std::pow(std::sin(t), 3),
+                    0.52 - (13 * std::cos(t) - 5 * std::cos(2 * t) - 2 * std::cos(3 * t) - std::cos(4 * t)) /
+                               32.0};
+            }
+            if (shape == Shape::CloudCallout) {
+                radius = 0.44 + 0.06 * std::cos(12 * angle);
+                point = {0.5 + radius * std::cos(angle), 0.5 + radius * std::sin(angle)};
+            }
+            normalized.push_back(point);
+        }
+        if (shape == Shape::OvalCallout || shape == Shape::CloudCallout) {
+            normalized.insert(normalized.begin() + 60, {{0.3, 0.9}, {0.15, 1.25}, {0.18, 0.85}});
+        }
+        break;
+    }
+    }
+    for (Point& point : normalized) {
+        point.x = left + point.x * width;
+        point.y = top + point.y * height;
+    }
+    return normalized;
+}
+void draw_shape(Image& image, Shape shape, Point start, Point end, const Ink& ink, bool outline, bool fill) {
+    std::vector<Point> points = shape_points(shape, start, end);
+    polygon(image, points, ink, outline, fill, shape != Shape::Line && shape != Shape::Curve);
+}
+Image make_stamp(const Image& image, Rect bounds, StampShape shape, bool transparent, Color key) {
+    Image result = cropped(image, bounds);
+    double rx = bounds.w * 0.5, ry = bounds.h * 0.5;
+    for (int y = 0; y < bounds.h; ++y) {
+        for (int x = 0; x < bounds.w; ++x) {
+            double dx = x + 0.5 - rx, dy = y + 0.5 - ry;
+            bool inside = true;
+            if (shape == StampShape::Circle) {
+                inside = dx * dx / (rx * rx) + dy * dy / (ry * ry) <= 1.0;
+            }
+            if (shape == StampShape::Pill) {
+                double radius = std::min(rx, ry);
+                double ax = std::max(0.0, std::abs(dx) - (rx - radius));
+                double ay = std::max(0.0, std::abs(dy) - (ry - radius));
+                inside = ax * ax + ay * ay <= radius * radius;
+            }
+            Color pixel = result.get(x, y);
+            if (!inside || (transparent && equal(pixel, key))) {
+                result.set(x, y, {0, 0, 0, 0});
+            } else if (!transparent && pixel.a < 255) {
+                Color opaque = key;
+                opaque.a = 255;
+                result.set(x, y, opaque);
+                result.blend(x, y, pixel);
+            }
+        }
+    }
+    return result;
+}
+Image rotate_quarter(const Image& image, int turns) {
+    turns = (turns % 4 + 4) % 4;
+    Image result;
+    result.reset(turns % 2 ? image.height : image.width, turns % 2 ? image.width : image.height,
+                 {0, 0, 0, 0});
+    for (int y = 0; y < image.height; ++y) {
+        for (int x = 0; x < image.width; ++x) {
+            int nx = x, ny = y;
+            if (turns == 1) {
+                nx = image.height - 1 - y;
+                ny = x;
+            }
+            if (turns == 2) {
+                nx = image.width - 1 - x;
+                ny = image.height - 1 - y;
+            }
+            if (turns == 3) {
+                nx = y;
+                ny = image.width - 1 - x;
+            }
+            result.set(nx, ny, image.get(x, y));
+        }
+    }
+    return result;
+}
+Image flipped(const Image& image, bool horizontal) {
+    Image result = image;
+    for (int y = 0; y < image.height; ++y) {
+        for (int x = 0; x < image.width; ++x) {
+            result.set(horizontal ? image.width - 1 - x : x, horizontal ? y : image.height - 1 - y,
+                       image.get(x, y));
+        }
+    }
+    return result;
+}
+} // namespace paint
