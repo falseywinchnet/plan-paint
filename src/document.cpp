@@ -7,16 +7,20 @@ Document::Document() {
     image.reset(960, 640);
 }
 bool Document::dirty() const {
-    return revision != saved_revision || selection.active || !path.empty();
+    return revision != saved_revision || selection.active;
+}
+std::size_t Snapshot::bytes() const {
+    // Counting shared bases conservatively keeps the history bound predictable.
+    return image.pixels.size() * sizeof(Color) + atlas.bytes() + path.nodes.size() * sizeof(Point) +
+           (path.base ? (*path.base).pixels.size() * sizeof(Color) : 0);
 }
 void Document::checkpoint() {
-    Snapshot snapshot{image, atlas, revision};
-    history_bytes += snapshot.image.pixels.size() * sizeof(Color) + snapshot.atlas.bytes();
+    Snapshot snapshot{image, atlas, revision, path};
+    history_bytes += snapshot.bytes();
     undo_history.push_back(std::move(snapshot));
     redo_history.clear();
     while (history_bytes > 256u * 1024u * 1024u && undo_history.size() > 1) {
-        history_bytes -=
-            undo_history.front().image.pixels.size() * sizeof(Color) + undo_history.front().atlas.bytes();
+        history_bytes -= undo_history.front().bytes();
         undo_history.pop_front();
     }
     revision = next_revision++;
@@ -26,10 +30,11 @@ void Document::undo() {
         return;
     }
     commit_selection();
-    commit_path();
-    redo_history.push_back({std::move(image), std::move(atlas), revision});
-    history_bytes -=
-        undo_history.back().image.pixels.size() * sizeof(Color) + undo_history.back().atlas.bytes();
+    redo_history.push_back({std::move(image), std::move(atlas), revision, path});
+    history_bytes -= undo_history.back().bytes();
+    // Escape and tool changes end a session permanently. Later image undo must
+    // not resurrect its controls; undo within that session keeps them editable.
+    restore_path(undo_history.back().path);
     image = std::move(undo_history.back().image);
     atlas = std::move(undo_history.back().atlas);
     ++atlas_epoch;
@@ -41,9 +46,9 @@ void Document::redo() {
         return;
     }
     selection = {};
-    path.clear();
-    history_bytes += image.pixels.size() * sizeof(Color) + atlas.bytes();
-    undo_history.push_back({std::move(image), std::move(atlas), revision});
+    undo_history.push_back({std::move(image), std::move(atlas), revision, path});
+    history_bytes += undo_history.back().bytes();
+    restore_path(redo_history.back().path);
     image = std::move(redo_history.back().image);
     atlas = std::move(redo_history.back().atlas);
     ++atlas_epoch;
@@ -56,7 +61,7 @@ void Document::replace(Image replacement, const std::string& path_name) {
     atlas = {};
     ++atlas_epoch;
     selection = {};
-    path.clear();
+    path = {};
     undo_history.clear();
     redo_history.clear();
     history_bytes = 0;
@@ -85,6 +90,7 @@ void Document::paste(const Image& pasted, int x, int y) {
 }
 void Document::select(Rect bounds, const std::vector<Point>& lasso) {
     require_rgba_transform();
+    commit_path();
     commit_selection();
     int right = std::clamp(bounds.x + bounds.w, 0, image.width);
     int bottom = std::clamp(bounds.y + bounds.h, 0, image.height);
@@ -180,6 +186,7 @@ void Document::crop() {
 }
 void Document::resize(int width, int height, bool scale) {
     require_rgba_transform();
+    commit_path();
     if (!selection.active && atlas.kind == AtlasKind::Sheet &&
         (width != image.width || height != image.height)) {
         throw std::runtime_error(
@@ -207,6 +214,7 @@ void Document::resize(int width, int height, bool scale) {
     }
 }
 void Document::rotate(int turns) {
+    commit_path();
     if (selection.active) {
         selection.image = rotate_quarter(selection.image, turns);
         selection.coverage.clear();
@@ -236,6 +244,7 @@ void Document::rotate(int turns) {
     }
 }
 void Document::flip(bool horizontal) {
+    commit_path();
     if (selection.active) {
         selection.image = flipped(selection.image, horizontal);
         selection.coverage.clear();
@@ -262,6 +271,7 @@ void Document::flip(bool horizontal) {
     }
 }
 void Document::invert_colors() {
+    commit_path();
     if (!selection.active) {
         checkpoint();
     }
@@ -273,10 +283,78 @@ void Document::invert_colors() {
     }
 }
 void Document::commit_path() {
-    if (path.size() > 1) {
-        polygon(image, path, ink, shape_outline, shape_fill, !continuous_path, shape_fill_brush);
+    sync_path();
+    path = {};
+}
+void Document::restore_path(const EditablePath& previous) {
+    if (path.session == 0 || path.session != previous.session) {
+        std::uint64_t session = path.session;
+        path = {};
+        // Undo may pass through edits predating the path. Keep the empty live
+        // session so Redo can reach it again, without reviving older sessions.
+        path.session = session;
+        return;
     }
-    path.clear();
+    path = previous;
+    if (!path.nodes.empty()) {
+        ink = path.ink;
+        shape_outline = path.outline;
+        shape_fill = path.fill;
+        continuous_path = path.continuous;
+        shape_fill_brush = path.fill_brush;
+    }
+}
+void Document::add_path_node(Point point) {
+    if (path.session == 0) {
+        path.session = next_path_session++;
+    }
+    sync_path();
+    checkpoint();
+    if (!path.extending) {
+        path.base = std::make_shared<const Image>(image);
+        path.start = path.nodes.size();
+    }
+    path.nodes.push_back(point);
+    path.extending = true;
+    sync_path();
+}
+void Document::end_path_geometry() {
+    sync_path();
+    path.extending = false;
+}
+Image Document::path_image(const Point* next) const {
+    if (!path.extending || !path.base) {
+        return image;
+    }
+    Image result = *path.base;
+    std::vector<Point> run(path.nodes.begin() + path.start, path.nodes.end());
+    if (next) {
+        run.push_back(*next);
+    }
+    if (run.size() > 1) {
+        polygon(result, run, ink, shape_outline, shape_fill, !continuous_path, shape_fill_brush);
+    }
+    return result;
+}
+void Document::sync_path() {
+    if (!path.extending) {
+        return;
+    }
+    path.ink = ink;
+    path.outline = shape_outline;
+    path.fill = shape_fill;
+    path.continuous = continuous_path;
+    path.fill_brush = shape_fill_brush;
+    Image rendered = path_image();
+    if (!std::equal(image.pixels.begin(), image.pixels.end(), rendered.pixels.begin(), rendered.pixels.end(),
+                    equal)) {
+        image = std::move(rendered);
+        // A live path can be saved without releasing its nodes. Subsequent
+        // appearance changes must make that saved document dirty again.
+        if (revision == saved_revision) {
+            revision = next_revision++;
+        }
+    }
 }
 Image Document::visible_image() const {
     Image result = image;

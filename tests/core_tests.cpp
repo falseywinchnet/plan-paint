@@ -320,6 +320,85 @@ void test_continuous_geometry_coverage() {
         }
     }
 }
+void test_path_history() {
+    paint::Document doc;
+    doc.new_image(64, 64);
+    doc.continuous_path = true;
+    doc.ink.primary = {0, 0, 0, 170};
+    doc.ink.size = 3;
+    doc.add_path_node({8, 8});
+    doc.add_path_node({48, 8});
+    paint::Image line = doc.image;
+    doc.add_path_node({48, 48});
+    paint::Image corner = doc.image;
+    require(doc.undo_history.size() == 3, "path nodes were grouped into one undo step");
+    doc.end_path_geometry();
+    require(doc.path.nodes.size() == 3 && !doc.path.extending && doc.undo_history.size() == 3,
+            "ending geometry discarded junctions or inserted an empty undo step");
+    doc.add_path_node({8, 8});
+    require(std::equal(corner.pixels.begin(), corner.pixels.end(), doc.image.pixels.begin(), paint::equal),
+            "a new run connected itself to the previous endpoint");
+    doc.add_path_node({8, 48});
+    require(doc.image.get(8, 30).r < 255, "branch from a retained junction is missing");
+    doc.undo();
+    require(doc.path.nodes.size() == 4 && doc.path.extending && doc.image.get(8, 30).r == 255 &&
+                doc.image.get(48, 30).r < 255,
+            "branch undo removed old geometry or kept the new segment");
+    doc.undo();
+    require(doc.path.nodes.size() == 3 && !doc.path.extending,
+            "undo did not remove the new run's starting node");
+    doc.undo();
+    require(doc.path.nodes.size() == 2 && doc.path.extending &&
+                std::equal(line.pixels.begin(), line.pixels.end(), doc.image.pixels.begin(), paint::equal),
+            "undo across a stopped run did not restore the prior editable segment");
+    doc.redo();
+    require(
+        doc.path.nodes.size() == 3 && !doc.path.extending &&
+            std::equal(corner.pixels.begin(), corner.pixels.end(), doc.image.pixels.begin(), paint::equal),
+        "redo lost nodes, the stopped state, or translucent coverage");
+    doc.commit_path();
+    doc.undo();
+    require(doc.path.nodes.empty() && doc.path.session == 0 && doc.image.get(48, 30).r == 255 &&
+                doc.image.get(30, 8).r < 255,
+            "released path undo resurrected controls or erased multiple segments");
+    doc.redo();
+    require(doc.path.nodes.empty() && doc.image.get(48, 30).r < 255,
+            "released path redo resurrected controls or lost pixels");
+
+    doc.new_image(64, 64);
+    doc.add_path_node({8, 8});
+    doc.add_path_node({48, 8});
+    doc.undo();
+    doc.undo();
+    require(doc.path.nodes.empty() && !doc.dirty(), "undoing every node did not restore a clean canvas");
+    doc.redo();
+    require(doc.path.nodes.size() == 1, "redo could not restore the first live node");
+    doc.add_path_node({8, 48});
+    require(doc.redo_history.empty() && doc.image.get(30, 8).r == 255 && doc.image.get(8, 30).r < 255,
+            "a replacement segment retained the abandoned redo branch");
+    doc.saved_revision = doc.revision;
+    doc.sync_path();
+    require(!doc.dirty(), "saved live path remained dirty solely because of its nodes");
+    doc.ink.primary = {200, 10, 30, 255};
+    doc.sync_path();
+    require(doc.dirty(), "changing a saved live path's appearance did not mark the document dirty");
+
+    doc.new_image(64, 64);
+    doc.checkpoint();
+    doc.image.set(2, 2, {10, 20, 30, 255});
+    doc.add_path_node({8, 8});
+    doc.add_path_node({48, 8});
+    doc.undo();
+    doc.undo();
+    doc.undo();
+    require(doc.path.nodes.empty() && doc.image.get(2, 2).r == 255,
+            "undo through the path's first node did not reach earlier image edits");
+    doc.redo();
+    doc.redo();
+    doc.redo();
+    require(doc.path.nodes.size() == 2 && doc.path.extending && doc.image.get(2, 2).r == 10,
+            "redo through earlier image edits lost the still-active path session");
+}
 void test_codecs() {
     paint::Image image;
     image.reset(17, 13, {62, 147, 219, 255});
@@ -359,6 +438,7 @@ int main() {
         test_materials_and_shapes();
         test_eraser_and_pixel_target();
         test_continuous_geometry_coverage();
+        test_path_history();
         test_codecs();
         std::cout << "Color, CONV, editing and seven-format codec tests passed.\n";
         return 0;

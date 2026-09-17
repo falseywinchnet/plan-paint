@@ -96,6 +96,8 @@ struct Application {
     bool zoom_scroll_pending = false;
     ImVec2 zoom_scroll;
     std::string path_preview_signature;
+    std::string path_style_signature;
+    bool path_preview_paused = false;
     Point down, last, hover, selection_start;
     std::vector<Point> lasso;
     std::vector<Point> curve_points;
@@ -151,6 +153,7 @@ struct Application {
     int active_mesh_node = -1;
     double mesh_spacing = 60.0;
     std::uint64_t mesh_generation = 0, stamp_generation = 0;
+    std::uint64_t stamp_source_generation = 0;
     double skew_horizontal = 0.0, skew_vertical = 0.0;
     std::shared_ptr<const ConvWarpField> rotation_field;
     FloatingSelection rotation_original;

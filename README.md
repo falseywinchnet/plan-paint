@@ -14,11 +14,11 @@ A free drawing application with the familiar Windows 7/10 Paint ribbon, built fo
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.5/rainstar-paint-0.1.5-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.5/rainstar-paint-0.1.5-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.5/rainstar-paint-0.1.5-linux-x64.tar.gz) | Ubuntu 22.04 or newer with a graphical desktop and GTK 3. Extract and launch `Rainstar Paint`. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.6/rainstar-paint-0.1.6-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.6/rainstar-paint-0.1.6-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.6/rainstar-paint-0.1.6-linux-x64.tar.gz) | Ubuntu 22.04 or newer with a graphical desktop and GTK 3. Extract and launch `Rainstar Paint`. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.5/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.6/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
@@ -30,8 +30,8 @@ The Mac application is ad-hoc signed; its installer is unsigned and has no Devel
 - **Add text and color.** Move and resize text boxes, toggle word wrap, and choose a font, size, bold, italic, underline or strikeout. Place or cancel from the floating toolbar. Mix colors with RGB, hex or OKLab controls and save sixteen custom swatches.
 - **See before you mark.** The pencil previews its exact pixel, the round pink eraser offers hard and soft edges, and the magnifier enlarges the hovered region. Click to zoom around the pointer, up to 1600%.
 - **Work with materials.** Procedural watercolor, oil, bristles, crayon, graphite, pastel and charcoal respond to paper tooth, grain scale and paint load. Choose separate outline and fill media in the Patterns & tools ribbon.
-- **Follow a path.** Connect new segments to any earlier junction and keep drawing through loops. Press **Escape** to finish.
-- **Stamp an object.** Lift a circle, pill, square or rectangle and print repeated copies. **R** rotates, **Shift+R** rotates backward, and **+ / −** changes size. Open **Stamp → Lift a new stamp** to choose another source.
+- **Follow a path.** Connect new segments to any earlier junction and keep drawing through loops. **Right-click** ends the current run and keeps its junctions available for another branch. **Undo** removes one node and its segment at a time; **Redo** restores them. **Escape** or choosing another tool releases the nodes.
+- **Stamp an object.** Lift a circle, pill, square or rectangle and print repeated copies. **R** rotates, **Shift+R** rotates backward, and **+ / −** changes size. **Right-click**, **Escape**, or **Stamp → Lift a new stamp** clears the sample so the next click chooses another source.
 - **Turn and reshape.** Drag the round handle at a selection's upper-right corner to rotate freely; hold **Shift** for 15-degree steps. Lasso an object and choose **Patterns & tools → Mesh** to stretch it with control points.
 
 **F1** opens the yellow help sidebar, with step-by-step instructions and keyboard shortcuts. The drawing workflow needs no account or network connection. Idle windows wait for input and avoid submitting unchanged frames to the GPU.

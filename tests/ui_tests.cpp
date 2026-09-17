@@ -309,13 +309,13 @@ void path_and_selection(UiFixture& ui) {
     ui.click(220, 213);
     ui.click(220, 323);
     ui.click(101, 214);
-    require(app.document.path.size() == 4, "continuous path terminated at first junction");
-    require(app.document.path[0].x == app.document.path[3].x &&
-                app.document.path[0].y == app.document.path[3].y,
+    require(app.document.path.nodes.size() == 4, "continuous path terminated at first junction");
+    require(app.document.path.nodes[0].x == app.document.path.nodes[3].x &&
+                app.document.path.nodes[0].y == app.document.path.nodes[3].y,
             "junction did not snap exactly");
     ui.click(340, 343);
     ui.key(ImGuiKey_Escape);
-    require(app.document.path.empty(), "Escape did not commit continuous path");
+    require(app.document.path.nodes.empty(), "Escape did not commit continuous path");
     require(app.document.image.get(93, 75).r != 255, "path was not rasterized");
     app.choose_tool(paint::Tool::Select);
     ui.drag(90, 198, 230, 343);
@@ -367,6 +367,191 @@ void stamp_and_reshape(UiFixture& ui) {
     ui.wait_work();
     require(!app.reshape_active && !app.document.selection.active, "Escape did not commit reshape");
     require(app.error.empty(), app.error.c_str());
+}
+void path_session_and_escape(UiFixture& ui, const std::string& screenshot = "") {
+    paint::Application& app = *ui.app;
+    app.document.new_image();
+    app.zoom = 1;
+    app.patterns_tab = app.view_tab = app.text_tab = app.atlas_tab = false;
+    app.document.ink = {};
+    app.document.shape_outline = true;
+    app.document.shape_fill = false;
+    app.choose_tool(paint::Tool::Path);
+    app.document.continuous_path = true;
+    ui.click(100, 220);
+    ui.click(260, 220);
+    ui.click(260, 380);
+    ui.click(420, 380);
+    std::size_t history = app.document.undo_history.size();
+    ui.click(440, 480, ImGuiMouseButton_Right);
+    require(!app.document.path.extending && app.document.path.nodes.size() == 4 &&
+                app.document.undo_history.size() == history,
+            "right-click added a path node, discarded junctions, or created an undo step");
+    ImGui::GetIO().AddKeyEvent(ImGuiMod_Ctrl, true);
+    ui.key(ImGuiKey_Z);
+    ImGui::GetIO().AddKeyEvent(ImGuiMod_Ctrl, false);
+    ui.frame();
+    require(app.document.path.nodes.size() == 3 && app.document.path.extending &&
+                app.document.image.get(330, 242).r == 255 && app.document.image.get(253, 170).r == 0,
+            "keyboard Undo did not remove just the last segment and retain the editable path");
+    app.command(paint::Command::Redo);
+    ui.frame();
+    require(app.document.path.nodes.size() == 4 && !app.document.path.extending &&
+                app.document.image.get(330, 242).r == 0,
+            "Redo lost the stopped path or its last segment");
+    app.choose_tool(paint::Tool::Path);
+    require(app.document.path.nodes.size() == 4, "reselecting the active tool discarded its junctions");
+    ui.click(101, 221);
+    require(app.document.path.start == 4 && app.document.path.nodes.back().x == 93 &&
+                app.document.path.nodes.back().y == 82 && app.document.image.get(170, 120).r == 255,
+            "branch did not snap to an old junction or inserted a connecting segment");
+    ui.click(100, 500);
+    std::filesystem::path saved = std::filesystem::temp_directory_path() / "rainstar-live-path.png";
+    app.save_to(saved.string());
+    ui.frame();
+    require(app.document.path.nodes.size() == 6 && !app.document.dirty() &&
+                paint::load_image(saved.string()).get(93, 300).r == 0,
+            "saving lost active nodes, omitted path pixels, or left the saved picture dirty");
+    std::filesystem::remove(saved);
+    ui.key(ImGuiKey_Escape);
+    require(app.document.path.session == 0 && app.document.path.nodes.empty() &&
+                app.document.image.get(93, 300).r == 0,
+            "Escape failed to release the path while preserving the drawing");
+    app.command(paint::Command::Undo);
+    ui.frame();
+    require(app.document.path.nodes.empty() && app.document.image.get(93, 300).r == 255 &&
+                app.document.image.get(330, 242).r == 0,
+            "Undo after Escape restored handles or erased older segments");
+    app.command(paint::Command::Redo);
+    ui.frame();
+    require(app.document.path.nodes.empty() && app.document.image.get(93, 300).r == 0,
+            "Redo after Escape restored handles or lost the segment");
+
+    // Polygon closure retains its junctions too; a later polygon closes against
+    // its own first node, including when that node is shared with an older run.
+    app.document.new_image();
+    app.document.continuous_path = false;
+    ui.click(100, 220);
+    ui.click(260, 220);
+    ui.click(260, 380);
+    ui.click(100, 220);
+    require(!app.document.path.extending && app.document.path.nodes.size() == 4,
+            "polygon closure discarded the closed polygon's junctions");
+    ui.click(100, 220);
+    ui.click(100, 500);
+    ui.click(400, 500);
+    ui.click(100, 220);
+    require(!app.document.path.extending && app.document.path.nodes.size() == 8,
+            "a second polygon sharing an old junction failed to close");
+    app.choose_tool(paint::Tool::Pencil);
+    require(app.document.path.nodes.empty(), "a different tool did not release the path session");
+    app.command(paint::Command::Undo);
+    require(app.document.path.nodes.empty(), "undo after a tool change resurrected path handles");
+
+    // Reset during compilation, lift a replacement before the old result arrives,
+    // and confirm only the replacement is ever rendered.
+    app.document.new_image();
+    app.document.image.reset(960, 640, {220, 30, 40, 255});
+    app.choose_tool(paint::Tool::Stamp);
+    app.stamp_width = 32;
+    app.reset_stamp();
+    app.begin_gesture({100, 100}, false);
+    require(app.warp_worker.busy(), "stamp compilation was not queued");
+    app.begin_gesture({100, 100}, true);
+    require(app.document.stamp.pixels.empty() && !app.stamp_field && app.stamp_preview.pixels.empty(),
+            "right-click did not immediately clear a compiling stamp");
+    app.document.image.reset(960, 640, {30, 80, 220, 255});
+    app.begin_gesture({100, 100}, false);
+    ui.wait_work();
+    require(!app.stamp_preview.pixels.empty() && app.stamp_preview.get(16, 16).b == 220,
+            "obsolete compilation replaced the newly lifted stamp");
+    ui.click(450, 450, ImGuiMouseButton_Right);
+    require(app.document.stamp.pixels.empty() && app.stamp_texture == nullptr &&
+                app.document.undo_history.empty(),
+            "right-click placed a stamp instead of returning to sample selection");
+    app.begin_gesture({100, 100}, false);
+    ui.key(ImGuiKey_Escape);
+    ui.wait_work();
+    require(app.document.stamp.pixels.empty() && app.stamp_preview.pixels.empty() && !app.stamp_field &&
+                !app.stamp_render_pending && app.stamp_texture == nullptr,
+            "Escape failed to release a stamp or an obsolete background result revived it");
+
+    app.choose_tool(paint::Tool::Shape);
+    app.document.shape = paint::Shape::Rectangle;
+    ui.move(200, 300);
+    ImGui::GetIO().AddMouseButtonEvent(0, true);
+    ui.frame();
+    ui.move(400, 500);
+    require(app.dragging && app.preview_active, "shape drag did not start");
+    app.hotspot_pick = true;
+    ui.key(ImGuiKey_Escape);
+    ImGui::GetIO().AddMouseButtonEvent(0, false);
+    ui.frame();
+    require(!app.dragging && !app.preview_active && !app.hotspot_pick && app.document.undo_history.empty(),
+            "Escape did not free the pending shape or hotspot operation");
+
+    app.choose_tool(paint::Tool::Path);
+    app.document.continuous_path = true;
+    ui.click(100, 220);
+    ui.click(260, 220);
+    const paint::Command modal_commands[] = {paint::Command::Resize, paint::Command::Properties,
+                                             paint::Command::PrintPreview, paint::Command::About,
+                                             paint::Command::Quit};
+    for (paint::Command command : modal_commands) {
+        app.command(command);
+        ui.frame();
+        ui.frame();
+        require(ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+                "test dialog did not open");
+        ui.key(ImGuiKey_Escape);
+        require(!ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel) &&
+                    app.running && app.document.path.nodes.size() == 2,
+                "Escape did not cancel the dialog alone, or changed the active picture");
+    }
+    app.atlas_grid_dialog = true;
+    ui.frame();
+    ui.key(ImGuiKey_Escape);
+    require(app.document.atlas.kind == paint::AtlasKind::None &&
+                !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+            "Escape did not dismiss sprite grid setup without applying it");
+    app.icon_sizes_dialog = true;
+    app.deferred_after_save = true;
+    ui.frame();
+    ui.key(ImGuiKey_Escape);
+    require(!app.deferred_after_save &&
+                !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+            "Escape did not cancel icon export and its deferred command");
+    app.error = "Dismiss this test message.";
+    ui.frame();
+    ui.key(ImGuiKey_Escape);
+    require(app.error.empty() &&
+                !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+            "Escape did not dismiss the message dialog");
+    ui.key(ImGuiKey_Escape);
+    require(app.document.path.nodes.empty(), "Escape did not release the tool after dismissing dialogs");
+
+    if (!screenshot.empty()) {
+        app.document.new_image();
+        app.choose_tool(paint::Tool::Path);
+        app.document.continuous_path = true;
+        app.document.ink.primary = {25, 70, 145, 255};
+        app.document.ink.size = 3;
+        ui.click(180, 280);
+        ui.click(440, 280);
+        ui.click(440, 530);
+        ui.click(180, 280);
+        ui.click(180, 280, ImGuiMouseButton_Right);
+        ui.click(440, 280);
+        ui.click(700, 430);
+        ui.click(440, 530);
+        ui.click(440, 530, ImGuiMouseButton_Right);
+        ui.move(440, 280);
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 2), screenshot);
+    }
+    app.document.new_image();
+    app.choose_tool(paint::Tool::Pencil);
+    app.texture_dirty = true;
+    ui.frame();
 }
 void text_and_stale_transform(UiFixture& ui) {
     paint::Application& app = *ui.app;
@@ -950,17 +1135,20 @@ void atlas_interactions(UiFixture& ui, const std::string& screenshot = "") {
 } // namespace
 int main(int argc, char** argv) {
     try {
+        bool path_render = argc >= 2 && std::string(argv[1]) == "--path-render-test";
         bool atlas_render = argc >= 2 && std::string(argv[1]) == "--atlas-render-test";
         bool text_render = argc >= 2 && std::string(argv[1]) == "--text-render-test";
         bool geometry_render = argc >= 2 && std::string(argv[1]) == "--geometry-render-test";
         bool pointed_render = argc >= 2 && std::string(argv[1]) == "--pointed-render-test";
         bool material_render = argc >= 2 && std::string(argv[1]) == "--materials-render-test";
-        bool native = atlas_render || geometry_render || pointed_render || material_render || text_render ||
-                      (argc >= 2 && std::string(argv[1]) == "--native-render-test");
+        bool native = path_render || atlas_render || geometry_render || pointed_render || material_render ||
+                      text_render || (argc >= 2 && std::string(argv[1]) == "--native-render-test");
         UiFixture ui(native);
         if (native) {
             std::string screenshot = argc >= 3 ? argv[2] : "";
-            if (atlas_render) {
+            if (path_render) {
+                path_session_and_escape(ui, screenshot);
+            } else if (atlas_render) {
                 atlas_interactions(ui, screenshot);
             } else if (geometry_render) {
                 geometry_preview(ui, screenshot);
@@ -973,7 +1161,9 @@ int main(int argc, char** argv) {
             } else {
                 retina_rendering(ui, screenshot);
             }
-            std::cout << (atlas_render
+            std::cout << (path_render
+                              ? "Native retained paths, segment history, stamp reset and Escape passed with "
+                          : atlas_render
                               ? "Native Atlas sequence, gallery, painting and cursor controls passed with "
                           : geometry_render ? "Native path preview/commit and geometry coverage passed with "
                           : pointed_render
@@ -987,6 +1177,7 @@ int main(int argc, char** argv) {
         }
         drawing_and_controls(ui);
         path_and_selection(ui);
+        path_session_and_escape(ui);
         stamp_and_reshape(ui);
         text_and_stale_transform(ui);
         text_object_controls(ui);

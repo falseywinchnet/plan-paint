@@ -13,10 +13,6 @@ void ribbon_cursor(ImVec2 position) {
 } // namespace
 
 void Application::reset_stamp() {
-    if (warp_worker.busy()) {
-        status = "Wait for the current stamp preparation to finish.";
-        return;
-    }
     document.stamp = {};
     stamp_field.reset();
     stamp_preview = {};
@@ -24,15 +20,14 @@ void Application::reset_stamp() {
     stamp_scale = 1;
     stamp_angle = 0;
     ++stamp_generation;
+    ++stamp_source_generation;
     SDL_DestroyTexture(stamp_texture);
     stamp_texture = nullptr;
     choose_tool(Tool::Stamp);
     status = "Click the picture to lift a new stamp. The old stamp has been cleared.";
 }
 void Application::stamp_controls() {
-    ImGui::BeginDisabled(warp_worker.busy());
     bool reset = ImGui::Button("Lift a new stamp", {245, 28});
-    ImGui::EndDisabled();
     if (reset) {
         reset_stamp();
         ImGui::CloseCurrentPopup();
@@ -500,6 +495,9 @@ void Application::ribbon(float width) {
         }
         if (ribbon_button("Ribbon path", "Path", 21, {156, 58}, {66, 80},
                           document.tool == Tool::Path && document.continuous_path)) {
+            if (!document.continuous_path) {
+                document.commit_path();
+            }
             choose_tool(Tool::Path);
             document.continuous_path = true;
         }
@@ -808,6 +806,9 @@ void Application::ribbon(float width) {
                           {419.0f + (i % 7) * 25.0f, 61.0f + (i / 7) * 23.0f}, {25, 23},
                           document.tool == Tool::Shape && static_cast<int>(document.shape) == shape_index,
                           shape_names[shape_index])) {
+            if (document.continuous_path) {
+                document.commit_path();
+            }
             choose_tool(i == 5 ? Tool::Path : Tool::Shape);
             document.continuous_path = false;
             document.shape = static_cast<Shape>(shape_index);
@@ -826,6 +827,9 @@ void Application::ribbon(float width) {
             if (ImGui::Selectable("##Shape",
                                   document.tool == Tool::Shape && static_cast<int>(document.shape) == i,
                                   ImGuiSelectableFlags_None, {104, 70})) {
+                if (document.continuous_path) {
+                    document.commit_path();
+                }
                 choose_tool(i == 5 ? Tool::Path : Tool::Shape);
                 document.continuous_path = false;
                 document.shape = static_cast<Shape>(i);
@@ -979,6 +983,9 @@ void Application::ribbon(float width) {
         }
         if (ribbon_button("Path shortcut", "Path", 21, {1206, 58}, {58, 66},
                           document.tool == Tool::Path && document.continuous_path)) {
+            if (!document.continuous_path) {
+                document.commit_path();
+            }
             choose_tool(Tool::Path);
             document.continuous_path = true;
         }

@@ -2,6 +2,7 @@
 #include "atlas.hpp"
 #include "raster.hpp"
 #include <deque>
+#include <memory>
 namespace paint {
 enum class Tool {
     Select,
@@ -25,10 +26,24 @@ struct FloatingSelection {
     std::vector<std::uint8_t> coverage;
     std::vector<Point> outline;
 };
+// A session retains junctions from every finished run. The current run is
+// rasterized from an immutable base so translucent joins are painted only once.
+struct EditablePath {
+    std::vector<Point> nodes;
+    std::shared_ptr<const Image> base;
+    std::size_t start = 0;
+    std::uint64_t session = 0;
+    bool extending = false;
+    Ink ink;
+    bool outline = true, fill = false, continuous = false;
+    Brush fill_brush = Brush::Round;
+};
 struct Snapshot {
     Image image;
     AtlasState atlas;
     std::uint64_t revision = 0;
+    EditablePath path;
+    std::size_t bytes() const;
 };
 struct Document {
     Image image;
@@ -45,7 +60,8 @@ struct Document {
     bool shape_outline = true, shape_fill = false;
     Brush shape_fill_brush = Brush::Round;
     bool continuous_path = false;
-    std::vector<Point> path;
+    EditablePath path;
+    std::uint64_t next_path_session = 1;
     std::string filename;
     std::uint64_t revision = 0, saved_revision = 0, next_revision = 1;
     std::deque<Snapshot> undo_history, redo_history;
@@ -83,6 +99,11 @@ struct Document {
     void flip(bool horizontal);
     void invert_colors();
     void commit_path();
+    void add_path_node(Point point);
+    void end_path_geometry();
+    void sync_path();
+    void restore_path(const EditablePath& previous);
+    Image path_image(const Point* next = nullptr) const;
     Image visible_image() const;
 };
 } // namespace paint

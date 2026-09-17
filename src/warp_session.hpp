@@ -34,7 +34,7 @@ class WarpWorker {
     WarpWorker(const WarpWorker&) = delete;
     WarpWorker& operator=(const WarpWorker&) = delete;
     bool busy() const;
-    void compile(WarpTask task, const Image& source);
+    void compile(WarpTask task, const Image& source, std::uint64_t generation = 0);
     void mesh(WarpTask task, std::shared_ptr<const ConvWarpField> field, const ReshapeMesh& mesh, Rect bounds,
               std::uint64_t generation);
     void affine(WarpTask task, std::shared_ptr<const ConvWarpField> field, const AffineMap& map, Rect bounds,

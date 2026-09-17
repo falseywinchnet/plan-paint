@@ -85,8 +85,12 @@ void Application::help(float x, float y, float width, float height) {
         "Choose Path in Patterns & tools or at the right of Home. Click to "
         "place each corner. Move near any old corner: a blue dot appears. Click that dot to snap your new "
         "segment exactly onto the old junction. You can keep drawing from there, including through "
-        "loops.\n\nReturning to the first point does not finish this kind of path. Press Escape when you are "
-        "done. The ordinary polygon still closes when you return to its first corner.");
+        "loops.\n\nRight-click ends the current run without dropping its junctions. Click an old junction "
+        "to begin a branch, or elsewhere to start a separate run. Undo removes one node and its segment "
+        "at a time; Redo restores them. The remaining junctions stay available. Saving keeps them too. "
+        "Escape or choosing another tool releases all junctions; the drawing remains, and its segments "
+        "can still be undone individually.\n\nReturning to the first point does not finish the continuous "
+        "path. The ordinary polygon closes when you return to the first corner of its current run.");
     help_topic(
         "6. Select, move, copy and paste",
         "Select draws a rectangle around part of the picture. The little arrow beneath Select also offers "
@@ -106,9 +110,9 @@ void Application::help(float x, float y, float width, float height) {
         "way. + makes it bigger and - makes it smaller. These keys change the stamp, not the "
         "canvas.\n\nTransparent stamp preserves transparent pixels and skips pixels matching Color 2. Turn "
         "it off to include that background color. The outside of a circle or pill is always transparent. "
-        "Click the small arrow below Stamp, then Lift a new stamp, to clear the old sample and reset its "
-        "rotation and scale. The next canvas click picks another. The same controls are in Patterns & "
-        "tools.");
+        "Right-click or press Escape to clear the old sample and reset its rotation and scale, even while "
+        "it is preparing. The next canvas click picks another. Stamp > Lift a new stamp does the same; "
+        "these controls are also in Patterns & tools.");
     help_topic(
         "8. Resize, rotate and the canvas",
         "Resize accepts percentages or pixel dimensions. Keep Maintain aspect ratio checked to avoid "
@@ -171,7 +175,8 @@ void Application::help(float x, float y, float width, float height) {
         "F11 toggles full screen.\n\nCtrl / Command shortcuts:\nN: New    O: Open    S: Save\nShift+S or "
         "F12: Save as\nZ: Undo    Y or Shift+Z: Redo\nX: Cut    C: Copy    V: Paste\nA: Select all    P: "
         "Print\nE: Properties    W: Resize    I: Invert colors\nG: Gridlines\n\nEscape places a selection or "
-        "finishes a path. F1 opens this guide. R and +/- change a loaded stamp.");
+        "releases a path, clears a loaded stamp, or cancels text. F1 opens this guide. R and +/- change "
+        "a loaded stamp.");
     help_topic(
         "13. How I made this - Astra",
         "I am Astra. I built Rainstar Paint in C++ with Dear ImGui and SDL, using explicit types, "

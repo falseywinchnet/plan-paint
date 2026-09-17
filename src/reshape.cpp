@@ -108,15 +108,20 @@ void Application::regenerate_stamp() {
     ++stamp_generation;
     stamp_render_pending = true;
     if (!stamp_field && !warp_worker.busy()) {
-        warp_worker.compile(WarpTask::CompileStamp, document.stamp);
+        warp_worker.compile(WarpTask::CompileStamp, document.stamp, stamp_source_generation);
         status = "Preparing the CONV stamp...";
     }
 }
 void Application::poll_warp() {
     WarpResult result;
     if (warp_worker.take(result)) {
-        if (result.task == WarpTask::CompileRotation || result.task == WarpTask::PreviewRotation ||
-            result.task == WarpTask::CommitRotation) {
+        bool stale_stamp =
+            (result.task == WarpTask::CompileStamp && result.generation != stamp_source_generation) ||
+            (result.task == WarpTask::Stamp && result.generation != stamp_generation);
+        if (stale_stamp) {
+            // Reset is immediate, even while an obsolete sample is compiling.
+        } else if (result.task == WarpTask::CompileRotation || result.task == WarpTask::PreviewRotation ||
+                   result.task == WarpTask::CommitRotation) {
             rotation_result(result);
         } else if (!result.error.empty()) {
             error = result.error;
@@ -168,7 +173,8 @@ void Application::poll_warp() {
                 SDL_SetTextureBlendMode(stamp_texture, SDL_BLENDMODE_BLEND);
                 SDL_SetTextureScaleMode(stamp_texture, SDL_SCALEMODE_NEAREST);
                 ++texture_generation;
-                status = "Click to stamp. R rotates 15 degrees; + and - resize.";
+                status =
+                    "Click to stamp. R rotates; + and - resize. Right-click or Escape lifts a new stamp.";
             }
         } else if (result.task == WarpTask::Transform) {
             if (transform_selection) {
@@ -200,6 +206,8 @@ void Application::poll_warp() {
         warp_worker.mesh(reshape_commit_pending ? WarpTask::CommitMesh : WarpTask::PreviewMesh, reshape_field,
                          reshape_mesh, bounds, mesh_generation);
         reshape_render_pending = false;
+    } else if (stamp_render_pending && !stamp_field && !document.stamp.pixels.empty()) {
+        warp_worker.compile(WarpTask::CompileStamp, document.stamp, stamp_source_generation);
     } else if (stamp_render_pending && stamp_field) {
         double angle = stamp_angle * std::numbers::pi / 180.0;
         double cosine = std::cos(angle) * stamp_scale, sine = std::sin(angle) * stamp_scale;

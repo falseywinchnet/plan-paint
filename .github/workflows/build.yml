@@ -49,7 +49,7 @@ jobs:
           $paintProcess = Start-Process -FilePath build/Release/rainstar-paint.exe -ArgumentList '--demo', '--screenshot', "$env:TEMP/rainstar-windows.png" -Wait -PassThru
           if ($paintProcess.ExitCode -ne 0) { exit $paintProcess.ExitCode }
           if (!(Test-Path "$env:TEMP/rainstar-windows.png")) { throw "GUI startup did not produce a screenshot" }
-          foreach ($mode in @('text', 'materials', 'pointed', 'geometry', 'atlas')) {
+          foreach ($mode in @('text', 'materials', 'pointed', 'geometry', 'atlas', 'path')) {
             $testProcess = Start-Process -FilePath build/Release/paint-ui-tests.exe -ArgumentList "--$mode-render-test", "$env:TEMP/rainstar-$mode.png" -Wait -PassThru
             if ($testProcess.ExitCode -ne 0) { exit $testProcess.ExitCode }
           }
@@ -89,7 +89,7 @@ jobs:
           ctest --test-dir build --output-on-failure
           python3 scripts/check-style.py
           xvfb-run -a build/rainstar-paint --demo --screenshot /tmp/rainstar-linux.png
-          for mode in text materials pointed geometry atlas; do
+          for mode in text materials pointed geometry atlas path; do
             xvfb-run -a build/paint-ui-tests --"$mode"-render-test /tmp/rainstar-"$mode".png
           done
       - name: Package portable folder

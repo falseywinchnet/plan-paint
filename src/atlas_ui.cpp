@@ -305,7 +305,7 @@ void Application::atlas_dialogs() {
         }
         ImGui::EndDisabled();
         ImGui::SameLine();
-        if (ImGui::Button("Open as picture", {140, 0})) {
+        if (ImGui::Button("Open as picture", {140, 0}) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             ImGui::CloseCurrentPopup();
         }
     }
@@ -339,7 +339,7 @@ void Application::atlas_dialogs() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", {90, 0})) {
+        if (ImGui::Button("Cancel", {90, 0}) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             deferred_after_save = false;
             ImGui::CloseCurrentPopup();
         }

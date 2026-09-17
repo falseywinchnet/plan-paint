@@ -67,7 +67,7 @@ void Application::event(const SDL_Event& event_value) {
 void Application::save_to(const std::string& path) {
     finish_text();
     finish_curve();
-    document.commit_path();
+    document.sync_path();
     document.commit_selection();
     document.sync_atlas();
     std::string extension = image_extension(path);
@@ -187,7 +187,7 @@ void Application::execute(Command requested) {
     case Command::PrintPreview:
         finish_text();
         finish_curve();
-        document.commit_path();
+        document.sync_path();
         print_preview = true;
         break;
     case Command::PageSetup:
@@ -214,7 +214,7 @@ void Application::execute(Command requested) {
     case Command::Email: {
         finish_text();
         finish_curve();
-        document.commit_path();
+        document.sync_path();
         compose_email(window, desktop_export(document.visible_image(), "Email"));
         status = "Requested a mail draft with your picture attached.";
         break;
@@ -224,7 +224,7 @@ void Application::execute(Command requested) {
     case Command::WallpaperCenter: {
         finish_text();
         finish_curve();
-        document.commit_path();
+        document.sync_path();
         const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(SDL_GetDisplayForWindow(window));
         if (!mode) {
             throw std::runtime_error("Paint could not determine the desktop size.");
@@ -240,7 +240,7 @@ void Application::execute(Command requested) {
     case Command::Print: {
         finish_text();
         finish_curve();
-        document.commit_path();
+        document.sync_path();
         Image printable = document.visible_image();
         if (!print_image(printable)) {
             status = "Printing canceled or no system print service is available.";
@@ -274,15 +274,24 @@ void Application::execute(Command requested) {
         curve_points.clear();
         preview_active = false;
         document.undo();
+        path_preview_paused = true;
+        if (document.path.session != 0) {
+            status = "Path step undone. Remaining junctions are available; click to continue.";
+        }
         break;
     case Command::Redo:
         document.redo();
+        path_preview_paused = true;
+        if (document.path.session != 0) {
+            status = "Path step restored. Right-click ends geometry; Escape releases the path.";
+        }
         break;
     case Command::Copy:
     case Command::Cut: {
         Image copied = document.selection.active ? document.selection.image : document.visible_image();
         copy_to_clipboard(copied);
         if (requested == Command::Cut) {
+            document.commit_path();
             if (document.selection.active) {
                 document.delete_selection();
             } else {
@@ -343,6 +352,7 @@ void Application::execute(Command requested) {
         document.invert_colors();
         break;
     case Command::Delete:
+        document.commit_path();
         if (document.selection.active) {
             document.delete_selection();
         } else {
@@ -384,7 +394,9 @@ void Application::choose_tool(Tool tool) {
     }
     finish_text();
     finish_curve();
-    document.commit_path();
+    if (tool != document.tool) {
+        document.commit_path();
+    }
     if (tool != Tool::Select && tool != Tool::Lasso && tool != Tool::Reshape) {
         document.commit_selection();
     }
@@ -487,6 +499,18 @@ void Application::keyboard() {
         command(Command::SaveAs);
     }
     if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        hotspot_pick = false;
+        resize_handle = -1;
+        canvas_handle = -1;
+        selection_original = {};
+        dragging = false;
+        moving_selection = false;
+        lasso.clear();
+        material_stroke.clear();
+        eraser_stroke.clear();
+        if (document.tool == Tool::Stamp) {
+            reset_stamp();
+        }
         if (rotation_active) {
             finish_rotation(true);
             return;
@@ -495,16 +519,16 @@ void Application::keyboard() {
             finish_reshape();
             return;
         }
-        resize_handle = -1;
-        canvas_handle = -1;
-        selection_original = {};
         finish_text();
         finish_curve();
+        if (document.path.session != 0) {
+            status = "Path released. Click to begin a new path.";
+        }
         document.commit_path();
         document.commit_selection();
         preview_active = false;
-        dragging = false;
         texture_dirty = true;
+        return;
     }
     if (ImGui::IsKeyPressed(ImGuiKey_F11)) {
         full_screen = !full_screen;
@@ -606,6 +630,18 @@ void Application::begin_gesture(Point point, bool right) {
         dragging = false;
         return;
     }
+    if (right && (document.tool == Tool::Path || document.tool == Tool::Stamp)) {
+        dragging = false;
+        if (document.tool == Tool::Path) {
+            document.end_path_geometry();
+            status = "Geometry ended. Click an old node to branch, or elsewhere to start a new run. Escape "
+                     "releases all nodes.";
+            texture_dirty = true;
+        } else {
+            reset_stamp();
+        }
+        return;
+    }
     if (reshape_active) {
         active_mesh_node = -1;
         Point local{point.x - reshape_origin.x, point.y - reshape_origin.y};
@@ -699,23 +735,26 @@ void Application::begin_gesture(Point point, bool right) {
         }
         break;
     case Tool::Path: {
-        if (document.path.empty()) {
-            document.checkpoint();
-        }
         int snap = -1;
-        for (std::size_t i = 0; i < document.path.size(); ++i) {
-            if (std::hypot(document.path[i].x - point.x, document.path[i].y - point.y) * zoom < 9.0) {
+        for (std::size_t i = 0; i < document.path.nodes.size(); ++i) {
+            if (std::hypot(document.path.nodes[i].x - point.x, document.path.nodes[i].y - point.y) * zoom <
+                9.0) {
                 snap = static_cast<int>(i);
                 break;
             }
         }
         if (snap >= 0) {
-            point = document.path[snap];
+            point = document.path.nodes[snap];
         }
-        document.path.push_back(point);
-        if (!document.continuous_path && snap == 0 && document.path.size() > 2) {
-            document.commit_path();
+        document.add_path_node(point);
+        path_preview_paused = false;
+        if (!document.continuous_path && document.path.nodes.size() - document.path.start > 2 &&
+            point.x == document.path.nodes[document.path.start].x &&
+            point.y == document.path.nodes[document.path.start].y) {
+            document.end_path_geometry();
         }
+        status = "Click to add a segment; right-click ends this run. Undo removes one node; Escape releases "
+                 "the path.";
         dragging = false;
         break;
     }
@@ -737,9 +776,10 @@ void Application::begin_gesture(Point point, bool right) {
             stamp_scale = 1.0;
             stamp_angle = 0.0;
             stamp_field.reset();
+            ++stamp_source_generation;
             regenerate_stamp();
-            status = "Stamp lifted. Click to repeat it; R rotates, + and - change size. Lift again selects "
-                     "new content.";
+            status = "Stamp lifted. Click to repeat it; R rotates, + and - change size. Right-click or "
+                     "Escape lifts a new stamp.";
         } else if (warp_worker.busy() || stamp_render_pending || stamp_preview.pixels.empty()) {
             status = "The stamp is preparing; it will be ready in a moment.";
         } else {
@@ -951,6 +991,9 @@ void Application::canvas(float width, float height) {
     bool over = ImGui::IsItemHovered();
     ImGuiIO& io = ImGui::GetIO();
     Point point{(io.MousePos.x - origin.x) / zoom, (io.MousePos.y - origin.y) / zoom};
+    if (point.x != hover.x || point.y != hover.y) {
+        path_preview_paused = false;
+    }
     hover = point;
     bool inside =
         point.x >= 0 && point.y >= 0 && point.x < document.image.width && point.y < document.image.height;
@@ -1072,24 +1115,32 @@ void Application::canvas(float width, float height) {
                        ImGui::GetScrollY() + float(point.y) * (zoom - previous_zoom)};
         zoom_scroll_pending = true;
     }
-    std::vector<Point> shown_path;
-    if (document.tool == Tool::Path && !document.path.empty()) {
-        shown_path = document.path;
-        if (inside && over) {
+    Point path_next;
+    bool show_path_next = false;
+    if (document.tool == Tool::Path && !document.path.nodes.empty()) {
+        if (document.path.extending && !path_preview_paused && inside && over) {
             Point next = point;
-            for (std::size_t i = 0; i < document.path.size(); ++i) {
-                if (std::hypot(document.path[i].x - point.x, document.path[i].y - point.y) * zoom < 9) {
-                    next = document.path[i];
+            for (std::size_t i = 0; i < document.path.nodes.size(); ++i) {
+                if (std::hypot(document.path.nodes[i].x - point.x, document.path.nodes[i].y - point.y) *
+                        zoom <
+                    9) {
+                    next = document.path.nodes[i];
                     break;
                 }
             }
-            shown_path.push_back(next);
+            path_next = next;
+            show_path_next = true;
         }
-        std::string signature;
-        for (std::size_t i = 0; i < shown_path.size(); ++i) {
-            signature += std::to_string(shown_path[i].x) + "," + std::to_string(shown_path[i].y) + ";";
+        std::string signature = std::to_string(document.path.session) + ":" +
+                                std::to_string(document.path.start) + ":" +
+                                std::to_string(document.path.extending) + ":";
+        for (Point node : document.path.nodes) {
+            signature += std::to_string(node.x) + "," + std::to_string(node.y) + ";";
         }
-        signature +=
+        if (show_path_next) {
+            signature += ">" + std::to_string(path_next.x) + "," + std::to_string(path_next.y);
+        }
+        std::string style_signature =
             std::to_string(document.ink.grain_scale) + ":" + std::to_string(document.ink.paper_roughness) +
             ":" + std::to_string(document.ink.pigment_load) + ":" +
             std::to_string(document.ink.material_angle) + ":" + std::to_string(document.ink.noise) + ":" +
@@ -1097,9 +1148,14 @@ void Application::canvas(float width, float height) {
             std::to_string(document.shape_outline) + std::to_string(document.continuous_path) +
             std::to_string(document.ink.transparent_pattern) + ":" +
             std::to_string(int(document.shape_fill_brush)) + ":" + std::to_string(document.revision) + ":";
-        signature += std::to_string(document.ink.size) + ":" + std::to_string(packed(document.ink.primary)) +
-                     ":" + std::to_string(int(document.ink.brush)) + ":" +
-                     std::to_string(int(document.ink.pattern));
+        style_signature +=
+            std::to_string(document.ink.size) + ":" + std::to_string(packed(document.ink.primary)) + ":" +
+            std::to_string(int(document.ink.brush)) + ":" + std::to_string(int(document.ink.pattern));
+        if (style_signature != path_style_signature) {
+            document.sync_path();
+            path_style_signature = style_signature;
+        }
+        signature += style_signature;
         if (signature != path_preview_signature) {
             texture_dirty = true;
             path_preview_signature = signature;
@@ -1109,10 +1165,8 @@ void Application::canvas(float width, float height) {
         texture_dirty = true;
     }
     if (texture_dirty) {
-        if (!shown_path.empty()) {
-            Image visible = document.image;
-            polygon(visible, shown_path, document.ink, document.shape_outline, document.shape_fill,
-                    !document.continuous_path, document.shape_fill_brush);
+        if (show_path_next) {
+            Image visible = document.path_image(&path_next);
             refresh_texture(visible);
         } else if (preview_active) {
             refresh_texture(preview);
@@ -1217,8 +1271,8 @@ void Application::canvas(float width, float height) {
                                                                          : IM_COL32(0, 110, 220, 255));
         }
     }
-    if (document.tool == Tool::Path && !document.path.empty()) {
-        for (Point node : document.path) {
+    if (document.tool == Tool::Path && !document.path.nodes.empty()) {
+        for (Point node : document.path.nodes) {
             if (std::hypot(node.x - point.x, node.y - point.y) * zoom < 12) {
                 ImVec2 center(origin.x + static_cast<float>(node.x) * zoom,
                               origin.y + static_cast<float>(node.y) * zoom);
@@ -1402,7 +1456,7 @@ void Application::dialogs() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(90, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(90, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             ImGui::CloseCurrentPopup();
         }
     }
@@ -1421,7 +1475,7 @@ void Application::dialogs() {
             page_setup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Close preview")) {
+        if (ImGui::Button("Close preview") || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::TextWrapped(
@@ -1466,7 +1520,7 @@ void Application::dialogs() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(90, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(90, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             ImGui::CloseCurrentPopup();
         }
     }
@@ -1496,7 +1550,7 @@ void Application::dialogs() {
                                "An independent implementation inspired by Windows 7/10 Paint. "
                                "Microsoft and Windows are trademarks of Microsoft Corporation.");
         ImGui::PopTextWrapPos();
-        if (ImGui::Button("OK", ImVec2(90, 0))) {
+        if (ImGui::Button("OK", ImVec2(90, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             ImGui::CloseCurrentPopup();
         }
     }
@@ -1518,7 +1572,7 @@ void Application::dialogs() {
             execute(deferred_command);
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel", ImVec2(100, 0))) {
+        if (ImGui::Button("Cancel", ImVec2(100, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             ImGui::CloseCurrentPopup();
         }
     }
@@ -1530,7 +1584,7 @@ void Application::dialogs() {
         ImGui::PushTextWrapPos(440);
         ImGui::TextUnformatted(error.c_str());
         ImGui::PopTextWrapPos();
-        if (ImGui::Button("OK", ImVec2(90, 0))) {
+        if (ImGui::Button("OK", ImVec2(90, 0)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             error.clear();
             ImGui::CloseCurrentPopup();
         }

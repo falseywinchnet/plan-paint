@@ -24,12 +24,12 @@ void WarpWorker::launch(WarpTask task) {
         throw;
     }
 }
-void WarpWorker::compile(WarpTask task, const Image& source) {
+void WarpWorker::compile(WarpTask task, const Image& source, std::uint64_t generation) {
     if (busy_) {
         throw std::logic_error("A warp operation is already running.");
     }
     source_ = source;
-    generation_ = 0;
+    generation_ = generation;
     bounds_ = {};
     launch(task);
 }
