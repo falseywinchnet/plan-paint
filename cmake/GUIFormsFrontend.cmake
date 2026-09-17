@@ -5,11 +5,23 @@ check_cxx_source_compiles("#include <gui_forms/canvas.hpp>
 #include <type_traits>
 static_assert(!std::is_final_v<gui_forms::RasterCanvas>);
 int main() { return 0; }" RAINSTAR_EXTENSIBLE_CANVAS)
+check_cxx_source_compiles("#include <gui_forms/basic_controls.hpp>
+#include <gui_forms/application.hpp>
+int main() {
+  gui_forms::DropDownButton button(gui_forms::StableId(\"ribbon\"));
+  button.set_drop_down_edge(gui_forms::DropDownButtonEdge::bottom);
+  gui_forms::ApplicationWindowHandle handle;
+  static_cast<void>(handle.toggle_full_screen());
+  return 0;
+}" RAINSTAR_RIBBON_CONTROLS)
 unset(CMAKE_REQUIRED_LIBRARIES)
 if(NOT RAINSTAR_EXTENSIBLE_CANVAS)
   message(FATAL_ERROR "Rainstar Paint requires GUI.Forms with the RasterCanvas extension (7444815 or later). See docs/GUI_FORMS_PORT.md.")
 endif()
-add_library(paint_forms STATIC src/forms/editor.cpp src/forms/display.cpp)
+if(NOT RAINSTAR_RIBBON_CONTROLS)
+  message(FATAL_ERROR "Rainstar Paint requires the GUI.Forms ribbon composition extension. See docs/GUI_FORMS_PORT.md.")
+endif()
+add_library(paint_forms STATIC src/forms/editor.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp)
 target_link_libraries(paint_forms PUBLIC paint_core GUIForms::Application)
 target_include_directories(paint_forms PUBLIC src)
 add_executable(rainstar-paint-forms MACOSX_BUNDLE src/forms/main.cpp)
@@ -51,4 +63,10 @@ if(APPLE OR WIN32)
       MACOSX_BUNDLE_GUI_IDENTIFIER "org.rainstar.paint.forms.validation")
   endif()
   add_test(NAME paint-forms-native COMMAND paint-forms-native-tests)
+endif()
+# Explicit offline authoring target; not part of application builds or installation.
+if(EXISTS "${PROJECT_SOURCE_DIR}/astra/ribbon-export.cpp")
+  add_executable(paint-export-ribbon-icons EXCLUDE_FROM_ALL astra/ribbon-export.cpp)
+  target_include_directories(paint-export-ribbon-icons PRIVATE src scripts)
+  target_link_libraries(paint-export-ribbon-icons PRIVATE paint_core)
 endif()

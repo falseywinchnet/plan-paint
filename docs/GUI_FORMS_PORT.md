@@ -9,7 +9,8 @@ feature-complete comparison application while integration proceeds.
 ## Build
 
 Use the macOS ARM64 GUI.Forms SDK built from `codex/paint-canvas-extension`,
-commit `7444815`, or an SDK that includes that change. The original `9a4b156`
+commit `8d448f5`, or an SDK that includes its canvas, ribbon composition,
+and native full-screen handle extensions. The original `9a4b156`
 package declares RasterCanvas final and cannot build this frontend. The extension
 allows an application canvas to override normal Control input and overlay hooks;
 bitmap presentation and resource ownership remain in GUI.Forms.
@@ -44,7 +45,21 @@ release package.
 - Open, save and save-as through native dialogs and the existing format engine;
   saving keeps live curve/path sessions. Clipboard images use GUI.Forms host
   services. macOS printing and page setup reuse Paint's native implementation.
-- Anchored wheel zoom, middle-button pan, keyboard commands and image status.
+- A classic icon ribbon with Home, View, Patterns & tools, and an active-tool
+  context page. The context page follows selection, stamp, brush, shape, path,
+  pencil, fill, eraser, picker, and magnifier settings. Text and mesh remain disabled.
+- Optical-size SVG icon artwork at 16, 24 and 32 logical pixels, rasterized at
+  twice density and embedded as PNG. Expanded shapes have named hover/focus
+  tooltips. Brush and pattern galleries show samples from the actual raster engine.
+- Graphical Fill pattern choices, grain scale, paper tooth, paint load, grain
+  angle, and separate edge/fill media. View includes zoom, rulers, pixel gridlines
+  (visible at 400% and above), status visibility, full screen, and fit window.
+- Anchored wheel zoom, middle-button pan, keyboard commands, image/selection
+  dimensions, image-local cursor coordinates, and a logarithmic zoom slider with
+  plus/minus and a percentage button that resets to 100%.
+- Retained color and resize dialogs with modal focus/input boundaries. Color
+  editing includes HSV, RGBA, hex, OKLab and the persistent custom palette. Resize
+  supports pixels/percentages, aspect lock, CONV scaling or canvas boundary changes.
 - Brush movement publishes only a conservative affected rectangle. GUI.Forms
   owns the tiled display update. Selection and shape previews currently publish
   the complete composed image.
@@ -56,11 +71,10 @@ these accepted functions remain in the comparison frontend:
 
 - Canvas text editing, its formatting and custom-font controls.
 - Asynchronous CONV reshape, free rotation and transform controls; stamp size,
-  shape, scale and angle controls and its compiled CONV preview.
-- Full atlas/frame/cursor-hotspot UI, resize/skew/property dialogs, rich color
-  editing, custom palette persistence and brush material settings.
+  scale and angle controls and its compiled CONV preview.
+- Full atlas/frame/cursor-hotspot UI and skew/property dialogs.
 - Recent-file menus, acquisition, email/wallpaper commands, print preview,
-  drag-and-drop, the full keyboard set and the original icon-based ribbon detail.
+  drag-and-drop and the full keyboard set.
 - Windows native execution and packaging; Linux native execution requires the
   toolkit's native Linux host. Neither is established by this macOS port.
 
@@ -68,6 +82,17 @@ Do not replace the default frontend or advertise parity until those behaviors
 are carried across and compared against the existing interaction tests.
 
 ## Toolkit findings
+
+`DropDownButtonEdge::bottom` puts the disclosure in a narrow lower strip for
+large icon commands while preserving the same split-button routing. Multiline
+button captions measure and paint as separate centered lines. These are normal
+control composition features, shared with other consumers.
+
+`ApplicationWindowHandle::toggle_full_screen()` keeps native full-screen
+requests in the toolkit's host adapters. macOS transitions were exercised in
+Paint; the Windows adapter was syntax-checked with MinGW but has not been run
+on Windows as part of this port.
+
 
 `RasterCanvas` inheritance removes the need to put tool handling on a parent
 or observe input that cannot be marked handled. Paint's derived canvas uses a
@@ -91,7 +116,11 @@ new printing subsystem inside GUI.Forms.
 
 `paint-forms-tests` exercises routed capture beyond control bounds, RGBA
 preservation, one-coat material deposition, undo, editable curves across save,
-selection movement, path branching, stamp reset and pointer-anchored zoom.
+selection movement, path branching, stamp reset, pointer-anchored zoom, ribbon
+page switching, context settings, material values, status controls and cursor
+coordinates after pan/zoom. Gallery tests verify shape tooltip scheduling,
+dismissal and reopening, plus modal color/resize transactions and RGBA palette
+persistence.
 `paint-forms-native-tests` exercises application startup, native host attachment,
 routed drawing/curve handles, capture release and application close. Run its
 macOS bundle with `--keep-open` to inspect the real rendered interaction fixture.

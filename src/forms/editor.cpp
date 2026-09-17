@@ -7,16 +7,44 @@
 #include <cstring>
 #include <filesystem>
 #include <gui_forms/host.hpp>
+#include <iomanip>
 #include <numbers>
+#include <sstream>
 #include <stdexcept>
 namespace paint::forms {
 namespace gf = gui_forms;
 namespace {
-constexpr int sizes[] = {1, 2, 3, 4, 5, 7, 8, 12, 16, 24, 32, 48, 64};
 const Tool tools[] = {Tool::Select,    Tool::Lasso, Tool::Pencil, Tool::Fill, Tool::Eraser, Tool::Picker,
                       Tool::Magnifier, Tool::Brush, Tool::Shape,  Tool::Path, Tool::Stamp};
-const char* tool_names[] = {"Select", "Lasso", "Pencil", "Fill", "Eraser", "Picker",
-                            "Zoom",   "Brush", "Shape",  "Path", "Stamp"};
+class ZoomTrackBar final : public gf::TrackBar {
+  public:
+    explicit ZoomTrackBar(gf::StableId id) : TrackBar(std::move(id)) {}
+    gf::SemanticDescriptor semantic_descriptor() const override {
+        gf::SemanticDescriptor descriptor = TrackBar::semantic_descriptor();
+        descriptor.numeric_value = std::exp2(value()) * 100;
+        descriptor.minimum_value = 6.25;
+        descriptor.maximum_value = 3200;
+        descriptor.value = std::to_string(static_cast<int>(std::lround(std::exp2(value()) * 100))) + "%";
+        return descriptor;
+    }
+    bool on_semantic_action(gf::SemanticAction action, std::string_view text) override {
+        if (action == gf::SemanticAction::set_value) {
+            try {
+                std::size_t consumed = 0;
+                double percentage = std::stod(std::string(text), &consumed);
+                if (consumed != text.size() || !std::isfinite(percentage) || percentage < 6.25 ||
+                    percentage > 3200) {
+                    return false;
+                }
+                set_value(std::log2(percentage / 100));
+                return true;
+            } catch (const std::exception&) {
+                return false;
+            }
+        }
+        return TrackBar::on_semantic_action(action, text);
+    }
+};
 Rect rectangle(Point start, Point end) {
     return {static_cast<int>(std::floor(std::min(start.x, end.x))),
             static_cast<int>(std::floor(std::min(start.y, end.y))),
@@ -26,13 +54,6 @@ Rect rectangle(Point start, Point end) {
 bool point_inside(Rect rectangle, Point point) {
     return point.x >= rectangle.x && point.y >= rectangle.y && point.x < rectangle.x + rectangle.w &&
            point.y < rectangle.y + rectangle.h;
-}
-std::vector<std::string> names(const char* const* values, int count) {
-    std::vector<std::string> result;
-    for (int index = 0; index < count; ++index) {
-        result.emplace_back(values[index]);
-    }
-    return result;
 }
 } // namespace
 PaintCanvas::PaintCanvas(gf::StableId id, std::weak_ptr<Editor> editor)
@@ -61,97 +82,74 @@ void Editor::initialize_control_tree() {
     (*canvas_).set_view(1.0, {-16, -16});
     (*canvas_).set_canvas_background(gf::Color::rgba(211, 221, 232));
     add_child(canvas_);
+    ribbon_ = gf::make_control<Ribbon>(gf::StableId("ribbon"),
+                                       std::static_pointer_cast<Editor>(shared_from_this()));
+    add_child(ribbon_);
     menu_ = gf::make_control<gf::MenuStrip>(gf::StableId("menus"));
-    (*menu_).set_items(
-        {{"file",
-          "File",
-          {menu_item("new", "New"), menu_item("open", "Open…"), menu_item("save", "Save"),
-           menu_item("save-as", "Save as…"),
+    gf::ThemeDefinition file_theme = gf::windows_professional_theme_definition();
+    file_theme.id = "rainstar-file-tab";
+    file_theme.compatibility.border = gf::Color::rgba(45, 105, 172);
+    for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
+        gf::SurfaceMaterial surface;
+        surface.fills = {gf::MaterialFillLayer::linear(
+            {0, 0}, {0, 1}, {{0, gf::Color::rgba(70, 139, 210)}, {1, gf::Color::rgba(38, 105, 177)}})};
+        file_theme.roles[static_cast<std::size_t>(gf::ControlVisualRole::panel)].ordinary[state].material =
+            surface;
+        gf::ControlRoleRecipes& item =
+            file_theme.roles[static_cast<std::size_t>(gf::ControlVisualRole::menu_item)];
+        item.ordinary[state].material = surface;
+        item.ordinary[state].text = gf::Color::rgba(255, 255, 255);
+        item.selected[state].material = surface;
+        item.selected[state].text = gf::Color::rgba(255, 255, 255);
+    }
+    (*menu_).set_theme_override(gf::Theme::create(std::move(file_theme)));
+    (*menu_).set_item_padding(17);
+    (*menu_).set_items({{"file",
+                         "File",
+                         {menu_item("new", "New"), menu_item("open", "Open…"), menu_item("save", "Save"),
+                          menu_item("save-as", "Save as…"),
 #if RAINSTAR_FORMS_NATIVE_PRINT
-           menu_item("print", "Print…"), menu_item("page-setup", "Page setup…"),
+                          menu_item("print", "Print…"), menu_item("page-setup", "Page setup…"),
 #endif
-           menu_item("quit", "Exit")}},
-         {"edit",
-          "Edit",
-          {menu_item("undo", "Undo"), menu_item("redo", "Redo"), menu_item("cut", "Cut"),
-           menu_item("copy", "Copy"), menu_item("paste", "Paste"), menu_item("select-all", "Select all"),
-           menu_item("invert-selection", "Invert selection"), menu_item("delete", "Delete selection")}},
-         {"image",
-          "Image",
-          {menu_item("crop", "Crop"), menu_item("rotate-right", "Rotate right 90°"),
-           menu_item("rotate-left", "Rotate left 90°"), menu_item("flip-horizontal", "Flip horizontal"),
-           menu_item("flip-vertical", "Flip vertical"), menu_item("invert", "Invert colors")}},
-         {"view",
-          "View",
-          {menu_item("zoom-in", "Zoom in"), menu_item("zoom-out", "Zoom out"),
-           menu_item("actual-size", "Actual size"), menu_item("fit", "Fit canvas")}},
-         {"help",
-          "Help",
-          {menu_item("help", "Controls and port status"), menu_item("about", "About Rainstar Paint")}}});
+                          menu_item("quit", "Exit")}}});
     add_child(menu_);
-    add_button("paste", "Paste", {8, 40, 66, 58});
-    add_button("cut", "Cut", {78, 40, 55, 27});
-    add_button("copy", "Copy", {78, 71, 55, 27});
-    add_button("crop", "Crop", {145, 40, 64, 27});
-    add_button("rotate-right", "Rotate", {145, 71, 64, 27});
-    for (std::size_t index = 0; index < std::size(tools); ++index) {
-        double x = 224 + static_cast<double>(index % 6) * 62;
-        double y = 40 + static_cast<double>(index / 6) * 31;
-        add_button("tool-" + std::to_string(index), tool_names[index], {x, y, 59, 27});
-    }
-    brush_ = gf::make_control<gf::ComboBox>(gf::StableId("brush"));
-    shape_ = gf::make_control<gf::ComboBox>(gf::StableId("shape"));
-    pattern_ = gf::make_control<gf::ComboBox>(gf::StableId("pattern"));
-    size_ = gf::make_control<gf::ComboBox>(gf::StableId("size"));
-    (*brush_).set_items(names(brush_names, brush_count));
-    (*shape_).set_items(names(shape_names, shape_count));
-    (*pattern_).set_items(names(pattern_names, 18));
-    std::vector<std::string> size_names;
-    for (int size : sizes) {
-        size_names.push_back(std::to_string(size) + " px");
-    }
-    (*size_).set_items(std::move(size_names));
-    (*brush_).set_selected_index(0);
-    (*shape_).set_selected_index(3);
-    (*pattern_).set_selected_index(0);
-    (*size_).set_selected_index(2);
-    (*brush_).set_requested_bounds({610, 40, 136, 27});
-    (*shape_).set_requested_bounds({610, 71, 136, 27});
-    (*pattern_).set_requested_bounds({754, 40, 136, 27});
-    (*size_).set_requested_bounds({754, 71, 136, 27});
-    add_child(brush_);
-    add_child(shape_);
-    add_child(pattern_);
-    add_child(size_);
-    subscriptions_.push_back((*brush_).selected_index_changed().subscribe(
-        *this, gf::Delegate<std::optional<std::size_t>>::bind<Editor, &Editor::brush_changed>(*this)));
-    subscriptions_.push_back((*shape_).selected_index_changed().subscribe(
-        *this, gf::Delegate<std::optional<std::size_t>>::bind<Editor, &Editor::shape_changed>(*this)));
-    subscriptions_.push_back((*pattern_).selected_index_changed().subscribe(
-        *this, gf::Delegate<std::optional<std::size_t>>::bind<Editor, &Editor::pattern_changed>(*this)));
-    subscriptions_.push_back((*size_).selected_index_changed().subscribe(
-        *this, gf::Delegate<std::optional<std::size_t>>::bind<Editor, &Editor::size_changed>(*this)));
-    add_button("primary", "Color 1", {905, 40, 65, 27});
-    add_button("secondary", "Color 2", {978, 40, 65, 27});
-    add_button("outline", "Outline", {905, 71, 65, 27});
-    add_button("fill", "Fill", {978, 71, 65, 27});
-    add_button("transparent-pattern", "Transparent pattern", {754, 104, 136, 25});
-    add_button("transparent-selection", "Transparent selection", {224, 104, 182, 25});
-    add_button("continuous-path", "Continuous path", {412, 104, 130, 25});
     status_ = gf::make_control<gf::Label>(gf::StableId("status"));
-    (*status_).set_font({gf::FontRole::control, 12, 400, false});
-    add_child(status_);
+    cursor_status_ = gf::make_control<gf::Label>(gf::StableId("cursor-status"));
+    dimensions_status_ = gf::make_control<gf::Label>(gf::StableId("dimensions-status"));
+    selection_status_ = gf::make_control<gf::Label>(gf::StableId("selection-status"));
+    for (const std::shared_ptr<gf::Label>& label :
+         {status_, cursor_status_, dimensions_status_, selection_status_}) {
+        (*label).set_font({gf::FontRole::control, 12, 400, false, 0.08});
+        add_child(label);
+    }
+    zoom_out_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-out"), "−");
+    zoom_in_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-in"), "+");
+    zoom_reset_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-reset"), "100%");
+    for (const std::shared_ptr<gf::Button>& button : {zoom_out_, zoom_in_, zoom_reset_}) {
+        (*button).set_theme_override(ribbon_theme());
+        (*button).set_content_padding({2, 1, 2, 1});
+        (*button).set_font({gf::FontRole::control, button == zoom_reset_ ? 12.0 : 18.0, 400, false});
+        subscriptions_.push_back((*button).clicked().subscribe(
+            *this, gf::Delegate<gf::ButtonBase&>::bind<Editor, &Editor::status_clicked>(*this)));
+        add_child(button);
+    }
+    (*zoom_out_).set_accessible_name("Zoom out");
+    (*zoom_in_).set_accessible_name("Zoom in");
+    (*zoom_reset_).set_accessible_name("Zoom percentage; reset to 100%");
+    zoom_slider_ = gf::make_control<ZoomTrackBar>(gf::StableId("zoom-slider"));
+    (*zoom_slider_).set_range(-4, 5);
+    (*zoom_slider_).set_value(0);
+    (*zoom_slider_).set_small_change(0.25);
+    (*zoom_slider_).set_large_change(1);
+    (*zoom_slider_).set_show_ticks(false);
+    (*zoom_slider_).set_visual_style(gf::TrackBarVisualStyle::compact);
+    (*zoom_slider_).set_accessible_name("Zoom percentage");
+    subscriptions_.push_back(
+        (*zoom_slider_)
+            .value_changed()
+            .subscribe(*this, gf::Delegate<double>::bind<Editor, &Editor::zoom_slider_changed>(*this)));
+    add_child(zoom_slider_);
     refresh();
-}
-void Editor::add_button(const std::string& id, const std::string& text, gf::Rect bounds) {
-    std::shared_ptr<gf::Button> button = gf::make_control<gf::Button>(gf::StableId(id), text);
-    (*button).set_requested_bounds(bounds);
-    (*button).set_visual_style(gf::ButtonVisualStyle::flat);
-    (*button).set_flat_border_width(1);
-    subscriptions_.push_back((*button).clicked().subscribe(
-        *this, gf::Delegate<gf::ButtonBase&>::bind<Editor, &Editor::button_clicked>(*this)));
-    buttons_.push_back(button);
-    add_child(button);
 }
 gf::MenuItemSpec Editor::menu_item(const std::string& id, const std::string& text) {
     std::shared_ptr<gf::Command> command = std::make_shared<gf::Command>(id, text);
@@ -162,35 +160,77 @@ gf::MenuItemSpec Editor::menu_item(const std::string& id, const std::string& tex
 }
 void Editor::arrange(gf::Rect bounds) {
     arrange_self(bounds);
-    set_child_layout(menu_, {0, 0, bounds.width, 31});
-    set_child_layout(canvas_, {0, 144, bounds.width, std::max(1.0, bounds.height - 170)});
-    set_child_layout(status_, {12, bounds.height - 25, bounds.width - 24, 25});
-    for (std::size_t index = 0; index < buttons_.size(); ++index) {
-        set_child_layout(buttons_[index], (*buttons_[index]).requested_bounds());
+    set_child_layout(ribbon_, {0, 0, bounds.width, 143});
+    set_child_layout(menu_, {0, 0, 56, 27});
+    double ruler = show_rulers ? 20 : 0;
+    double footer = show_status ? 30 : 0;
+    set_child_layout(canvas_, {ruler, 143 + ruler, bounds.width - ruler,
+                               std::max(1.0, bounds.height - 143 - ruler - footer)});
+    for (const std::shared_ptr<gf::Control>& control : std::vector<std::shared_ptr<gf::Control>>{
+             status_, cursor_status_, selection_status_, dimensions_status_, zoom_reset_, zoom_out_,
+             zoom_slider_, zoom_in_}) {
+        (*control).set_visible(show_status);
     }
-    set_child_layout(brush_, (*brush_).requested_bounds());
-    set_child_layout(shape_, (*shape_).requested_bounds());
-    set_child_layout(pattern_, (*pattern_).requested_bounds());
-    set_child_layout(size_, (*size_).requested_bounds());
+    double y = bounds.height - 28;
+    set_child_layout(status_, {12, y, 230, 26});
+    set_child_layout(cursor_status_, {260, y, 165, 26});
+    set_child_layout(selection_status_, {445, y, 164, 26});
+    set_child_layout(dimensions_status_, {632, y, 210, 26});
+    set_child_layout(zoom_reset_, {bounds.width - 292, y + 1, 65, 25});
+    set_child_layout(zoom_out_, {bounds.width - 221, y + 1, 26, 25});
+    set_child_layout(zoom_slider_, {bounds.width - 189, y + 1, 148, 25});
+    set_child_layout(zoom_in_, {bounds.width - 34, y + 1, 26, 25});
 }
 void Editor::on_paint(gf::Painter& painter, gf::Rect) {
     gf::Rect bounds = committed_arranged_bounds();
-    painter.fill_rect({0, 0, bounds.width, bounds.height}, gf::Color::rgba(241, 246, 251));
-    painter.draw_line({0, 31}, {bounds.width, 31}, gf::Color::rgba(175, 191, 210), 1);
-    for (double x : {139.0, 217.0, 601.0, 747.0, 897.0}) {
-        painter.draw_line({x, 37}, {x, 135}, gf::Color::rgba(199, 210, 224), 1);
+    painter.fill_rect({0, 0, bounds.width, bounds.height}, gf::Color::rgba(232, 240, 249));
+    if (show_rulers) {
+        gf::Rect area = (*canvas_).committed_arranged_bounds();
+        gui_drawing::PointF origin = (*canvas_).view_origin();
+        double scale = (*canvas_).zoom();
+        double step = 1;
+        while (step * scale < 50) {
+            step *= 2;
+        }
+        const gf::FontSpec font{gf::FontRole::control, 10, 400, false};
+        const gf::Color color = gf::Color::rgba(81, 103, 127);
+        painter.fill_rect({20, 143, area.width, 20}, gf::Color::rgba(245, 248, 252));
+        painter.fill_rect({0, 163, 20, area.height}, gf::Color::rgba(245, 248, 252));
+        for (int axis = 0; axis < 2; ++axis) {
+            double start = axis == 0 ? origin.x : origin.y;
+            double length = axis == 0 ? area.width : area.height;
+            double end = start + length / scale;
+            for (double value = std::ceil(start / (step / 5)) * (step / 5); value <= end; value += step / 5) {
+                double position = (value - start) * scale;
+                bool major = std::abs(value / step - std::round(value / step)) < 0.001;
+                if (axis == 0) {
+                    painter.draw_line({20 + position, 163}, {20 + position, major ? 155.0 : 159.0}, color, 1);
+                    if (major) {
+                        painter.draw_text_utf8({23 + position, 153},
+                                               std::to_string(static_cast<int>(std::round(value))), font,
+                                               color);
+                    }
+                } else {
+                    painter.draw_line({20, 163 + position}, {major ? 12.0 : 16.0, 163 + position}, color, 1);
+                    if (major) {
+                        painter.draw_text_utf8({1, 160 + position},
+                                               std::to_string(static_cast<int>(std::round(value))), font,
+                                               color);
+                    }
+                }
+            }
+        }
+        painter.draw_line({20, 143}, {20, 163 + area.height}, color, 1);
+        painter.draw_line({0, 163}, {20 + area.width, 163}, color, 1);
     }
-    const gf::FontSpec font{gf::FontRole::control, 11, 400, false};
-    painter.draw_text_utf8({43, 119}, "Clipboard", font, gf::Color::rgba(80, 96, 115));
-    painter.draw_text_utf8({160, 119}, "Image", font, gf::Color::rgba(80, 96, 115));
-    painter.draw_text_utf8({631, 120}, "Brush / shape", font, gf::Color::rgba(80, 96, 115));
-    painter.fill_rect({912, 111, 24, 16}, gf::Color::rgba(document.ink.primary.r, document.ink.primary.g,
-                                                          document.ink.primary.b, document.ink.primary.a));
-    painter.stroke_rect({912, 111, 24, 16}, gf::Color::rgba(70, 85, 100), 1);
-    painter.fill_rect({985, 111, 24, 16},
-                      gf::Color::rgba(document.ink.secondary.r, document.ink.secondary.g,
-                                      document.ink.secondary.b, document.ink.secondary.a));
-    painter.stroke_rect({985, 111, 24, 16}, gf::Color::rgba(70, 85, 100), 1);
+    if (!show_status) {
+        return;
+    }
+    double y = bounds.height - 30;
+    painter.draw_line({0, y}, {bounds.width, y}, gf::Color::rgba(172, 193, 214), 1);
+    for (double x : {249.0, 434.0, 621.0, bounds.width - 303}) {
+        painter.draw_line({x, y + 5}, {x, bounds.height - 5}, gf::Color::rgba(193, 208, 224), 1);
+    }
 }
 gf::Point Editor::screen(Point point) const {
     gui_drawing::PointF origin = (*canvas_).view_origin();
@@ -201,6 +241,26 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     painter.save();
     painter.clip_rect(
         {0, 0, (*canvas_).committed_arranged_bounds().width, (*canvas_).committed_arranged_bounds().height});
+    if (show_grid && (*canvas_).zoom() >= 4) {
+        double scale = (*canvas_).zoom();
+        gui_drawing::PointF origin = (*canvas_).view_origin();
+        gf::Rect area = (*canvas_).committed_arranged_bounds();
+        int left = std::max(0, static_cast<int>(std::floor(origin.x)));
+        int top = std::max(0, static_cast<int>(std::floor(origin.y)));
+        int right =
+            std::min(document.image.width, static_cast<int>(std::ceil(origin.x + area.width / scale)));
+        int bottom =
+            std::min(document.image.height, static_cast<int>(std::ceil(origin.y + area.height / scale)));
+        gf::Color color = gf::Color::rgba(90, 110, 135, 85);
+        for (int x = left; x <= right; ++x) {
+            painter.draw_line(screen({static_cast<double>(x), static_cast<double>(top)}),
+                              screen({static_cast<double>(x), static_cast<double>(bottom)}), color, 1);
+        }
+        for (int y = top; y <= bottom; ++y) {
+            painter.draw_line(screen({static_cast<double>(left), static_cast<double>(y)}),
+                              screen({static_cast<double>(right), static_cast<double>(y)}), color, 1);
+        }
+    }
     if (document.selection.active ||
         (dragging_ && (document.tool == Tool::Select || document.tool == Tool::Lasso))) {
         Rect bounds = document.selection.active
@@ -244,19 +304,6 @@ gf::RasterCanvas& Editor::canvas() {
     return *canvas_;
 }
 void Editor::refresh() {
-    synchronizing_controls_ = true;
-    (*brush_).set_selected_index(static_cast<std::size_t>(document.ink.brush));
-    (*shape_).set_selected_index(static_cast<std::size_t>(document.shape));
-    (*pattern_).set_selected_index(static_cast<std::size_t>(document.ink.pattern));
-    std::optional<std::size_t> size_index;
-    for (std::size_t index = 0; index < std::size(sizes); ++index) {
-        if (sizes[index] == document.ink.size) {
-            size_index = index;
-        }
-    }
-    (*size_).set_selected_index(size_index);
-    (*size_).set_placeholder_text(std::to_string(document.ink.size) + " px");
-    synchronizing_controls_ = false;
     if (preview_active_) {
         publish_image(preview_, *canvas_);
     } else if (document.selection.active) {
@@ -264,77 +311,72 @@ void Editor::refresh() {
     } else {
         publish_image(document.image, *canvas_);
     }
-    for (std::size_t index = 0; index < buttons_.size(); ++index) {
-        gf::Button& button = *buttons_[index];
-        std::string id(button.stable_id().value());
-        bool selected = false;
-        if (id.starts_with("tool-")) {
-            selected = document.tool == tools[std::stoul(id.substr(5))];
-        } else if (id == "outline") {
-            selected = document.shape_outline;
-        } else if (id == "fill") {
-            selected = document.shape_fill;
-        } else if (id == "transparent-pattern") {
-            selected = document.ink.transparent_pattern;
-        } else if (id == "transparent-selection") {
-            selected = document.transparent_selection;
-        } else if (id == "continuous-path") {
-            selected = document.continuous_path;
-        }
-        button.set_selected(selected);
+    if (ribbon_) {
+        (*ribbon_).synchronize();
     }
     update_status();
-    invalidate(gf::Rect{0, 31, committed_arranged_bounds().width, 113});
+    invalidate(gf::Dirty::paint);
     (*canvas_).invalidate(gf::Dirty::paint);
 }
-void Editor::update_status() {
-    if (status_) {
-        (*status_).set_text(
-            (document.filename.empty() ? "Untitled"
-                                       : std::filesystem::path(document.filename).filename().string()) +
-            (document.dirty() ? " *" : "") + "   |   " + std::to_string(document.image.width) + " × " +
-            std::to_string(document.image.height) + " px   |   " +
-            std::to_string(static_cast<int>(std::round((*canvas_).zoom() * 100))) + "%   |   GUI.Forms port");
+void Editor::update_cursor_status() {
+    if (!cursor_status_) {
+        return;
     }
+    std::string text = "X: —   Y: —";
+    if (cursor_client_) {
+        gui_drawing::PointF point = (*canvas_).client_to_bitmap(*cursor_client_);
+        text = "X: " + std::to_string(static_cast<int>(std::floor(point.x))) +
+               "   Y: " + std::to_string(static_cast<int>(std::floor(point.y))) + " px";
+    }
+    (*cursor_status_).set_text(text);
 }
-void Editor::button_clicked(gf::ButtonBase& button) {
-    execute(std::string(button.stable_id().value()));
+void Editor::update_status() {
+    if (!status_) {
+        return;
+    }
+    (*status_).set_text((document.filename.empty()
+                             ? "Untitled"
+                             : std::filesystem::path(document.filename).filename().string()) +
+                        (document.dirty() ? " *" : ""));
+    (*dimensions_status_)
+        .set_text(std::to_string(document.image.width) + " × " + std::to_string(document.image.height) +
+                  " px");
+    std::string selection;
+    if (document.selection.active) {
+        selection = std::to_string(document.selection.image.width) + " × " +
+                    std::to_string(document.selection.image.height) + " px selected";
+    } else if (dragging_ && (document.tool == Tool::Select || document.tool == Tool::Lasso)) {
+        Rect bounds = rectangle(start_, current_);
+        selection = std::to_string(bounds.w) + " × " + std::to_string(bounds.h) + " px selected";
+    }
+    (*selection_status_).set_text(selection);
+    double percent = (*canvas_).zoom() * 100;
+    std::ostringstream label;
+    label << std::fixed << std::setprecision(percent < 10 ? 2 : 0) << percent << "%";
+    (*zoom_reset_).set_text(label.str());
+    synchronizing_zoom_ = true;
+    (*zoom_slider_).set_value(std::log2((*canvas_).zoom()));
+    synchronizing_zoom_ = false;
+    update_cursor_status();
+}
+void Editor::zoom_slider_changed(double value) {
+    if (synchronizing_zoom_) {
+        return;
+    }
+    gf::Rect bounds = (*canvas_).committed_arranged_bounds();
+    zoom(std::exp2(value) / (*canvas_).zoom(), {bounds.width / 2, bounds.height / 2});
+}
+void Editor::status_clicked(gf::ButtonBase& button) {
+    std::string_view id = button.stable_id().value();
+    if (id == "status-zoom-reset") {
+        execute("actual-size");
+        return;
+    }
+    gf::Rect bounds = (*canvas_).committed_arranged_bounds();
+    zoom(id == "status-zoom-in" ? 2 : 0.5, {bounds.width / 2, bounds.height / 2});
 }
 void Editor::command_invoked(const gf::CommandInvocation& invocation) {
     execute(invocation.command_id);
-}
-void Editor::brush_changed(std::optional<std::size_t> index) {
-    if (!index || synchronizing_controls_) {
-        return;
-    }
-    document.ink.brush = static_cast<Brush>(*index);
-    choose_tool(Tool::Brush);
-}
-void Editor::shape_changed(std::optional<std::size_t> index) {
-    if (!index || synchronizing_controls_) {
-        return;
-    }
-    finish_controls();
-    document.shape = static_cast<Shape>(*index);
-    choose_tool(Tool::Shape);
-}
-void Editor::pattern_changed(std::optional<std::size_t> index) {
-    if (!index || synchronizing_controls_) {
-        return;
-    }
-    document.ink.pattern = static_cast<Pattern>(*index);
-    document.sync_curve();
-    document.sync_path();
-    refresh();
-}
-void Editor::size_changed(std::optional<std::size_t> index) {
-    if (!index || synchronizing_controls_) {
-        return;
-    }
-    document.ink.size = sizes[*index];
-    document.sync_curve();
-    document.sync_path();
-    refresh();
 }
 void Editor::release_gesture() {
     dragging_ = false;
@@ -353,6 +395,12 @@ void Editor::finish_controls() {
     document.commit_path();
     document.commit_curve();
 }
+void Editor::choose_shape(Shape shape) {
+    finish_controls();
+    document.shape = shape;
+    document.tool = Tool::Shape;
+    refresh();
+}
 void Editor::choose_tool(Tool tool) {
     if (document.tool != tool) {
         finish_controls();
@@ -366,6 +414,12 @@ void Editor::pointer(const gf::PointerEvent& event) {
         gf::Point client = (*canvas_).point_from_window(event.position);
         gui_drawing::PointF mapped = (*canvas_).client_to_bitmap(client);
         Point point{mapped.x, mapped.y};
+        if (event.action == gf::PointerAction::leave && !(*canvas_).has_pointer_capture()) {
+            cursor_client_.reset();
+        } else {
+            cursor_client_ = client;
+        }
+        update_cursor_status();
         if (event.action == gf::PointerAction::wheel) {
             if (gf::has_modifier(event.modifiers, gf::Modifier::control) ||
                 gf::has_modifier(event.modifiers, gf::Modifier::meta)) {
@@ -375,6 +429,7 @@ void Editor::pointer(const gf::PointerEvent& event) {
                 origin.x -= event.wheel_delta.x * 30 / (*canvas_).zoom();
                 origin.y -= event.wheel_delta.y * 30 / (*canvas_).zoom();
                 (*canvas_).set_view_origin(origin);
+                update_cursor_status();
                 invalidate(gf::Dirty::paint);
             }
             return;
@@ -409,6 +464,7 @@ void Editor::pointer(const gf::PointerEvent& event) {
             if (panning_) {
                 (*canvas_).set_view_origin({pan_origin_.x - (client.x - pan_start_.x) / (*canvas_).zoom(),
                                             pan_origin_.y - (client.y - pan_start_.y) / (*canvas_).zoom()});
+                update_cursor_status();
                 invalidate(gf::Dirty::paint);
             } else if (dragging_) {
                 move(point);
@@ -838,28 +894,29 @@ void Editor::paste() {
     document.paste(image);
     refresh();
 }
-void Editor::edit_color(bool secondary) {
-    Color color = secondary ? document.ink.secondary : document.ink.primary;
-    gf::HostColorDialogRequest request;
-    request.title = secondary ? "Color 2" : "Color 1";
-    request.initial_rgba = (static_cast<std::uint32_t>(color.r) << 24) |
-                           (static_cast<std::uint32_t>(color.g) << 16) |
-                           (static_cast<std::uint32_t>(color.b) << 8) | color.a;
-    request.allow_alpha = true;
-    gf::HostColorDialogResult result = std::get<gf::HostColorDialogResult>(dialog(request).payload);
-    if (result.outcome != gf::HostDialogOutcome::accepted) {
+void Editor::open_editor_dialog(EditorDialogKind kind, bool secondary) {
+    if (!attached_window()) {
         return;
     }
-    color = {static_cast<std::uint8_t>(result.rgba >> 24), static_cast<std::uint8_t>(result.rgba >> 16),
-             static_cast<std::uint8_t>(result.rgba >> 8), static_cast<std::uint8_t>(result.rgba)};
-    if (secondary) {
-        document.ink.secondary = color;
-    } else {
-        document.ink.primary = color;
-    }
-    document.sync_curve();
-    document.sync_path();
+    (*ribbon_).close_popup();
+    close_editor_dialog();
+    editor_dialog_ = gf::make_control<EditorDialog>(
+        gf::StableId("editor-dialog"), std::static_pointer_cast<Editor>(shared_from_this()), kind, secondary);
+    editor_dialog_popup_ = (*attached_window()).open_popup(shared_from_this(), editor_dialog_);
+    editor_dialog_focus_ = (*attached_window()).begin_focus_scope(editor_dialog_);
 }
+void Editor::close_editor_dialog() {
+    if (editor_dialog_focus_ && attached_window()) {
+        static_cast<void>((*attached_window()).end_focus_scope(editor_dialog_focus_));
+        editor_dialog_focus_ = {};
+    }
+    editor_dialog_popup_.disconnect();
+    editor_dialog_.reset();
+}
+void Editor::edit_color(bool secondary) {
+    open_editor_dialog(EditorDialogKind::color, secondary);
+}
+
 void Editor::execute(const std::string& command) {
     try {
         if (command.starts_with("tool-")) {
@@ -920,9 +977,11 @@ void Editor::execute(const std::string& command) {
         } else if (command == "crop") {
             release_gesture();
             document.crop();
-        } else if (command == "rotate-right" || command == "rotate-left") {
+        } else if (command == "resize") {
+            open_editor_dialog(EditorDialogKind::resize);
+        } else if (command == "rotate-right" || command == "rotate-left" || command == "rotate-180") {
             finish_controls();
-            document.rotate(command == "rotate-right" ? 1 : 3);
+            document.rotate(command == "rotate-right" ? 1 : command == "rotate-left" ? 3 : 2);
         } else if (command == "flip-horizontal" || command == "flip-vertical") {
             finish_controls();
             document.flip(command == "flip-horizontal");
@@ -948,6 +1007,22 @@ void Editor::execute(const std::string& command) {
             document.ink.transparent_pattern = !document.ink.transparent_pattern;
         } else if (command == "transparent-selection") {
             document.transparent_selection = !document.transparent_selection;
+        } else if (command == "show-rulers" || command == "show-grid" || command == "show-status") {
+            if (command == "show-rulers") {
+                show_rulers = !show_rulers;
+            }
+            if (command == "show-grid") {
+                show_grid = !show_grid;
+            }
+            if (command == "show-status") {
+                show_status = !show_status;
+            }
+            invalidate(gf::Dirty::layout | gf::Dirty::paint);
+        } else if (command == "full-screen") {
+            gf::HostServiceStatus result = handle_.toggle_full_screen();
+            if (!result.accepted()) {
+                error("Full screen is unavailable from this window host.");
+            }
         } else if (command == "primary" || command == "secondary") {
             edit_color(command == "secondary");
         } else if (command == "zoom-in" || command == "zoom-out") {
@@ -967,7 +1042,7 @@ void Editor::execute(const std::string& command) {
                 command == "about"
                     ? "For the people who keep making things.\n\nAuthor: Astra\nSponsor: "
                       "Rainstar\n\nGUI.Forms integration build"
-                    : "Draw with the left button; the right button uses Color 2. Drag selections to move "
+                    : "Draw with the left button; the right button uses Alt. Drag selections to move "
                       "them. Drag Bézier and arc handles after setting their line. Escape releases editing "
                       "controls. Enter or right-click ends a path run. Middle-drag pans; Ctrl/Command + "
                       "wheel zooms.\n\nThis integration build is still being ported. Text editing, CONV "

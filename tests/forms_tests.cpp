@@ -125,8 +125,27 @@ void dialog_clipboard_and_close_contracts() {
             "clipboard transfers straight-alpha hidden RGB");
     editor.execute("release");
     editor.execute("primary");
+    (*fixture.window).perform_layout();
+    std::shared_ptr<gf::NumericUpDown> red =
+        std::dynamic_pointer_cast<gf::NumericUpDown>((*fixture.window).find("color-Red"));
+    std::shared_ptr<gf::NumericUpDown> green =
+        std::dynamic_pointer_cast<gf::NumericUpDown>((*fixture.window).find("color-Green"));
+    std::shared_ptr<gf::NumericUpDown> blue =
+        std::dynamic_pointer_cast<gf::NumericUpDown>((*fixture.window).find("color-Blue"));
+    std::shared_ptr<gf::NumericUpDown> alpha =
+        std::dynamic_pointer_cast<gf::NumericUpDown>((*fixture.window).find("color-Alpha"));
+    require(red && green && blue && alpha, "retained color dialog exposes editable channels");
+    (*red).set_value(15);
+    (*green).set_value(40);
+    (*blue).set_value(65);
+    (*alpha).set_value(128);
+    require(!paint::equal(editor.document.ink.primary, {15, 40, 65, 128}),
+            "color editing is staged until acceptance");
+    std::shared_ptr<gf::Button> accept =
+        std::dynamic_pointer_cast<gf::Button>((*fixture.window).find("dialog-ok"));
+    require(accept && (*accept).perform_click(), "color dialog accepts through retained command");
     require(paint::equal(editor.document.ink.primary, {15, 40, 65, 128}),
-            "typed native color result reaches document");
+            "accepted RGBA reaches document without alpha loss");
     services.path = (std::filesystem::temp_directory_path() / "rainstar-forms-dialog-test.png").string();
     require(editor.save(true) && std::filesystem::exists(services.path),
             "save-as dialog supplies a writable path");
@@ -276,6 +295,166 @@ void selection_move_path_and_stamp() {
     fixture.pointer(gf::PointerAction::down, 80, 40, gf::PointerButton::secondary);
     require(editor.document.stamp.pixels.empty(), "right click resets stamp");
 }
+std::shared_ptr<gf::Button> require_button(gf::Window& window, const std::string& id) {
+    std::shared_ptr<gf::Button> button = std::dynamic_pointer_cast<gf::Button>(window.find(id));
+    require(static_cast<bool>(button), "expected retained button exists");
+    return button;
+}
+void routed_button(gf::Window& window, const std::string& id) {
+    std::shared_ptr<gf::Button> button = require_button(window, id);
+    window.perform_layout();
+    gf::Rect bounds = (*button).absolute_bounds();
+    gf::Point point{bounds.x + bounds.width / 2, bounds.y + bounds.height / 2};
+    require(window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, point}),
+            "button consumes routed pointer down");
+    require(window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, point}),
+            "button consumes routed pointer up");
+}
+void ribbon_galleries_and_modal_transactions() {
+    Fixture fixture;
+    gf::Window& window = *fixture.window;
+    paint::forms::Editor& editor = *fixture.editor;
+    routed_button(window, "brush-menu");
+    window.perform_layout();
+    require(window.find("ribbon-popup") != nullptr, "brush gallery opens as retained popup");
+    require((*require_button(window, "popup-brush-4")).image_list() != nullptr,
+            "brush gallery uses rendered artwork previews");
+    routed_button(window, "popup-brush-4");
+    require(editor.document.tool == paint::Tool::Brush && editor.document.ink.brush == paint::Brush::Oil &&
+                !window.find("ribbon-popup"),
+            "gallery selection changes brush and closes popup");
+    routed_button(window, "fill-menu");
+    window.perform_layout();
+    routed_button(window, "popup-pattern-12");
+    require(editor.document.ink.pattern == paint::Pattern::Checker,
+            "pattern gallery changes the actual ink pattern");
+    editor.choose_shape(paint::Shape::Bezier);
+    fixture.drag(12, 20, 85, 70);
+    require(editor.document.curve.line_set, "curve is live before shape switch");
+    routed_button(window, "shape-3");
+    require(!editor.document.curve.line_set && editor.document.shape == paint::Shape::Rectangle,
+            "shape switch commits prior editable curve");
+    routed_button(window, "size-menu");
+    window.perform_layout();
+    require(window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape}),
+            "Escape is consumed by gallery");
+    require(!window.find("ribbon-popup"), "Escape dismisses gallery");
+    const std::filesystem::path palette_path =
+        std::filesystem::temp_directory_path() / "rainstar-forms-palette-test.bin";
+    paint::CustomColors palette;
+    palette.storage_path = palette_path.string();
+    palette.store(3, {19, 53, 107, 128});
+    paint::CustomColors reloaded;
+    reloaded.storage_path = palette_path.string();
+    reloaded.load();
+    require(paint::equal(reloaded.colors[3], {19, 53, 107, 128}),
+            "custom colors preserve RGBA through preferences");
+    std::filesystem::remove(palette_path);
+    paint::Color before = editor.document.ink.primary;
+    editor.execute("primary");
+    window.perform_layout();
+    gf::Control::Ptr modal = window.find("editor-dialog");
+    require(modal && (*modal).absolute_bounds().width == window.client_size().width &&
+                (*modal).absolute_bounds().height == window.client_size().height,
+            "modal has real full-client geometry");
+    require(!window.request_focus(window.find("canvas")), "modal focus scope rejects the background canvas");
+    std::size_t undo_count = editor.document.undo_history.size();
+    fixture.drag(5, 5, 20, 5);
+    require(editor.document.undo_history.size() == undo_count, "modal blocks background drawing");
+    std::shared_ptr<gf::TextBox> hex = std::dynamic_pointer_cast<gf::TextBox>(window.find("color-hex"));
+    (*hex).set_text("invalid");
+    routed_button(window, "dialog-ok");
+    require(window.find("editor-dialog") != nullptr, "invalid hex keeps editor open");
+    (*hex).set_text("#A02060");
+    routed_button(window, "dialog-cancel");
+    require(paint::equal(editor.document.ink.primary, before) && !window.find("editor-dialog"),
+            "Cancel discards staged color");
+    editor.execute("resize");
+    window.perform_layout();
+    std::shared_ptr<gf::NumericUpDown> width =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("resize-width"));
+    std::shared_ptr<gf::NumericUpDown> height =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("resize-height"));
+    (*width).set_value(64);
+    require((*height).value() == 48, "resize keeps original aspect ratio");
+    std::shared_ptr<gf::CheckBox> scale =
+        std::dynamic_pointer_cast<gf::CheckBox>(window.find("resize-scale"));
+    (*scale).set_checked(false);
+    routed_button(window, "dialog-ok");
+    require(editor.document.image.width == 64 && editor.document.image.height == 48,
+            "Resize commits accepted dimensions");
+    editor.execute("undo");
+    require(editor.document.image.width == 128 && editor.document.image.height == 96, "Resize is undoable");
+}
+void ribbon_tabs_status_and_context() {
+    Fixture fixture;
+    gf::Window& window = *fixture.window;
+    paint::forms::Editor& editor = *fixture.editor;
+    routed_button(window, "view-tab");
+    require(!(*window.find("paste")).visible() && (*window.find("show-rulers")).visible(),
+            "View replaces Home controls");
+    editor.execute("show-rulers");
+    window.perform_layout();
+    require(editor.canvas().absolute_bounds().x == 20 && editor.canvas().absolute_bounds().y == 163,
+            "rulers reserve space around canvas");
+    editor.execute("show-status");
+    window.perform_layout();
+    require(!(*window.find("zoom-slider")).visible(), "status toggle hides all footer controls");
+    editor.execute("show-status");
+    window.perform_layout();
+    routed_button(window, "status-zoom-in");
+    require(editor.canvas().zoom() == 2, "status plus doubles zoom");
+    std::shared_ptr<gf::TrackBar> slider =
+        std::dynamic_pointer_cast<gf::TrackBar>(window.find("zoom-slider"));
+    (*slider).set_value(2);
+    require(editor.canvas().zoom() == 4, "status slider controls logarithmic zoom");
+    editor.canvas().set_view(4, {17, 9});
+    gf::Point position = fixture.position(31, 22);
+    static_cast<void>(window.dispatch_pointer({gf::PointerAction::move, gf::PointerButton::none, position}));
+    std::shared_ptr<gf::Label> cursor = std::dynamic_pointer_cast<gf::Label>(window.find("cursor-status"));
+    require((*cursor).text() == "X: 31   Y: 22 px", "coordinates reflect image location after pan and zoom");
+    routed_button(window, "status-zoom-reset");
+    require(editor.canvas().zoom() == 1, "percentage button resets actual size");
+    routed_button(window, "patterns-tab");
+    require((*window.find("grain-scale")).visible() && !window.find("ribbon-popup"),
+            "patterns live on a ribbon page");
+    routed_button(window, "r-pattern-12");
+    require(editor.document.ink.pattern == paint::Pattern::Checker, "ribbon swatch selects ink pattern");
+    std::shared_ptr<gf::NumericUpDown> grain =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("grain-scale"));
+    (*grain).set_value(1.75);
+    require(editor.document.ink.grain_scale == 1.75, "material settings update drawing ink");
+    routed_button(window, "patterns-stamp");
+    routed_button(window, "tool-tab");
+    require((*window.find("stamp-shape-0")).visible() && !(*window.find("grain-scale")).visible(),
+            "stamp context hides unrelated material settings");
+    routed_button(window, "stamp-shape-1");
+    require(editor.document.stamp_shape == paint::StampShape::Pill, "context changes stamp capture shape");
+    editor.choose_tool(paint::Tool::Brush);
+    require(!(*window.find("stamp-shape-0")).visible() && (*window.find("grain-scale")).visible(),
+            "context swaps when active tool changes");
+    routed_button(window, "home-tab");
+    routed_button(window, "shapes-menu");
+    window.perform_layout();
+    require((*require_button(window, "popup-shape-3")).accessible_name() == "Rectangle",
+            "expanded shapes expose distinct names");
+    gf::Rect rectangle = (*window.find("popup-shape-3")).absolute_bounds();
+    static_cast<void>(window.dispatch_pointer(
+        {gf::PointerAction::move, gf::PointerButton::none, {rectangle.x + 12, rectangle.y + 12}}));
+    require(window.next_wake().has_value(), "shape hover arms tooltip deadline");
+    static_cast<void>(window.poll_frame_schedule(*window.next_wake()));
+    window.perform_layout();
+    require(window.semantic_snapshot().to_json().find("\"role\":\"tool_tip\"") != std::string::npos,
+            "expanded shape hover displays an accessible tooltip");
+    require(window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape}),
+            "Escape closes shape gallery");
+    require(!window.find("ribbon-popup") &&
+                window.semantic_snapshot().to_json().find("\"role\":\"tool_tip\"") == std::string::npos,
+            "closing shapes removes tooltip overlays");
+    routed_button(window, "shapes-menu");
+    window.perform_layout();
+    require(window.find("popup-shape-3") != nullptr, "shape gallery can reopen after tooltip cleanup");
+}
 void zoom_anchors_the_point() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -299,6 +478,8 @@ int main() {
         retained_curve_save_undo_and_release();
         selection_move_path_and_stamp();
         zoom_anchors_the_point();
+        ribbon_tabs_status_and_context();
+        ribbon_galleries_and_modal_transactions();
         std::cout << "GUI.Forms: RGBA, routed capture, undo, material strokes, curves/save, selections, "
                      "path, stamp and anchored zoom passed\n";
         return 0;

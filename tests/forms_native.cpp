@@ -72,8 +72,8 @@ int main(int argc, char**) {
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));
         gf::ApplicationWindowOptions options;
         options.title = "Rainstar Paint — GUI.Forms native interaction check";
-        options.initial_size = {1180, 820};
-        options.minimum_size = {1040, 560};
+        options.initial_size = {1280, 820};
+        options.minimum_size = {1280, 600};
         options.print_metrics_on_close = false;
         options.ready = std::bind(&NativeExercise::ready, std::ref(exercise), std::placeholders::_1,
                                   std::placeholders::_2);
