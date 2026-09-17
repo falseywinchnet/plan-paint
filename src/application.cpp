@@ -520,6 +520,7 @@ void Application::refresh_texture(const Image& image) {
     SDL_SetTextureBlendMode(canvas_texture, SDL_BLENDMODE_BLEND);
     SDL_UpdateTexture(canvas_texture, nullptr, image.pixels.data(), image.width * 4);
     texture_dirty = false;
+    ++texture_generation;
 }
 static Rect drag_bounds(Point a, Point b, bool square) {
     if (square) {
@@ -845,6 +846,7 @@ void Application::prepare_text_font() {
     }
     (*io.Fonts).Build();
     ImGui_ImplSDLRenderer3_CreateFontsTexture();
+    ++texture_generation;
     text_font_signature = signature;
 }
 void Application::finish_text() {

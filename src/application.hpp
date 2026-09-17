@@ -83,6 +83,7 @@ struct Application {
     std::string screenshot_path;
     int screenshot_frame = 0;
     int rendered_frames = 0;
+    std::uint64_t texture_generation = 0;
     char text_buffer[8192] = {};
     TextStyle text_style;
     std::vector<std::string> font_paths;

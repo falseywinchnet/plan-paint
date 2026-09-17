@@ -167,6 +167,7 @@ void Application::poll_warp() {
                                   stamp_preview.width * 4);
                 SDL_SetTextureBlendMode(stamp_texture, SDL_BLENDMODE_BLEND);
                 SDL_SetTextureScaleMode(stamp_texture, SDL_SCALEMODE_NEAREST);
+                ++texture_generation;
                 status = "Click to stamp. R rotates 15 degrees; + and - resize.";
             }
         } else if (result.task == WarpTask::Transform) {

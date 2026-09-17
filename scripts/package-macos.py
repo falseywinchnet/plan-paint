@@ -19,7 +19,7 @@ def dependencies(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--build", default="build")
-    parser.add_argument("--version", default="0.1.1")
+    parser.add_argument("--version", default="0.1.2")
     args = parser.parse_args()
     distribution = ROOT / "dist"
     distribution.mkdir(exist_ok=True)

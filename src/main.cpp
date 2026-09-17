@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "codecs.hpp"
+#include "idle_render.hpp"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 #include "renderer.hpp"
@@ -8,6 +9,7 @@
 #include <cstring>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <numbers>
 
@@ -72,9 +74,14 @@ int main(int argc, char** argv) {
         bool trace = false;
         bool demo_reshape = false;
         bool demo_rotation = false;
+        double idle_report_seconds = 0;
+        std::string idle_report_path;
         for (int i = 1; i < argc; ++i) {
             std::string argument = argv[i];
-            if (argument == "--trace") {
+            if (argument == "--idle-report" && i + 2 < argc) {
+                idle_report_seconds = std::clamp(std::stod(argv[++i]), 1.0, 120.0);
+                idle_report_path = argv[++i];
+            } else if (argument == "--trace") {
                 trace = true;
             } else if (argument == "--screenshot" && i + 1 < argc) {
                 app.screenshot_path = argv[++i];
@@ -151,9 +158,18 @@ int main(int argc, char** argv) {
                 app.reshape_render_pending = true;
             }
         }
+        paint::IdleRender idle;
+        bool input_held = false;
+        bool force_present = true;
+        bool measuring = false;
+        Uint64 measurement_start = 0;
+        int measured_frames = 0, measured_presents = 0, measured_visible = 0, measured_focused = 0;
+        const Uint64 warmup_end = SDL_GetTicks() + 3000;
         while (app.running) {
             SDL_Event event{};
-            while (SDL_PollEvent(&event)) {
+            bool received =
+                SDL_WaitEventTimeout(&event, idle.wait_timeout(input_held, !app.screenshot_path.empty()));
+            while (received) {
                 if (trace &&
                     (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN || event.type == SDL_EVENT_MOUSE_BUTTON_UP ||
                      event.type == SDL_EVENT_MOUSE_MOTION)) {
@@ -162,7 +178,18 @@ int main(int argc, char** argv) {
                 }
                 ImGui_ImplSDL3_ProcessEvent(&event);
                 app.event(event);
+                idle.activity();
+                if (event.type >= SDL_EVENT_WINDOW_FIRST && event.type <= SDL_EVENT_WINDOW_LAST) {
+                    force_present = true;
+                }
+                if (event.type == SDL_EVENT_RENDER_TARGETS_RESET ||
+                    event.type == SDL_EVENT_RENDER_DEVICE_RESET) {
+                    force_present = true;
+                    app.texture_dirty = true;
+                }
+                received = SDL_PollEvent(&event);
             }
+            idle.framed();
             app.prepare_text_font();
             ImGui_ImplSDLRenderer3_NewFrame();
             ImGui_ImplSDL3_NewFrame();
@@ -170,7 +197,24 @@ int main(int argc, char** argv) {
             app.frame();
             ImGui::Render();
             mouse_cursor.update(ImGui::GetMouseCursor());
-            paint::render_interface(renderer, ImGui::GetDrawData());
+            ImDrawData& draw_data = *ImGui::GetDrawData();
+            SDL_WindowFlags flags = SDL_GetWindowFlags(window);
+            bool visible = !(flags & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN | SDL_WINDOW_OCCLUDED));
+            bool present = (visible || !app.screenshot_path.empty()) &&
+                           (force_present || !app.screenshot_path.empty() ||
+                            idle.changed(draw_data, app.texture_generation));
+            if (present) {
+                paint::render_interface(renderer, &draw_data);
+                idle.submitted(draw_data, app.texture_generation);
+                force_present = false;
+            }
+            input_held = false;
+            for (int button = 0; button < ImGuiMouseButton_COUNT; ++button) {
+                input_held = input_held || io.MouseDown[button];
+            }
+            for (int key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; ++key) {
+                input_held = input_held || ImGui::IsKeyDown(static_cast<ImGuiKey>(key));
+            }
             ++app.rendered_frames;
             if (!app.screenshot_path.empty() && app.rendered_frames >= app.screenshot_frame &&
                 (!demo_reshape || (!app.warp_worker.busy() && !app.reshape_render_pending)) &&
@@ -193,8 +237,35 @@ int main(int argc, char** argv) {
                 }
                 app.running = false;
             }
-            SDL_RenderPresent(renderer);
-            SDL_Delay(8);
+            if (present) {
+                SDL_RenderPresent(renderer);
+            }
+            if (idle_report_seconds > 0 && SDL_GetTicks() >= warmup_end) {
+                if (!measuring) {
+                    measuring = true;
+                    measurement_start = SDL_GetTicks();
+                } else {
+                    ++measured_frames;
+                    measured_presents += present ? 1 : 0;
+                    measured_visible += visible ? 1 : 0;
+                    measured_focused += flags & SDL_WINDOW_INPUT_FOCUS ? 1 : 0;
+                    double elapsed = (SDL_GetTicks() - measurement_start) / 1000.0;
+                    if (elapsed >= idle_report_seconds) {
+                        std::ofstream report(idle_report_path);
+                        report << "{\n  \"wall_seconds\": " << elapsed
+                               << ",\n  \"gui_frames\": " << measured_frames
+                               << ",\n  \"gpu_presentations\": " << measured_presents
+                               << ",\n  \"visible_frames\": " << measured_visible
+                               << ",\n  \"focused_frames\": " << measured_focused
+                               << ",\n  \"framebuffer_scale_x\": " << draw_data.FramebufferScale.x
+                               << ",\n  \"framebuffer_scale_y\": " << draw_data.FramebufferScale.y << "\n}\n";
+                        if (!report) {
+                            throw std::runtime_error("Could not write the idle measurement report.");
+                        }
+                        app.running = false;
+                    }
+                }
+            }
         }
     } catch (const std::exception& exception) {
         std::cerr << exception.what() << '\n';

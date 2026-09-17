@@ -1,5 +1,6 @@
 #include "platform.hpp"
 #include "codecs.hpp"
+#include "idle_render.hpp"
 #include "imgui.h"
 #include "paths.hpp"
 #include <algorithm>
@@ -101,6 +102,7 @@ static void file_dialog_result(void* userdata, const char* const* files, int fil
     }
     dialog.result.completed = true;
     dialog.pending = false;
+    wake_event_loop();
 }
 void FileDialog::show(SDL_Window* window, FileAction action, const std::string& initial) {
     {

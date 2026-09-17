@@ -1,5 +1,6 @@
 #include "application.hpp"
 #include "codecs.hpp"
+#include "idle_render.hpp"
 #include "imgui_impl_sdlrenderer3.h"
 #include "imgui_internal.h"
 #include "paths.hpp"
@@ -181,6 +182,97 @@ void retina_rendering(UiFixture& ui, const std::string& screenshot = "") {
     }
     ImGui::GetIO().DisplaySize = {1280, 850};
     ImGui::GetIO().DisplayFramebufferScale = {1, 1};
+}
+void idle_rendering(UiFixture& ui) {
+    paint::Application& app = *ui.app;
+    app.document.new_image(960, 640);
+    app.texture_dirty = true;
+    app.choose_tool(paint::Tool::Pencil);
+    app.text_active = false;
+    app.text_tab = false;
+    ui.move(-100, -100);
+    for (int frame = 0; frame < 4; ++frame) {
+        ui.frame();
+    }
+    paint::IdleRender idle;
+    require(idle.changed(*ImGui::GetDrawData(), app.texture_generation), "first frame must render");
+    idle.submitted(*ImGui::GetDrawData(), app.texture_generation);
+    ImGui::GetIO().DeltaTime = 0.25f;
+    for (int frame = 0; frame < 20; ++frame) {
+        ui.frame();
+        require(!idle.changed(*ImGui::GetDrawData(), app.texture_generation),
+                "idle interface incorrectly requires a GPU submission");
+    }
+    // Same image geometry and texture ID; only the uploaded texture pixels change.
+    app.document.image.set(400, 400, {192, 80, 77, 255});
+    app.texture_dirty = true;
+    ui.frame();
+    require(idle.changed(*ImGui::GetDrawData(), app.texture_generation),
+            "texture-only painting change was suppressed by idle renderer");
+    idle.submitted(*ImGui::GetDrawData(), app.texture_generation);
+    ImDrawData& data = *ImGui::GetDrawData();
+    data.FramebufferScale = {2, 2};
+    require(idle.changed(data, app.texture_generation), "display-density change was not rendered");
+    data.FramebufferScale = {1, 1};
+    ImDrawCmd& command = (*data.CmdLists[0]).CmdBuffer[0];
+    command.ClipRect.x += 1;
+    require(idle.changed(data, app.texture_generation), "clip change was not rendered");
+    command.ClipRect.x -= 1;
+    command.UserCallback = ImDrawCallback_ResetRenderState;
+    require(idle.changed(data, app.texture_generation), "callback frame must never be suppressed");
+    command.UserCallback = nullptr;
+    ui.move(273, 75);
+    int initial_lists = (*ImGui::GetDrawData()).CmdListsCount;
+    bool tooltip = false;
+    for (int frame = 0; frame < 8; ++frame) {
+        ui.frame();
+        tooltip = tooltip || (*ImGui::GetDrawData()).CmdListsCount > initial_lists;
+    }
+    require(tooltip, "tooltip timer stopped while the mouse was stationary");
+    ui.move(-100, -100);
+    app.choose_tool(paint::Tool::Text);
+    ui.click(150, 300);
+    ui.frame();
+    idle.submitted(*ImGui::GetDrawData(), app.texture_generation);
+    int caret_changes = 0;
+    for (int frame = 0; frame < 12; ++frame) {
+        ui.frame();
+        if (idle.changed(*ImGui::GetDrawData(), app.texture_generation)) {
+            ++caret_changes;
+            idle.submitted(*ImGui::GetDrawData(), app.texture_generation);
+        }
+    }
+    require(caret_changes >= 2 && caret_changes < 12, "text caret did not blink at idle cadence");
+    ui.key(ImGuiKey_Escape);
+    for (int frame = 0; frame < 3; ++frame) {
+        idle.framed();
+    }
+    require(idle.wait_timeout(false, false) > 200, "idle loop does not wait for input");
+    require(idle.wait_timeout(true, false) <= 16, "held input is throttled to idle cadence");
+    ImGui::GetIO().AddKeyEvent(ImGuiKey_A, true);
+    ImGui::GetIO().AddKeyEvent(ImGuiKey_A, false);
+    require(idle.wait_timeout(false, false) <= 16, "queued ImGui input was delayed by idle wait");
+    ui.frame();
+    ui.frame();
+    idle.activity();
+    require(idle.wait_timeout(false, false) <= 16, "input event did not wake interactive cadence");
+    SDL_FlushEvent(SDL_EVENT_USER);
+    paint::Image source;
+    source.reset(16, 16, {255, 0, 0, 255});
+    paint::WarpWorker worker;
+    worker.compile(paint::WarpTask::CompileStamp, source);
+    SDL_Event event{};
+    bool woke = false;
+    Uint64 deadline = SDL_GetTicks() + 3000;
+    while (!woke && SDL_GetTicks() < deadline) {
+        if (SDL_WaitEventTimeout(&event, 100)) {
+            woke = event.type == SDL_EVENT_USER;
+        }
+    }
+    require(woke, "completed transform did not wake the event loop");
+    paint::WarpResult result;
+    require(worker.take(result) && result.field, "worker result was not ready at its wake event");
+    ImGui::GetIO().DeltaTime = 1.0f / 60;
 }
 void drawing_and_controls(UiFixture& ui) {
     paint::Application& app = *ui.app;
@@ -481,6 +573,7 @@ int main(int argc, char** argv) {
         custom_colors_and_cursor(ui);
         arbitrary_rotation(ui);
         retina_rendering(ui);
+        idle_rendering(ui);
         std::cout << "Ribbon/canvas, palettes, cursor requests, paths, selections, stamps, free rotation and "
                      "reshape passed.\n";
         return 0;

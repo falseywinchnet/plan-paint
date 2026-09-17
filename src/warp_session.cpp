@@ -1,4 +1,5 @@
 #include "warp_session.hpp"
+#include "idle_render.hpp"
 #include <stdexcept>
 #include <utility>
 namespace paint {
@@ -103,6 +104,7 @@ void WarpWorker::run(WarpWorker& worker) {
     }
     worker.result_ = std::move(result);
     worker.finished_.store(true, std::memory_order_release);
+    wake_event_loop();
 }
 bool WarpWorker::take(WarpResult& result) {
     if (!busy_ || !finished_.load(std::memory_order_acquire)) {
