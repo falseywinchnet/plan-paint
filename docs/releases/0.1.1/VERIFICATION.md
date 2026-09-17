@@ -15,3 +15,14 @@ Version 0.1.1 sets SDL's renderer scale from each frame's framebuffer density be
 The M4's attached display is 1×. The higher-density checks use actual rendered 2× framebuffer targets; they are not a claim of testing the user's MacBook Neo or its physical display.
 
 Package hashes, application source and native CI evidence accompany the release in `SHA256SUMS` and `release-manifest.json`. The macOS 26+ requirement and ad-hoc application signature remain as documented in the README.
+
+## Packaged build verification
+
+Application source: `599b8dbde37ab3956f49ce15474e4de809a03773`. The release tag adds documentation and hashes only.
+
+- Native Windows Server 2022 and Ubuntu 22.04 builds both passed all three CTest suites, including the new framebuffer checks, in [CI run 35195660038](https://github.com/falseywinchnet/rainstar-paint/actions/runs/35195660038). Graphical startup and Linux portable-launcher checks passed.
+- The Mac installer was expanded; its application version is 0.1.1, strict ad-hoc signature verification passed, and the extracted executable launched and rendered its demo capture.
+- Downloaded Windows and Linux archives contain native PE/ELF executables, portable launch layouts and the required license notices.
+- The M4 sanitizer run completed all three suites in 8.41 seconds with no reported error.
+
+The [manifest](release-manifest.json) and [checksums](SHA256SUMS) identify the compiled packages.
