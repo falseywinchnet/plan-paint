@@ -117,6 +117,17 @@ void test_codecs() {
             require(paint::equal(loaded.get(4, 7), image.get(4, 7)), "lossless codec failed");
         }
         std::filesystem::remove(file);
+        std::filesystem::path unicode = std::filesystem::temp_directory_path() /
+                                        std::filesystem::path(std::u8string(u8"Rainstar-é-绘画."));
+        unicode += format;
+        std::u8string encoded_path = unicode.u8string();
+        std::string path(encoded_path.begin(), encoded_path.end());
+        paint::save_image(image, path);
+        paint::save_image(image, path);
+        loaded = paint::load_image(path);
+        require(loaded.width == image.width && loaded.height == image.height,
+                "Unicode filename roundtrip failed");
+        std::filesystem::remove(unicode);
     }
 }
 } // namespace

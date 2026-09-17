@@ -9,12 +9,15 @@
 #include <filesystem>
 #ifdef _WIN32
 static FILE* utf8_fopen(const char* path, const char* mode) {
-    std::filesystem::path native = std::filesystem::path(std::u8string(path.begin(), path.end()));
+    std::string utf8_path = path;
+    std::filesystem::path native = std::filesystem::path(std::u8string(utf8_path.begin(), utf8_path.end()));
     std::wstring wide_mode;
     for (const char* letter = mode; *letter; ++letter) {
         wide_mode.push_back(static_cast<wchar_t>(*letter));
     }
-    return _wfopen(native.c_str(), wide_mode.c_str());
+    FILE* file = nullptr;
+    _wfopen_s(&file, native.c_str(), wide_mode.c_str());
+    return file;
 }
 #define fopen utf8_fopen
 #endif
