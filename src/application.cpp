@@ -89,7 +89,7 @@ void Application::command(Command requested) {
             return;
         }
         if ((requested == Command::New || requested == Command::Open || requested == Command::Quit) &&
-            document.dirty()) {
+            (document.dirty() || (text_active && text_buffer[0]))) {
             deferred_command = requested;
             unsaved_dialog = true;
             return;
@@ -585,6 +585,7 @@ void Application::begin_gesture(Point point, bool right) {
     case Tool::Text:
         finish_text();
         text_active = true;
+        text_focus = true;
         text_origin = point;
         text_buffer[0] = '\0';
         text_tab = true;
@@ -1077,6 +1078,10 @@ void Application::canvas(float width, float height) {
             ImGui::PushFont(text_ui_font);
         }
         ImGui::PushStyleColor(ImGuiCol_Text, packed(document.ink.primary));
+        if (text_focus) {
+            ImGui::SetKeyboardFocusHere();
+            text_focus = false;
+        }
         ImGui::InputTextMultiline("##Canvas text", text_buffer, sizeof(text_buffer), ImVec2(440, 160));
         ImGui::PopStyleColor();
         if (text_ui_font) {
@@ -1378,7 +1383,7 @@ void Application::frame() {
         std::string title = document.filename.empty()
                                 ? "Untitled"
                                 : std::filesystem::path(document.filename).filename().string();
-        if (document.dirty()) {
+        if ((document.dirty() || (text_active && text_buffer[0]))) {
             title += " *";
         }
         title += " - Rainstar Paint";

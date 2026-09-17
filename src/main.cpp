@@ -3,10 +3,12 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 #include <SDL3/SDL_main.h>
+#include <cmath>
 #include <cstring>
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <numbers>
 
 int main(int argc, char** argv) {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -65,6 +67,7 @@ int main(int argc, char** argv) {
     try {
         paint::Application app(window, renderer);
         bool trace = false;
+        bool demo_reshape = false;
         for (int i = 1; i < argc; ++i) {
             std::string argument = argv[i];
             if (argument == "--trace") {
@@ -72,6 +75,8 @@ int main(int argc, char** argv) {
             } else if (argument == "--screenshot" && i + 1 < argc) {
                 app.screenshot_path = argv[++i];
                 app.screenshot_frame = 8;
+            } else if (argument == "--demo-reshape") {
+                demo_reshape = true;
             } else if (argument == "--view-tab") {
                 app.view_tab = true;
             } else if (argument == "--help-sidebar") {
@@ -101,6 +106,27 @@ int main(int argc, char** argv) {
                 app.document.replace(paint::load_image(argument), argument);
             }
         }
+        if (demo_reshape) {
+            std::vector<paint::Point> outline;
+            for (int i = 0; i < 24; ++i) {
+                double angle = i * 2.0 * std::numbers::pi / 24;
+                outline.push_back({595.0 + 154 * std::cos(angle), 270.0 + 154 * std::sin(angle)});
+            }
+            app.document.select({440, 115, 310, 310}, outline);
+            app.start_reshape();
+            app.document.tool = paint::Tool::Reshape;
+            std::size_t rightmost = 0;
+            for (std::size_t i = 1; i < app.reshape_mesh.nodes.size(); ++i) {
+                if (app.reshape_mesh.nodes[i].target.x > app.reshape_mesh.nodes[rightmost].target.x) {
+                    rightmost = i;
+                }
+            }
+            paint::Point target = app.reshape_mesh.nodes[rightmost].target;
+            if (paint::move_reshape_node(app.reshape_mesh, rightmost, {target.x + 85, target.y - 25})) {
+                ++app.mesh_generation;
+                app.reshape_render_pending = true;
+            }
+        }
         while (app.running) {
             SDL_Event event{};
             while (SDL_PollEvent(&event)) {
@@ -123,7 +149,8 @@ int main(int argc, char** argv) {
             SDL_RenderClear(renderer);
             ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
             ++app.rendered_frames;
-            if (!app.screenshot_path.empty() && app.rendered_frames == app.screenshot_frame) {
+            if (!app.screenshot_path.empty() && app.rendered_frames >= app.screenshot_frame &&
+                (!demo_reshape || (!app.warp_worker.busy() && !app.reshape_render_pending))) {
                 SDL_Surface* surface = SDL_RenderReadPixels(renderer, nullptr);
                 if (surface) {
                     SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);

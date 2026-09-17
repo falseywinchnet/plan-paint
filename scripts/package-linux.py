@@ -40,7 +40,15 @@ def main():
     for line in output.splitlines():
         match = re.search(r"(\S+) => (/\S+)", line)
         if match and match[1] not in SYSTEM and match[1] not in desktop:
-            shutil.copy2(Path(match[2]).resolve(), bundle / "lib" / match[1])
+            source = Path(match[2]).resolve()
+            shutil.copy2(source, bundle / "lib" / match[1])
+            owned = subprocess.run(["dpkg-query", "-S", str(source)], text=True, capture_output=True)
+            if owned.returncode == 0:
+                package = owned.stdout.split(": ", 1)[0].split(":", 1)[0]
+                copyright_file = Path("/usr/share/doc") / package / "copyright"
+                if copyright_file.exists():
+                    (bundle / "licenses").mkdir(exist_ok=True)
+                    shutil.copy2(copyright_file, bundle / "licenses" / (package + "-copyright.txt"))
     launcher = bundle / "Rainstar Paint"
     launcher.write_text('#!/bin/sh\napp_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexport LD_LIBRARY_PATH="$app_dir/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\nexec "$app_dir/bin/rainstar-paint" "$@"\n')
     launcher.chmod(0o755)

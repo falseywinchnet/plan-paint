@@ -45,7 +45,7 @@ struct Application {
     bool show_grid = false, show_rulers = false, show_status = true, full_screen = false;
     bool texture_dirty = true, preview_active = false, dragging = false, moving_selection = false;
     bool color_dialog = false, resize_dialog = false, properties_dialog = false, about_dialog = false;
-    bool text_active = false, unsaved_dialog = false;
+    bool text_active = false, unsaved_dialog = false, text_focus = false;
     bool print_preview = false, black_white = false;
     Command deferred_command = Command::New;
     bool deferred_after_save = false;

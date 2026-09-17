@@ -1,4 +1,5 @@
 #include "application.hpp"
+#include "imgui_impl_sdlrenderer3.h"
 #include <chrono>
 #include <filesystem>
 #include <iostream>
@@ -46,18 +47,22 @@ class UiFixture {
         require((*font).FindGlyphNoFallback(0x25bc) && (*font).FindGlyphNoFallback(0x25b2) &&
                     (*font).FindGlyphNoFallback(0x25b6) && (*font).FindGlyphNoFallback(0x25c0),
                 "Portsmouth navigation glyphs are missing from embedded UI font");
+        ImGui_ImplSDLRenderer3_Init(renderer);
         app = std::make_unique<paint::Application>(window, renderer);
         frame();
         frame();
     }
     ~UiFixture() {
         app.reset();
+        ImGui_ImplSDLRenderer3_Shutdown();
         ImGui::DestroyContext();
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
     }
     void frame() {
+        (*app).prepare_text_font();
+        ImGui_ImplSDLRenderer3_NewFrame();
         ImGui::NewFrame();
         (*app).frame();
         ImGui::Render();
@@ -191,6 +196,36 @@ void stamp_and_reshape(UiFixture& ui) {
     require(!app.reshape_active && !app.document.selection.active, "Escape did not commit reshape");
     require(app.error.empty(), app.error.c_str());
 }
+void text_and_stale_transform(UiFixture& ui) {
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    app.choose_tool(paint::Tool::Text);
+    ui.click(120, 260);
+    ui.frame();
+    ImGui::GetIO().AddInputCharactersUTF8("Hello Portsmouth");
+    ui.frame();
+    require(std::string(app.text_buffer) == "Hello Portsmouth",
+            "text did not receive initial keyboard focus");
+    app.text_style.bold = true;
+    app.text_style.size = 36;
+    ui.frame();
+    require(app.text_ui_font && (*app.text_ui_font).FontSize == 36, "live embedded text font did not update");
+    app.finish_text();
+    ui.frame();
+    unsigned marks = 0;
+    for (paint::Color pixel : app.document.image.pixels) {
+        if (pixel.r < 250) {
+            ++marks;
+        }
+    }
+    require(marks > 80, "styled text was not rasterized");
+    app.document.select({50, 50, 80, 80});
+    app.start_reshape();
+    app.command(paint::Command::Undo);
+    ui.wait_work();
+    require(!app.reshape_active && !app.reshape_field, "completed background compilation survived Undo");
+    require(app.error.empty(), app.error.c_str());
+}
 } // namespace
 int main() {
     try {
@@ -198,6 +233,7 @@ int main() {
         drawing_and_controls(ui);
         path_and_selection(ui);
         stamp_and_reshape(ui);
+        text_and_stale_transform(ui);
         std::cout
             << "Isolated ribbon/canvas, paths, selections, F1, stamp and reshape interactions passed.\n";
         return 0;

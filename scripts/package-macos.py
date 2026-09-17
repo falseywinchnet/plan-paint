@@ -32,6 +32,7 @@ def main():
     resources = app / "Contents/Resources"
     plist_path = app / "Contents/Info.plist"
     plist = plistlib.loads(plist_path.read_bytes())
+    plist["CFBundleIconFile"] = "app-icon.icns"
     plist["LSMinimumSystemVersion"] = "26.0"
     plist["CFBundleDocumentTypes"] = [{"CFBundleTypeName": "Image", "CFBundleTypeRole": "Editor", "LSHandlerRank": "Alternate", "LSItemContentTypes": ["public.image"]}]
     plist_path.write_bytes(plistlib.dumps(plist))
