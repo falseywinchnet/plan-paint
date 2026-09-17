@@ -1,6 +1,6 @@
 # Third-party notices
 
-Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail.com. Written by Astra, sponsored by Joshuah, with thanks to Hashem.
+Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail.com.
 
 - Dear ImGui v1.91.9b, commit f5befd2d29e66809cd1110a152e375a7f1981f06: MIT, Copyright Omar Cornut. See vendor/imgui/LICENSE.txt.
 - stb, commit 2c980bb59875b0d32144a71867fbdebb2f77cd20: MIT option selected. See vendor/stb/LICENSE.
@@ -8,7 +8,7 @@ Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail
 - SDL3: zlib license. https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt
 - libtiff: permissive TIFF license. https://gitlab.com/libtiff/libtiff/-/blob/master/LICENSE.md
 - libwebp: BSD-style license. https://chromium.googlesource.com/webm/libwebp/+/HEAD/COPYING
-- Portsmouth Regular, Bold, Italic, Bold Italic and Mono: the project owner's supplied font family, embedded unmodified. The source identities, original metadata, and construction record are preserved in assets/fonts/PROJECT.md. Portsmouth supplies the interface text and custom navigation glyphs. System fonts selected for artwork are not redistributed.
+- Portsmouth Regular, Bold, Italic, Bold Italic and Mono: embedded font family. Original source-font copyright and license notices are preserved in [packaging/licenses/Portsmouth-source-notices.txt](packaging/licenses/Portsmouth-source-notices.txt). System fonts selected for artwork are not redistributed.
 - The vendored Dear ImGui source tree also contains Droid Sans under Apache License 2.0; it is not the application interface font.
 
 Microsoft, Windows and Paint names identify the reference application and belong to their respective owner. Rainstar Paint is independent and uses newly drawn icons.

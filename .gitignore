@@ -2,3 +2,6 @@ build*/
 dist/
 .DS_Store
 imgui.ini
+
+# Local authoring notes and development receipts.
+/astra/

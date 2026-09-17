@@ -34,7 +34,7 @@ jobs:
           key: vcpkg-windows-static-2026-09-17
       - name: Configure
         shell: pwsh
-        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+        run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DRAINSTAR_COMPILER_REPORTS=ON -DRAINSTAR_BENCHMARKS=ON
       - name: Compile and test
         shell: pwsh
         run: |
@@ -52,13 +52,14 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force dist/RainstarPaint | Out-Null
           Copy-Item build/Release/rainstar-paint.exe dist/RainstarPaint/
-          Copy-Item LICENSE,THIRD_PARTY_NOTICES.md,README.md dist/RainstarPaint/
+          Copy-Item LICENSE,THIRD_PARTY_NOTICES.md dist/RainstarPaint/
+          Copy-Item packaging/README.txt dist/RainstarPaint/README.txt
           Copy-Item -Recurse packaging/licenses dist/RainstarPaint/
-          Copy-Item assets/fonts/PROJECT.md dist/RainstarPaint/licenses/Portsmouth-PROJECT.md
           Get-ChildItem C:/vcpkg/installed/x64-windows-static/share/*/copyright | ForEach-Object {
             Copy-Item $_.FullName ("dist/RainstarPaint/licenses/" + $_.Directory.Name + "-copyright.txt")
           }
-          Compress-Archive -Path dist/RainstarPaint -DestinationPath dist/rainstar-paint-0.1.2-windows-x64.zip
+          $version = python scripts/release_version.py
+          Compress-Archive -Path dist/RainstarPaint -DestinationPath "dist/rainstar-paint-$version-windows-x64.zip"
           Copy-Item "$env:TEMP/rainstar-windows.png" dist/rainstar-windows.png
       - uses: actions/upload-artifact@v4
         with:
@@ -66,6 +67,7 @@ jobs:
           path: |
             dist/*.zip
             dist/rainstar-windows.png
+            build/compiler-reports/*.asm
   linux:
     runs-on: ubuntu-22.04
     steps:
@@ -73,7 +75,7 @@ jobs:
       - name: Install native dependencies
         run: sudo apt-get update && sudo apt-get install -y libtiff-dev libwebp-dev libgtk-3-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgl1-mesa-dev libegl1-mesa-dev xvfb
       - name: Configure and compile
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRAINSTAR_SYSTEM_SDL=OFF -DRAINSTAR_BUNDLED_TIFF=ON && cmake --build build --parallel 4
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRAINSTAR_SYSTEM_SDL=OFF -DRAINSTAR_BUNDLED_TIFF=ON -DRAINSTAR_COMPILER_REPORTS=ON -DRAINSTAR_BENCHMARKS=ON && cmake --build build --parallel 4
       - name: Test core and graphical startup
         run: |
           ctest --test-dir build --output-on-failure
@@ -89,3 +91,5 @@ jobs:
           path: |
             dist/*.tar.gz
             /tmp/rainstar-linux-portable.png
+            build/compiler-reports/*.txt
+            build/CMakeFiles/paint_core.dir/src/*.s

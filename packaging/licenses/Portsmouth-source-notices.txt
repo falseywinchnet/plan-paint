@@ -1,6 +1,6 @@
 Portsmouth source-font notices
 
-The unmodified Portsmouth family is supplied by the project owner. Its construction record is in Portsmouth-PROJECT.md / assets/fonts/PROJECT.md. The following original source notices are preserved from the recorded source-font name tables.
+Portsmouth is distributed with the following original source-font copyright and license notices.
 
 AnnotationMono-VF.ttf
 ---------------------

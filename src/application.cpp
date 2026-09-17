@@ -1355,14 +1355,28 @@ void Application::dialogs() {
         ImGui::OpenPopup("About Rainstar Paint");
         about_dialog = false;
     }
-    if (ImGui::BeginPopupModal("About Rainstar Paint", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16, 14));
+    bool show_about =
+        ImGui::BeginPopupModal("About Rainstar Paint", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::PopStyleVar();
+    if (show_about) {
         GuiScope popup_scope(GuiEnd::Popup);
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + 460.0f);
         ImGui::TextUnformatted(
-            "Rainstar Paint\nClassic tools. Room to make something your own.\n\nWritten by Astra. Sponsored "
-            "by Joshuah.\nWith thanks to Hashem.\n\nCopyright (c) 2026 joshuah.rainstar@gmail.com\nFree and "
-            "open source under the MIT license.\nAnyone may use, study, change, and share this "
-            "program.\n\nAn independent implementation inspired by Windows 7/10 Paint.\nMicrosoft and "
-            "Windows are trademarks of Microsoft Corporation.");
+            "To the Holy One, blessed be He, from whom all good things come. "
+            "This work is dedicated in gratitude for the nourishment that sustains human life, "
+            "the energy that powers our tools, and the opportunity to weave information into "
+            "works of use and beauty.");
+        ImGui::Spacing();
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::TextUnformatted("Rainstar Paint\n\nAuthor: Astra\nSponsor: Rainstar\n\n"
+                               "Copyright (c) 2026 joshuah.rainstar@gmail.com\n"
+                               "Free and open source under the MIT license.\n"
+                               "Anyone may use, study, change, and share this program.\n\n"
+                               "An independent implementation inspired by Windows 7/10 Paint. "
+                               "Microsoft and Windows are trademarks of Microsoft Corporation.");
+        ImGui::PopTextWrapPos();
         if (ImGui::Button("OK", ImVec2(90, 0))) {
             ImGui::CloseCurrentPopup();
         }

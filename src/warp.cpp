@@ -887,7 +887,7 @@ std::size_t ConvWarpField::storage_bytes() const {
     std::size_t bytes = controls_.size() * sizeof(double);
     return bytes;
 }
-WarpSample ConvWarpField::sample_premultiplied(Point position) const {
+WarpSample ConvWarpField::sample_components(Point position) const {
     WarpSample sample;
     if (!std::isfinite(position.x) || !std::isfinite(position.y) || position.x < -0.5 || position.y < -0.5 ||
         position.x >= width_ - 0.5 || position.y >= height_ - 0.5 || controls_.empty()) {
@@ -915,6 +915,16 @@ WarpSample ConvWarpField::sample_premultiplied(Point position) const {
     }
     sample = {values[0], values[1], values[2], values[3]};
     return sample;
+}
+WarpSample ConvWarpField::sample_premultiplied(Point position) const {
+    WarpSample value = sample_components(position);
+    // Keep the admitted opacity. Project color at each query, before any positive
+    // filter weights are accumulated; clipping only the final average is too late.
+    value.a = std::clamp(value.a, 0.0, 1.0);
+    value.r = std::clamp(value.r, 0.0, value.a);
+    value.g = std::clamp(value.g, 0.0, value.a);
+    value.b = std::clamp(value.b, 0.0, value.a);
+    return value;
 }
 namespace {
 static Color encoded_sample(WarpSample value) {
@@ -958,56 +968,46 @@ struct SampleRule {
     double offsets[8] = {};
     double weights[8] = {1.0};
 };
-static bool lattice_isometry(const AffineMap& map) {
-    double tolerance = 1.0e-10;
-    double values[6] = {map.xx, map.xy, map.tx, map.yx, map.yy, map.ty};
-    for (double value : values) {
-        if (std::abs(value - std::round(value)) > tolerance) {
-            return false;
-        }
-    }
-    return std::abs(map.xx * map.xx + map.yx * map.yx - 1.0) < tolerance &&
-           std::abs(map.xy * map.xy + map.yy * map.yy - 1.0) < tolerance &&
-           std::abs(map.xx * map.xy + map.yx * map.yy) < tolerance;
-}
-static SampleRule sample_rule(double footprint, bool point) {
+static SampleRule sample_rule(double footprint, WarpSampling sampling) {
     SampleRule rule;
-    if (point) {
+    double side = 1.0;
+    if (sampling == WarpSampling::Point) {
         return rule;
     }
-    if (footprint <= 1.25) {
-        rule.count = 2;
-        rule.offsets[0] = -0.28867513459481287;
-        rule.offsets[1] = 0.28867513459481287;
-        rule.weights[0] = 0.5;
-        rule.weights[1] = 0.5;
-    } else if (footprint <= 3.0) {
-        rule.count = 4;
-        double offsets[4] = {-0.43056815579702629, -0.16999052179242813, 0.16999052179242813,
-                             0.43056815579702629};
-        double weights[4] = {0.17392742256872693, 0.32607257743127307, 0.32607257743127307,
-                             0.17392742256872693};
-        for (int i = 0; i < 4; ++i) {
-            rule.offsets[i] = offsets[i];
-            rule.weights[i] = weights[i];
+    if (sampling == WarpSampling::Minification) {
+        if (footprint <= 1.0) {
+            return rule;
         }
-    } else {
-        rule.count = 8;
-        double offsets[8] = {-0.48014492824876812, -0.39833323870681337, -0.26276620495816449,
-                             -0.09171732124782490, 0.09171732124782490,  0.26276620495816449,
-                             0.39833323870681337,  0.48014492824876812};
-        double weights[8] = {0.05061426814518813, 0.11119051722668724, 0.15685332293894364,
-                             0.18134189168918099, 0.18134189168918099, 0.15685332293894364,
-                             0.11119051722668724, 0.05061426814518813};
-        for (int i = 0; i < 8; ++i) {
-            rule.offsets[i] = offsets[i];
-            rule.weights[i] = weights[i];
-        }
+        double reciprocal = 1.0 / footprint;
+        side = std::sqrt((1.0 - reciprocal) * (1.0 + reciprocal));
+    }
+    // Fixed nodes avoid finite rule changes as a transform crosses a threshold.
+    // The residual square shrinks continuously to the cardinal point sampler.
+    rule.count = 8;
+    constexpr double offsets[8] = {-0.48014492824876812, -0.39833323870681337, -0.26276620495816449,
+                                   -0.09171732124782490, 0.09171732124782490,  0.26276620495816449,
+                                   0.39833323870681337,  0.48014492824876812};
+    constexpr double weights[8] = {0.05061426814518813, 0.11119051722668724, 0.15685332293894364,
+                                   0.18134189168918099, 0.18134189168918099, 0.15685332293894364,
+                                   0.11119051722668724, 0.05061426814518813};
+    for (int i = 0; i < 8; ++i) {
+        rule.offsets[i] = side * offsets[i];
+        rule.weights[i] = weights[i];
     }
     return rule;
 }
 static double map_footprint(const AffineMap& inverse) {
-    double footprint = std::max(std::hypot(inverse.xx, inverse.yx), std::hypot(inverse.xy, inverse.yy));
+    // Largest singular value, including compression along a sheared direction.
+    // Normalize before squaring to avoid overflow for otherwise valid maps.
+    double scale =
+        std::max({std::abs(inverse.xx), std::abs(inverse.xy), std::abs(inverse.yx), std::abs(inverse.yy)});
+    double xx = inverse.xx / scale, xy = inverse.xy / scale;
+    double yx = inverse.yx / scale, yy = inverse.yy / scale;
+    double a = xx * xx + yx * yx;
+    double b = xx * xy + yx * yy;
+    double d = xy * xy + yy * yy;
+    double eigenvalue = 0.5 * (a + d + std::hypot(a - d, 2.0 * b));
+    double footprint = scale * std::sqrt(eigenvalue);
     return footprint;
 }
 static void add_weighted(WarpSample& sum, WarpSample value, double weight) {
@@ -1016,36 +1016,54 @@ static void add_weighted(WarpSample& sum, WarpSample value, double weight) {
     sum.b += value.b * weight;
     sum.a += value.a * weight;
 }
+struct AffineStencil {
+    int count = 1;
+    Point offsets[64] = {};
+    double weights[64] = {1.0};
+};
+static AffineStencil prepare_affine_stencil(const AffineMap& inverse, const SampleRule& rule) {
+    AffineStencil stencil;
+    stencil.count = rule.count * rule.count;
+    for (int j = 0; j < rule.count; ++j) {
+        for (int i = 0; i < rule.count; ++i) {
+            int index = j * rule.count + i;
+            stencil.offsets[index] = {inverse.xx * rule.offsets[i] + inverse.xy * rule.offsets[j],
+                                      inverse.yx * rule.offsets[i] + inverse.yy * rule.offsets[j]};
+            stencil.weights[index] = rule.weights[i] * rule.weights[j];
+        }
+    }
+    return stencil;
+}
 struct AffineJob {
     const ConvWarpField& field;
     const AffineMap& inverse;
-    const SampleRule& rule;
+    const AffineStencil& stencil;
     Image& output;
     std::atomic<int> next_row{0};
 };
 static void affine_worker(AffineJob& job) {
+    const int width = job.output.width, height = job.output.height;
+    const AffineMap inverse = job.inverse;
+    const AffineStencil stencil = job.stencil;
+    const ConvWarpField& field = job.field;
+    std::vector<Color>& pixels = job.output.pixels;
     for (;;) {
-        int y = job.next_row.fetch_add(1);
-        if (y >= job.output.height) {
+        int y = job.next_row.fetch_add(1, std::memory_order_relaxed);
+        if (y >= height) {
             return;
         }
-        double row_x = job.inverse.xy * y + job.inverse.tx;
-        double row_y = job.inverse.yy * y + job.inverse.ty;
-        std::size_t offset = static_cast<std::size_t>(y) * job.output.width;
-        for (int x = 0; x < job.output.width; ++x) {
-            Point centre{row_x + job.inverse.xx * x, row_y + job.inverse.yx * x};
+        double row_x = inverse.xy * y + inverse.tx;
+        double row_y = inverse.yy * y + inverse.ty;
+        std::size_t offset = static_cast<std::size_t>(y) * width;
+        for (int x = 0; x < width; ++x) {
+            Point centre{row_x + inverse.xx * x, row_y + inverse.yx * x};
             WarpSample total;
-            for (int j = 0; j < job.rule.count; ++j) {
-                for (int i = 0; i < job.rule.count; ++i) {
-                    Point position{centre.x + job.inverse.xx * job.rule.offsets[i] +
-                                       job.inverse.xy * job.rule.offsets[j],
-                                   centre.y + job.inverse.yx * job.rule.offsets[i] +
-                                       job.inverse.yy * job.rule.offsets[j]};
-                    WarpSample value = job.field.sample_premultiplied(position);
-                    add_weighted(total, value, job.rule.weights[i] * job.rule.weights[j]);
-                }
+            for (int i = 0; i < stencil.count; ++i) {
+                Point position{centre.x + stencil.offsets[i].x, centre.y + stencil.offsets[i].y};
+                WarpSample value = field.sample_premultiplied(position);
+                add_weighted(total, value, stencil.weights[i]);
             }
-            job.output.pixels[offset + x] = encoded_sample(total);
+            pixels[offset + x] = encoded_sample(total);
         }
     }
 }
@@ -1122,20 +1140,24 @@ void render_affine(const ConvWarpField& field, const AffineMap& map, int width, 
     AffineMap inverse = inverse_map(map);
     Image output;
     output.reset(width, height, {0, 0, 0, 0});
-    SampleRule rule =
-        sample_rule(map_footprint(inverse), sampling == WarpSampling::Point || lattice_isometry(inverse));
-    AffineJob job{field, inverse, rule, output};
+    SampleRule rule = sample_rule(map_footprint(inverse), sampling);
+    AffineStencil stencil = prepare_affine_stencil(inverse, rule);
+    AffineJob job{field, inverse, stencil, output};
     unsigned count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
     if (output.pixels.size() < 65536) {
         count = 1;
     }
-    std::vector<std::jthread> workers;
-    workers.reserve(count);
-    for (unsigned i = 0; i < count; ++i) {
-        workers.emplace_back(affine_worker, std::ref(job));
-    }
-    for (std::jthread& worker : workers) {
-        worker.join();
+    if (count == 1) {
+        affine_worker(job);
+    } else {
+        std::vector<std::jthread> workers;
+        workers.reserve(count);
+        for (unsigned i = 0; i < count; ++i) {
+            workers.emplace_back(affine_worker, std::ref(job));
+        }
+        for (std::jthread& worker : workers) {
+            worker.join();
+        }
     }
     destination = std::move(output);
 }
@@ -1471,18 +1493,12 @@ void render_mesh(const ConvWarpField& field, const ReshapeMesh& mesh, int width,
     Image output;
     output.reset(width, height, {0, 0, 0, 0});
     double footprint = 1.0;
-    bool identity = true;
-    for (const MeshNode& node : mesh.nodes) {
-        if (node.source.x != node.target.x || node.source.y != node.target.y) {
-            identity = false;
-        }
-    }
     for (const MeshTriangle& triangle : mesh.triangles) {
         AffineMap inverse = triangle_inverse(mesh.nodes[triangle.nodes[0]], mesh.nodes[triangle.nodes[1]],
                                              mesh.nodes[triangle.nodes[2]]);
         footprint = std::max(footprint, map_footprint(inverse));
     }
-    SampleRule rule = sample_rule(footprint, sampling == WarpSampling::Point || identity);
+    SampleRule rule = sample_rule(footprint, sampling);
     // One bit owns each quadrature node. Shared triangle edges can include
     // the same point, but exactly one triangle contributes its value.
     std::vector<std::uint64_t> ownership(output.pixels.size(), 0);

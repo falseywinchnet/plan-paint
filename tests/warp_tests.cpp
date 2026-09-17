@@ -144,21 +144,21 @@ void test_canonical_reference() {
                              {.9499470468430964, .08457244260906291, .07392009691925135},
                              {.10271603622105065, .44901960784313716, 0}};
     for (int i = 0; i < 6; ++i) {
-        paint::WarpSample sample = field.sample_premultiplied({positions[i][0], positions[i][1]});
+        paint::WarpSample sample = field.sample_components({positions[i][0], positions[i][1]});
         near(sample.r, expected[i][0], 2.0e-5, "canonical red reference mismatch");
         near(sample.g, expected[i][1], 2.0e-5, "canonical green reference mismatch");
         near(sample.b, expected[i][2], 2.0e-5, "canonical blue reference mismatch");
     }
     for (int y = 0; y < 6; ++y) {
         for (int x = 1; x < 7; ++x) {
-            paint::WarpSample left = field.sample_premultiplied({x - 1.0e-9, y + 0.37});
-            paint::WarpSample right = field.sample_premultiplied({x + 1.0e-9, y + 0.37});
+            paint::WarpSample left = field.sample_components({x - 1.0e-9, y + 0.37});
+            paint::WarpSample right = field.sample_components({x + 1.0e-9, y + 0.37});
             near(left.r, right.r, 1.0e-7, "shared atlas edge discontinuity");
         }
     }
     for (double y = 0; y <= 6; y += .19) {
         for (double x = 0; x <= 7; x += .17) {
-            paint::WarpSample sample = field.sample_premultiplied({x, y});
+            paint::WarpSample sample = field.sample_components({x, y});
             require(sample.r >= -1e-12 && sample.r <= 1 + 1e-12 && sample.g >= -1e-12 &&
                         sample.g <= 1 + 1e-12 && sample.b >= -1e-12 && sample.b <= 1 + 1e-12,
                     "atlas range violation");
@@ -227,6 +227,129 @@ void test_admitted_edge_and_mesh_area() {
         require(paint::equal(output.pixels[i], previous.pixels[i]), "invalid affine map changed destination");
     }
 }
+void test_physical_alpha_before_filtering() {
+    paint::Image image;
+    image.reset(5, 5);
+    constexpr paint::Color columns[5] = {
+        {0, 0, 0, 0}, {255, 0, 0, 51}, {255, 0, 0, 204}, {204, 0, 0, 255}, {204, 0, 0, 255}};
+    for (int y = 0; y < 5; ++y) {
+        for (int x = 0; x < 5; ++x) {
+            image.set(x, y, columns[x]);
+        }
+    }
+    paint::ConvWarpField field;
+    field.compile(image);
+    paint::WarpSample raw = field.sample_components({1.685, 2.0});
+    near(raw.r, 0.64167095527343732, 1.0e-12, "independent raw color field changed");
+    near(raw.a, 0.62268291957710920, 1.0e-12, "independent raw opacity field changed");
+    require(raw.r > raw.a + 0.01, "alpha fixture no longer exercises component coupling");
+    paint::WarpSample physical = field.sample_premultiplied({1.685, 2.0});
+    near(physical.a, raw.a, 0.0, "physical projection changed admitted alpha");
+    near(physical.r, physical.a, 0.0, "physical sample contains excess premultiplied red");
+    // On this mixed-opacity edge, late clipping would return red 252. Projecting
+    // before integration agrees with the independent dense integral, red 248.
+    paint::Image edge;
+    paint::render_affine(field, {1, 0, 0.2, 0, 1, 0}, 5, 5, edge, paint::WarpSampling::Area);
+    require(edge.get(2, 2).r == 248, "excess color leaked between quadrature samples before clipping");
+    // All channels, including mixed colors and hidden RGB in transparent source pixels.
+    std::uint32_t state = 19;
+    for (paint::Color& pixel : image.pixels) {
+        state = state * 1664525u + 1013904223u;
+        pixel = {static_cast<std::uint8_t>(state), static_cast<std::uint8_t>(state >> 8),
+                 static_cast<std::uint8_t>(state >> 16), static_cast<std::uint8_t>(state >> 24)};
+    }
+    image.set(2, 2, {255, 127, 63, 0});
+    field.compile(image);
+    for (double y = -0.6; y < 4.6; y += 0.11) {
+        for (double x = -0.6; x < 4.6; x += 0.13) {
+            physical = field.sample_premultiplied({x, y});
+            require(physical.a >= 0.0 && physical.a <= 1.0 && physical.r >= 0.0 && physical.r <= physical.a &&
+                        physical.g >= 0.0 && physical.g <= physical.a && physical.b >= 0.0 &&
+                        physical.b <= physical.a,
+                    "physical RGBA left the premultiplied color domain");
+        }
+    }
+    for (int y = 0; y < 5; ++y) {
+        for (int x = 0; x < 5; ++x) {
+            paint::Color original = image.get(x, y);
+            paint::Color expected = original.a == 0 ? paint::Color{0, 0, 0, 0} : original;
+            require(paint::equal(field.sample({static_cast<double>(x), static_cast<double>(y)}), expected),
+                    "physical projection changed a visible source node");
+        }
+    }
+    // Independent dense midpoint integration of the physical field. Unlike a
+    // mirrored Gauss-rule test, this catches projection after, rather than before,
+    // averaging and allows only the bounded filter's numerical integration error.
+    constexpr int divisions = 256;
+    double sums[4] = {};
+    for (int y = 0; y < divisions; ++y) {
+        for (int x = 0; x < divisions; ++x) {
+            paint::Point position{1.2 + (x + 0.5) / divisions, 1.1 + (y + 0.5) / divisions};
+            physical = field.sample_premultiplied(position);
+            sums[0] += physical.r;
+            sums[1] += physical.g;
+            sums[2] += physical.b;
+            sums[3] += physical.a;
+        }
+    }
+    paint::Image output;
+    paint::render_affine(field, {1, 0, 0.3, 0, 1, 0.4}, 5, 5, output, paint::WarpSampling::Area);
+    paint::Color actual = output.get(2, 2);
+    near(actual.r, std::round(255.0 * sums[0] / sums[3]), 1.0, "filtered physical red differs from integral");
+    near(actual.g, std::round(255.0 * sums[1] / sums[3]), 1.0,
+         "filtered physical green differs from integral");
+    near(actual.b, std::round(255.0 * sums[2] / sums[3]), 1.0,
+         "filtered physical blue differs from integral");
+    near(actual.a, std::round(255.0 * sums[3] / (divisions * divisions)), 1.0,
+         "filtered alpha differs from integral");
+}
+void test_sampling_continuity_and_equivalent_maps() {
+    paint::Image image;
+    image.reset(5, 5);
+    for (int y = 0; y < 5; ++y) {
+        for (int x = 0; x < 5; ++x) {
+            image.set(x, y, {static_cast<std::uint8_t>(10 * x * x), 0, 0, 255});
+        }
+    }
+    paint::ConvWarpField field;
+    field.compile(image);
+    paint::Image identity, moved, area;
+    paint::render_affine(field, {}, 5, 5, identity);
+    paint::render_affine(field, {1, 0, 0.000001, 0, 1, 0}, 5, 5, moved);
+    require(identity.get(2, 2).r == 40 && moved.get(2, 2).r == 40,
+            "infinitesimal translation changed the default sampling functional");
+    paint::render_affine(field, {}, 5, 5, area, paint::WarpSampling::Area);
+    require(area.get(2, 2).r == 41, "explicit area mode silently became a point sample at identity");
+    paint::render_affine(field, {1, 0, 0.000001, 0, 1, 0}, 5, 5, moved, paint::WarpSampling::Area);
+    require(moved.get(2, 2).r == area.get(2, 2).r, "explicit area functional jumps near identity");
+    constexpr paint::AffineMap maps[4] = {
+        {1, 0, 1, 0, 1, 0}, {0.8, 0.12, 0.4, 0, 0.9, 0.3}, {0, -1, 4, 1, 0, 0}, {1, 0, 0.000001, 0, 1, 0}};
+    for (const paint::AffineMap& map : maps) {
+        paint::ReshapeMesh mesh = paint::make_reshape_mesh(image, 2.0);
+        for (paint::MeshNode& node : mesh.nodes) {
+            node.target = {map.xx * node.source.x + map.xy * node.source.y + map.tx,
+                           map.yx * node.source.x + map.yy * node.source.y + map.ty};
+        }
+        for (paint::WarpSampling sampling :
+             {paint::WarpSampling::Point, paint::WarpSampling::Minification, paint::WarpSampling::Area}) {
+            paint::Image affine_output, mesh_output;
+            paint::render_affine(field, map, 7, 7, affine_output, sampling);
+            paint::render_mesh(field, mesh, 7, 7, mesh_output, sampling);
+            for (std::size_t i = 0; i < affine_output.pixels.size(); ++i) {
+                require(paint::equal(affine_output.pixels[i], mesh_output.pixels[i]),
+                        "equivalent affine and mesh maps produced different pixels");
+            }
+        }
+    }
+    // Former 2/4/8-rule thresholds no longer introduce finite switches.
+    for (double stretch : {1.0, 1.25, 3.0}) {
+        double before = 1.0 / (stretch - 0.0000001);
+        double after = 1.0 / (stretch + 0.0000001);
+        paint::render_affine(field, {before, 0, 2 - 2 * before, 0, before, 2 - 2 * before}, 5, 5, identity);
+        paint::render_affine(field, {after, 0, 2 - 2 * after, 0, after, 2 - 2 * after}, 5, 5, moved);
+        require(paint::equal(identity.get(2, 2), moved.get(2, 2)), "filter switched at a scale threshold");
+    }
+}
 void benchmark(int side) {
     paint::Image image;
     image.reset(side, side);
@@ -258,6 +381,8 @@ int main(int argc, char** argv) {
         test_mesh();
         test_canonical_reference();
         test_admitted_edge_and_mesh_area();
+        test_physical_alpha_before_filtering();
+        test_sampling_continuity_and_equivalent_maps();
         std::cout << "CONV warp constants, affine fields, cardinality, alpha, tiny images, mesh identity, "
                      "folds and lasso tests passed.\n";
         if (argc > 1) {

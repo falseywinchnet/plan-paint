@@ -111,12 +111,13 @@ void Application::help(float x, float y, float width, float height) {
                "Drag a knob to stretch the object. A red warning means that move would fold the mesh, "
                "so the last safe shape stays in place. Press Escape to finish, or Undo to restore the "
                "original object.\n\nThe first preparation can take a few seconds. You may move knobs "
-               "while it prepares. Drag previews use point samples; the finished picture uses CONV area "
-               "sampling. A selected source can contain at most one million pixels. Select a smaller "
+               "while it prepares. Drag previews use point samples; finishing applies an antialiasing filter "
+               "where the mesh compresses the image. A source can contain at most one million pixels. Select "
+               "a smaller "
                "object or resize it first if Paint explains that it is too large.");
     help_topic("10. Put words in your picture",
                "Click the A tool, then click the canvas. Type into the box. The Text tab lets you choose a "
-               "Portsmouth, Portsmouth Mono, or an installed font face, size, bold, italic, underline, "
+               "font face, size, bold, italic, underline, "
                "strikeout, and an opaque "
                "background. Color 1 colors the letters; Color 2 colors an opaque background. Place text "
                "stamps the words into the picture. Cancel text discards them. Undo removes placed text if "
@@ -149,8 +150,8 @@ void Application::help(float x, float y, float width, float height) {
         "finishes a path. F1 opens this guide. R and +/- change a loaded stamp.");
     help_topic(
         "13. How I made this - Astra",
-        "I am Astra. I built Rainstar Paint in C++ with Dear ImGui and SDL, following Joshuah's programming "
-        "house style: explicit types, named operations and callbacks, clear ownership, and inspectable "
+        "I am Astra. I built Rainstar Paint in C++ with Dear ImGui and SDL, using explicit types, "
+        "named operations and callbacks, clear ownership, and inspectable "
         "numerical loops. I chose the Windows 7/10 Paint ribbon as the visual and behavioral reference.\n\nI "
         "keep the document as a contiguous RGBA image. Editing gestures create undo checkpoints, and a "
         "floating selection owns its pixels until it is placed. Flood fill finds the region before painting "
@@ -161,16 +162,19 @@ void Application::help(float x, float y, float width, float height) {
         "Lines shorter than five pixels use an explicit short-line interpolation rule because the five-point "
         "stencil does not exist there.\n\nFor free deformation I compiled the paper's joint CONV field "
         "into a shared quintic control atlas, then built a coarse triangle mesh for the geometry. "
-        "The Neo backup and the published paper match the research source I used. The compact beta-star "
-        "variant supplies the material; bounded positive quadrature supplies output pixel areas. "
-        "This is approximate area integration, not the paper's exact moment-bank method. Preparation "
+        "The compact beta-star "
+        "variant supplies the material. Color is constrained to the available opacity before averaging. "
+        "A bounded antialiasing filter grows smoothly where a transform compresses the image. Preparation "
         "runs on a background worker, and dragging reuses the compiled material.\n\nI use stb, gif-h, "
         "libtiff and libwebp for file encoding and "
         "decoding. Dear ImGui and the image libraries retain their own permissive license notices. This is "
         "an independent implementation; it does not contain Microsoft's Paint code or artwork.");
     help_topic(
         "14. Free for everyone",
-        "With thanks to Hashem.\n\nWritten by Astra. Sponsored by Joshuah.\nCopyright (c) 2026 "
+        "To the Holy One, blessed be He, from whom all good things come. This work is dedicated in "
+        "gratitude for the nourishment that sustains human life, the energy that powers our tools, "
+        "and the opportunity to weave information into works of use and beauty.\n\n"
+        "Author: Astra\nSponsor: Rainstar\nCopyright (c) 2026 "
         "joshuah.rainstar@gmail.com\n\nRainstar Paint is free and open source under the MIT license. Anyone "
         "may use it, learn from it, change it, and share it, including for commercial work. Keep the "
         "copyright and license notice with copies. The license does not promise a warranty.\n\nYour pictures "

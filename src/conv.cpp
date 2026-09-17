@@ -427,17 +427,25 @@ struct LineWorkspace {
             double value[4] = {0.0, 0.0, 0.0, 0.0};
             for (u32 segment = plan.offsets[target]; segment < plan.offsets[target + 1]; segment += 1) {
                 u32 cell = plan.cells[segment];
+                double sample[4] = {};
                 for (u32 channel = 0; channel < 4; channel += 1) {
-                    double sample =
+                    sample[channel] =
                         plan.anchor_weights[segment] *
                         source[source_offset + plan.anchor_nodes[segment] * source_stride + channel];
-                    for (u32 current = 0; current < 5; current += 1) {
-                        double coefficient = plan.current_weights[segment * 5 + current];
-                        if (coefficient != 0.0) {
-                            sample += coefficient * admitted_current[(cell * 5 + current) * 4 + channel];
+                }
+                // Channels are independent lanes. Keep each channel's five-current
+                // summation order while sharing coefficient loads and zero tests.
+                for (u32 current = 0; current < 5; current += 1) {
+                    double coefficient = plan.current_weights[segment * 5 + current];
+                    if (coefficient != 0.0) {
+                        for (u32 channel = 0; channel < 4; channel += 1) {
+                            sample[channel] +=
+                                coefficient * admitted_current[(cell * 5 + current) * 4 + channel];
                         }
                     }
-                    value[channel] += sample;
+                }
+                for (u32 channel = 0; channel < 4; channel += 1) {
+                    value[channel] += sample[channel];
                 }
             }
             for (u32 channel = 0; channel < 4; channel += 1) {
@@ -493,7 +501,7 @@ static void axis_worker(AxisJob& job) {
     int lines = job.vertical ? job.width : job.height;
     LineWorkspace workspace(static_cast<u32>(length));
     for (;;) {
-        int line = job.next.fetch_add(1);
+        int line = job.next.fetch_add(1, std::memory_order_relaxed);
         if (line >= lines) {
             break;
         }
@@ -508,7 +516,7 @@ static void axis_worker(AxisJob& job) {
             int ok = workspace.resample_line(job.input.data(), length, source_offset, source_stride, job.plan,
                                              job.output.data(), destination_offset, destination_stride);
             if (!ok) {
-                job.failed.store(true);
+                job.failed.store(true, std::memory_order_relaxed);
             }
         }
     }
@@ -527,22 +535,24 @@ static void resize_axis(const std::vector<double>& input, int width, int height,
     if (static_cast<std::size_t>(width) * height < 65536) {
         count = 1;
     }
-    std::vector<std::jthread> workers;
-    workers.reserve(count);
-    for (unsigned index = 0; index < count; ++index) {
-        workers.emplace_back(axis_worker, std::ref(job));
+    if (count == 1) {
+        axis_worker(job);
+    } else {
+        std::vector<std::jthread> workers;
+        workers.reserve(count);
+        for (unsigned index = 0; index < count; ++index) {
+            workers.emplace_back(axis_worker, std::ref(job));
+        }
+        for (std::jthread& worker : workers) {
+            worker.join();
+        }
     }
-    for (std::jthread& worker : workers) {
-        worker.join();
-    }
-    if (job.failed.load()) {
+    if (job.failed.load(std::memory_order_relaxed)) {
         throw std::runtime_error("CONV signed-current projection did not admit this image.");
     }
 }
 } // namespace
 void conv_resize(const Image& source, int width, int height, Image& destination) {
-    Image result;
-    result.reset(width, height, {0, 0, 0, 0});
     if (source.width < 1 || source.height < 1) {
         throw std::invalid_argument("Cannot resize an empty image.");
     }
@@ -550,6 +560,8 @@ void conv_resize(const Image& source, int width, int height, Image& destination)
         destination = source;
         return;
     }
+    Image result;
+    result.reset(width, height, {0, 0, 0, 0});
     std::vector<double> input(source.pixels.size() * 4);
     for (std::size_t i = 0; i < source.pixels.size(); ++i) {
         Color color = source.pixels[i];
@@ -560,7 +572,11 @@ void conv_resize(const Image& source, int width, int height, Image& destination)
         input[i * 4 + 3] = alpha;
     }
     std::vector<double> middle, output;
-    if (height < source.height) {
+    if (width == source.width) {
+        resize_axis(input, source.width, source.height, height, true, output);
+    } else if (height == source.height) {
+        resize_axis(input, source.width, source.height, width, false, output);
+    } else if (height < source.height) {
         resize_axis(input, source.width, source.height, height, true, middle);
         resize_axis(middle, source.width, height, width, false, output);
     } else {

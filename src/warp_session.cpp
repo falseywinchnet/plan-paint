@@ -90,12 +90,13 @@ void WarpWorker::run(WarpWorker& worker) {
             }
         } else if (worker.task_ == WarpTask::PreviewMesh || worker.task_ == WarpTask::CommitMesh) {
             render_mesh(*worker.field_, worker.mesh_, worker.bounds_.w, worker.bounds_.h, result.image,
-                        worker.task_ == WarpTask::PreviewMesh ? WarpSampling::Point : WarpSampling::Area);
+                        worker.task_ == WarpTask::PreviewMesh ? WarpSampling::Point
+                                                              : WarpSampling::Minification);
         } else if (worker.task_ == WarpTask::Stamp || worker.task_ == WarpTask::PreviewRotation ||
                    worker.task_ == WarpTask::CommitRotation) {
             render_affine(*worker.field_, worker.map_, worker.bounds_.w, worker.bounds_.h, result.image,
                           worker.task_ == WarpTask::PreviewRotation ? WarpSampling::Point
-                                                                    : WarpSampling::Area);
+                                                                    : WarpSampling::Minification);
         }
     } catch (const std::exception& exception) {
         result.error = exception.what();

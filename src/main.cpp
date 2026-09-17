@@ -92,6 +92,8 @@ int main(int argc, char** argv) {
                 demo_rotation = true;
             } else if (argument == "--view-tab") {
                 app.view_tab = true;
+            } else if (argument == "--about") {
+                app.about_dialog = true;
             } else if (argument == "--help-sidebar") {
                 app.show_help = true;
             } else if (argument == "--edit-colors") {

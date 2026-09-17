@@ -6,7 +6,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 failures = []
-for folder in (ROOT / "src", ROOT / "tests"):
+for folder in (ROOT / "src", ROOT / "tests", ROOT / "benchmarks"):
     for path in folder.rglob("*"):
         if path.suffix not in {".cpp", ".hpp", ".mm"}:
             continue

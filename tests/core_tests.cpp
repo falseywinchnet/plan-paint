@@ -52,6 +52,22 @@ void test_conv() {
                     "CONV nodal interpolation failed");
         }
     }
+    // An unchanged dimension must preserve its rows/columns, including when
+    // source and destination alias. These fixtures exercise both one-axis paths.
+    paint::conv_resize(input, 25, 9, output);
+    for (int y = 0; y < 9; ++y) {
+        for (int x = 0; x < 13; ++x) {
+            require(paint::equal(input.get(x, y), output.get(x * 2, y)), "width-only resize moved a row");
+        }
+    }
+    paint::Image original = input;
+    paint::conv_resize(input, 13, 17, input);
+    for (int y = 0; y < 9; ++y) {
+        for (int x = 0; x < 13; ++x) {
+            require(paint::equal(original.get(x, y), input.get(x, y * 2)),
+                    "height-only alias resize moved a column");
+        }
+    }
     input.reset(1, 3, {20, 40, 60, 255});
     paint::conv_resize(input, 7, 1, output);
     for (paint::Color pixel : output.pixels) {

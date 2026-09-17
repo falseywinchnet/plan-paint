@@ -1,109 +1,78 @@
+To the Holy One, blessed be He, from whom all good things come. We dedicate this work in gratitude for the nourishment that sustains human life, the energy that powers our tools, and the opportunity to weave information into works of use and beauty.
+
 # Rainstar Paint
 
-A free native C++ drawing program that recreates the Windows 7/10 Paint ribbon and familiar painting workflow, with CONV image transforms, patterned tools, snapping paths, and rubber stamps. Written by Astra, sponsored by Joshuah, with thanks to Hashem.
+[![Windows and Linux builds](https://github.com/falseywinchnet/rainstar-paint/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/falseywinchnet/rainstar-paint/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/falseywinchnet/rainstar-paint)](https://github.com/falseywinchnet/rainstar-paint/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![Rainstar Paint on the Mac M4](docs/screenshots/macos-home.png)
+A free drawing application with the familiar Windows 7/10 Paint ribbon, built for Mac, Windows and Linux. Draw, paint, add text and edit pictures, with snapping paths, patterned brushes, reusable stamps and CONV image transforms.
 
-The interface uses the supplied **Portsmouth** family, embedded in the executable along with its custom navigation glyphs. Raised tabs, a recessed blue tab strip, beveled galleries, warm selection highlights, and newly drawn shaded icons follow the classic ribbon design. This is an independent implementation with original code and artwork.
+![Rainstar Paint](assets/screenshots/macos-home.png)
 
-## Downloads
+## Download
 
-[Download release 0.1.2](https://github.com/falseywinchnet/rainstar-paint/releases/tag/v0.1.2)
+| Platform | Download | Requirements |
+| --- | --- | --- |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-linux-x64.tar.gz) | Ubuntu 22.04 or newer with a graphical desktop and GTK 3. Extract and launch `Rainstar Paint`. |
 
-| Platform | Package | Use |
-|---|---|---|
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-macos-arm64.pkg) | Install into Applications. Requires macOS 26 or newer because of the bundled native libraries. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-windows-x64.zip) | Extract the folder, then launch `rainstar-paint.exe`. No installer or separate codec installation. |
-| Linux x64 | [Portable tar.gz](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/rainstar-paint-0.1.2-linux-x64.tar.gz) | Extract the folder, then launch `Rainstar Paint`. Targets Ubuntu 22.04 or newer with a graphical desktop and its GTK 3 print service. |
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
-[SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.2/SHA256SUMS) accompany the compiled packages. The bundled Mac application is signed ad hoc; the installer is unsigned, and there is no Developer ID notarization. macOS may require approval in System Settings → Privacy & Security. The Windows 7/10 reference identifies the **Paint design**, not a claim of verified Windows 7 operating-system support.
+The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
-Version 0.1.2 reduces idle CPU and GPU work. The event loop waits for input and skips GPU submission when the interface and textures are unchanged. Tooltips and the text caret retain a lightweight timer; drawing, held keys, dialogs and completed CONV transforms wake updates. The Retina scaling fix from 0.1.1 is retained.
+## Make something
 
-## Painting
+- **Draw and paint.** Pencil, nine brushes, 23 shapes, curves, flood fill, eraser, eyedropper and adjustable outlines. Use solid colors or eighteen two-color patterns.
+- **Edit pictures.** Rectangular and free-form selections, crop, copy/paste, resize, rotate, flip and undo/redo. Drop an image into the window to place it as a movable selection.
+- **Add text and color.** Choose a font, size and text style. Mix colors with RGB, hex or OKLab controls and save sixteen custom swatches.
+- **Follow a path.** Connect new segments to any earlier junction and keep drawing through loops. Press **Escape** to finish.
+- **Stamp an object.** Lift a circle, pill, square or rectangle and print repeated copies. **R** rotates, **Shift+R** rotates backward, and **+ / −** changes size. Open **Stamp → Lift a new stamp** to choose another source.
+- **Turn and reshape.** Drag the round handle at a selection's upper-right corner to rotate freely; hold **Shift** for 15-degree steps. Lasso an object and choose **Patterns & tools → Reshape selected object** to stretch it with control points.
 
-- **Classic tools:** pencil, nine brushes, eraser and color-replacement eraser, connected-region fill, eyedropper, magnifier, 23 shapes, two-control-point curves, polygons, outline and fill controls, and custom stroke widths.
-- **Editing:** rectangular and free-form selections; move, nudge, resize handles, cut/copy/paste, Paste from, inverse selection, transparent selection, crop, undo/redo, exact quarter rotations, arbitrary CONV rotation with a corner handle or numeric angle, flips, color inversion, canvas properties, and black-and-white conversion.
-- **Text:** embedded Portsmouth proportional and mono faces, installed font selection, size, bold, italic, underline, strikeout, and opaque or transparent background. The editing field previews the selected font and size.
-- **Colors:** Microsoft Office theme accents and pastel tints, primary/background colors, RGB controls, OKLab inputs, hexadecimal entry, and sixteen persistent custom-color slots with original/new previews.
-- **View and File:** zoom, 100%, fit window, gridlines, rulers, status bar and full screen; native open/save dialogs, twelve recent pictures, print, page setup and an artwork print preview. File also includes scanner/camera acquisition, an email attachment draft, and Fill/Tile/Center desktop backgrounds.
-- **Image exchange:** dragging a file from Finder or a file manager immediately pastes a floating selection. The native clipboard publishes PNG and, on Windows/Linux, interoperable bitmap data.
+**F1** opens the yellow help sidebar, with step-by-step instructions and keyboard shortcuts. The drawing workflow needs no account or network connection. Idle windows wait for input and avoid submitting unchanged frames to the GPU.
 
-Scanner acquisition uses WIA directly on Windows. Mac Image Capture and Linux Document Scanner/XSane open as separate capture applications; save there, then drop the image into Paint. Mail uses the configured system application. Linux wallpaper integration supports GNOME, Cinnamon, Budgie and KDE. Hardware, drivers and desktop services determine availability; these commands report unavailable services rather than claiming success. Copies used for mail and wallpaper remain in Paint's preferences folder.
+Print and page setup use the system dialog. Scanner capture, email drafts and desktop backgrounds use available operating-system services. On Mac and Linux, scanner capture opens a separate application; save the scan there, then drop it into Paint.
 
-### Paths, stamps and patterns
+### Image formats
 
-The **continuous junction path** snaps to any earlier junction when its blue target appears. Clicking the first point continues drawing; **Escape** commits. The ordinary polygon still closes normally.
+| Open, paste or drop | Save |
+| --- | --- |
+| PNG, JPEG, BMP, GIF, TIFF, TGA, WebP, PSD composite, PNM, HDR, PIC | PNG, JPEG, BMP, GIF, TIFF, TGA, lossless WebP |
 
-The **rubber stamp** can lift a circle, pill, square or rectangle. Its source stays on the canvas. Click elsewhere to repeat it, press **R** to turn by 15 degrees, **Shift+R** to turn backward, and **+ / −** to change size. Transparency can skip the background color. Stamp rotation and scaling use the native joint CONV material. To reset, open the arrow below **Stamp → Lift a new stamp**; this clears the sample and resets its angle and scale.
+PNG, TIFF, TGA and WebP preserve transparency. JPEG, BMP and GIF flatten onto white; GIF also reduces the palette. Animated GIF opens its first frame. HDR is converted to 8-bit RGBA. Saving produces a flat image.
 
-The bucket and brushes share eighteen patterns: solid, seven dither densities, horizontal and vertical stripes, diagonal, crosshatch, checkerboard, bricks, woven cloth, houndstooth, dots and waves. Both colors are editable, and the second pattern color may be transparent.
+### Transform limits
 
-### Free rotation
+Free rotation, stamps and reshape use a continuous CONV field compiled from the original selection. Preparation runs in the background and may take a few seconds. A source selection is limited to one million pixels because the double-precision field requires substantial memory. Normal editing supports up to 100 megapixels, subject to available memory; undo history is bounded to approximately 256 MiB.
 
-Drag the round handle just outside a selection's upper-right corner. Hold **Shift** to snap to 15-degree steps. Release to finish; **Escape** places the selection. The **Rotate** menu also accepts an exact angle, including for the entire picture. Whole-picture rotation expands the canvas.
+Reshape uses a triangle mesh and rejects folds. Final antialiasing uses bounded numerical sampling; very strong reductions and very thin features can still alias. The implementation follows the [CONV research](https://github.com/falseywinchnet/papers_please/blob/main/conv_paper_composed.tex).
 
-The CONV field is compiled once per gesture and every preview uses that original material. Repeated mouse movement does not repeatedly resample a previous preview. Preparation is asynchronous, and the final result uses area sampling. The one-million-pixel material limit described below also applies to free rotation.
+## Build
 
-![An actual arbitrary CONV rotation](docs/screenshots/macos-rotation.png)
+Requires **C++20**, **CMake 3.24+**, **SDL3**, **libtiff** and **libwebp**. Linux also requires GTK 3. Dear ImGui, stb and gif-h are vendored.
 
-### Reshape
-
-Lasso an object, choose **Patterns & tools → Reshape selected object**, and drag its blue knobs. Paint adds coarse triangles along the outline and through the interior. Invalid moves that fold or cross the mesh are rejected. **Escape** commits; Undo restores the original.
-
-![An actual CONV reshape preview](docs/screenshots/macos-reshape.png)
-
-Preparation runs on a background worker. After compilation, dragging reuses the same continuous image field. The field follows the canonical shared joint CONV atlas and compact β* reference. The geometry is piecewise affine; final pixel areas use bounded positive quadrature. This is not a claim of the paper's exact clipped moment integration or a physical cloth simulation.
-
-The research source matches the named MacBook Neo backup and the composed paper in `papers_please`, byte for byte. See [the derivation, source hashes, implementation boundaries and tests](docs/WARP_MATH.md). Axis-aligned resize is independently tested byte for byte against the website demonstrator; see [resize provenance](docs/CONV_PROVENANCE.md).
-
-For this release, the joint warp source is limited to one million pixels. Its double-precision atlas uses about 800 bytes per source pixel; first preparation takes about 1.9 seconds for a 512 × 512 source on the M4. Normal image editing has a 100-megapixel working limit, subject to available memory. Undo retains up to approximately 256 MiB of prior image snapshots plus the current transaction.
-
-## Formats
-
-| Operation | Formats |
-|---|---|
-| Open / drop / Paste from | PNG, JPEG, BMP, GIF, TIFF, TGA, WebP, PSD composite, PNM, HDR, PIC |
-| Save | PNG, JPEG, BMP, GIF, TIFF, TGA, lossless WebP |
-
-PNG, TIFF, TGA and WebP preserve transparency. JPEG, BMP and GIF flatten onto white; GIF is palette-quantized. Animated GIF imports its first frame. HDR imports into the application's 8-bit RGBA working image. Saving produces a flat picture, not a layered project. Files are encoded to a unique temporary sibling before replacing the destination, preserving an existing picture when encoding fails.
-
-## Help
-
-**F1** opens the black-on-yellow help sidebar. Fourteen chapters explain the program for a new artist, including the special tools, keyboard shortcuts, implementation choices in Astra's first person, and the right to use and share the free software.
-
-![Classic yellow help sidebar](docs/screenshots/macos-help.png)
-
-## Build and check
-
-C++20, CMake 3.24+, SDL3, libtiff and libwebp are required. Linux also uses GTK 3 for native printing. Dear ImGui, stb and gif-h are pinned in `vendor/`. The drawing workflow has no account or network-service dependency.
-
-On the Mac M4 with Homebrew:
+On an Apple Silicon Mac with Homebrew:
 
 ```sh
 brew install cmake sdl3 libtiff webp
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
-python3 scripts/check-style.py
 open build/rainstar-paint.app
-python3 scripts/package-macos.py
 ```
 
-The [native build workflow](.github/workflows/build.yml) contains the Windows and Linux recipes. `RAINSTAR_SYSTEM_SDL=OFF` builds the pinned SDL release; `RAINSTAR_BUNDLED_TIFF=ON` builds pinned TIFF with permissive optional codecs. The Linux folder bundles image-codec dependencies and uses the host's desktop/GTK stack. Windows statically links its dependencies and runtime.
+The [build workflow](.github/workflows/build.yml) provides Windows and Linux recipes, runs the test suite and produces portable packages. Set `RAINSTAR_SYSTEM_SDL=OFF` to build the pinned SDL release and `RAINSTAR_BUNDLED_TIFF=ON` to build pinned TIFF. Packaging scripts are in `scripts/`; all packages read their version from CMake.
 
-`--idle-report 15 report.json` measures UI frames and GPU presentations during 15 seconds after a three-second warmup. CPU measurements use the host process accounting; presentation counts are not a system-wide GPU-utilization percentage.
+Tests cover image editing, formats, numerical transforms, transparency, real UI input, display scaling and idle rendering. Run `python3 scripts/check-style.py` before submitting a change. Optional `RAINSTAR_BENCHMARKS=ON` and `RAINSTAR_COMPILER_REPORTS=ON` produce a timing/checksum harness and compiler assembly reports.
 
-The tests cover color round trips, website CONV reference outputs, editing transactions, seven codec round trips and file replacement, mesh validity and numerical invariants, embedded Portsmouth symbols, and actual ImGui input-driven drawing/path/selection/stamp/text/reshape workflows. [Release evidence](docs/releases/0.1.2/VERIFICATION.md) distinguishes native tests, GUI startup checks and untested hardware integration.
+## Credits and license
 
-`--demo --screenshot path.png`, `--view-tab`, `--help-sidebar`, `--edit-colors`, `--demo-rotation` and `--demo-reshape` are reproducible app-rendered captures used for these screenshots. They draw through the same application renderer and painting kernels; the screenshots are not mockups.
+**Author:** Astra
 
-The supplied [programming house style](docs/PROGRAMMING_HOUSE_STYLE.md) is included. First-party C++ uses explicit types, named callbacks, visible ownership and double-precision numerical kernels, without `auto`, lambdas or arrow member access. Vendor code retains upstream style.
+**Sponsor:** Rainstar
 
-## License and credits
+Original code, documentation and artwork are [MIT licensed](LICENSE), copyright © 2026 joshuah.rainstar@gmail.com. You may use, study, modify and share the software, including commercially. Dependencies retain their [third-party notices](THIRD_PARTY_NOTICES.md).
 
-All original application code, tests, documentation and icons are MIT licensed, copyright (c) 2026 **joshuah.rainstar@gmail.com**. Anyone may use, study, modify and share the program, including commercially. Preserve the copyright and license notice.
-
-**Written by Astra. Sponsored by Joshuah. With thanks to Hashem.**
-
-Dependencies and the supplied Portsmouth fonts retain their notices and provenance; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), `packaging/licenses/`, and `assets/fonts/PROJECT.md`. Microsoft and Windows are trademarks of Microsoft Corporation. Rainstar Paint contains no Microsoft Paint source code or copied icon assets.
+Rainstar Paint is an independent implementation. Microsoft and Windows are trademarks of Microsoft Corporation; no Microsoft Paint source code or icon assets are included.

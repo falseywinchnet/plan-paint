@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Bundle the exact Mach-O dependency closure, sign ad hoc, and build an installer."""
 from pathlib import Path
+from release_version import project_version
 import argparse
 import json
 import plistlib
@@ -19,7 +20,7 @@ def dependencies(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--build", default="build")
-    parser.add_argument("--version", default="0.1.2")
+    parser.add_argument("--version", default=project_version())
     args = parser.parse_args()
     distribution = ROOT / "dist"
     distribution.mkdir(exist_ok=True)
@@ -40,7 +41,6 @@ def main():
     resources.mkdir(exist_ok=True)
     shutil.copy2(ROOT / "LICENSE", resources)
     shutil.copy2(ROOT / "THIRD_PARTY_NOTICES.md", resources)
-    shutil.copy2(ROOT / "assets/fonts/PROJECT.md", resources / "Portsmouth-PROJECT.md")
     notices = resources / "licenses"
     if (ROOT / "packaging/licenses").exists():
         shutil.copytree(ROOT / "packaging/licenses", notices, dirs_exist_ok=True)

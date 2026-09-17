@@ -22,6 +22,10 @@ struct WarpSample {
 class ConvWarpField {
   public:
     void compile(const Image& source);
+    // Independently admitted CONV channels, before physical color projection.
+    // Raw RGB can exceed alpha; use only for numerical inspection/reference work.
+    [[nodiscard]] WarpSample sample_components(Point source_position) const;
+    // Physical premultiplied RGBA: 0 <= RGB <= alpha <= 1, projected before filtering.
     [[nodiscard]] WarpSample sample_premultiplied(Point source_position) const;
     [[nodiscard]] Color sample(Point source_position) const;
     [[nodiscard]] int width() const {
@@ -37,18 +41,20 @@ class ConvWarpField {
     std::vector<double> controls_;
 };
 
-enum class WarpSampling { Point, Area };
+enum class WarpSampling { Point, Minification, Area };
 
-// Area uses positive bounded 2/4/8 point Gauss rules per target axis, an
-// approximation to the pixel footprint integral. Integer lattice isometries
-// use exact point samples. Transparent outside the
-// source pixel footprint; edge centres extend constantly for half a pixel.
+// Point preserves nodal samples. Minification uses a continuous residual filter:
+// target-square side sqrt(max(0, 1 - 1 / sigma_max(inverse)^2)), so identity,
+// translations and quarter rotations remain exact. Area always uses the full
+// unit target square, including at identity. Both filters use fixed positive
+// 8x8 Gauss nodes; neither is an exact coverage or conservation guarantee.
+// Transparent outside the source footprint; edge centres extend half a pixel.
 // All output pixels are replaced. Invalid maps leave destination unchanged.
 // affine_bounds includes every target pixel basin intersecting the transformed
 // source footprint. Subtract returned x/y from map.tx/map.ty before rendering.
 [[nodiscard]] Rect affine_bounds(const ConvWarpField& field, const AffineMap& source_to_target);
 void render_affine(const ConvWarpField& field, const AffineMap& source_to_target, int width, int height,
-                   Image& destination, WarpSampling sampling = WarpSampling::Area);
+                   Image& destination, WarpSampling sampling = WarpSampling::Minification);
 
 struct MeshNode {
     Point source;
@@ -75,6 +81,9 @@ struct ReshapeMesh {
 [[nodiscard]] bool move_reshape_node(ReshapeMesh& mesh, std::size_t node, Point target);
 [[nodiscard]] bool reshape_mesh_valid(const ReshapeMesh& mesh);
 // Mesh geometry is piecewise affine. Pixel values always use the CONV* atlas.
+// Minification uses the maximum triangle stretch for one common filter, keeping
+// shared coverage samples consistent. A local deformation can widen that filter
+// smoothly across the mesh. An equivalent whole-affine mesh uses the same filter.
 void render_mesh(const ConvWarpField& field, const ReshapeMesh& mesh, int width, int height,
-                 Image& destination, WarpSampling sampling = WarpSampling::Area);
+                 Image& destination, WarpSampling sampling = WarpSampling::Minification);
 } // namespace paint

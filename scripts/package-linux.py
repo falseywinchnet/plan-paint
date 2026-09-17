@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Make a relocatable folder; keep system graphics drivers and glibc on the host."""
 from pathlib import Path
+from release_version import project_version
 import argparse
 import re
 import shutil
@@ -13,7 +14,7 @@ SYSTEM = {"libstdc++.so.6", "libgcc_s.so.1", "libc.so.6", "libm.so.6", "libpthre
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--build", default="build")
-    parser.add_argument("--version", default="0.1.2")
+    parser.add_argument("--version", default=project_version())
     args = parser.parse_args()
     distribution = ROOT / "dist"
     bundle = distribution / "RainstarPaint"
@@ -52,10 +53,10 @@ def main():
     launcher = bundle / "Rainstar Paint"
     launcher.write_text('#!/bin/sh\napp_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexport LD_LIBRARY_PATH="$app_dir/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\nexec "$app_dir/bin/rainstar-paint" "$@"\n')
     launcher.chmod(0o755)
-    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md", "README.md"):
+    for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(ROOT / name, bundle)
+    shutil.copy2(ROOT / "packaging/README.txt", bundle / "README.txt")
     shutil.copytree(ROOT / "packaging/licenses", bundle / "licenses", dirs_exist_ok=True)
-    shutil.copy2(ROOT / "assets/fonts/PROJECT.md", bundle / "licenses/Portsmouth-PROJECT.md")
     archive = distribution / f"rainstar-paint-{args.version}-linux-x64.tar.gz"
     with tarfile.open(archive, "w:gz") as output_file:
         output_file.add(bundle, arcname="RainstarPaint")
