@@ -357,12 +357,30 @@ void Application::ribbon(float width) {
         GuiScope popup_scope(GuiEnd::Popup);
         command_menu("New", "Ctrl+N", *this, Command::New);
         command_menu("Open...", "Ctrl+O", *this, Command::Open);
+        if (ImGui::BeginMenu("Recent pictures", !recent_files.paths.empty())) {
+            GuiScope menu_scope(GuiEnd::Menu);
+            for (const std::string& path : recent_files.paths) {
+                if (ImGui::MenuItem(path.c_str())) {
+                    recent_to_open = path;
+                    command(Command::OpenRecent);
+                    break;
+                }
+            }
+        }
         command_menu("Save", "Ctrl+S", *this, Command::Save);
         command_menu("Save as...", "F12", *this, Command::SaveAs);
         ImGui::Separator();
         command_menu("Print...", "Ctrl+P", *this, Command::Print);
         command_menu("Page setup...", nullptr, *this, Command::PageSetup);
         command_menu("Print preview", nullptr, *this, Command::PrintPreview);
+        command_menu("From scanner or camera...", nullptr, *this, Command::Acquire);
+        command_menu("Send in email...", nullptr, *this, Command::Email);
+        if (ImGui::BeginMenu("Set as desktop background")) {
+            GuiScope menu_scope(GuiEnd::Menu);
+            command_menu("Fill", nullptr, *this, Command::WallpaperFill);
+            command_menu("Tile", nullptr, *this, Command::WallpaperTile);
+            command_menu("Center", nullptr, *this, Command::WallpaperCenter);
+        }
         command_menu("Properties", "Ctrl+E", *this, Command::Properties);
         ImGui::Separator();
         command_menu("About Rainstar Paint", nullptr, *this, Command::About);

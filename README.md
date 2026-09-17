@@ -24,8 +24,10 @@ The interface uses the supplied **Portsmouth** family, embedded in the executabl
 - **Editing:** rectangular and free-form selections; move, nudge, resize handles, cut/copy/paste, Paste from, inverse selection, transparent selection, crop, undo/redo, exact quarter rotations, flips, color inversion, canvas properties, and black-and-white conversion.
 - **Text:** embedded Portsmouth proportional and mono faces, installed font selection, size, bold, italic, underline, strikeout, and opaque or transparent background. The editing field previews the selected font and size.
 - **Colors:** Microsoft Office theme accents and pastel tints, primary/background colors, RGB controls, OKLab inputs, and hexadecimal entry.
-- **View:** zoom, 100%, fit window, gridlines, rulers, status bar and full screen. File includes native open/save dialogs, print, page setup and an artwork print preview.
+- **View and File:** zoom, 100%, fit window, gridlines, rulers, status bar and full screen; native open/save dialogs, twelve recent pictures, print, page setup and an artwork print preview. File also includes scanner/camera acquisition, an email attachment draft, and Fill/Tile/Center desktop backgrounds.
 - **Image exchange:** dragging a file from Finder or a file manager immediately pastes a floating selection. The native clipboard publishes PNG and, on Windows/Linux, interoperable bitmap data.
+
+Scanner acquisition uses WIA directly on Windows. Mac Image Capture and Linux Document Scanner/XSane open as separate capture applications; save there, then drop the image into Paint. Mail uses the configured system application. Linux wallpaper integration supports GNOME, Cinnamon, Budgie and KDE. Hardware, drivers and desktop services determine availability; these commands report unavailable services rather than claiming success. Copies used for mail and wallpaper remain in Paint's preferences folder.
 
 ### Paths, stamps and patterns
 

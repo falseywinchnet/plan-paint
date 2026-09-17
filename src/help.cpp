@@ -106,7 +106,8 @@ void Application::help(float x, float y, float width, float height) {
                "object or resize it first if Paint explains that it is too large.");
     help_topic("10. Put words in your picture",
                "Click the A tool, then click the canvas. Type into the box. The Text tab lets you choose a "
-               "Portsmouth, Portsmouth Mono, or an installed font face, size, bold, italic, underline, strikeout, and an opaque "
+               "Portsmouth, Portsmouth Mono, or an installed font face, size, bold, italic, underline, "
+               "strikeout, and an opaque "
                "background. Color 1 colors the letters; Color 2 colors an opaque background. Place text "
                "stamps the words into the picture. Cancel text discards them. Undo removes placed text if "
                "you change your mind.");
@@ -119,7 +120,15 @@ void Application::help(float x, float y, float width, float height) {
         "GIF, TIFF, TGA, WebP, PSD composite images, PNM, HDR and PIC. Animated GIF imports its first frame. "
         "Saving exports a single picture, not an editable project.\n\nThe application asks before replacing "
         "unsaved work. Cancel keeps you here. Printing uses the system's print dialog where available. Keep "
-        "a saved copy of pictures you care about.");
+        "a saved copy of pictures you care about.\n\nRecent pictures remembers your last twelve opened or "
+        "saved files. From scanner or camera uses Windows Image Acquisition on Windows. On a Mac it opens "
+        "Image Capture; on Linux it opens Document Scanner or XSane. In those capture applications, save "
+        "the picture, then drag it into Paint or choose Paste from. A connected device and its driver "
+        "are needed.\n\nSend in email opens a mail draft with a copy of the picture attached. You choose "
+        "the recipient and send it in your mail application. Set as desktop background offers Fill "
+        "(cover the screen), Tile (repeat), and Center (keep the picture's size). These commands keep "
+        "their exported copies in Paint's private preferences folder so the other application can "
+        "continue using them.");
     help_topic(
         "12. View and keyboard guide",
         "View has Zoom in, Zoom out, 100%, rulers, gridlines, the status bar, Full screen and Fit window. "

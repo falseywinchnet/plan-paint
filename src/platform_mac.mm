@@ -1,8 +1,38 @@
 #include "codecs.hpp"
+#include "desktop.hpp"
 #include "platform.hpp"
 #import <Cocoa/Cocoa.h>
 #include <stdexcept>
 namespace paint {
+void compose_email(SDL_Window*, const std::string& path) {
+    NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path.c_str()]];
+    NSSharingService* service = [NSSharingService sharingServiceNamed:NSSharingServiceNameComposeEmail];
+    NSArray* items = @[ url ];
+    if (!service || ![service canPerformWithItems:items]) {
+        throw std::runtime_error("Set up a mail application to compose a message with this picture.");
+    }
+    [service performWithItems:items];
+}
+void set_wallpaper(const std::string& path) {
+    NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path.c_str()]];
+    NSDictionary* options = @{NSWorkspaceDesktopImageScalingKey : @(NSImageScaleAxesIndependently)};
+    NSError* error = nil;
+    if (![[NSWorkspace sharedWorkspace] setDesktopImageURL:url
+                                                 forScreen:[NSScreen mainScreen]
+                                                   options:options
+                                                     error:&error]) {
+        throw std::runtime_error(error ? [[error localizedDescription] UTF8String]
+                                       : "The desktop background could not be changed.");
+    }
+}
+bool acquire_picture(std::string&) {
+    NSURL* app =
+        [[NSWorkspace sharedWorkspace] URLForApplicationWithBundleIdentifier:@"com.apple.Image_Capture"];
+    if (!app || ![[NSWorkspace sharedWorkspace] openURL:app]) {
+        throw std::runtime_error("Image Capture is unavailable. Open an image file or use Paste from.");
+    }
+    return false;
+}
 void copy_to_clipboard(const Image& image) {
     std::vector<std::uint8_t> bytes = encode_png(image);
     NSData* data = [NSData dataWithBytes:bytes.data() length:bytes.size()];

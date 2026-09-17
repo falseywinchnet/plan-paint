@@ -48,7 +48,7 @@ class UiFixture {
                     (*font).FindGlyphNoFallback(0x25b6) && (*font).FindGlyphNoFallback(0x25c0),
                 "Portsmouth navigation glyphs are missing from embedded UI font");
         ImGui_ImplSDLRenderer3_Init(renderer);
-        app = std::make_unique<paint::Application>(window, renderer);
+        app = std::make_unique<paint::Application>(window, renderer, false);
         frame();
         frame();
     }
@@ -226,6 +226,57 @@ void text_and_stale_transform(UiFixture& ui) {
     require(!app.reshape_active && !app.reshape_field, "completed background compilation survived Undo");
     require(app.error.empty(), app.error.c_str());
 }
+void recent_files_and_desktop_layouts(UiFixture& ui) {
+    paint::Image material;
+    material.reset(2, 2, {10, 30, 60, 255});
+    paint::Image tiled = paint::wallpaper_image(material, 7, 5, paint::WallpaperLayout::Tile);
+    require(tiled.width == 7 && tiled.height == 5 && paint::equal(tiled.pixels.back(), material.pixels[0]),
+            "tiled wallpaper left an unpainted edge");
+    paint::Image centered = paint::wallpaper_image(material, 6, 6, paint::WallpaperLayout::Center);
+    require(centered.pixels[0].r == 255 && paint::equal(centered.pixels[14], material.pixels[0]),
+            "centered wallpaper did not preserve native size and center");
+    paint::Image filled = paint::wallpaper_image(material, 7, 5, paint::WallpaperLayout::Fill);
+    require(paint::equal(filled.pixels.front(), material.pixels[0]) &&
+                paint::equal(filled.pixels.back(), material.pixels[0]),
+            "CONV wallpaper fill did not cover the desktop");
+    std::filesystem::path directory =
+        std::filesystem::temp_directory_path() / ("rainstar-recent-test-" + std::to_string(SDL_GetTicksNS()));
+    std::filesystem::create_directory(directory);
+    std::u8string encoded = (directory / "recent.bin").u8string();
+    paint::RecentFiles recent;
+    recent.storage_path = std::string(encoded.begin(), encoded.end());
+    recent.remember("a\\b\nimage.png");
+    recent.remember("日本語 image.png");
+    recent.remember("a\\b\nimage.png");
+    paint::RecentFiles reloaded;
+    reloaded.storage_path = recent.storage_path;
+    reloaded.load();
+    require(reloaded.paths == recent.paths && reloaded.paths.size() == 2,
+            "recent files lost Unicode/newlines or retained duplicates");
+    for (int index = 0; index < 20; ++index) {
+        recent.remember(std::to_string(index));
+    }
+    require(recent.paths.size() == 12 && recent.paths[0] == "19", "recent files did not bound history");
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    encoded = (directory / std::filesystem::u8path("日本語.png")).u8string();
+    const std::string picture_path(encoded.begin(), encoded.end());
+    app.save_to(picture_path);
+    require(app.recent_files.paths.front() == picture_path && app.status.find("日本語") != std::string::npos,
+            "saving did not publish the Unicode recent-file entry");
+    ui.frame();
+    app.document.checkpoint();
+    app.document.image.pixels[0] = {20, 40, 60, 255};
+    app.recent_to_open = picture_path;
+    app.command(paint::Command::OpenRecent);
+    require(app.unsaved_dialog && app.deferred_command == paint::Command::OpenRecent,
+            "opening recent picture bypassed the unsaved-work prompt");
+    app.unsaved_dialog = false;
+    app.execute(paint::Command::OpenRecent);
+    require(!app.document.dirty() && app.document.filename == picture_path,
+            "recent-picture command did not load the selected document");
+    std::filesystem::remove_all(directory);
+}
 } // namespace
 int main() {
     try {
@@ -234,6 +285,7 @@ int main() {
         path_and_selection(ui);
         stamp_and_reshape(ui);
         text_and_stale_transform(ui);
+        recent_files_and_desktop_layouts(ui);
         std::cout
             << "Isolated ribbon/canvas, paths, selections, F1, stamp and reshape interactions passed.\n";
         return 0;

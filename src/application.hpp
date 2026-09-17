@@ -1,4 +1,5 @@
 #pragma once
+#include "desktop.hpp"
 #include "document.hpp"
 #include "imgui.h"
 #include "platform.hpp"
@@ -8,11 +9,17 @@ namespace paint {
 enum class Command {
     New,
     Open,
+    OpenRecent,
     Save,
     SaveAs,
     Print,
     PageSetup,
     PrintPreview,
+    Acquire,
+    Email,
+    WallpaperFill,
+    WallpaperTile,
+    WallpaperCenter,
     Quit,
     Undo,
     Redo,
@@ -41,6 +48,8 @@ struct Application {
     SDL_Texture* stamp_texture = nullptr;
     Document document;
     FileDialog dialog;
+    RecentFiles recent_files;
+    std::string recent_to_open;
     bool running = true, show_help = false, view_tab = false, text_tab = false;
     bool show_grid = false, show_rulers = false, show_status = true, full_screen = false;
     bool texture_dirty = true, preview_active = false, dragging = false, moving_selection = false;
@@ -97,7 +106,7 @@ struct Application {
     void finish_reshape();
     void poll_warp();
     void request_skew(int width, int height);
-    explicit Application(SDL_Window* input_window, SDL_Renderer* input_renderer);
+    explicit Application(SDL_Window* input_window, SDL_Renderer* input_renderer, bool preferences = true);
     ~Application();
     Application(const Application&) = delete;
     Application& operator=(const Application&) = delete;

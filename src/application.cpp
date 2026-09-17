@@ -10,11 +10,24 @@
 #include <numbers>
 #include <stdexcept>
 namespace paint {
+static std::string display_filename(const std::string& path) {
+    std::u8string name = std::filesystem::u8path(path).filename().u8string();
+    return std::string(name.begin(), name.end());
+}
 ImU32 packed(Color color) {
     return IM_COL32(color.r, color.g, color.b, color.a);
 }
-Application::Application(SDL_Window* input_window, SDL_Renderer* input_renderer)
-    : window(input_window), renderer(input_renderer) {}
+Application::Application(SDL_Window* input_window, SDL_Renderer* input_renderer, bool preferences)
+    : window(input_window), renderer(input_renderer) {
+    if (preferences) {
+        try {
+            recent_files.storage_path = preference_directory() + "recent-files.bin";
+            recent_files.load();
+        } catch (const std::exception&) {
+            recent_files.storage_path.clear();
+        }
+    }
+}
 Application::~Application() {
     SDL_DestroyTexture(canvas_texture);
     SDL_DestroyTexture(stamp_texture);
@@ -52,7 +65,8 @@ void Application::save_to(const std::string& path) {
     save_image(document.image, path, jpeg_quality);
     document.filename = path;
     document.saved_revision = document.revision;
-    status = "Saved " + std::filesystem::path(path).filename().string();
+    recent_files.remember(path);
+    status = "Saved " + display_filename(path);
     if (deferred_after_save) {
         deferred_after_save = false;
         execute(deferred_command);
@@ -71,6 +85,7 @@ void Application::file_results() {
         save_to(result.path);
     } else if (result.action == FileAction::Open) {
         document.replace(load_image(result.path), result.path);
+        recent_files.remember(result.path);
         texture_dirty = true;
     } else if (result.action == FileAction::Paste) {
         document.paste(load_image(result.path));
@@ -88,7 +103,8 @@ void Application::command(Command requested) {
             status = "Press Escape to finish reshaping before another command.";
             return;
         }
-        if ((requested == Command::New || requested == Command::Open || requested == Command::Quit) &&
+        if ((requested == Command::New || requested == Command::Open || requested == Command::OpenRecent ||
+             requested == Command::Quit) &&
             (document.dirty() || (text_active && text_buffer[0]))) {
             deferred_command = requested;
             unsaved_dialog = true;
@@ -109,6 +125,12 @@ void Application::execute(Command requested) {
     case Command::Open:
         dialog.show(window, FileAction::Open, document.filename);
         break;
+    case Command::OpenRecent:
+        document.replace(load_image(recent_to_open), recent_to_open);
+        recent_files.remember(recent_to_open);
+        text_active = false;
+        curve_points.clear();
+        break;
     case Command::Save:
         if (document.filename.empty()) {
             dialog.show(window, FileAction::Save, "Untitled.png");
@@ -128,6 +150,50 @@ void Application::execute(Command requested) {
     case Command::PageSetup:
         page_setup();
         break;
+    case Command::Acquire: {
+        std::string acquired;
+        if (acquire_picture(acquired)) {
+            finish_text();
+            finish_curve();
+            document.paste(load_image(acquired));
+            std::error_code removal_error;
+            std::filesystem::remove(std::filesystem::u8path(acquired), removal_error);
+            status = "Acquired picture. Move it, then press Escape to place it.";
+        } else {
+#ifdef _WIN32
+            status = "Image acquisition canceled.";
+#else
+            status = "Save the picture in the capture app, then drag it here or use Paste from.";
+#endif
+        }
+        break;
+    }
+    case Command::Email: {
+        finish_text();
+        finish_curve();
+        document.commit_path();
+        compose_email(window, desktop_export(document.visible_image(), "Email"));
+        status = "The mail application opens a draft with your picture attached.";
+        break;
+    }
+    case Command::WallpaperFill:
+    case Command::WallpaperTile:
+    case Command::WallpaperCenter: {
+        finish_text();
+        finish_curve();
+        document.commit_path();
+        const SDL_DisplayMode* mode = SDL_GetDesktopDisplayMode(SDL_GetDisplayForWindow(window));
+        if (!mode) {
+            throw std::runtime_error("Paint could not determine the desktop size.");
+        }
+        WallpaperLayout layout = requested == Command::WallpaperTile     ? WallpaperLayout::Tile
+                                 : requested == Command::WallpaperCenter ? WallpaperLayout::Center
+                                                                         : WallpaperLayout::Fill;
+        Image wallpaper = wallpaper_image(document.visible_image(), (*mode).w, (*mode).h, layout);
+        set_wallpaper(desktop_export(wallpaper, "Wallpaper"));
+        status = "Desktop background updated.";
+        break;
+    }
     case Command::Print: {
         finish_text();
         finish_curve();
@@ -1391,9 +1457,7 @@ void Application::frame() {
         }
         dialogs();
 
-        std::string title = document.filename.empty()
-                                ? "Untitled"
-                                : std::filesystem::path(document.filename).filename().string();
+        std::string title = document.filename.empty() ? "Untitled" : display_filename(document.filename);
         if ((document.dirty() || (text_active && text_buffer[0]))) {
             title += " *";
         }
