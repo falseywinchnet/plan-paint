@@ -19,11 +19,17 @@ static FILE* utf8_fopen(const char* path, const char* mode) {
     _wfopen_s(&file, native.c_str(), wide_mode.c_str());
     return file;
 }
+static int utf8_fopen_s(FILE** file, const char* path, const char* mode) {
+    *file = utf8_fopen(path, mode);
+    return *file ? 0 : 1;
+}
 #define fopen utf8_fopen
+#define fopen_s utf8_fopen_s
 #endif
 #include "gif.h"
 #ifdef _WIN32
 #undef fopen
+#undef fopen_s
 #endif
 #include "stb_image_write.h"
 #include <algorithm>

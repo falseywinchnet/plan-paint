@@ -17,7 +17,8 @@ jobs:
       VCPKG_BINARY_SOURCES: clear;files,C:/vcpkg-binary-cache,readwrite
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: vcpkg
         with:
           path: C:/vcpkg-binary-cache
           key: vcpkg-windows-static-2026-09-17
@@ -26,6 +27,11 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force C:/vcpkg-binary-cache | Out-Null
           vcpkg install sdl3:x64-windows-static tiff:x64-windows-static libwebp:x64-windows-static
+      - uses: actions/cache/save@v4
+        if: steps.vcpkg.outputs.cache-hit != 'true'
+        with:
+          path: C:/vcpkg-binary-cache
+          key: vcpkg-windows-static-2026-09-17
       - name: Configure
         shell: pwsh
         run: cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
