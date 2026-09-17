@@ -59,12 +59,13 @@ jobs:
             Copy-Item $_.FullName ("dist/RainstarPaint/licenses/" + $_.Directory.Name + "-copyright.txt")
           }
           Compress-Archive -Path dist/RainstarPaint -DestinationPath dist/rainstar-paint-0.1.0-windows-x64.zip
+          Copy-Item "$env:TEMP/rainstar-windows.png" dist/rainstar-windows.png
       - uses: actions/upload-artifact@v4
         with:
           name: rainstar-paint-windows-x64
           path: |
             dist/*.zip
-            C:/Users/runneradmin/AppData/Local/Temp/rainstar-windows.png
+            dist/rainstar-windows.png
   linux:
     runs-on: ubuntu-22.04
     steps:
