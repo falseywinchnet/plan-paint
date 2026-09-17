@@ -31,5 +31,34 @@
     "focused_frames": 0,
     "framebuffer_scale_x": 1,
     "framebuffer_scale_y": 1
+  },
+  "normal_launch_cpu_samples": [
+    {
+      "version": "0.1.1",
+      "wall_seconds": 10.012344833929092,
+      "process_cpu_seconds": 1.6599999999999984,
+      "one_core_cpu_percent": 16.579532842044287,
+      "scenario": "Blank app launched normally through LaunchServices; 10-second sample after warmup",
+      "machine": "Apple M4; native 1x display",
+      "measurement": "ps cumulative CPU time delta / monotonic elapsed time"
+    },
+    {
+      "version": "0.1.2",
+      "wall_seconds": 10.01403533294797,
+      "process_cpu_seconds": 0.03,
+      "one_core_cpu_percent": 0.29957953015498784,
+      "scenario": "Blank app launched normally through LaunchServices; 10-second sample after warmup",
+      "machine": "Apple M4; native 1x display",
+      "measurement": "ps cumulative CPU time delta / monotonic elapsed time"
+    }
+  ],
+  "normal_launch_frame_sample": {
+    "wall_seconds": 17.013,
+    "gui_frames": 68,
+    "gpu_presentations": 0,
+    "visible_frames": 68,
+    "focused_frames": 0,
+    "framebuffer_scale_x": 1,
+    "framebuffer_scale_y": 1
   }
 }

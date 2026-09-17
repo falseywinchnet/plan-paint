@@ -10,6 +10,8 @@ On the Apple M4 with its 1× display, an untouched visible blank window used 16.
 
 The 0.1.2 frame counter recorded 80 lightweight UI updates and **zero GPU presentations** during a separate 20.027-second idle interval. A visibility-instrumented run confirmed 40 visible frames and zero GPU presentations over 10.013 seconds. Presentation count describes this application's submissions, not system-wide GPU utilization.
 
+A repeat launch through macOS LaunchServices measured 16.58% → 0.30% CPU, with 68 visible UI updates and zero GPU presentations over 17.013 seconds. The environment still reported no keyboard focus in that run. The [raw measurements](idle-measurements.json) preserve the samples and their limits.
+
 ## Checks
 
 - Release: all three CTest suites passed, 1.18 seconds.
@@ -20,3 +22,13 @@ The 0.1.2 frame counter recorded 80 lightweight UI updates and **zero GPU presen
 `--idle-report 15 report.json` collects frame, presentation, visibility, focus and framebuffer-density counts after a three-second warmup. CPU samples are taken separately with host process accounting.
 
 The macOS 26+ requirement and ad-hoc application signature remain unchanged. Native build and package identities are recorded with the release manifest and checksums.
+
+## Compiled release
+
+The three packages use application source `8792afefbee7625c07e95c37f5df38d926c17cf1`. The release tag adds verification documentation and hashes only.
+
+- [Native CI run 35197466290](https://github.com/falseywinchnet/rainstar-paint/actions/runs/35197466290) passed on Windows Server 2022 and Ubuntu 22.04: all three test suites, the new idle checks, graphical startup and the Linux portable launcher.
+- The Mac installer was expanded. Its app reports version 0.1.2, passed strict ad-hoc signature verification, and launched to render its actual demo screenshot.
+- Downloaded Windows/Linux archives contain native PE/ELF executables and required license notices.
+
+[Package manifest](release-manifest.json) and [SHA-256 checksums](SHA256SUMS).
