@@ -46,25 +46,7 @@ int main(int argc, char** argv) {
     const ImWchar interface_ranges[] = {0x20, 0x024F, 0x2000, 0x2199, 0x25B2, 0x25C0, 0};
     (*io.Fonts).AddFontFromMemoryTTF(const_cast<unsigned char*>(paint::embedded_font),
                                      paint::embedded_font_size, 18.0f, &font_config, interface_ranges);
-    ImGui::StyleColorsLight();
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowRounding = 0;
-    style.ChildRounding = 0;
-    style.FrameRounding = 0;
-    style.PopupRounding = 0;
-    style.WindowBorderSize = 1;
-    style.FrameBorderSize = 1;
-    style.PopupBorderSize = 1;
-    style.ScrollbarSize = 16;
-    style.ScrollbarRounding = 0;
-    style.GrabRounding = 0;
-    style.Colors[ImGuiCol_Text] = ImVec4(0.10f, 0.13f, 0.17f, 1);
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.96f, 0.96f, 0.96f, 1);
-    style.Colors[ImGuiCol_Button] = ImVec4(0.96f, 0.97f, 0.98f, 1);
-    style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.87f, 0.93f, 0.99f, 1);
-    style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.75f, 0.86f, 0.96f, 1);
-    style.Colors[ImGuiCol_Header] = ImVec4(0.84f, 0.91f, 0.97f, 1);
-    style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.87f, 0.93f, 0.99f, 1);
+    paint::configure_interface_style();
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
     int exit_code = 0;

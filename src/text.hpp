@@ -10,7 +10,23 @@ struct TextStyle {
     bool strikeout = false;
     bool mono = false;
     bool opaque = false;
+    bool word_wrap = true;
 };
+struct TextGlyph {
+    std::uint32_t codepoint = 0;
+    std::size_t begin = 0, end = 0;
+    int x = 0, y = 0, advance = 0;
+};
+struct TextLayout {
+    std::vector<TextGlyph> glyphs;
+    std::vector<Point> carets;
+    int width = 0, height = 0, line_height = 0, ascent = 0;
+};
+TextLayout layout_text(const std::string& text, const TextStyle& style, int wrap_width = 0);
+void render_text(Image& image, Point origin, const TextLayout& layout, const TextStyle& style, Color color,
+                 Color background);
+std::size_t previous_text_boundary(const std::string& text, std::size_t cursor);
+std::size_t next_text_boundary(const std::string& text, std::size_t cursor);
 void draw_text(Image& image, Point origin, const std::string& text, const TextStyle& style, Color color,
                Color background, const std::string& font_path);
 extern const unsigned char embedded_font[];

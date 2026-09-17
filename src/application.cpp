@@ -35,6 +35,8 @@ Application::Application(SDL_Window* input_window, SDL_Renderer* input_renderer,
 Application::~Application() {
     SDL_DestroyTexture(canvas_texture);
     SDL_DestroyTexture(stamp_texture);
+    SDL_DestroyTexture(text_texture);
+    SDL_DestroyTexture(material_texture);
 }
 void Application::report(const std::exception& exception) {
     error = exception.what();
@@ -381,8 +383,14 @@ void Application::keyboard() {
     if (ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
         return;
     }
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape) && text_active) {
-        finish_text();
+    if (text_active) {
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+            cancel_text();
+        } else if (shortcut && ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+            finish_text();
+        } else if (shortcut && ImGui::IsKeyPressed(ImGuiKey_S)) {
+            command(Command::Save);
+        }
         return;
     }
     if (io.WantTextInput || transform_active || reshape_commit_pending) {
@@ -593,7 +601,17 @@ void Application::begin_gesture(Point point, bool right) {
         if (document.tool == Tool::Eraser) {
             ink = document.ink;
         }
-        dab(document.image, point, ink, document.tool == Tool::Eraser, right);
+        eraser_stroke.clear();
+        material_stroke.clear();
+        if (document.tool == Tool::Brush && (ink.brush == Brush::Round || textured_brush(ink.brush))) {
+            material_stroke.segment(document.image, point, point, ink);
+        } else if (document.tool == Tool::Eraser) {
+            eraser_stroke.segment(document.image, point, point, ink.size, eraser_soft);
+        } else if (document.tool == Tool::Pencil) {
+            pixel_line(document.image, point, point, ink);
+        } else {
+            dab(document.image, point, ink);
+        }
         break;
     case Tool::Fill:
         document.checkpoint();
@@ -609,7 +627,7 @@ void Application::begin_gesture(Point point, bool right) {
         dragging = false;
         break;
     case Tool::Magnifier:
-        zoom = std::clamp(zoom * (right ? 0.5f : 2.0f), 0.125f, 8.0f);
+        zoom = std::clamp(zoom * (right ? 0.5f : 2.0f), 0.125f, 16.0f);
         dragging = false;
         break;
     case Tool::Shape:
@@ -689,6 +707,14 @@ void Application::begin_gesture(Point point, bool right) {
         text_origin = point;
         text_buffer[0] = '\0';
         text_tab = true;
+        text_editing = true;
+        text_caret = text_anchor = 0;
+        text_undo.clear();
+        text_redo.clear();
+        text_preview_signature.clear();
+        text_width = std::max(80, std::min(440, document.image.width - static_cast<int>(point.x)));
+        text_height = 160;
+        text_caret_epoch = ImGui::GetTime();
         dragging = false;
         break;
     case Tool::Reshape:
@@ -732,7 +758,15 @@ void Application::update_gesture(Point point) {
         if (document.tool == Tool::Eraser) {
             ink = document.ink;
         }
-        stroke(document.image, last, point, ink, document.tool == Tool::Eraser, right_gesture);
+        if (document.tool == Tool::Brush && (ink.brush == Brush::Round || textured_brush(ink.brush))) {
+            material_stroke.segment(document.image, last, point, ink);
+        } else if (document.tool == Tool::Eraser) {
+            eraser_stroke.segment(document.image, last, point, ink.size, eraser_soft);
+        } else if (document.tool == Tool::Pencil) {
+            pixel_line(document.image, last, point, ink);
+        } else {
+            stroke(document.image, last, point, ink);
+        }
         texture_dirty = true;
     } else if (document.tool == Tool::Shape && preview_active) {
         preview = gesture_base;
@@ -759,6 +793,7 @@ void Application::end_gesture(Point point) {
     }
     update_gesture(point);
     dragging = false;
+    material_stroke.clear();
     if (reshape_active) {
         active_mesh_node = -1;
         return;
@@ -817,58 +852,21 @@ void Application::finish_curve() {
     preview_active = false;
     texture_dirty = true;
 }
-void Application::prepare_text_font() {
-    if (!text_active) {
-        return;
-    }
-    std::string face = text_style.face_path;
-    std::string signature = face + "@" + std::to_string(text_style.size) + (text_style.mono ? "m" : "p") +
-                            (text_style.bold ? "b" : "r") + (text_style.italic ? "i" : "n");
-    if (signature == text_font_signature) {
-        return;
-    }
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui_ImplSDLRenderer3_DestroyFontsTexture();
-    (*io.Fonts).Clear();
-    ImFontConfig config;
-    config.FontDataOwnedByAtlas = false;
-    static const ImWchar interface_ranges[] = {0x20, 0x024F, 0x2000, 0x2199, 0x25B2, 0x25C0, 0};
-    io.FontDefault = (*io.Fonts).AddFontFromMemoryTTF(const_cast<unsigned char*>(embedded_font),
-                                                      embedded_font_size, 18.0f, &config, interface_ranges);
-    if (!face.empty() &&
-        std::filesystem::exists(std::filesystem::path(std::u8string(face.begin(), face.end())))) {
-        text_ui_font = (*io.Fonts).AddFontFromFileTTF(face.c_str(), static_cast<float>(text_style.size));
-    } else {
-        EmbeddedFont font = portsmouth_face(text_style);
-        text_ui_font =
-            (*io.Fonts).AddFontFromMemoryTTF(const_cast<unsigned char*>(font.data), font.size,
-                                             static_cast<float>(text_style.size), &config, interface_ranges);
-    }
-    (*io.Fonts).Build();
-    ImGui_ImplSDLRenderer3_CreateFontsTexture();
-    ++texture_generation;
-    text_font_signature = signature;
-}
-void Application::finish_text() {
-    if (!text_active) {
-        return;
-    }
-    if (text_buffer[0]) {
-        document.checkpoint();
-        draw_text(document.image, text_origin, text_buffer, text_style, document.ink.primary,
-                  document.ink.secondary, text_style.face_path);
-    }
-    text_active = false;
-    text_tab = false;
-    texture_dirty = true;
-}
 void Application::canvas(float width, float height) {
-    ImGui::SetCursorPos(ImVec2(0, 158));
+    ImGui::SetCursorPos(ImVec2(0, 131));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(207, 219, 234, 255));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(7, 7));
+    ImGui::SetNextWindowContentSize({document.image.width * zoom + 22 + (show_rulers ? 25 : 0),
+                                     document.image.height * zoom + 22 + (show_rulers ? 20 : 0)});
     ImGui::BeginChild("Canvas workspace", ImVec2(width, height), false,
                       ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_AlwaysUseWindowPadding);
     GuiScope child_scope(GuiEnd::Child, 1, 1);
+    if (zoom_scroll_pending) {
+        ImGui::SetScrollX(zoom_scroll.x);
+        ImGui::SetScrollY(zoom_scroll.y);
+        zoom_scroll_pending = false;
+    }
+    float previous_zoom = zoom;
     ImDrawList& draw = *ImGui::GetWindowDrawList();
     if (show_rulers) {
         ImVec2 ruler = ImGui::GetCursorScreenPos();
@@ -908,7 +906,7 @@ void Application::canvas(float width, float height) {
     bool inside =
         point.x >= 0 && point.y >= 0 && point.x < document.image.width && point.y < document.image.height;
     if (over && (io.KeyCtrl || io.KeySuper) && io.MouseWheel != 0) {
-        zoom = std::clamp(zoom * (io.MouseWheel > 0 ? 1.25f : 0.8f), 0.125f, 8.0f);
+        zoom = std::clamp(zoom * (io.MouseWheel > 0 ? 1.25f : 0.8f), 0.125f, 16.0f);
     }
     bool over_handle = rotation_control(
         origin, point, ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem));
@@ -919,7 +917,7 @@ void Application::canvas(float width, float height) {
     const double handle_x[8] = {0, 0.5, 1, 1, 1, 0.5, 0, 0};
     const double handle_y[8] = {0, 0, 0, 0.5, 1, 1, 1, 0.5};
     for (int i = 0; i < 8; ++i) {
-        if (reshape_active || rotation_active || transform_active) {
+        if (text_active || reshape_active || rotation_active || transform_active) {
             break;
         }
         if (!document.selection.active && i != 3 && i != 4 && i != 5) {
@@ -1013,8 +1011,54 @@ void Application::canvas(float width, float height) {
     if (dragging && (ImGui::IsMouseReleased(0) || ImGui::IsMouseReleased(1))) {
         end_gesture(point);
     }
+    if (zoom != previous_zoom) {
+        zoom_scroll = {ImGui::GetScrollX() + float(point.x) * (zoom - previous_zoom),
+                       ImGui::GetScrollY() + float(point.y) * (zoom - previous_zoom)};
+        zoom_scroll_pending = true;
+    }
+    std::vector<Point> shown_path;
+    if (document.tool == Tool::Path && !document.path.empty()) {
+        shown_path = document.path;
+        if (inside && over) {
+            Point next = point;
+            for (std::size_t i = 0; i < document.path.size(); ++i) {
+                if (std::hypot(document.path[i].x - point.x, document.path[i].y - point.y) * zoom < 9) {
+                    next = document.path[i];
+                    break;
+                }
+            }
+            shown_path.push_back(next);
+        }
+        std::string signature;
+        for (std::size_t i = 0; i < shown_path.size(); ++i) {
+            signature += std::to_string(shown_path[i].x) + "," + std::to_string(shown_path[i].y) + ";";
+        }
+        signature +=
+            std::to_string(document.ink.grain_scale) + ":" + std::to_string(document.ink.paper_roughness) +
+            ":" + std::to_string(document.ink.pigment_load) + ":" +
+            std::to_string(document.ink.material_angle) + ":" + std::to_string(document.ink.noise) + ":" +
+            std::to_string(packed(document.ink.secondary)) + ":" + std::to_string(document.shape_fill) +
+            std::to_string(document.shape_outline) + std::to_string(document.continuous_path) +
+            std::to_string(document.ink.transparent_pattern) + ":" +
+            std::to_string(int(document.shape_fill_brush)) + ":" + std::to_string(document.revision) + ":";
+        signature += std::to_string(document.ink.size) + ":" + std::to_string(packed(document.ink.primary)) +
+                     ":" + std::to_string(int(document.ink.brush)) + ":" +
+                     std::to_string(int(document.ink.pattern));
+        if (signature != path_preview_signature) {
+            texture_dirty = true;
+            path_preview_signature = signature;
+        }
+    } else if (!path_preview_signature.empty()) {
+        path_preview_signature.clear();
+        texture_dirty = true;
+    }
     if (texture_dirty) {
-        if (preview_active) {
+        if (!shown_path.empty()) {
+            Image visible = document.image;
+            polygon(visible, shown_path, document.ink, document.shape_outline, document.shape_fill,
+                    !document.continuous_path, document.shape_fill_brush);
+            refresh_texture(visible);
+        } else if (preview_active) {
             refresh_texture(preview);
         } else if (document.selection.active) {
             Image visible = document.visible_image();
@@ -1117,19 +1161,6 @@ void Application::canvas(float width, float height) {
         }
     }
     if (document.tool == Tool::Path && !document.path.empty()) {
-        for (std::size_t i = 1; i < document.path.size(); ++i) {
-            Point a = document.path[i - 1], b = document.path[i];
-            draw.AddLine(
-                ImVec2(origin.x + static_cast<float>(a.x) * zoom, origin.y + static_cast<float>(a.y) * zoom),
-                ImVec2(origin.x + static_cast<float>(b.x) * zoom, origin.y + static_cast<float>(b.y) * zoom),
-                packed(document.ink.primary), std::max(1.0f, document.ink.size * zoom));
-        }
-        Point last_point = document.path.back();
-        if (inside && over) {
-            draw.AddLine(ImVec2(origin.x + static_cast<float>(last_point.x) * zoom,
-                                origin.y + static_cast<float>(last_point.y) * zoom),
-                         io.MousePos, packed(document.ink.primary), std::max(1.0f, document.ink.size * zoom));
-        }
         for (Point node : document.path) {
             if (std::hypot(node.x - point.x, node.y - point.y) * zoom < 12) {
                 ImVec2 center(origin.x + static_cast<float>(node.x) * zoom,
@@ -1157,6 +1188,60 @@ void Application::canvas(float width, float height) {
         }
     }
     if (over && inside && !text_active) {
+        draw.PushClipRect(origin, {origin.x + image_width, origin.y + image_height}, true);
+        if (document.tool == Tool::Eraser) {
+            float radius = std::max(.5f, document.ink.size * .5f) * zoom;
+            if (eraser_soft) {
+                // Concentric translucent shells show the same spherical falloff as the eraser.
+                const int shells = 32;
+                double previous = 0;
+                for (int ring = shells; ring > 0; --ring) {
+                    double fraction = (ring - .5) / shells;
+                    double alpha = .42 * std::sqrt(1 - fraction * fraction);
+                    int layer = int(255 * (alpha - previous) / (1 - previous));
+                    draw.AddCircleFilled(io.MousePos, radius * ring / shells, IM_COL32(245, 65, 118, layer),
+                                         64);
+                    previous = alpha;
+                }
+            } else {
+                draw.AddCircleFilled(io.MousePos, radius, IM_COL32(245, 65, 118, 100), 64);
+            }
+            draw.AddCircle(io.MousePos, radius, IM_COL32(199, 37, 89, 220), 64, 1.25f);
+        } else if (document.tool == Tool::Pencil && !dragging) {
+            int px = int(std::floor(point.x)), py = int(std::floor(point.y));
+            Ink pencil_ink = document.ink;
+            if (ImGui::IsMouseDown(1)) {
+                std::swap(pencil_ink.primary, pencil_ink.secondary);
+            }
+            ImVec2 a(origin.x + px * zoom, origin.y + py * zoom), b(a.x + zoom, a.y + zoom);
+            draw.AddRectFilled(a, b, packed(patterned(pencil_ink, px, py)));
+            if (zoom >= 4) {
+                draw.AddRect(a, b, IM_COL32(255, 255, 255, 230));
+                draw.AddRect({a.x - 1, a.y - 1}, {b.x + 1, b.y + 1}, IM_COL32(30, 30, 30, 220));
+            }
+        } else if (document.tool == Tool::Magnifier && !ImGui::IsMouseDown(0) && !ImGui::IsMouseDown(1)) {
+            float radius = 64, magnification = zoom * 2;
+            ImVec2 a(io.MousePos.x - radius, io.MousePos.y - radius),
+                b(io.MousePos.x + radius, io.MousePos.y + radius);
+            ImVec2 uv0(float(point.x - radius / magnification) / document.image.width,
+                       float(point.y - radius / magnification) / document.image.height);
+            ImVec2 uv1(float(point.x + radius / magnification) / document.image.width,
+                       float(point.y + radius / magnification) / document.image.height);
+            // Crop at the picture boundary; UVs never repeat edge pixels outside the document.
+            a.x = std::max(a.x, io.MousePos.x - float(point.x) * magnification);
+            a.y = std::max(a.y, io.MousePos.y - float(point.y) * magnification);
+            b.x = std::min(b.x, io.MousePos.x + float(document.image.width - point.x) * magnification);
+            b.y = std::min(b.y, io.MousePos.y + float(document.image.height - point.y) * magnification);
+            uv0.x = std::max(0.0f, uv0.x);
+            uv0.y = std::max(0.0f, uv0.y);
+            uv1.x = std::min(1.0f, uv1.x);
+            uv1.y = std::min(1.0f, uv1.y);
+            draw.AddRectFilled(a, b, IM_COL32(245, 245, 245, 255));
+            draw.AddImage(static_cast<ImTextureID>(reinterpret_cast<std::uintptr_t>(canvas_texture)), a, b,
+                          uv0, uv1);
+            draw.AddRect(a, b, IM_COL32(45, 82, 117, 255), 0, 0, 2);
+        }
+        draw.PopClipRect();
         if (document.tool == Tool::Stamp) {
             if (stamp_texture && !document.stamp.pixels.empty()) {
                 ImVec2 a(io.MousePos.x - stamp_preview.width * zoom / 2,
@@ -1186,31 +1271,7 @@ void Application::canvas(float width, float height) {
                      IM_COL32(30, 30, 30, 255));
     }
     if (text_active) {
-        ImGui::SetCursorScreenPos(ImVec2(origin.x + static_cast<float>(text_origin.x) * zoom,
-                                         origin.y + static_cast<float>(text_origin.y) * zoom));
-        ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(255, 255, 255, 235));
-        if (text_ui_font) {
-            ImGui::PushFont(text_ui_font);
-        }
-        ImGui::PushStyleColor(ImGuiCol_Text, packed(document.ink.primary));
-        if (text_focus) {
-            ImGui::SetKeyboardFocusHere();
-            text_focus = false;
-        }
-        ImGui::InputTextMultiline("##Canvas text", text_buffer, sizeof(text_buffer), ImVec2(440, 160));
-        ImGui::PopStyleColor();
-        if (text_ui_font) {
-            ImGui::PopFont();
-        }
-        ImGui::PopStyleColor();
-        if (ImGui::Button("Place text")) {
-            finish_text();
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Cancel text")) {
-            text_active = false;
-            text_tab = false;
-        }
+        text_canvas(origin);
     }
 }
 void Application::dialogs() {
@@ -1433,10 +1494,10 @@ void Application::frame() {
         ribbon(io.DisplaySize.x);
         float sidebar_width = show_help ? std::min(370.0f, io.DisplaySize.x * 0.38f) : 0.0f;
         float status_height = show_status ? 27.0f : 0.0f;
-        canvas(io.DisplaySize.x - sidebar_width, io.DisplaySize.y - 158 - status_height);
+        canvas(io.DisplaySize.x - sidebar_width, io.DisplaySize.y - 131 - status_height);
         if (show_help) {
-            help(io.DisplaySize.x - sidebar_width, 158, sidebar_width,
-                 io.DisplaySize.y - 158 - status_height);
+            help(io.DisplaySize.x - sidebar_width, 131, sidebar_width,
+                 io.DisplaySize.y - 131 - status_height);
         }
         if (show_status) {
             ImDrawList& status_draw = *ImGui::GetWindowDrawList();
@@ -1457,10 +1518,10 @@ void Application::frame() {
             ImGui::SetItemTooltip("Zoom out");
             ImGui::SetCursorPos({io.DisplaySize.x - 178, io.DisplaySize.y - 24});
             ImGui::SetNextItemWidth(140);
-            ImGui::SliderFloat("##Zoom", &zoom, 0.125f, 8.0f, "", ImGuiSliderFlags_Logarithmic);
+            ImGui::SliderFloat("##Zoom", &zoom, 0.125f, 16.0f, "", ImGuiSliderFlags_Logarithmic);
             ImGui::SetCursorPos({io.DisplaySize.x - 33, io.DisplaySize.y - 24});
             if (ImGui::Button("+##Zoom in", {22, 20})) {
-                zoom = std::min(8.0f, zoom * 2);
+                zoom = std::min(16.0f, zoom * 2);
             }
             ImGui::SetItemTooltip("Zoom in");
             ImGui::PopStyleVar();

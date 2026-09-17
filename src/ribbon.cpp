@@ -3,7 +3,15 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <stdexcept>
 namespace paint {
+namespace {
+// Ribbon coordinates begin at the tabs; the native window owns the only title bar.
+void ribbon_cursor(ImVec2 position) {
+    ImGui::SetCursorPos({position.x, position.y - 27});
+}
+} // namespace
+
 void Application::reset_stamp() {
     if (warp_worker.busy()) {
         status = "Wait for the current stamp preparation to finish.";
@@ -43,18 +51,50 @@ void Application::stamp_controls() {
     ImGui::Checkbox("Transparent stamp (skip Color 2)", &document.stamp_transparent);
     ImGui::TextDisabled("R rotates; Shift+R turns back; +/- scales.");
 }
+void Application::material_preview(ImVec2 position) {
+    std::string signature =
+        std::to_string(static_cast<int>(document.ink.brush)) + ":" +
+        std::to_string(static_cast<int>(document.shape_fill_brush)) + ":" +
+        std::to_string(static_cast<int>(document.ink.pattern)) + ":" + std::to_string(document.ink.noise) +
+        ":" + std::to_string(document.ink.grain_scale) + ":" + std::to_string(document.ink.paper_roughness) +
+        ":" + std::to_string(document.ink.pigment_load) + ":" + std::to_string(document.ink.material_angle) +
+        ":" + std::to_string(packed(document.ink.primary)) + ":" +
+        std::to_string(packed(document.ink.secondary)) + (document.ink.transparent_pattern ? "t" : "o");
+    if (signature != material_preview_signature) {
+        Image sample;
+        sample.reset(144, 78, {255, 255, 255, 255});
+        Ink ink = document.ink;
+        ink.size = 14;
+        draw_shape(sample, Shape::RoundedRectangle, {12, 12}, {132, 65}, ink, true, true,
+                   document.shape_fill_brush);
+        SDL_DestroyTexture(material_texture);
+        material_texture =
+            SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STATIC, 144, 78);
+        if (!material_texture) {
+            throw std::runtime_error(SDL_GetError());
+        }
+        SDL_UpdateTexture(material_texture, nullptr, sample.pixels.data(), 144 * 4);
+        material_preview_signature = signature;
+        ++texture_generation;
+    }
+    ImDrawList& draw = *ImGui::GetWindowDrawList();
+    draw.AddImage(static_cast<ImTextureID>(reinterpret_cast<std::uintptr_t>(material_texture)), position,
+                  {position.x + 144, position.y + 78});
+    draw.AddRect(position, {position.x + 144, position.y + 78}, IM_COL32(150, 175, 200, 255));
+}
 void classic_icon(ImDrawList& draw, int icon, ImVec2 position, float size, ImU32 color) {
     float x = position.x, y = position.y, s = size;
     ImU32 blue = IM_COL32(60, 135, 203, 255), gold = IM_COL32(233, 174, 55, 255),
           edge = IM_COL32(76, 88, 101, 255);
-    if (icon >= 100 && icon < 123) {
+    if (icon >= 100 && icon < 100 + shape_count) {
         Shape shape = static_cast<Shape>(icon - 100);
         if (shape == Shape::Curve) {
             draw.AddBezierCubic({x + 1, y + s - 3}, {x + s * .35f, y - s * .4f}, {x + s * .65f, y + s * 1.4f},
                                 {x + s - 1, y + 3}, color, 1.3f);
             return;
         }
-        std::vector<Point> points = shape_points(shape, {x + 2, y + 2}, {x + s - 2, y + s - 2});
+        std::vector<Point> points = shape_points(shape, {x + 2, y + (shape == Shape::Oval ? s * 0.24f : 2)},
+                                                 {x + s - 2, y + s - (shape == Shape::Oval ? s * 0.24f : 2)});
         for (std::size_t i = 1; i < points.size(); ++i) {
             draw.AddLine(ImVec2(static_cast<float>(points[i - 1].x), static_cast<float>(points[i - 1].y)),
                          ImVec2(static_cast<float>(points[i].x), static_cast<float>(points[i].y)), color,
@@ -256,7 +296,7 @@ void classic_icon(ImDrawList& draw, int icon, ImVec2 position, float size, ImU32
 }
 bool ribbon_button(const char* id, const char* label, int icon, ImVec2 position, ImVec2 size, bool selected,
                    const char* tooltip) {
-    ImGui::SetCursorPos(position);
+    ribbon_cursor(position);
     ImGui::PushID(id);
     bool clicked = ImGui::InvisibleButton("##button", size);
     bool hovered = ImGui::IsItemHovered();
@@ -299,7 +339,7 @@ bool ribbon_button(const char* id, const char* label, int icon, ImVec2 position,
     return clicked;
 }
 static bool ribbon_tab(const char* id, const char* label, float left, float width, bool active) {
-    ImGui::SetCursorPos({left, 27});
+    ribbon_cursor({left, 27});
     bool clicked = ImGui::InvisibleButton(id, {width, 26});
     ImDrawList& draw = *ImGui::GetWindowDrawList();
     ImVec2 a = ImGui::GetItemRectMin(), b = ImGui::GetItemRectMax();
@@ -323,6 +363,7 @@ static bool ribbon_tab(const char* id, const char* label, float left, float widt
 static void group_label(float left, float right, const char* label) {
     ImDrawList& draw = *ImGui::GetWindowDrawList();
     ImVec2 base = ImGui::GetWindowPos();
+    base.y -= 27;
     draw.AddLine(ImVec2(base.x + right, base.y + 57), ImVec2(base.x + right, base.y + 148),
                  IM_COL32(170, 191, 213, 255));
     draw.AddLine(ImVec2(base.x + right + 1, base.y + 57), ImVec2(base.x + right + 1, base.y + 148),
@@ -342,9 +383,7 @@ static bool command_menu(const char* name, const char* shortcut, Application& ap
 void Application::ribbon(float width) {
     ImDrawList& draw = *ImGui::GetWindowDrawList();
     ImVec2 base = ImGui::GetWindowPos();
-    draw.AddRectFilledMultiColor(ImVec2(base.x, base.y), ImVec2(base.x + width, base.y + 27),
-                                 IM_COL32(225, 237, 250, 255), IM_COL32(239, 245, 252, 255),
-                                 IM_COL32(214, 229, 245, 255), IM_COL32(213, 231, 249, 255));
+    base.y -= 27;
     draw.AddRectFilledMultiColor(ImVec2(base.x, base.y + 27), ImVec2(base.x + width, base.y + 53),
                                  IM_COL32(191, 211, 234, 255), IM_COL32(208, 224, 242, 255),
                                  IM_COL32(181, 203, 227, 255), IM_COL32(178, 202, 228, 255));
@@ -354,40 +393,33 @@ void Application::ribbon(float width) {
                                  IM_COL32(216, 228, 241, 255), IM_COL32(216, 228, 241, 255));
     draw.AddLine(ImVec2(base.x, base.y + 157), ImVec2(base.x + width, base.y + 157),
                  IM_COL32(168, 184, 204, 255));
-    classic_icon(draw, 13, ImVec2(base.x + 8, base.y + 4), 18);
-    if (ribbon_button("Quick save", nullptr, 14, {36, 2}, {24, 23}, false, "Save (Ctrl+S / Command+S)")) {
-        command(Command::Save);
-    }
-    if (ribbon_button("Quick undo", nullptr, 15, {63, 2}, {24, 23}, false, "Undo (Ctrl+Z / Command+Z)")) {
-        command(Command::Undo);
-    }
-    if (ribbon_button("Quick redo", nullptr, 16, {89, 2}, {24, 23}, false,
-                      "Redo (Ctrl+Y / Command+Shift+Z)")) {
-        command(Command::Redo);
-    }
-    draw.AddText(ImVec2(base.x + 135, base.y + 7), IM_COL32(32, 54, 76, 255), "Rainstar Paint");
     draw.AddRectFilled(ImVec2(base.x, base.y + 27), ImVec2(base.x + 56, base.y + 51),
                        IM_COL32(40, 116, 183, 255));
-    ImGui::SetCursorPos({0, 27});
+    ribbon_cursor({0, 27});
     if (ImGui::InvisibleButton("File tab", {56, 24})) {
         ImGui::OpenPopup("File");
     }
     draw.AddText(ImVec2(base.x + 16, base.y + 32), IM_COL32(255, 255, 255, 255), "File");
-    if (ribbon_tab("Home tab", "Home", 59, 58, !view_tab && !text_tab)) {
+    if (ribbon_tab("Home tab", "Home", 59, 58, !view_tab && !text_tab && !patterns_tab)) {
         view_tab = false;
         text_tab = false;
+        patterns_tab = false;
     }
     if (ribbon_tab("View tab", "View", 118, 56, view_tab)) {
         view_tab = true;
         text_tab = false;
+        patterns_tab = false;
     }
     if (text_active && ribbon_tab("Text tab", "Text", 175, 56, text_tab)) {
         text_tab = true;
         view_tab = false;
+        patterns_tab = false;
     }
-    if (ribbon_button("Extras menu", "Patterns & tools", -1, {text_active ? 235.0f : 183.0f, 27}, {145, 25},
-                      false, "Pattern fills, continuous paths, rubber stamps and reshape")) {
-        ImGui::OpenPopup("Extra tools");
+    if (ribbon_tab("Patterns and tools tab", "Patterns & tools", text_active ? 235.0f : 175.0f, 162,
+                   patterns_tab)) {
+        patterns_tab = true;
+        view_tab = false;
+        text_tab = false;
     }
     if (ribbon_button("Help", "?", -1, {width - 29, 28}, {25, 23}, show_help, "Help (F1)")) {
         show_help = !show_help;
@@ -425,36 +457,119 @@ void Application::ribbon(float width) {
         command_menu("About Rainstar Paint", nullptr, *this, Command::About);
         command_menu("Exit", nullptr, *this, Command::Quit);
     }
-    if (ImGui::BeginPopup("Extra tools")) {
-        const double minimum_mesh_spacing = 20.0, maximum_mesh_spacing = 140.0;
-        GuiScope popup_scope(GuiEnd::Popup);
-        if (ImGui::MenuItem("Continuous junction path", nullptr,
-                            document.tool == Tool::Path && document.continuous_path)) {
-            choose_tool(Tool::Path);
-            document.continuous_path = true;
-            status = "Click points. Blue dots snap to old junctions. Escape finishes.";
-        }
-        if (ImGui::MenuItem("Rubber stamp", nullptr, document.tool == Tool::Stamp)) {
+    if (patterns_tab) {
+        if (ribbon_button("Ribbon stamp", "Stamp", 20, {8, 58}, {66, 65}, document.tool == Tool::Stamp)) {
             choose_tool(Tool::Stamp);
         }
-        if (ImGui::MenuItem("Reshape selected object", nullptr, document.tool == Tool::Reshape,
-                            document.selection.active)) {
+        if (ribbon_button("Ribbon stamp options", "▼", -1, {8, 124}, {66, 14}, false, "Stamp options")) {
+            ImGui::OpenPopup("Ribbon stamp options");
+        }
+        if (ImGui::BeginPopup("Ribbon stamp options")) {
+            GuiScope popup_scope(GuiEnd::Popup);
+            stamp_controls();
+        }
+        ImGui::BeginDisabled(!document.selection.active && !reshape_active);
+        if (ribbon_button("Ribbon mesh", "Mesh", 21, {82, 58}, {66, 65}, document.tool == Tool::Reshape,
+                          "Reshape the selected object")) {
             choose_tool(Tool::Reshape);
         }
-        ImGui::SliderScalar("Mesh spacing", ImGuiDataType_Double, &mesh_spacing, &minimum_mesh_spacing,
-                            &maximum_mesh_spacing, "%.0f px");
-        ImGui::Separator();
-        int pattern = static_cast<int>(document.ink.pattern);
-        if (ImGui::Combo("Fill / brush pattern", &pattern, pattern_names, 18)) {
-            document.ink.pattern = static_cast<Pattern>(pattern);
+        ImGui::EndDisabled();
+        if (ribbon_button("Mesh options", "▼", -1, {82, 124}, {66, 14}, false, "Mesh spacing")) {
+            ImGui::OpenPopup("Mesh options");
         }
-        ImGui::Checkbox("Transparent second pattern color", &document.ink.transparent_pattern);
-        ImGui::Separator();
-        stamp_controls();
+        if (ImGui::BeginPopup("Mesh options")) {
+            GuiScope popup_scope(GuiEnd::Popup);
+            const double minimum = 20, maximum = 140;
+            ImGui::SliderScalar("Mesh spacing", ImGuiDataType_Double, &mesh_spacing, &minimum, &maximum,
+                                "%.0f px");
+            ImGui::TextDisabled("Spacing applies to the next mesh.");
+        }
+        if (ribbon_button("Ribbon path", "Path", 21, {156, 58}, {66, 80},
+                          document.tool == Tool::Path && document.continuous_path)) {
+            choose_tool(Tool::Path);
+            document.continuous_path = true;
+        }
+        group_label(0, 232, "Tools");
+        for (int i = 0; i < 18; ++i) {
+            ImGui::PushID(i);
+            ribbon_cursor({242.0f + (i % 9) * 33, 59.0f + (i / 9) * 32});
+            if (ImGui::InvisibleButton("Pattern swatch", {29, 28})) {
+                document.ink.pattern = static_cast<Pattern>(i);
+            }
+            ImVec2 a = ImGui::GetItemRectMin();
+            Ink swatch = document.ink;
+            swatch.pattern = static_cast<Pattern>(i);
+            swatch.primary = {40, 80, 120, 255};
+            swatch.secondary = {245, 248, 252, 255};
+            swatch.transparent_pattern = false;
+            for (int y = 0; y < 24; ++y) {
+                for (int x = 0; x < 25; ++x) {
+                    draw.AddRectFilled({a.x + 2 + x, a.y + 2 + y}, {a.x + 3 + x, a.y + 3 + y},
+                                       packed(patterned(swatch, x, y)));
+                }
+            }
+            draw.AddRect(a, {a.x + 29, a.y + 28},
+                         document.ink.pattern == swatch.pattern ? IM_COL32(225, 155, 30, 255)
+                                                                : IM_COL32(155, 178, 201, 255),
+                         0, 0, document.ink.pattern == swatch.pattern ? 2 : 1);
+            ImGui::SetItemTooltip("%s", pattern_names[i]);
+            ImGui::PopID();
+        }
+        ribbon_cursor({242, 123});
+        ImGui::Checkbox("Transparent second color", &document.ink.transparent_pattern);
+        group_label(232, 548, "Patterns");
+        ribbon_cursor({560, 59});
+        ImGui::SetNextItemWidth(156);
+        const double small = 0.3, large = 4.0, zero = 0.0, one = 1.0, minus = -180, plus = 180;
+        ImGui::SliderScalar("Grain scale", ImGuiDataType_Double, &document.ink.grain_scale, &small, &large,
+                            "%.2fx");
+        ribbon_cursor({560, 88});
+        ImGui::SetNextItemWidth(156);
+        ImGui::SliderScalar("Paper tooth", ImGuiDataType_Double, &document.ink.paper_roughness, &zero, &one,
+                            "%.2f");
+        ribbon_cursor({560, 117});
+        ImGui::SetNextItemWidth(156);
+        ImGui::SliderScalar("Paint load", ImGuiDataType_Double, &document.ink.pigment_load, &zero, &one,
+                            "%.2f");
+        group_label(548, 846, "Material");
+        ribbon_cursor({858, 60});
+        ImGui::TextUnformatted("Outline");
+        ribbon_cursor({927, 57});
+        ImGui::SetNextItemWidth(159);
+        int outline_medium = static_cast<int>(document.ink.brush);
+        if (ImGui::Combo("##Outline medium", &outline_medium, brush_names, brush_count)) {
+            document.ink.brush = static_cast<Brush>(outline_medium);
+            document.shape_outline = true;
+        }
+        ImGui::SetItemTooltip("Brush and outline material");
+        ribbon_cursor({858, 90});
+        ImGui::TextUnformatted("Fill");
+        ribbon_cursor({927, 87});
+        ImGui::SetNextItemWidth(159);
+        int fill_medium = static_cast<int>(document.shape_fill_brush);
+        if (ImGui::Combo("##Fill medium", &fill_medium, brush_names, brush_count)) {
+            document.shape_fill_brush = static_cast<Brush>(fill_medium);
+            document.shape_fill = true;
+        }
+        ribbon_cursor({858, 119});
+        ImGui::TextUnformatted("Angle");
+        ribbon_cursor({917, 117});
+        ImGui::SetNextItemWidth(94);
+        ImGui::SliderScalar("##Grain angle", ImGuiDataType_Double, &document.ink.material_angle, &minus,
+                            &plus, "%.0f deg");
+        ribbon_cursor({1017, 117});
+        if (ImGui::Button("New grain", {93, 23})) {
+            ++document.ink.noise;
+        }
+        if (width >= 1230) {
+            material_preview({base.x + 1122, base.y + 59});
+        }
+        group_label(846, width - 3, "Media");
+        return;
     }
     if (view_tab) {
         if (ribbon_button("Zoom in", "Zoom in", 12, {8, 57}, {65, 70})) {
-            zoom = std::min(8.0f, zoom * 2);
+            zoom = std::min(16.0f, zoom * 2);
         }
         if (ribbon_button("Zoom out", "Zoom out", 12, {76, 57}, {65, 70})) {
             zoom = std::max(0.125f, zoom / 2);
@@ -463,11 +578,11 @@ void Application::ribbon(float width) {
             zoom = 1;
         }
         group_label(0, 220, "Zoom");
-        ImGui::SetCursorPos({232, 61});
+        ribbon_cursor({232, 61});
         ImGui::Checkbox("Rulers", &show_rulers);
-        ImGui::SetCursorPos({232, 86});
+        ribbon_cursor({232, 86});
         ImGui::Checkbox("Gridlines", &show_grid);
-        ImGui::SetCursorPos({232, 111});
+        ribbon_cursor({232, 111});
         ImGui::Checkbox("Status bar", &show_status);
         group_label(220, 366, "Show or hide");
         if (ribbon_button("Full screen", "Full screen", 5, {376, 57}, {82, 70})) {
@@ -476,13 +591,13 @@ void Application::ribbon(float width) {
         }
         if (ribbon_button("Fit view", "Fit window", 5, {461, 57}, {85, 70})) {
             ImVec2 size = ImGui::GetIO().DisplaySize;
-            zoom = std::min((size.x - 30) / document.image.width, (size.y - 205) / document.image.height);
+            zoom = std::min((size.x - 30) / document.image.width, (size.y - 178) / document.image.height);
         }
         group_label(366, 557, "Display");
         return;
     }
     if (text_tab && text_active) {
-        ImGui::SetCursorPos({12, 63});
+        ribbon_cursor({12, 63});
         if (font_paths.empty()) {
             font_paths = installed_fonts();
         }
@@ -509,35 +624,48 @@ void Application::ribbon(float width) {
             }
             ImGui::EndCombo();
         }
-        ImGui::SetCursorPos({12, 96});
+        ribbon_cursor({12, 96});
         ImGui::SetNextItemWidth(90);
         ImGui::InputInt("Size", &text_style.size);
         text_style.size = std::clamp(text_style.size, 6, 300);
-        ImGui::SetCursorPos({215, 64});
+        ribbon_cursor({215, 64});
         ImGui::Checkbox("Bold", &text_style.bold);
         ImGui::SameLine();
         ImGui::Checkbox("Italic", &text_style.italic);
-        ImGui::SetCursorPos({215, 94});
+        ribbon_cursor({215, 94});
         ImGui::Checkbox("Underline", &text_style.underline);
         ImGui::SameLine();
         ImGui::Checkbox("Strikeout", &text_style.strikeout);
         group_label(0, 427, "Font");
-        ImGui::SetCursorPos({438, 64});
+        ribbon_cursor({438, 64});
         ImGui::Checkbox("Opaque background", &text_style.opaque);
-        ImGui::SetCursorPos({438, 95});
-        if (ImGui::Button("Place text")) {
+        ribbon_cursor({438, 95});
+        ImGui::Checkbox("Word wrap", &text_style.word_wrap);
+        group_label(427, 655, "Text box");
+        if (ribbon_button("Place text ribbon", "Place text", -1, {666, 61}, {104, 30})) {
             finish_text();
         }
-        group_label(427, 635, "Background");
-        if (ribbon_button("Text color", "Edit colors", 8, {650, 57}, {80, 70})) {
+        if (ribbon_button("Cancel text ribbon", "Cancel", -1, {666, 98}, {104, 30})) {
+            cancel_text();
+        }
+        if (ribbon_button("Text color", "Edit colors", 8, {783, 57}, {83, 72})) {
             begin_color();
         }
+        if (ribbon_button("Fit text height", "Fit height", -1, {880, 61}, {106, 30})) {
+            refresh_text_preview();
+            text_height = std::clamp(text_layout.height + 4, 24, std::min(8192, 16000000 / text_width));
+        }
+        group_label(655, 995, "Finish text");
         return;
     }
-    if (ribbon_button("Paste", "Paste", 0, {5, 57}, {48, 68}, false, "Paste an image from the clipboard")) {
+    if (ribbon_button("Save above Paste", "Save", 14, {1, 57}, {55, 22}, false,
+                      "Save (Ctrl+S / Command+S)")) {
+        command(Command::Save);
+    }
+    if (ribbon_button("Paste", "Paste", 0, {1, 80}, {52, 57}, false, "Paste an image from the clipboard")) {
         command(Command::Paste);
     }
-    if (ribbon_button("Paste dropdown", "▼", -1, {7, 126}, {43, 13})) {
+    if (ribbon_button("Paste dropdown", "▼", -1, {48, 120}, {12, 18})) {
         ImGui::OpenPopup("Paste choices");
     }
     if (ImGui::BeginPopup("Paste choices")) {
@@ -545,11 +673,19 @@ void Application::ribbon(float width) {
         command_menu("Paste", "Ctrl+V", *this, Command::Paste);
         command_menu("Paste from...", nullptr, *this, Command::PasteFrom);
     }
-    if (ribbon_button("Cut", "Cut", 1, {55, 60}, {62, 24})) {
+    if (ribbon_button("Cut", "Cut", 1, {60, 57}, {63, 18})) {
         command(Command::Cut);
     }
-    if (ribbon_button("Copy", "Copy", 2, {55, 86}, {62, 24})) {
+    if (ribbon_button("Copy", "Copy", 2, {60, 77}, {63, 18})) {
         command(Command::Copy);
+    }
+    if (ribbon_button("Undo below Copy", "Undo", 15, {60, 97}, {63, 18}, false,
+                      "Undo (Ctrl+Z / Command+Z)")) {
+        command(Command::Undo);
+    }
+    if (ribbon_button("Redo below Undo", "Redo", 16, {60, 117}, {63, 18}, false,
+                      "Redo (Ctrl+Y / Command+Shift+Z)")) {
+        command(Command::Redo);
     }
     group_label(0, 123, "Clipboard");
     if (ribbon_button("Select", "Select", 3, {128, 57}, {48, 67},
@@ -616,7 +752,22 @@ void Application::ribbon(float width) {
         if (ribbon_button(names[i], nullptr, 7 + i, {269.0f + (i % 3) * 22.0f, 63.0f + (i / 3) * 28.0f},
                           {21, 25}, document.tool == tools[i], names[i])) {
             choose_tool(tools[i]);
+            if (tools[i] == Tool::Eraser) {
+                ImGui::OpenPopup("Eraser settings");
+            }
         }
+    }
+    if (ImGui::BeginPopup("Eraser settings")) {
+        GuiScope popup_scope(GuiEnd::Popup);
+        ImGui::TextUnformatted("Round eraser");
+        if (ImGui::RadioButton("Hard — erase every touched pixel", !eraser_soft)) {
+            eraser_soft = false;
+        }
+        if (ImGui::RadioButton("Soft — strongest at the center", eraser_soft)) {
+            eraser_soft = true;
+        }
+        ImGui::SetNextItemWidth(220);
+        ImGui::SliderInt("Diameter", &document.ink.size, 1, 100);
     }
     group_label(265, 341, "Tools");
     if (ribbon_button("Brushes", "Brushes\n▼", 13, {346, 57}, {58, 68}, document.tool == Tool::Brush)) {
@@ -625,7 +776,7 @@ void Application::ribbon(float width) {
     }
     if (ImGui::BeginPopup("Brushes")) {
         GuiScope popup_scope(GuiEnd::Popup);
-        for (int i = 0; i < 9; ++i) {
+        for (int i = 0; i < brush_count; ++i) {
             if (ImGui::MenuItem(brush_names[i], nullptr, static_cast<int>(document.ink.brush) == i)) {
                 document.ink.brush = static_cast<Brush>(i);
                 choose_tool(Tool::Brush);
@@ -638,13 +789,14 @@ void Application::ribbon(float width) {
     draw.AddRect(ImVec2(base.x + 418, base.y + 60), ImVec2(base.x + 597, base.y + 132),
                  IM_COL32(177, 186, 198, 255));
     for (int i = 0; i < 21; ++i) {
-        if (ribbon_button(shape_names[i], nullptr, 100 + i,
+        int shape_index = i == 20 ? static_cast<int>(Shape::Circle) : i;
+        if (ribbon_button(shape_names[shape_index], nullptr, 100 + shape_index,
                           {419.0f + (i % 7) * 25.0f, 61.0f + (i / 7) * 23.0f}, {25, 23},
-                          document.tool == Tool::Shape && static_cast<int>(document.shape) == i,
-                          shape_names[i])) {
+                          document.tool == Tool::Shape && static_cast<int>(document.shape) == shape_index,
+                          shape_names[shape_index])) {
             choose_tool(i == 5 ? Tool::Path : Tool::Shape);
             document.continuous_path = false;
-            document.shape = static_cast<Shape>(i);
+            document.shape = static_cast<Shape>(shape_index);
         }
     }
     if (ribbon_button("More shapes", "▼", -1, {596, 60}, {15, 72})) {
@@ -652,12 +804,25 @@ void Application::ribbon(float width) {
     }
     if (ImGui::BeginPopup("Shape gallery")) {
         GuiScope popup_scope(GuiEnd::Popup);
-        for (int i = 0; i < 23; ++i) {
-            if (ImGui::MenuItem(shape_names[i])) {
+        for (int i = 0; i < shape_count; ++i) {
+            if (i % 6) {
+                ImGui::SameLine();
+            }
+            ImGui::PushID(i);
+            if (ImGui::Selectable("##Shape",
+                                  document.tool == Tool::Shape && static_cast<int>(document.shape) == i,
+                                  ImGuiSelectableFlags_None, {104, 70})) {
                 choose_tool(i == 5 ? Tool::Path : Tool::Shape);
                 document.continuous_path = false;
                 document.shape = static_cast<Shape>(i);
             }
+            ImVec2 a = ImGui::GetItemRectMin();
+            ImDrawList& gallery = *ImGui::GetWindowDrawList();
+            classic_icon(gallery, 100 + i, {a.x + 38, a.y + 3}, 28);
+            gallery.AddText(ImGui::GetFont(), 14, {a.x + 4, a.y + 36}, IM_COL32(35, 49, 64, 255),
+                            shape_names[i], nullptr, 96);
+            ImGui::SetItemTooltip("%s", shape_names[i]);
+            ImGui::PopID();
         }
     }
     if (ribbon_button("Outline", "Outline ▼", -1, {614, 61}, {78, 25})) {
@@ -672,7 +837,7 @@ void Application::ribbon(float width) {
             document.shape_outline = true;
             document.ink.brush = Brush::Round;
         }
-        for (int i = 4; i < 9; ++i) {
+        for (int i = 4; i < brush_count; ++i) {
             if (ImGui::MenuItem(brush_names[i])) {
                 document.shape_outline = true;
                 document.ink.brush = static_cast<Brush>(i);
@@ -694,7 +859,7 @@ void Application::ribbon(float width) {
             document.ink.pattern = Pattern::Solid;
             document.shape_fill_brush = Brush::Round;
         }
-        for (int i = 4; i < 9; ++i) {
+        for (int i = 4; i < brush_count; ++i) {
             if (ImGui::MenuItem(brush_names[i], nullptr,
                                 document.shape_fill && static_cast<int>(document.shape_fill_brush) == i)) {
                 document.shape_fill = true;
@@ -749,7 +914,7 @@ void Application::ribbon(float width) {
     for (int i = 0; i < 30; ++i) {
         Color color = office_color(i);
         ImVec2 pos(871.0f + (i % 10) * 21.0f, 60.0f + (i / 10) * 23.0f);
-        ImGui::SetCursorPos(pos);
+        ribbon_cursor(pos);
         ImGui::PushID(i);
         ImGui::InvisibleButton("Office color", {19, 21},
                                ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);

@@ -42,17 +42,24 @@ void Application::help(float x, float y, float width, float height) {
         "closes. Click a slot, choose your color, then Add to custom colors. Click a saved box to use it "
         "again. Original restores the color you started with; OK applies your choice and Cancel leaves "
         "the drawing color alone.\n\nBrushes includes round, two calligraphy nibs, airbrush, oil, "
-        "crayon, marker, natural pencil and watercolor. Size changes the width. Patterns & tools lets "
+        "crayon, marker, natural pencil, watercolor, bristles, soft pastel and charcoal. Size changes the "
+        "width. The Patterns & tools ribbon lets "
         "brushes and the bucket use two-color dots, stripes, checks, bricks, woven cloth, houndstooth and "
         "seven dither densities. Transparent second pattern color leaves those spaces untouched.");
     help_topic(
         "3. Fill, erase, pick and magnify",
         "The bucket fills the connected patch you click. A closed outline keeps the color inside; even a "
         "tiny gap lets it reach the outside. Undo if it went farther than you wanted. Patterns use the same "
-        "region, with Color 1 and Color 2 making the design.\n\nThe eraser replaces marks with Color 2. Hold "
-        "the right mouse button with the eraser to replace only pixels that match Color 1. The eyedropper "
-        "picks a color from the picture. The magnifying glass zooms in; right-click zooms out. The zoom "
-        "slider is at the bottom. Zoom changes your view, not your saved picture.");
+        "region, with Color 1 and Color 2 making the design.\n\nClick the eraser icon to choose Hard or Soft "
+        "and set its diameter. Its round pink preview shows the area it will touch. Hard clears every "
+        "touched pixel to transparency. Soft erases most strongly under the center and tapers toward the "
+        "edge. "
+        "Undo restores erased marks. The eyedropper picks a color from the picture.\n\nThe magnifying glass "
+        "shows an enlarged view under the pointer. Click to zoom in around that point; right-click zooms "
+        "out. "
+        "The bottom slider goes up to 1600%. The pencil previews the exact pixel under its tip before you "
+        "click. "
+        "Hover previews and zoom do not change your saved picture.");
     help_topic("4. Lines, curves and shapes",
                "Choose a shape in the little gallery. Hold the mouse button where it should start, drag, "
                "then release. Outline uses Color 1; Fill uses Color 2. Their menus let you turn either part "
@@ -62,7 +69,7 @@ void Application::help(float x, float y, float width, float height) {
                "by clicking corners; clicking the first corner closes it. Escape also finishes it.");
     help_topic(
         "5. The continuous junction path",
-        "In Patterns & tools, choose Continuous junction path, or click Path at the right of Home. Click to "
+        "Choose Path in Patterns & tools or at the right of Home. Click to "
         "place each corner. Move near any old corner: a blue dot appears. Click that dot to snap your new "
         "segment exactly onto the old junction. You can keep drawing from there, including through "
         "loops.\n\nReturning to the first point does not finish this kind of path. Press Escape when you are "
@@ -79,7 +86,7 @@ void Application::help(float x, float y, float width, float height) {
         "Without a selection, Delete clears the canvas to Color 2.");
     help_topic(
         "7. The rubber stamp",
-        "Choose Rubber stamp in Patterns & tools, or click Stamp. Pick a circle, pill, square or rectangle "
+        "Choose Stamp in Patterns & tools or at the right of Home. Pick a circle, pill, square or rectangle "
         "and choose its width and height. The outline under the pointer shows what you will lift. Click once "
         "over a part of the picture to load the stamp. The original stays on the page.\n\nNow click in other "
         "places to print repeated copies. R turns the stamp 15 degrees clockwise; Shift+R turns it the other "
@@ -106,7 +113,7 @@ void Application::help(float x, float y, float width, float height) {
         "Properties shows dimensions and lets you change the canvas size and JPEG quality.");
     help_topic("9. Reshape an object like soft cloth",
                "Choose Free-form selection from the Select arrow. Draw all the way around your object. "
-               "Then choose Patterns & tools > Reshape selected object. Paint puts a coarse mesh of blue "
+               "Then choose Patterns & tools > Mesh. Paint puts a coarse mesh of blue "
                "knobs around the edge and through the inside. Smaller Mesh spacing gives you more knobs. "
                "Drag a knob to stretch the object. A red warning means that move would fold the mesh, "
                "so the last safe shape stays in place. Press Escape to finish, or Undo to restore the "
@@ -119,9 +126,11 @@ void Application::help(float x, float y, float width, float height) {
                "Click the A tool, then click the canvas. Type into the box. The Text tab lets you choose a "
                "font face, size, bold, italic, underline, "
                "strikeout, and an opaque "
-               "background. Color 1 colors the letters; Color 2 colors an opaque background. Place text "
+               "background. Drag Move text to reposition the box and drag its edge handles to resize it. "
+               "Word wrap moves whole words onto the next line; switch it off for explicit line breaks only. "
+               "Color 1 colors the letters; Color 2 colors an opaque background. Place text "
                "stamps the words into the picture. Cancel text discards them. Undo removes placed text if "
-               "you change your mind.");
+               "you change your mind. Ctrl+Enter places text; Escape cancels it.");
     help_topic(
         "11. Open, save and print",
         "File > Open replaces the picture with an image from disk. Save writes your picture. Save as lets "

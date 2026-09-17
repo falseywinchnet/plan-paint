@@ -39,7 +39,9 @@ class UiFixture {
             throw std::runtime_error(SDL_GetError());
         }
         ImGui::CreateContext();
+        paint::configure_interface_style();
         ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.DisplaySize = {1280, 850};
         io.DeltaTime = 1.0f / 60;
         io.IniFilename = nullptr;
@@ -221,7 +223,7 @@ void idle_rendering(UiFixture& ui) {
     command.UserCallback = ImDrawCallback_ResetRenderState;
     require(idle.changed(data, app.texture_generation), "callback frame must never be suppressed");
     command.UserCallback = nullptr;
-    ui.move(273, 75);
+    ui.move(273, 48);
     int initial_lists = (*ImGui::GetDrawData()).CmdListsCount;
     bool tooltip = false;
     for (int frame = 0; frame < 8; ++frame) {
@@ -231,7 +233,7 @@ void idle_rendering(UiFixture& ui) {
     require(tooltip, "tooltip timer stopped while the mouse was stationary");
     ui.move(-100, -100);
     app.choose_tool(paint::Tool::Text);
-    ui.click(150, 300);
+    ui.click(150, 273);
     ui.frame();
     idle.submitted(*ImGui::GetDrawData(), app.texture_generation);
     int caret_changes = 0;
@@ -276,25 +278,25 @@ void idle_rendering(UiFixture& ui) {
 }
 void drawing_and_controls(UiFixture& ui) {
     paint::Application& app = *ui.app;
-    ui.click(273, 75);
-    ui.drag(107, 265, 207, 365);
+    ui.click(273, 48);
+    ui.drag(107, 238, 207, 338);
     require(app.document.dirty(), "canvas pointer stroke did not start");
     require(app.document.image.get(100, 100).r == 0, "stroke start pixel missing");
     require(app.document.image.get(200, 200).r == 0, "stroke end pixel missing");
-    ui.click(75, 13);
-    require(app.document.image.get(100, 100).r == 255, "quick access Undo failed");
-    ui.click(102, 13);
-    require(app.document.image.get(100, 100).r == 0, "quick access Redo failed");
+    ui.click(87, 79);
+    require(app.document.image.get(100, 100).r == 255, "ribbon Undo failed");
+    ui.click(87, 99);
+    require(app.document.image.get(100, 100).r == 0, "ribbon Redo failed");
     ui.key(ImGuiKey_F1);
     require(app.show_help, "F1 did not open help");
     ui.key(ImGuiKey_F1);
     require(!app.show_help, "F1 did not close help");
-    ui.click(146, 39);
+    ui.click(146, 12);
     require(app.view_tab, "View tab failed");
-    ui.click(86, 39);
+    ui.click(86, 12);
     require(!app.view_tab, "Home tab failed");
     // The second palette row's first Office blue pastel is #C6D9F1.
-    ui.click(921, 93);
+    ui.click(921, 66);
     require(paint::equal(app.document.ink.primary, {198, 217, 241, 255}),
             "Office palette hit testing failed");
 }
@@ -303,23 +305,23 @@ void path_and_selection(UiFixture& ui) {
     app.execute(paint::Command::New);
     app.choose_tool(paint::Tool::Path);
     app.document.continuous_path = true;
-    ui.click(100, 240);
-    ui.click(220, 240);
-    ui.click(220, 350);
-    ui.click(101, 241);
+    ui.click(100, 213);
+    ui.click(220, 213);
+    ui.click(220, 323);
+    ui.click(101, 214);
     require(app.document.path.size() == 4, "continuous path terminated at first junction");
     require(app.document.path[0].x == app.document.path[3].x &&
                 app.document.path[0].y == app.document.path[3].y,
             "junction did not snap exactly");
-    ui.click(340, 370);
+    ui.click(340, 343);
     ui.key(ImGuiKey_Escape);
     require(app.document.path.empty(), "Escape did not commit continuous path");
     require(app.document.image.get(93, 75).r != 255, "path was not rasterized");
     app.choose_tool(paint::Tool::Select);
-    ui.drag(90, 225, 230, 370);
+    ui.drag(90, 198, 230, 343);
     require(app.document.selection.active, "rectangle selection was not created");
     int previous_x = app.document.selection.x;
-    ui.drag(150, 280, 270, 320);
+    ui.drag(150, 253, 270, 293);
     require(app.document.selection.x == previous_x + 120, "floating selection did not move");
     ui.key(ImGuiKey_Escape);
     require(!app.document.selection.active, "Escape did not place selection");
@@ -339,10 +341,10 @@ void stamp_and_reshape(UiFixture& ui) {
     app.stamp_width = 90;
     app.stamp_height = 90;
     app.choose_tool(paint::Tool::Stamp);
-    ui.click(102, 260);
+    ui.click(102, 233);
     ui.wait_work();
     require(!app.stamp_preview.pixels.empty(), "stamp was not compiled");
-    ui.click(307, 365);
+    ui.click(307, 338);
     require(app.document.image.get(300, 200).r == 242, "stamp did not place a copy");
     ui.key(ImGuiKey_R);
     ui.key(ImGuiKey_Equal);
@@ -370,7 +372,7 @@ void text_and_stale_transform(UiFixture& ui) {
     paint::Application& app = *ui.app;
     app.execute(paint::Command::New);
     app.choose_tool(paint::Tool::Text);
-    ui.click(120, 260);
+    ui.click(120, 233);
     ui.frame();
     ImGui::GetIO().AddInputCharactersUTF8("Hello Portsmouth");
     ui.frame();
@@ -379,7 +381,8 @@ void text_and_stale_transform(UiFixture& ui) {
     app.text_style.bold = true;
     app.text_style.size = 36;
     ui.frame();
-    require(app.text_ui_font && (*app.text_ui_font).FontSize == 36, "live embedded text font did not update");
+    require(app.text_layout.line_height >= 36 && !app.text_preview.pixels.empty(),
+            "live text raster did not update");
     app.finish_text();
     ui.frame();
     unsigned marks = 0;
@@ -395,6 +398,294 @@ void text_and_stale_transform(UiFixture& ui) {
     ui.wait_work();
     require(!app.reshape_active && !app.reshape_field, "completed background compilation survived Undo");
     require(app.error.empty(), app.error.c_str());
+}
+void text_object_controls(UiFixture& ui, const std::string& screenshot = "") {
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    app.patterns_tab = app.view_tab = false;
+    app.zoom = 1;
+    app.choose_tool(paint::Tool::Text);
+    ui.click(120, 233);
+    ImGui::GetIO().AddInputCharactersUTF8(
+        "Watercolor words wrap across the page. Café and a bright new day.");
+    ui.frame();
+    std::string content(app.text_buffer);
+    require(content.find("Café") != std::string::npos, "UTF-8 text input failed");
+    app.text_width = 175;
+    app.text_style.size = 28;
+    app.text_style.word_wrap = true;
+    ui.frame();
+    int wrapped_height = app.text_layout.height;
+    require(wrapped_height > app.text_layout.line_height * 2, "text did not wrap at its box width");
+    ui.click(447, 77);
+    require(!app.text_style.word_wrap && app.text_layout.height == app.text_layout.line_height,
+            "ribbon word wrap toggle did not change live layout");
+    require(std::string(app.text_buffer) == content, "soft wrapping modified text content");
+    ui.click(447, 77);
+    ui.drag(155, 215, 215, 255);
+    require(std::abs(app.text_origin.x - 173) < 1 && std::abs(app.text_origin.y - 135) < 1,
+            "floating Move text control did not drag the text object");
+    ui.frame();
+    float right = 7 + static_cast<float>(app.text_origin.x) + app.text_width;
+    float bottom = 138 + static_cast<float>(app.text_origin.y) + app.text_height;
+    int old_width = app.text_width, old_height = app.text_height;
+    ui.drag(right, bottom, right + 220, bottom + 70);
+    require(app.text_width == old_width + 220 && app.text_height == old_height + 70,
+            "text corner handle did not enlarge the box");
+    require(app.text_layout.height < wrapped_height, "resizing the text box did not reflow words");
+    app.text_style.bold = app.text_style.italic = app.text_style.underline = app.text_style.strikeout = false;
+    ui.frame();
+    const float format_x[4] = {224, 300, 224, 349};
+    const float format_y[4] = {46, 46, 76, 76};
+    for (int style = 0; style < 4; ++style) {
+        paint::Image before = app.text_preview;
+        ui.click(format_x[style], format_y[style]);
+        require(std::memcmp(before.pixels.data(), app.text_preview.pixels.data(), before.pixels.size() * 4) !=
+                    0,
+                "text formatting button did not change the preview pixels");
+    }
+    if (!screenshot.empty()) {
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot);
+    }
+    paint::Image expected = app.document.image;
+    paint::composite(expected, app.text_preview, static_cast<int>(app.text_origin.x),
+                     static_cast<int>(app.text_origin.y));
+    float toolbar_x = 7 + static_cast<float>(app.text_origin.x) - 5;
+    float toolbar_y = 138 + static_cast<float>(app.text_origin.y) - 32;
+    ui.click(toolbar_x + 130, toolbar_y + 15);
+    require(!app.text_active, "floating Place text button did not commit");
+    require(std::memcmp(expected.pixels.data(), app.document.image.pixels.data(),
+                        expected.pixels.size() * 4) == 0,
+            "placed text differs from the live preview raster");
+    app.choose_tool(paint::Tool::Text);
+    ui.click(120, 233);
+    ImGui::GetIO().AddInputCharactersUTF8("Cancel this text");
+    ui.frame();
+    ui.click(115 + 205, 201 + 15);
+    require(!app.text_active, "floating Cancel button did not dismiss text");
+    require(std::memcmp(expected.pixels.data(), app.document.image.pixels.data(),
+                        expected.pixels.size() * 4) == 0,
+            "cancelling text modified the picture");
+    app.choose_tool(paint::Tool::Text);
+    ui.click(120, 233);
+    ImGui::GetIO().AddInputCharactersUTF8("café");
+    ui.frame();
+    ui.key(ImGuiKey_Backspace);
+    require(std::string(app.text_buffer) == "caf", "backspace split a UTF-8 character");
+    ImGui::GetIO().AddKeyEvent(ImGuiMod_Ctrl, true);
+    ui.key(ImGuiKey_Z);
+    ImGui::GetIO().AddKeyEvent(ImGuiMod_Ctrl, false);
+    ui.frame();
+    require(std::string(app.text_buffer) == "café", "text undo did not restore the removed character");
+    ui.key(ImGuiKey_Escape);
+    require(!app.text_active, "Escape did not cancel the text box");
+    require(app.error.empty(), app.error.c_str());
+}
+void material_ribbon_and_circle(UiFixture& ui, const std::string& screenshot = "") {
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    app.patterns_tab = app.view_tab = app.text_tab = false;
+    app.zoom = 1;
+    app.document.ink.primary = {0, 0, 0, 255};
+    app.document.ink.brush = paint::Brush::Round;
+    app.document.ink.size = 1;
+    app.document.shape_fill = false;
+    app.document.shape_outline = true;
+    ui.click(581, 91);
+    require(app.document.shape == paint::Shape::Circle, "dedicated Circle ribbon option is missing");
+    ui.drag(120, 243, 260, 293);
+    int min_x = 960, max_x = 0, min_y = 640, max_y = 0;
+    for (int y = 0; y < 640; ++y) {
+        for (int x = 0; x < 960; ++x) {
+            if (app.document.image.get(x, y).r < 100) {
+                min_x = std::min(min_x, x);
+                max_x = std::max(max_x, x);
+                min_y = std::min(min_y, y);
+                max_y = std::max(max_y, y);
+            }
+        }
+    }
+    require(max_x - min_x == max_y - min_y && max_x - min_x >= 138,
+            "unequal drag drew an oval with Circle selected");
+    ui.click(253, 13);
+    require(app.patterns_tab &&
+                !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+            "Patterns and tools opened a menu instead of a ribbon");
+    ui.click(40, 103);
+    require(ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+            "stamp dropdown is not beneath Stamp");
+    ui.key(ImGuiKey_Escape);
+    ui.click(110, 103);
+    require(ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+            "mesh spacing dropdown is not beneath Mesh");
+    ui.key(ImGuiKey_Escape);
+    if (!screenshot.empty()) {
+        app.document.new_image();
+        const paint::Brush media[8] = {paint::Brush::Watercolor, paint::Brush::Oil,     paint::Brush::Bristle,
+                                       paint::Brush::Crayon,     paint::Brush::Pencil,  paint::Brush::Marker,
+                                       paint::Brush::Pastel,     paint::Brush::Charcoal};
+        for (int i = 0; i < 8; ++i) {
+            int x = 12 + (i % 4) * 237, y = 10 + (i / 4) * 305;
+            paint::TextStyle label;
+            label.size = 23;
+            paint::draw_text(app.document.image, {static_cast<double>(x), static_cast<double>(y)},
+                             paint::brush_names[static_cast<int>(media[i])], label, {34, 55, 82, 255}, {},
+                             "");
+            paint::Ink ink;
+            ink.primary = ink.secondary = {43, 93, 141, 255};
+            ink.brush = media[i];
+            ink.paper_roughness = 0.85;
+            ink.grain_scale = 1.35;
+            ink.pigment_load = 0.72;
+            ink.size = 22;
+            paint::draw_shape(app.document.image, paint::Shape::RoundedRectangle, {x + 3.0, y + 40.0},
+                              {x + 218.0, y + 204.0}, ink, false, true, media[i]);
+            paint::MaterialStroke coat;
+            const paint::Point points[4] = {
+                {x + 10.0, y + 255.0}, {x + 73.0, y + 235.0}, {x + 132.0, y + 262.0}, {x + 211.0, y + 241.0}};
+            for (int j = 1; j < 4; ++j) {
+                coat.segment(app.document.image, points[j - 1], points[j], ink);
+            }
+        }
+        app.document.ink.primary = {40, 88, 140, 255};
+        app.document.ink.secondary = {143, 183, 216, 255};
+        app.document.ink.brush = paint::Brush::Oil;
+        app.document.shape_fill_brush = paint::Brush::Watercolor;
+        app.texture_dirty = true;
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot);
+        paint::save_image(app.document.image, screenshot + ".swatches.png");
+    }
+    ui.click(85, 13);
+    require(!app.patterns_tab, "Home did not restore the main ribbon");
+    require(app.error.empty(), app.error.c_str());
+}
+void geometry_preview(UiFixture& ui, const std::string& screenshot = "") {
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    app.zoom = 1;
+    app.patterns_tab = app.view_tab = app.text_tab = false;
+    app.document.ink.primary = {25, 70, 145, 170};
+    app.document.ink.secondary = {90, 160, 200, 100};
+    app.document.ink.brush = paint::Brush::Round;
+    app.document.ink.size = 3;
+    app.document.shape_outline = true;
+    app.document.shape_fill = false;
+    app.choose_tool(paint::Tool::Path);
+    app.document.continuous_path = true;
+    ui.click(120, 240);
+    ui.click(440, 280);
+    ui.click(250, 520);
+    ui.click(120, 240);
+    ui.move(1100, 500);
+    paint::Image pending = capture_framebuffer(ui, 1280, 850, 1);
+    ui.key(ImGuiKey_Escape);
+    paint::Image placed = capture_framebuffer(ui, 1280, 850, 1);
+    for (int y = 160; y < 700; ++y) {
+        for (int x = 40; x < 940; ++x) {
+            require(paint::equal(pending.get(x, y), placed.get(x, y)),
+                    "path preview differs from committed stroke coverage");
+        }
+    }
+    if (!screenshot.empty()) {
+        app.document.new_image();
+        const int widths[3] = {1, 3, 7};
+        for (int row = 0; row < 3; ++row) {
+            paint::Ink ink;
+            ink.size = widths[row];
+            ink.primary = {30, 65, 105, 255};
+            ink.secondary = {120, 175, 200, 150};
+            int y = 40 + row * 195;
+            std::vector<paint::Point> points = {
+                {30.0, double(y)}, {215.0, y + 22.0}, {350.0, y + 135.0}, {510.0, y + 15.0}};
+            paint::polygon(app.document.image, points, ink, true, false, false);
+            paint::draw_shape(app.document.image, paint::Shape::Triangle, {550.0, double(y)},
+                              {710.0, y + 150.0}, ink, true, true);
+            paint::draw_shape(app.document.image, paint::Shape::Circle, {765.0, double(y)}, {915.0, y + 85.0},
+                              ink, true, true);
+        }
+        app.texture_dirty = true;
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot);
+    }
+}
+void pointed_tools(UiFixture& ui, const std::string& screenshot = "") {
+    paint::Application& app = *ui.app;
+    app.execute(paint::Command::New);
+    app.document.new_image(96, 64);
+    app.zoom = 16;
+    app.show_rulers = false;
+    app.patterns_tab = app.view_tab = app.text_tab = false;
+    app.choose_tool(paint::Tool::Pencil);
+    app.document.ink.primary = {28, 100, 185, 255};
+    app.document.ink.pattern = paint::Pattern::Solid;
+    ui.move(185, 315);
+    int px = int(app.hover.x), py = int(app.hover.y);
+    paint::Image original = app.document.image;
+    paint::Image pencil = capture_framebuffer(ui, 1280, 850, 1);
+    require(std::equal(app.document.image.pixels.begin(), app.document.image.pixels.end(),
+                       original.pixels.begin(), paint::equal),
+            "pencil hover modified the document");
+    int sample_x = 185 + int((px + .5 - app.hover.x) * app.zoom);
+    int sample_y = 315 + int((py + .5 - app.hover.y) * app.zoom);
+    require(pencil.get(sample_x, sample_y).b > pencil.get(sample_x, sample_y).r,
+            "pencil preview did not fill the hovered pixel");
+    ui.click(185, 315);
+    require(paint::equal(app.document.image.get(px, py), app.document.ink.primary),
+            "pencil click missed previewed pixel");
+    app.choose_tool(paint::Tool::Eraser);
+    app.document.ink.size = 8;
+    ui.move(185, 315);
+    paint::Image erased_preview = capture_framebuffer(ui, 1280, 850, 1);
+    require(erased_preview.get(180, 300).r > erased_preview.get(180, 300).g,
+            "eraser preview is not visibly pink");
+    if (!screenshot.empty()) {
+        paint::save_image(erased_preview, screenshot + ".eraser.png");
+    }
+    ui.click(185, 315);
+    require(app.document.image.get(px, py).a == 0, "hard eraser did not clear pointed pixel");
+    app.command(paint::Command::Undo);
+    require(paint::equal(app.document.image.get(px, py), app.document.ink.primary), "eraser Undo failed");
+    ui.click(280, 75);
+    require(ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+            "eraser has no settings menu");
+    ui.key(ImGuiKey_Escape);
+    app.zoom = 1;
+    app.document.new_image(960, 640);
+    for (int y = 0; y < 640; ++y) {
+        for (int x = 0; x < 960; ++x) {
+            app.document.image.set(
+                x, y,
+                {std::uint8_t((x / 16) % 2 ? 20 : 230), std::uint8_t((y / 16) % 2 ? 60 : 210), 150, 255});
+        }
+    }
+    app.texture_dirty = true;
+    app.choose_tool(paint::Tool::Magnifier);
+    ui.move(400, 360);
+    ui.frame();
+    ui.frame();
+    paint::Point pointed = app.hover;
+    original = app.document.image;
+    if (!screenshot.empty()) {
+        paint::save_image(capture_framebuffer(ui, 1280, 850, 1), screenshot + ".magnifier.png");
+    }
+    require(std::equal(app.document.image.pixels.begin(), app.document.image.pixels.end(),
+                       original.pixels.begin(), paint::equal),
+            "magnifier hover modified the image");
+    ui.click(400, 360);
+    ui.frame();
+    ui.frame();
+    ui.frame();
+    require(app.zoom == 2 && std::abs(app.hover.x - pointed.x) < 1 && std::abs(app.hover.y - pointed.y) < 1,
+            "magnifier did not preserve the pointed canvas location");
+    app.zoom = 8;
+    ui.frame();
+    ui.click(400, 360);
+    ui.frame();
+    ui.frame();
+    require(app.zoom == 16, "extra 1600-percent zoom level is unavailable");
+    app.zoom = 1;
+    app.execute(paint::Command::New);
+    ui.frame();
+    ui.frame();
 }
 void recent_files_and_desktop_layouts(UiFixture& ui) {
     paint::Application& app = *ui.app;
@@ -456,10 +747,10 @@ void custom_colors_and_cursor(UiFixture& ui) {
     paint::Application& app = *ui.app;
     app.execute(paint::Command::New);
     app.choose_tool(paint::Tool::Pencil);
-    ui.move(400, 350);
+    ui.move(400, 323);
     require(ImGui::GetMouseCursor() == ImGuiMouseCursor_None,
             "painting cursor did not use its canvas preview");
-    ui.move(90, 40);
+    ui.move(90, 13);
     for (int frame = 0; frame < 20; ++frame) {
         ui.frame();
         require(ImGui::GetMouseCursor() == ImGuiMouseCursor_Arrow, "menu cursor request was unstable");
@@ -518,7 +809,7 @@ void arbitrary_rotation(UiFixture& ui) {
     app.document.select({40, 40, 80, 40});
     app.texture_dirty = true;
     ui.frame();
-    ui.drag(145, 187, 155, 239);
+    ui.drag(145, 160, 155, 212);
     ui.wait_work();
     require(!app.rotation_active && app.document.selection.active &&
                 app.document.selection.image.height > 60 && app.rotation_angle > 30 &&
@@ -539,7 +830,7 @@ void arbitrary_rotation(UiFixture& ui) {
     app.document.select({40, 40, 80, 40});
     ImGui::GetIO().AddKeyEvent(ImGuiMod_Shift, true);
     ui.frame();
-    ui.drag(145, 187, 150, 250);
+    ui.drag(145, 160, 150, 223);
     ImGui::GetIO().AddKeyEvent(ImGuiMod_Shift, false);
     ui.wait_work();
     require(std::abs(std::remainder(app.rotation_angle, 15.0)) < 1e-8,
@@ -556,12 +847,33 @@ void arbitrary_rotation(UiFixture& ui) {
 } // namespace
 int main(int argc, char** argv) {
     try {
-        bool native = argc >= 2 && std::string(argv[1]) == "--native-render-test";
+        bool text_render = argc >= 2 && std::string(argv[1]) == "--text-render-test";
+        bool geometry_render = argc >= 2 && std::string(argv[1]) == "--geometry-render-test";
+        bool pointed_render = argc >= 2 && std::string(argv[1]) == "--pointed-render-test";
+        bool material_render = argc >= 2 && std::string(argv[1]) == "--materials-render-test";
+        bool native = geometry_render || pointed_render || material_render || text_render ||
+                      (argc >= 2 && std::string(argv[1]) == "--native-render-test");
         UiFixture ui(native);
         if (native) {
             std::string screenshot = argc >= 3 ? argv[2] : "";
-            retina_rendering(ui, screenshot);
-            std::cout << "Native framebuffer coverage and clipping passed at 1x, 1.5x and 2x with "
+            if (geometry_render) {
+                geometry_preview(ui, screenshot);
+            } else if (pointed_render) {
+                pointed_tools(ui, screenshot);
+            } else if (material_render) {
+                material_ribbon_and_circle(ui, screenshot);
+            } else if (text_render) {
+                text_object_controls(ui, screenshot);
+            } else {
+                retina_rendering(ui, screenshot);
+            }
+            std::cout << (geometry_render ? "Native path preview/commit and geometry coverage passed with "
+                          : pointed_render
+                              ? "Native pencil preview, pink eraser and anchored magnifier passed with "
+                          : material_render ? "Native material ribbon, Circle and swatches passed with "
+                          : text_render
+                              ? "Native text editing, formatting and floating controls passed with "
+                              : "Native framebuffer coverage and clipping passed at 1x, 1.5x and 2x with ")
                       << SDL_GetRendererName(ui.renderer) << ".\n";
             return 0;
         }
@@ -569,6 +881,10 @@ int main(int argc, char** argv) {
         path_and_selection(ui);
         stamp_and_reshape(ui);
         text_and_stale_transform(ui);
+        text_object_controls(ui);
+        material_ribbon_and_circle(ui);
+        geometry_preview(ui);
+        pointed_tools(ui);
         recent_files_and_desktop_layouts(ui);
         custom_colors_and_cursor(ui);
         arbitrary_rotation(ui);

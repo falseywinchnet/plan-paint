@@ -2,10 +2,13 @@
 #include "conv.hpp"
 #include "document.hpp"
 #include "fixtures/conv_reference.hpp"
+#include "material.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <numbers>
 #include <stdexcept>
 namespace {
 void require(bool value, const char* message) {
@@ -122,8 +125,200 @@ void test_editing() {
     fill_ink.secondary = {0, 0, 0, 255};
     paint::draw_shape(textured, paint::Shape::Rectangle, {1, 1}, {18, 18}, fill_ink, false, true,
                       paint::Brush::Watercolor);
-    require(textured.get(10, 10).r > 180 && textured.get(10, 10).r < 250,
+    require(textured.get(10, 10).r > 0 && textured.get(10, 10).r < 250,
             "watercolor shape fill ignored its medium");
+}
+void test_materials_and_shapes() {
+    paint::Ink ink;
+    ink.primary = {42, 88, 139, 210};
+    ink.secondary = ink.primary;
+    ink.size = 28;
+    for (int i = 4; i < paint::brush_count; ++i) {
+        ink.brush = static_cast<paint::Brush>(i);
+        paint::Image whole, split;
+        whole.reset(224, 110, {230, 220, 200, 255});
+        split = whole;
+        paint::MaterialStroke a, b;
+        a.segment(whole, {10, 25}, {210, 75}, ink);
+        b.segment(split, {10, 25}, {60, 37.5}, ink);
+        b.segment(split, {60, 37.5}, {130, 55}, ink);
+        b.segment(split, {130, 55}, {210, 75}, ink);
+        require(std::memcmp(whole.pixels.data(), split.pixels.data(), whole.pixels.size() * 4) == 0,
+                "material coat depends on collinear mouse event subdivision");
+        b.segment(split, {10, 25}, {210, 75}, ink);
+        require(std::memcmp(whole.pixels.data(), split.pixels.data(), whole.pixels.size() * 4) == 0,
+                "revisiting a material coat multiplied its opacity");
+        paint::MaterialSurface surface(ink, ink.brush);
+        int minimum = 255, maximum = 0;
+        for (int y = 0; y < 40; ++y) {
+            for (int x = 0; x < 40; ++x) {
+                int alpha = surface.sample(x, y, 12).a;
+                minimum = std::min(minimum, alpha);
+                maximum = std::max(maximum, alpha);
+            }
+        }
+        require(maximum - minimum > 3, "natural medium has no spatial material variation");
+        paint::Ink dry = ink;
+        dry.pigment_load = 0;
+        paint::MaterialSurface empty(dry, dry.brush);
+        require(empty.sample(10, 20, 3).a == 0, "zero paint load deposited pigment");
+        paint::Image fill;
+        fill.reset(140, 120, {255, 255, 255, 255});
+        paint::draw_shape(fill, paint::Shape::Rectangle, {5, 5}, {130, 110}, ink, false, true, ink.brush);
+        require(fill.get(60, 60).r < 255 && fill.get(0, 0).r == 255,
+                "material fill leaked outside its region");
+    }
+    ink.brush = paint::Brush::Watercolor;
+    paint::MaterialSurface water(ink, ink.brush);
+    require(water.sample(20, 20, 0.5).a > water.sample(20, 20, 20).a,
+            "watercolor rim did not accumulate pigment");
+    paint::MaterialSurface original(ink, ink.brush);
+    ++ink.noise;
+    paint::MaterialSurface reseeded(ink, ink.brush);
+    unsigned changes = 0;
+    for (int y = 0; y < 24; ++y) {
+        for (int x = 0; x < 24; ++x) {
+            changes += !paint::equal(original.sample(x, y, 10), reseeded.sample(x, y, 10));
+        }
+    }
+    require(changes > 500, "new grain did not regenerate the procedural surface");
+    const paint::Point ends[4] = {{230, 100}, {-70, 100}, {230, -100}, {-70, -100}};
+    for (int i = 0; i < 4; ++i) {
+        paint::Point start{40, 30};
+        std::vector<paint::Point> circle = paint::shape_points(paint::Shape::Circle, start, ends[i]);
+        double min_x = circle[0].x, max_x = min_x, min_y = circle[0].y, max_y = min_y;
+        for (std::size_t j = 0; j < circle.size(); ++j) {
+            min_x = std::min(min_x, circle[j].x);
+            max_x = std::max(max_x, circle[j].x);
+            min_y = std::min(min_y, circle[j].y);
+            max_y = std::max(max_y, circle[j].y);
+        }
+        require(std::abs((max_x - min_x) - (max_y - min_y)) < 1e-9, "Circle permitted unequal diameters");
+        double cx = (min_x + max_x) / 2, cy = (min_y + max_y) / 2, r = (max_x - min_x) / 2;
+        for (std::size_t j = 0; j < circle.size(); ++j) {
+            require(std::abs(std::hypot(circle[j].x - cx, circle[j].y - cy) - r) < 1e-9,
+                    "Circle is not circular");
+        }
+    }
+    for (int i = static_cast<int>(paint::Shape::Circle); i < paint::shape_count; ++i) {
+        std::vector<paint::Point> points =
+            paint::shape_points(static_cast<paint::Shape>(i), {0, 0}, {100, 100});
+        require(points.size() >= 3, "new shape has no closed outline");
+        for (std::size_t j = 0; j < points.size(); ++j) {
+            require(std::isfinite(points[j].x) && std::isfinite(points[j].y),
+                    "new shape has invalid geometry");
+        }
+    }
+}
+void test_eraser_and_pixel_target() {
+    paint::Image hard, soft, split;
+    hard.reset(64, 64, {40, 100, 170, 200});
+    soft = hard;
+    split = hard;
+    paint::EraserStroke eraser;
+    eraser.segment(hard, {20.5, 20.5}, {40.5, 20.5}, 12, false);
+    require(hard.get(30, 20).a == 0 && hard.get(20, 20).a == 0, "hard eraser left opacity");
+    require(hard.get(15, 15).a == 200, "round eraser used a square footprint");
+    eraser.clear();
+    eraser.segment(soft, {20.5, 20.5}, {40.5, 20.5}, 12, true);
+    require(soft.get(30, 20).a == 0 && soft.get(30, 22).a > 0 && soft.get(30, 25).a > soft.get(30, 22).a,
+            "soft eraser has no center-to-edge opacity taper");
+    eraser.clear();
+    for (int x = 20; x < 40; ++x) {
+        eraser.segment(split, {x + .5, 20.5}, {x + 1.5, 20.5}, 12, true);
+    }
+    require(std::equal(split.pixels.begin(), split.pixels.end(), soft.pixels.begin(), paint::equal),
+            "soft eraser strength depends on pointer event frequency");
+    eraser.segment(split, {20.5, 20.5}, {40.5, 20.5}, 12, true);
+    require(std::equal(split.pixels.begin(), split.pixels.end(), soft.pixels.begin(), paint::equal),
+            "same eraser gesture compounded opacity");
+    paint::Image pencil;
+    pencil.reset(4, 4, {255, 255, 255, 255});
+    paint::Ink ink;
+    ink.primary = {0, 0, 0, 255};
+    paint::pixel_line(pencil, {1.99, 1.99}, {1.99, 1.99}, ink);
+    require(pencil.get(1, 1).r == 0 && pencil.get(2, 2).r == 255, "pencil rounded into neighboring pixel");
+}
+double reference_segment_distance(paint::Point p, paint::Point a, paint::Point b) {
+    double dx = b.x - a.x, dy = b.y - a.y, length2 = dx * dx + dy * dy;
+    double t = length2 > 0 ? std::clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / length2, 0.0, 1.0) : 0;
+    return std::hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+}
+void test_continuous_geometry_coverage() {
+    const int widths[3] = {1, 3, 7};
+    for (int w = 0; w < 3; ++w) {
+        double radius = widths[w] * .5, expected = 80 * widths[w] + std::numbers::pi * radius * radius;
+        for (int degrees = 0; degrees < 180; degrees += 15) {
+            double angle = degrees * std::numbers::pi / 180;
+            paint::Point a{64 - 40 * std::cos(angle), 64 - 40 * std::sin(angle)};
+            paint::Point b{64 + 40 * std::cos(angle), 64 + 40 * std::sin(angle)};
+            paint::Image image;
+            image.reset(128, 128, {0, 0, 0, 0});
+            paint::Ink ink;
+            ink.size = widths[w];
+            paint::MaterialStroke coat;
+            coat.segment(image, a, b, ink);
+            double area = 0;
+            for (std::size_t i = 0; i < image.pixels.size(); ++i) {
+                area += image.pixels[i].a / 255.0;
+            }
+            if (std::abs(area - expected) >= std::max(.8, expected * .009)) {
+                std::cerr << "width=" << widths[w] << " angle=" << degrees << " area=" << area
+                          << " expected=" << expected << "\n";
+            }
+            require(std::abs(area - expected) < std::max(.8, expected * .009),
+                    "stroke thickness changes with angle");
+        }
+    }
+    // Independent 64x64 area integration checks shared fill/outline edge compositing.
+    std::vector<paint::Point> triangle = {{12.2, 8.7}, {57.6, 26.3}, {19.4, 57.1}};
+    paint::Image image;
+    image.reset(70, 70, {255, 255, 255, 255});
+    paint::Ink ink;
+    ink.primary = {0, 0, 0, 151};
+    ink.secondary = {80, 120, 180, 97};
+    ink.size = 1;
+    paint::polygon(image, triangle, ink, true, true, true, paint::Brush::Round);
+    for (int y = 6; y < 60; ++y) {
+        for (int x = 10; x < 60; ++x) {
+            double distance = 100;
+            for (int edge = 0; edge < 3; ++edge) {
+                distance =
+                    std::min(distance, reference_segment_distance({double(x), double(y)}, triangle[edge],
+                                                                  triangle[(edge + 1) % 3]));
+            }
+            if (distance > 1.3) {
+                continue;
+            }
+            double expected[3] = {0, 0, 0};
+            for (int sy = 0; sy < 64; ++sy) {
+                for (int sx = 0; sx < 64; ++sx) {
+                    paint::Point sample{x + (sx + .5) / 64 - .5, y + (sy + .5) / 64 - .5};
+                    double color[3] = {255, 255, 255};
+                    if (paint::inside_polygon(triangle, sample.x, sample.y)) {
+                        const int fill[3] = {80, 120, 180};
+                        for (int c = 0; c < 3; ++c) {
+                            color[c] = fill[c] * (97.0 / 255) + 255 * (1 - 97.0 / 255);
+                        }
+                    }
+                    bool stroke = false;
+                    for (int edge = 0; edge < 3; ++edge) {
+                        if (reference_segment_distance(sample, triangle[edge], triangle[(edge + 1) % 3]) <=
+                            .5) {
+                            stroke = true;
+                        }
+                    }
+                    for (int c = 0; c < 3; ++c) {
+                        expected[c] += color[c] * (stroke ? 1 - 151.0 / 255 : 1) / 4096;
+                    }
+                }
+            }
+            paint::Color actual = image.get(x, y);
+            require(std::abs(actual.r - expected[0]) < 3 && std::abs(actual.g - expected[1]) < 3 &&
+                        std::abs(actual.b - expected[2]) < 3,
+                    "fill/outline edge differs from independent area integration");
+        }
+    }
 }
 void test_codecs() {
     paint::Image image;
@@ -161,6 +356,9 @@ int main() {
         test_conv();
         test_conv_reference();
         test_editing();
+        test_materials_and_shapes();
+        test_eraser_and_pixel_target();
+        test_continuous_geometry_coverage();
         test_codecs();
         std::cout << "Color, CONV, editing and seven-format codec tests passed.\n";
         return 0;

@@ -1,6 +1,19 @@
 #pragma once
 #include "image.hpp"
+#include <unordered_map>
 namespace paint {
+class EraserStroke {
+    struct Pixel {
+        Color original;
+        double strength = 0;
+    };
+    std::unordered_map<int, Pixel> pixels_;
+
+  public:
+    void clear();
+    void segment(Image& image, Point start, Point end, double diameter, bool soft);
+};
+
 enum class Pattern {
     Solid,
     Dither12,
@@ -21,7 +34,21 @@ enum class Pattern {
     Dots,
     Waves
 };
-enum class Brush { Round, Calligraphy, CalligraphyLeft, Airbrush, Oil, Crayon, Marker, Pencil, Watercolor };
+enum class Brush {
+    Round,
+    Calligraphy,
+    CalligraphyLeft,
+    Airbrush,
+    Oil,
+    Crayon,
+    Marker,
+    Pencil,
+    Watercolor,
+    Bristle,
+    Pastel,
+    Charcoal
+};
+inline constexpr int brush_count = 12;
 enum class Shape {
     Line,
     Curve,
@@ -45,12 +72,26 @@ enum class Shape {
     OvalCallout,
     CloudCallout,
     Heart,
-    Lightning
+    Lightning,
+    Circle,
+    Octagon,
+    Trapezoid,
+    Parallelogram,
+    Chevron,
+    DoubleArrow,
+    Cross,
+    Gear,
+    Crescent,
+    Teardrop,
+    Leaf,
+    Star8,
+    Burst
 };
+inline constexpr int shape_count = 36;
 enum class StampShape { Circle, Pill, Square, Rectangle };
 extern const char* pattern_names[18];
-extern const char* brush_names[9];
-extern const char* shape_names[23];
+extern const char* brush_names[brush_count];
+extern const char* shape_names[shape_count];
 struct Ink {
     Color primary{0, 0, 0, 255};
     Color secondary{255, 255, 255, 255};
@@ -59,10 +100,15 @@ struct Ink {
     int size = 3;
     bool transparent_pattern = false;
     std::uint32_t noise = 1;
+    double grain_scale = 1.0;
+    double paper_roughness = 0.65;
+    double pigment_load = 0.65;
+    double material_angle = -20.0;
 };
 Color patterned(const Ink& ink, int x, int y);
-void dab(Image& image, Point point, const Ink& ink, bool erase = false, bool replace = false);
-void stroke(Image& image, Point start, Point end, const Ink& ink, bool erase = false, bool replace = false);
+void dab(Image& image, Point point, const Ink& ink);
+void stroke(Image& image, Point start, Point end, const Ink& ink);
+void pixel_line(Image& image, Point start, Point end, const Ink& ink);
 void flood(Image& image, int x, int y, const Ink& ink);
 bool inside_polygon(const std::vector<Point>& points, double x, double y);
 void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, bool outline, bool fill,

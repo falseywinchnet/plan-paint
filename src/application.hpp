@@ -2,6 +2,7 @@
 #include "desktop.hpp"
 #include "document.hpp"
 #include "imgui.h"
+#include "material.hpp"
 #include "platform.hpp"
 #include "text.hpp"
 #include "warp_session.hpp"
@@ -41,11 +42,19 @@ enum class Command {
     Properties,
     About
 };
+struct TextEditSnapshot {
+    std::string content;
+    std::size_t caret = 0, anchor = 0;
+};
 struct Application {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
     SDL_Texture* canvas_texture = nullptr;
     SDL_Texture* stamp_texture = nullptr;
+    SDL_Texture* text_texture = nullptr;
+    SDL_Texture* material_texture = nullptr;
+    std::string material_preview_signature;
+    void material_preview(ImVec2 position);
     Document document;
     FileDialog dialog;
     RecentFiles recent_files;
@@ -54,7 +63,7 @@ struct Application {
     Color original_color;
     std::string last_window_title;
     std::string recent_to_open;
-    bool running = true, show_help = false, view_tab = false, text_tab = false;
+    bool running = true, show_help = false, view_tab = false, text_tab = false, patterns_tab = false;
     bool show_grid = false, show_rulers = false, show_status = true, full_screen = false;
     bool texture_dirty = true, preview_active = false, dragging = false, moving_selection = false;
     bool color_dialog = false, resize_dialog = false, properties_dialog = false, about_dialog = false;
@@ -65,6 +74,12 @@ struct Application {
     bool primary_slot = true;
     bool right_gesture = false;
     Image preview, gesture_base, stamp_preview;
+    MaterialStroke material_stroke;
+    EraserStroke eraser_stroke;
+    bool eraser_soft = false;
+    bool zoom_scroll_pending = false;
+    ImVec2 zoom_scroll;
+    std::string path_preview_signature;
     Point down, last, hover, selection_start;
     std::vector<Point> lasso;
     std::vector<Point> curve_points;
@@ -87,10 +102,24 @@ struct Application {
     char text_buffer[8192] = {};
     TextStyle text_style;
     std::vector<std::string> font_paths;
-    ImFont* text_ui_font = nullptr;
-    std::string text_font_signature;
     void prepare_text_font();
     Point text_origin;
+    int text_width = 440, text_height = 160;
+    std::size_t text_caret = 0, text_anchor = 0;
+    bool text_editing = true;
+    TextLayout text_layout;
+    Image text_preview;
+    std::string text_preview_signature;
+    std::vector<TextEditSnapshot> text_undo, text_redo;
+    Rect text_drag_bounds;
+    ImVec2 text_drag_mouse;
+    double text_caret_epoch = 0;
+    void refresh_text_preview();
+    void text_canvas(ImVec2 canvas_origin);
+    void cancel_text();
+    void replace_text_selection(const std::string& inserted);
+    void text_history(bool redo);
+
     Lab edited_lab;
     float edited_rgb[3] = {};
     char edited_hex[16] = {};
