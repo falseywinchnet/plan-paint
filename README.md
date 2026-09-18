@@ -6,19 +6,22 @@ To the Holy One, blessed be He, from whom all good things come. We dedicate this
 [![Latest release](https://img.shields.io/github/v/release/falseywinchnet/rainstar-paint)](https://github.com/falseywinchnet/rainstar-paint/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A free drawing application with the familiar Windows 7/10 Paint ribbon, built for Mac, Windows and Linux. Draw, paint, add text and edit pictures, with snapping paths, patterned brushes, reusable stamps and CONV image transforms.
+A free drawing application with the familiar Windows 7/10 Paint ribbon, built on native GUI.Forms for Mac, Windows and Linux. Draw, paint, add text and edit pictures, with snapping paths, patterned brushes, reusable stamps and CONV image transforms.
 
-![Rainstar Paint](assets/screenshots/macos-home.png)
+![Native Rainstar Paint on Linux with dwm](assets/screenshots/linux-home.png)
+
+Actual GUI.Forms application on Linux with dwm; the pictured shapes and editable Bézier are drawn by the native interaction fixture.
 
 ## Download
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.6/rainstar-paint-0.1.6-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.6/rainstar-paint-0.1.6-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.6/rainstar-paint-0.1.6-linux-x64.tar.gz) | Ubuntu 22.04 or newer with a graphical desktop and GTK 3. Extract and launch `Rainstar Paint`. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/rainstar-paint-0.2.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/rainstar-paint-0.2.0-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/rainstar-paint-0.2.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/rainstar-paint-0.2.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.1.6/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
@@ -30,14 +33,14 @@ The Mac application is ad-hoc signed; its installer is unsigned and has no Devel
 - **Edit pictures.** Rectangular and free-form selections, crop, copy/paste, resize, rotate, flip and undo/redo. Drop an image into the window to place it as a movable selection.
 - **Add text and color.** Move and resize text boxes, toggle word wrap, and choose a font, size, bold, italic, underline or strikeout. Place or cancel from the floating toolbar. Mix colors with RGB, hex or OKLab controls and save sixteen custom swatches.
 - **See before you mark.** The pencil previews its exact pixel, the round pink eraser offers hard and soft edges, and the magnifier enlarges the hovered region. Click to zoom around the pointer, up to 1600%.
-- **Work with materials.** Procedural watercolor, oil, bristles, crayon, graphite, pastel and charcoal respond to paper tooth, grain scale and paint load. Choose separate outline and fill media in the Patterns & tools ribbon.
+- **Work with materials.** Procedural watercolor, oil, bristles, crayon, graphite, pastel and charcoal respond to paper tooth, grain scale and paint load. Choose separate outline and fill media in the Patterns ribbon.
 - **Follow a path.** Connect new segments to any earlier junction and keep drawing through loops. **Right-click** ends the current run and keeps its junctions available for another branch. **Undo** removes one node and its segment at a time; **Redo** restores them. **Escape** or choosing another tool releases the nodes.
-- **Stamp an object.** Lift a circle, pill, square or rectangle and print repeated copies. **R** rotates, **Shift+R** rotates backward, and **+ / −** changes size. **Right-click**, **Escape**, or **Stamp → Lift a new stamp** clears the sample so the next click chooses another source.
-- **Turn and reshape.** Drag the round handle at a selection's upper-right corner to rotate freely; hold **Shift** for 15-degree steps. Lasso an object and choose **Patterns & tools → Mesh** to stretch it with control points.
+- **Stamp an object.** Lift a circle, pill, square or rectangle and print repeated copies. **R** rotates, **Shift+R** rotates backward, and **+ / −** changes size. Drag the Scale and Angle labels in the Stamp ribbon to scrub their values. **Right-click**, **Escape**, or **Stamp → Lift a new stamp** clears the sample so the next click chooses another source.
+- **Turn and reshape.** Drag the round handle at a selection's upper-right corner to rotate freely; hold **Shift** for 15-degree steps. Lasso an object and choose **Selection → Mesh** to stretch it with control points.
 
-**F1** opens the yellow help sidebar, with step-by-step instructions and keyboard shortcuts. The drawing workflow needs no account or network connection. Idle windows wait for input and avoid submitting unchanged frames to the GPU.
+**F1** opens the yellow help sidebar, with step-by-step instructions and keyboard shortcuts. The drawing workflow needs no account or network connection. Idle windows wait for input. The native interface renders on the CPU and presents changed areas. Linux packages include their musl loader, library dependencies, X11 locale data and fonts; they do not download or install packages when launched. Native Wayland without XWayland and mixed-DPI Linux displays are not supported by this release.
 
-Print and page setup use the system dialog. Scanner capture, email drafts and desktop backgrounds use available operating-system services. On Mac and Linux, scanner capture opens a separate application; save the scan there, then drop it into Paint.
+Print and page setup use native system dialogs on Mac and Windows. Linux provides paper, orientation, margin, printer and copy controls, and submits PostScript to a configured CUPS `lp` service. Scanner capture and desktop backgrounds use available operating-system services. On Mac and Linux, scanner capture opens a separate application; save the scan there, then drop it into Paint.
 
 ### Image formats
 
@@ -51,8 +54,6 @@ ICO and CUR open every stored size in Atlas. CUR retains per-image hotspots, edi
 
 Atlas uses flat canvases with a maximum of 4096 grid cells. Filename tokens such as `sprite`, `spritesheet`, `atlas`, `tileset`, `walk` and `idle` automatically offer grid setup; any picture can use Atlas manually. Rows and columns come first, with optional margins and spacing. Unused edge pixels are preserved. Grid setup and navigation do not change the picture, and edits participate in undo/redo across frames. Leave grid to resize or crop the whole sheet.
 
-![Atlas sprite sequence](assets/screenshots/macos-atlas.png)
-
 ### Transform limits
 
 Free rotation, stamps and reshape use a continuous CONV field compiled from the original selection. Preparation runs in the background and may take a few seconds. A source selection is limited to one million pixels because the double-precision field requires substantial memory. Normal editing supports up to 100 megapixels, subject to available memory; undo history is bounded to approximately 256 MiB.
@@ -61,19 +62,18 @@ Reshape uses a triangle mesh and rejects folds. Final antialiasing uses bounded 
 
 ## Build
 
-Requires **C++20**, **CMake 3.24+**, **SDL3**, **libtiff**, **libwebp**, **dav1d**. Linux also requires GTK 3. Dear ImGui, stb and gif-h are vendored. CMake downloads pinned libavif, LunaSVG (with PlutoVG) and TinyXML-2 sources. All build as native C/C++ libraries; no Rust toolchain is needed.
+Requires **C++20**, **CMake 3.24+**, the pinned **GUI.Forms SDK**, **libtiff**, **libwebp**, and **dav1d**. CMake downloads pinned libavif, LunaSVG (with PlutoVG) and TinyXML-2 sources. GUI.Forms supplies native window hosts, controls, input, dialogs, fonts and CPU rendering. The default application does not link SDL, ImGui or GTK.
 
-On an Apple Silicon Mac with Homebrew:
+Fetch the checksum-verified toolkit source, build and install its SDK, then build Paint against that installation. The complete recipes are in [Native build and platform notes](docs/GUI_FORMS_PORT.md). With an installed SDK:
 
 ```sh
-brew install cmake sdl3 libtiff webp dav1d
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/opt/homebrew
-cmake --build build --parallel
-ctest --test-dir build --output-on-failure
-open build/rainstar-paint.app
+cmake -S . -B build-forms -DCMAKE_BUILD_TYPE=Release \
+  -DGUIForms_DIR=/path/to/sdk/lib/cmake/GUIForms
+cmake --build build-forms --parallel
+ctest --test-dir build-forms --output-on-failure
 ```
 
-The [build workflow](.github/workflows/build.yml) provides Windows (ClangCL) and Linux recipes, runs the test suite and produces portable packages. Set `RAINSTAR_SYSTEM_SDL=OFF` to build the pinned SDL release and `RAINSTAR_BUNDLED_TIFF=ON` to build pinned TIFF. Packaging scripts are in `scripts/`; all packages read their version from CMake.
+The [build workflow](.github/workflows/build.yml) builds Windows with MinGW and Linux with musl, runs the native tests, and produces portable packages. Linux packages are also launched on a glibc host without an installed musl loader. `RAINSTAR_LEGACY_UI=ON` enables the optional SDL/ImGui comparison frontend; it is off by default. Packaging scripts read the release version from CMake.
 
 Tests cover image editing, formats, numerical transforms, transparency, real UI input, display scaling and idle rendering. Run `python3 scripts/check-style.py` before submitting a change. Optional `RAINSTAR_BENCHMARKS=ON` and `RAINSTAR_COMPILER_REPORTS=ON` produce a timing/checksum harness and compiler assembly reports.
 

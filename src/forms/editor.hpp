@@ -80,7 +80,8 @@ class Editor final : public gui_forms::Control {
     void paint_canvas_overlay(gui_forms::Painter& painter, gui_forms::Rect damage);
     void on_key_preview(gui_forms::KeyEvent& event) override;
     void on_drag(gui_forms::DragEvent& event) override;
-    void ready(gui_forms::Window& window, gui_forms::ApplicationWindowHandle handle);
+    void ready(gui_forms::Window& window, gui_forms::ApplicationWindowHandle handle,
+               const std::string& initial_path = {});
     void closing(gui_forms::HostCloseRequest& request);
     void execute(const std::string& command);
     void choose_tool(Tool tool);

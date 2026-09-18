@@ -182,6 +182,28 @@ void dialog_clipboard_and_close_contracts() {
     }
     std::filesystem::remove(services.path);
 }
+void startup_file_opens_after_window_attachment() {
+    const std::string path =
+        (std::filesystem::temp_directory_path() / "rainstar-startup-forms.png").string();
+    paint::Image image;
+    image.reset(41, 23, {255, 255, 255, 255});
+    image.set(9, 7, {63, 141, 207, 128});
+    paint::save_image(image, path);
+    const std::shared_ptr<paint::forms::Editor> editor =
+        gf::make_control<paint::forms::Editor>(gf::StableId("startup.editor"));
+    gf::Window window(editor, {1280, 820});
+    (*editor).ready(window, {}, path);
+    window.perform_layout();
+    require((*editor).document.filename == path && !(*editor).document.dirty(),
+            "startup opens the supplied file as a saved document");
+    require((*editor).document.image.width == 41 && (*editor).document.image.height == 23 &&
+                paint::equal((*editor).document.image.get(9, 7), {63, 141, 207, 128}),
+            "startup preserves decoded dimensions and straight RGBA");
+    require((*(*editor).canvas().bitmap()).width() == 41 &&
+                (*editor).canvas().last_resource_error() == gf::ImageResourceError::none,
+            "startup publishes the image only after the canvas has a window");
+    std::filesystem::remove(path);
+}
 void display_preserves_document_and_hidden_rgb() {
     Fixture fixture;
     paint::Document& document = (*fixture.editor).document;
@@ -987,6 +1009,7 @@ int main() {
     try {
         dialog_clipboard_and_close_contracts();
         display_preserves_document_and_hidden_rgb();
+        startup_file_opens_after_window_attachment();
         captured_stroke_undo_and_right_color();
         material_deposition_does_not_depend_on_event_count();
         retained_curve_save_undo_and_release();

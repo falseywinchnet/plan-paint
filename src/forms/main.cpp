@@ -17,9 +17,7 @@ int main(int argc, char** argv) {
         } catch (const std::exception&) {
             (*editor).custom_colors.storage_path.clear();
         }
-        if (argc > 1) {
-            (*editor).open_file(argv[1]);
-        }
+        const std::string initial_path = argc > 1 ? argv[1] : "";
         std::unique_ptr<gui_forms::Window> window =
             std::make_unique<gui_forms::Window>(editor, gui_forms::Size{1280, 820});
         gui_forms::ApplicationWindowOptions options;
@@ -28,7 +26,8 @@ int main(int argc, char** argv) {
         options.minimum_size = {1280, 600};
         options.print_metrics_on_close = false;
         options.ready =
-            std::bind(&paint::forms::Editor::ready, editor, std::placeholders::_1, std::placeholders::_2);
+            std::bind(&paint::forms::Editor::ready, editor, std::placeholders::_1, std::placeholders::_2,
+                      initial_path);
         options.closing = std::bind(&paint::forms::Editor::closing, editor, std::placeholders::_1);
         gui_forms::ApplicationResult result =
             gui_forms::Application::run(std::move(window), std::move(options));

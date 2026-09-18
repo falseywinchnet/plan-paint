@@ -363,10 +363,13 @@ void Editor::on_detaching_from_window(gf::Window& former_window) noexcept {
     help_accelerator_.disconnect();
     Control::on_detaching_from_window(former_window);
 }
-void Editor::ready(gf::Window&, gf::ApplicationWindowHandle handle) {
+void Editor::ready(gf::Window&, gf::ApplicationWindowHandle handle, const std::string& initial_path) {
     handle_ = handle;
     rebuild_file_menu();
     refresh();
+    if (!initial_path.empty()) {
+        open_file(initial_path);
+    }
 }
 void Editor::closing(gf::HostCloseRequest& request) {
     request.cancel = !can_replace();
