@@ -10,7 +10,8 @@ ctest --test-dir build-deps/gui-forms-build --output-on-failure
 cmake --install build-deps/gui-forms-build
 cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DRAINSTAR_LEGACY_UI=OFF -DRAINSTAR_GUI_FORMS=ON -DRAINSTAR_BUNDLED_TIFF=ON \
-  -DCMAKE_PREFIX_PATH="$PWD/build-deps/gui-forms-sdk;/mingw64"
+  -DGUIForms_DIR="$PWD/build-deps/gui-forms-sdk/lib/cmake/GUIForms" \
+  -DCMAKE_PREFIX_PATH="$(cygpath -m /mingw64)"
 cmake --build build-windows --parallel 4
 ctest --test-dir build-windows --output-on-failure
 python scripts/check-style.py

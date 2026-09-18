@@ -36,6 +36,18 @@ class WeightButton final : public gf::Button {
   private:
     int weight_;
 };
+void paint_separator(gf::Painter& painter, double x) {
+    const gf::GradientStop shade[] = {{0, gf::Color::rgba(143, 170, 201, 0)},
+                                      {0.16, gf::Color::rgba(143, 170, 201, 125)},
+                                      {0.83, gf::Color::rgba(143, 170, 201, 125)},
+                                      {1, gf::Color::rgba(143, 170, 201, 0)}};
+    const gf::GradientStop light[] = {{0, gf::Color::rgba(255, 255, 255, 0)},
+                                      {0.16, gf::Color::rgba(255, 255, 255, 235)},
+                                      {0.83, gf::Color::rgba(255, 255, 255, 235)},
+                                      {1, gf::Color::rgba(255, 255, 255, 0)}};
+    painter.fill_linear_gradient({x, 32, 1, 106}, {x, 32}, {x, 138}, shade);
+    painter.fill_linear_gradient({x + 1, 32, 1, 106}, {x, 32}, {x, 138}, light);
+}
 gf::SurfaceMaterial ribbon_material(bool selected, bool hot, bool pressed) {
     gf::SurfaceMaterial material;
     material.fills = {gf::MaterialFillLayer::solid(gf::Color::rgba(0, 0, 0, 0))};
@@ -47,7 +59,7 @@ gf::SurfaceMaterial ribbon_material(bool selected, bool hot, bool pressed) {
             bottom = gf::Color::rgba(255, 226, 151);
         }
         material.fills.push_back(gf::MaterialFillLayer::linear(
-            {0, 0}, {0, 1}, {{0, top}, {0.46, top}, {0.49, bottom}, {1, bottom}}));
+            {0, 0}, {0, 1}, {{0, top}, {1, bottom}}));
         material.border =
             gf::MaterialBorder{selected ? gf::Color::rgba(196, 147, 50) : gf::Color::rgba(219, 182, 109), 1};
         material.corner_radius = 2;
@@ -127,7 +139,13 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
         for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
             gf::SurfaceMaterial& material =
                 tab.roles[static_cast<std::size_t>(gf::ControlVisualRole::button)].selected[state].material;
-            material.fills = {gf::MaterialFillLayer::solid(gf::Color::rgba(250, 253, 255))};
+            material.fills = {gf::MaterialFillLayer::linear(
+                {0, 0}, {0, 1}, {{0, gf::Color::rgba(255, 255, 255)},
+                                 {1, gf::Color::rgba(249, 252, 255)}})};
+            material.keylines.clear();
+            material.keylines.push_back({gf::MaterialEdge::top, gf::Color::rgba(255, 255, 255), 1, 1});
+            material.keylines.push_back(
+                {gf::MaterialEdge::bottom, gf::Color::rgba(249, 252, 255), 1, 0});
             material.border = gf::MaterialBorder{gf::Color::rgba(178, 198, 219), 1};
             material.corner_radius = 2;
         }
@@ -649,14 +667,19 @@ void Ribbon::arrange(gf::Rect bounds) {
 }
 void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     double width = committed_arranged_bounds().width;
-    painter.fill_rect({0, 0, width, 27}, gf::Color::rgba(235, 242, 250));
-    const gf::GradientStop stops[] = {{0, gf::Color::rgba(253, 254, 255)},
-                                      {0.44, gf::Color::rgba(245, 249, 253)},
-                                      {0.46, gf::Color::rgba(232, 239, 248)},
-                                      {1, gf::Color::rgba(218, 232, 247)}};
+    const gf::GradientStop tabs[] = {{0, gf::Color::rgba(241, 247, 253)},
+                                     {1, gf::Color::rgba(224, 235, 248)}};
+    painter.fill_linear_gradient({0, 0, width, 27}, {0, 0}, {0, 27}, tabs);
+    // Broadly spaced stops keep the body continuous behind every tool group.
+    const gf::GradientStop stops[] = {{0, gf::Color::rgba(249, 252, 255)},
+                                      {0.28, gf::Color::rgba(241, 247, 253)},
+                                      {0.62, gf::Color::rgba(226, 237, 249)},
+                                      {1, gf::Color::rgba(208, 226, 245)}};
     painter.fill_linear_gradient({0, 27, width, 116}, {0, 27}, {0, 143}, stops);
-    painter.draw_line({0, 27}, {width, 27}, gf::Color::rgba(182, 199, 218), 1);
-    painter.draw_line({0, 142}, {width, 142}, gf::Color::rgba(160, 182, 207), 1);
+    painter.draw_line({0, 27}, {width, 27}, gf::Color::rgba(171, 192, 216), 1);
+    painter.draw_line({0, 28}, {width, 28}, gf::Color::rgba(255, 255, 255, 225), 1);
+    painter.draw_line({0, 141}, {width, 141}, gf::Color::rgba(245, 251, 255, 210), 1);
+    painter.draw_line({0, 142}, {width, 142}, gf::Color::rgba(145, 172, 202), 1);
     if (page_ == 64) {
         return;
     }
@@ -689,7 +712,7 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
                 }
             }
             double x = edges[i + 1];
-            painter.draw_line({x, 32}, {x, 138}, gf::Color::rgba(188, 204, 222), 1);
+            paint_separator(painter, x);
             gf::Size size = painter.measure_text_utf8(labels[i], font);
             painter.draw_text_utf8({(edges[i] + x - size.width) / 2, 132}, labels[i], font,
                                    gf::Color::rgba(72, 91, 112));
@@ -697,11 +720,14 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
         return;
     }
     for (double x : {74.0, 338.0, 540.0, 818.0, 879.0}) {
-        painter.draw_line({x, 32}, {x, 138}, gf::Color::rgba(188, 204, 222), 1);
-        painter.draw_line({x + 1, 32}, {x + 1, 138}, gf::Color::rgba(255, 255, 255), 1);
+        paint_separator(painter, x);
     }
-    painter.fill_rect({546, 36, 176, 75}, gf::Color::rgba(255, 255, 255));
-    painter.stroke_rect({545.5, 35.5, 195, 76}, gf::Color::rgba(160, 183, 207), 1);
+    const gf::GradientStop gallery[] = {{0, gf::Color::rgba(248, 251, 255)},
+                                       {1, gf::Color::rgba(255, 255, 255)}};
+    painter.fill_linear_gradient({546, 36, 176, 75}, {0, 36}, {0, 111}, gallery);
+    painter.stroke_rect({545.5, 35.5, 195, 76}, gf::Color::rgba(148, 172, 200), 1);
+    painter.draw_line({546, 36.5}, {721, 36.5}, gf::Color::rgba(111, 142, 177, 35), 1);
+    painter.draw_line({546, 112}, {741, 112}, gf::Color::rgba(255, 255, 255, 225), 1);
     const char* captions[] = {"Clipboard", "Tools", "Brushes", "Shapes", "Size", "Colors"};
     const double centers[] = {108, 239, 439, 679, 848, 1076};
     const gf::FontSpec font{gf::FontRole::control, 12, 400, false, 0.08};
