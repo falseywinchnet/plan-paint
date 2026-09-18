@@ -2,6 +2,7 @@
 """Package the GUI.Forms application and its verified PE import closure."""
 from pathlib import Path
 from release_version import project_version
+from font_pack import copy_fonts
 import argparse
 import hashlib
 import json
@@ -52,7 +53,7 @@ def main():
             destination = bundle / name
             if not destination.exists(): shutil.copy2(candidates[key], destination)
             pending.append(destination)
-    shutil.copytree(args.gui_forms_sdk / "share/GUIForms/fonts", bundle / "fonts")
+    copy_fonts(args.gui_forms_sdk, bundle / "fonts")
     for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"): shutil.copy2(ROOT / name, bundle)
     shutil.copy2(ROOT / "packaging/README.txt", bundle / "README.txt")
     shutil.copytree(ROOT / "packaging/licenses", bundle / "licenses")

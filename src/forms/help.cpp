@@ -47,6 +47,10 @@ HelpBook::HelpBook(gf::StableId id) : ScrollableControl(std::move(id)) {
     set_theme_override(gf::Theme::create(std::move(theme)));
 }
 void HelpBook::initialize_control_tree() {
+    close_ = gf::make_control<gf::Button>(gf::StableId("help-close"), "×");
+    (*close_).set_font({gf::FontRole::control, 24, 400, false});
+    (*close_).set_accessible_name("Close Paint Help");
+    add_child(close_);
     title_ = gf::make_control<gf::Label>(gf::StableId("help-title"), "Rainstar Paint Help");
     introduction_ = gf::make_control<gf::Label>(gf::StableId("help-welcome"), std::string(help_welcome));
     for (const std::shared_ptr<gf::Label>& label : {title_, introduction_}) {
@@ -77,6 +81,9 @@ void HelpBook::initialize_control_tree() {
         add_child(body);
     }
 }
+gf::Event<gf::ButtonBase&>& HelpBook::close_clicked() {
+    return (*close_).clicked();
+}
 void HelpBook::toggle(gf::ButtonBase& button) {
     std::size_t index = std::stoul(std::string(button.stable_id().value().substr(11)));
     bool open = !(*bodies_[index]).visible();
@@ -87,9 +94,11 @@ void HelpBook::toggle(gf::ButtonBase& button) {
 void HelpBook::arrange(gf::Rect bounds) {
     arrange_self(bounds);
     double width = std::max(1.0, bounds.width - 40);
-    double y = 12;
+    double y = 52;
+    set_child_layout(close_, {10, 9, 30, 30});
+    set_child_layout(title_, {48, 12, width - 36, 28});
     std::vector<gf::Rect> rectangles;
-    std::vector<std::shared_ptr<gf::Control>> controls{title_, introduction_};
+    std::vector<std::shared_ptr<gf::Control>> controls{introduction_};
     for (std::size_t i = 0; i < headers_.size(); ++i) {
         controls.push_back(headers_[i]);
         if ((*bodies_[i]).visible()) {
@@ -113,7 +122,7 @@ void HelpBook::on_paint(gf::Painter& painter, gf::Rect) {
     gf::Rect bounds = client_rectangle();
     painter.fill_rect(bounds, gf::Color::rgba(255, 255, 211));
     painter.stroke_rect(bounds, gf::Color::rgba(160, 157, 125), 1);
-    painter.draw_line({12, 38 - scroll_position().y}, {bounds.width - 25, 38 - scroll_position().y},
+    painter.draw_line({12, 44}, {bounds.width - 25, 44},
                       gf::Color::rgba(190, 185, 146), 1);
 }
 } // namespace paint::forms

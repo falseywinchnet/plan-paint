@@ -340,6 +340,30 @@ void Editor::poll_warp() {
     }
 }
 void Editor::publish_stamp_preview() {
+    stamp_boundary_.clear();
+    for (int y = 0; y < stamp_preview_.height; ++y) {
+        for (int x = 0; x < stamp_preview_.width; ++x) {
+            if (!stamp_preview_.get(x, y).a) {
+                continue;
+            }
+            if (!stamp_preview_.get(x, y - 1).a) {
+                stamp_boundary_.push_back({static_cast<double>(x), static_cast<double>(y)});
+                stamp_boundary_.push_back({x + 1.0, static_cast<double>(y)});
+            }
+            if (!stamp_preview_.get(x, y + 1).a) {
+                stamp_boundary_.push_back({static_cast<double>(x), y + 1.0});
+                stamp_boundary_.push_back({x + 1.0, y + 1.0});
+            }
+            if (!stamp_preview_.get(x - 1, y).a) {
+                stamp_boundary_.push_back({static_cast<double>(x), static_cast<double>(y)});
+                stamp_boundary_.push_back({static_cast<double>(x), y + 1.0});
+            }
+            if (!stamp_preview_.get(x + 1, y).a) {
+                stamp_boundary_.push_back({x + 1.0, static_cast<double>(y)});
+                stamp_boundary_.push_back({x + 1.0, y + 1.0});
+            }
+        }
+    }
     if (!window() || stamp_preview_.pixels.empty()) {
         return;
     }
@@ -371,6 +395,9 @@ void Editor::reset_stamp() {
 
     document.stamp = {};
     stamp_preview_ = {};
+    stamp_boundary_.clear();
+    stamp_scale = 1;
+    stamp_angle = 0;
     stamp_field_.reset();
     stamp_pending_ = false;
     ++stamp_generation_;
@@ -381,6 +408,12 @@ void Editor::regenerate_stamp() {
         return;
     }
     ++stamp_generation_;
+    if (stamp_scale == 1 && std::remainder(stamp_angle, 360.0) == 0) {
+        stamp_pending_ = false;
+        stamp_preview_ = document.stamp;
+        publish_stamp_preview();
+        return;
+    }
     stamp_pending_ = true;
     poll_warp();
 }
@@ -398,7 +431,7 @@ void Editor::stamp_at(Point point, bool checkpoint) {
         stamp_field_.reset();
         ++stamp_source_generation_;
         regenerate_stamp();
-    } else if (!stamp_pending_ && !warp_worker_.busy() && !stamp_preview_.pixels.empty()) {
+    } else if (!stamp_pending_ && !stamp_preview_.pixels.empty()) {
         if (checkpoint) {
             document.checkpoint();
         }
@@ -504,7 +537,27 @@ void Editor::paint_warp_overlay(gf::Painter& painter) {
         if (stamp_image_.value != 0) {
             painter.draw_image(stamp_image_, bounds, 0.65);
         }
-        painter.stroke_rect(bounds, blue, 1);
+        double scale = (*canvas_).zoom();
+        if (stamp_preview_.pixels.empty()) {
+            std::vector<Point> outline = stamp_outline(document.stamp_shape, static_cast<int>(width / scale),
+                                                       static_cast<int>(height / scale));
+            Shape geometry = stamp_geometry_shape(document.stamp_shape);
+            bool open = geometry == Shape::Line || geometry == Shape::Bezier || geometry == Shape::Arc;
+            std::size_t edges = outline.size() - (open ? 1 : 0);
+            for (std::size_t i = 0; i < edges; ++i) {
+                Point first = outline[i], last = outline[(i + 1) % outline.size()];
+                gf::Point a{bounds.x + first.x * scale, bounds.y + first.y * scale};
+                gf::Point b{bounds.x + last.x * scale, bounds.y + last.y * scale};
+                painter.draw_line(a, b, white, open ? 3 * scale + 2 : 3);
+                painter.draw_line(a, b, blue, open ? 3 * scale : 1);
+            }
+        } else {
+            for (std::size_t i = 0; i + 1 < stamp_boundary_.size(); i += 2) {
+                Point first = stamp_boundary_[i], last = stamp_boundary_[i + 1];
+                painter.draw_line({bounds.x + first.x * scale, bounds.y + first.y * scale},
+                                  {bounds.x + last.x * scale, bounds.y + last.y * scale}, blue, 1);
+            }
+        }
     }
 
     if (warp_mode_ == WarpMode::mesh) {

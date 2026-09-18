@@ -7,7 +7,7 @@ struct HelpTopic {
 };
 inline constexpr std::string_view help_welcome =
     "Hello! A picture can begin with one little mark. This guide shows you where to "
-    "click and how to try again. Press F1 to hide or show this book.";
+    "click and how to try again. Close this book with the × at its upper left, or click the yellow ? button. F1 also hides or shows it.";
 inline constexpr HelpTopic help_topics[] = {
     {"Atlas: sprite sheets, icons and cursors",
      "Open a sprite sheet and choose Rows and Columns. Filenames containing sprite, sheet, atlas, "
@@ -39,7 +39,7 @@ inline constexpr HelpTopic help_topics[] = {
      "again. Original restores the color you started with; OK applies your choice and Cancel leaves "
      "the drawing color alone.\n\nBrushes includes round, two calligraphy nibs, airbrush, oil, "
      "crayon, marker, natural pencil, watercolor, bristles, soft pastel and charcoal. Size changes the "
-     "width. The Patterns & tools ribbon lets "
+     "width. The Patterns tab is available for drawing and filling. It lets "
      "brushes and the bucket use two-color dots, stripes, checks, bricks, woven cloth, houndstooth and "
      "seven dither densities. Transparent second pattern color leaves those spaces untouched."},
     {"3. Fill, erase, pick and magnify",
@@ -50,7 +50,7 @@ inline constexpr HelpTopic help_topics[] = {
      "touched pixel to transparency. Soft erases most strongly under the center and tapers toward the "
      "edge. "
      "Undo restores erased marks. The eyedropper picks a color from the picture.\n\nThe magnifying glass "
-     "shows an enlarged view under the pointer. Click to zoom in around that point; right-click zooms "
+     "shows a floating 4× pixel preview beside the pointer. Click to zoom in around that point; right-click zooms "
      "out. "
      "The bottom slider goes up to 1600%. The pencil previews the exact pixel under its tip before you "
      "click. "
@@ -67,14 +67,14 @@ inline constexpr HelpTopic help_topics[] = {
      "by clicking corners; clicking the first corner closes it. Escape also finishes it."},
     {"5. The continuous junction path",
      "Choose Path at the right of Home. Click to "
-     "place each corner. Move near any old corner: a blue dot appears. Click that dot to snap your new "
+     "place each corner. The next segment follows the pointer until you click. Blue dots mark the junctions; move near one to preview an exact snap. Click that dot to snap your new "
      "segment exactly onto the old junction. You can keep drawing from there, including through "
      "loops.\n\nRight-click ends the current run without dropping its junctions. Click an old junction "
      "to begin a branch, or elsewhere to start a separate run. Undo removes one node and its segment "
      "at a time; Redo restores them. The remaining junctions stay available. Saving keeps them too. "
      "Escape or choosing another tool releases all junctions; the drawing remains, and its segments "
      "can still be undone individually.\n\nReturning to the first point does not finish the continuous "
-     "path. The ordinary polygon closes when you return to the first corner of its current run."},
+     "path. The Continuous path checkbox in Path tools keeps the run open when checked; uncheck it to add a closing edge. The ordinary polygon closes when you return to the first corner of its current run."},
     {"6. Select, move, copy and paste",
      "Select draws a rectangle around part of the picture. The little arrow beneath Select also offers "
      "Free-form selection: draw a lasso around an object. Drag inside the selected area to move it. Arrow "
@@ -82,17 +82,17 @@ inline constexpr HelpTopic help_topics[] = {
      "original. Cut removes it. Paste makes a new movable selection. Paste from opens an image file as a "
      "selection. Drag an image file from Finder or your file manager onto this window to paste it "
      "immediately. A larger pasted picture expands the canvas.\n\nTransparent selection skips pixels "
-     "exactly equal to Color 2. Crop keeps only the selected rectangle. Delete removes selected content. "
+     "exactly equal to Color 2. Crop keeps only the selected rectangle. With nothing selected, Crop first switches to Select so you can mark the area. Delete removes selected content. "
      "Without a selection, Delete clears the canvas to Color 2."},
     {"7. The rubber stamp",
-     "Choose Stamp at the right of Home. Pick a circle, pill, square or rectangle "
-     "and choose its width and height. The outline under the pointer shows what you will lift. Click once "
+     "Choose Stamp at the right of Home. Open Stamp tools and pick one of 39 masks, including stars, arrows, hearts, callouts, curves and the original circle, pill, square and rectangle. "
+     "Choose its width and height. The outline under the pointer shows what you will lift. Click once "
      "over a part of the picture to load the stamp. The original stays on the page.\n\nNow click in other "
      "places to print repeated copies, or hold and drag to scrub with the sample. R turns the stamp 15 "
      "degrees clockwise; Shift+R turns it the other "
      "way. + makes it bigger and - makes it smaller. These keys change the stamp, not the "
      "canvas.\n\nTransparent stamp preserves transparent pixels and skips pixels matching Color 2. Turn "
-     "it off to include that background color. The outside of a circle or pill is always transparent. "
+     "it off to include that background color. The area outside the chosen mask is always transparent. "
      "Right-click or press Escape to clear the old sample and reset its rotation and scale, even while "
      "it is preparing. The next canvas click picks another. Stamp > Lift a new stamp does the same; "
      "the Stamp ribbon holds its size and angle controls."},

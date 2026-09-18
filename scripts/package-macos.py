@@ -2,6 +2,7 @@
 """Bundle the exact Mach-O dependency closure, sign ad hoc, and build an installer."""
 from pathlib import Path
 from release_version import project_version
+from font_pack import copy_fonts
 import argparse
 import json
 import plistlib
@@ -29,6 +30,10 @@ def main():
     args = parser.parse_args()
     forms = args.frontend == "forms"
     build = args.build or ("build-forms" if forms else "build")
+    cache = (ROOT / build / "CMakeCache.txt").read_text()
+    build_type = re.search(r"^CMAKE_BUILD_TYPE:STRING=(.*)$", cache, re.MULTILINE)
+    if not build_type or build_type.group(1) not in ("Release", "MinSizeRel", "RelWithDebInfo"):
+        raise RuntimeError("Configure an optimized CMake build before packaging (Release or MinSizeRel).")
     distribution = ROOT / (args.output or "dist")
     distribution.mkdir(parents=True, exist_ok=True)
     app = distribution / "Rainstar Paint.app"
@@ -38,6 +43,7 @@ def main():
     source_app = ROOT / build / (binary_name + ".app")
     shutil.copytree(source_app, app)
     executable = app / "Contents/MacOS" / binary_name
+    subprocess.check_call(["strip", "-S", str(executable)])
     frameworks = app / "Contents/Frameworks"
     resources = app / "Contents/Resources"
     plist_path = app / "Contents/Info.plist"
@@ -57,6 +63,7 @@ def main():
         if not args.gui_forms_sdk:
             raise RuntimeError("The GUI.Forms package requires --gui-forms-sdk for license provenance.")
         sdk = args.gui_forms_sdk.resolve()
+        copy_fonts(sdk, resources / "fonts")
         # The installed dependency and its license accompany the standalone app.
         license_candidates = [sdk / "share/licenses/GUIForms/LICENSE", sdk / "LICENSE"]
         toolkit_license = next((path for path in license_candidates if path.exists()), None)

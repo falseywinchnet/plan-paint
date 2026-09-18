@@ -94,6 +94,8 @@ void Editor::initialize_control_tree() {
     help_ = gf::make_control<HelpBook>(gf::StableId("help-book"));
     (*help_).set_visible(false);
     add_child(help_);
+    subscriptions_.push_back((*help_).close_clicked().subscribe(
+        *this, gf::Delegate<gf::ButtonBase&>::bind<Editor, &Editor::close_help>(*this)));
     menu_ = gf::make_control<gf::MenuStrip>(gf::StableId("menus"));
     gf::ThemeDefinition file_theme = gf::windows_professional_theme_definition();
     file_theme.id = "rainstar-file-tab";
@@ -339,7 +341,8 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     }
     for (std::size_t index = 0; index < document.path.nodes.size(); ++index) {
         gf::Point point = screen(document.path.nodes[index]);
-        painter.fill_rect({point.x - 3, point.y - 3, 6, 6}, gf::Color::rgba(30, 100, 190));
+        painter.fill_rounded_rect({point.x - 6, point.y - 6, 12, 12}, 6, gf::Color::rgba(255, 255, 255));
+        painter.fill_rounded_rect({point.x - 5, point.y - 5, 10, 10}, 5, gf::Color::rgba(0, 120, 215));
     }
     paint_resize_overlay(painter);
     paint_warp_overlay(painter);
@@ -380,12 +383,47 @@ void Editor::closing(gf::HostCloseRequest& request) {
 gf::RasterCanvas& Editor::canvas() {
     return *canvas_;
 }
+void Editor::close_help(gf::ButtonBase&) {
+    if (show_help) {
+        execute("help");
+    }
+}
+Point Editor::snap_path_point(Point point) const {
+    double nearest = 12;
+    Point snapped = point;
+    for (Point node : document.path.nodes) {
+        double distance = std::hypot(node.x - point.x, node.y - point.y) * (*canvas_).zoom();
+        if (distance < nearest) {
+            nearest = distance;
+            snapped = node;
+        }
+    }
+    return snapped;
+}
+bool Editor::path_preview_point(Point& point) const {
+    if (document.tool != Tool::Path || !document.path.extending || !cursor_client_) {
+        return false;
+    }
+    gui_drawing::PointF mapped = (*canvas_).client_to_bitmap(*cursor_client_);
+    if (!document.image.contains(static_cast<int>(std::floor(mapped.x)),
+                                 static_cast<int>(std::floor(mapped.y)))) {
+        return false;
+    }
+    point = snap_path_point({mapped.x, mapped.y});
+    return true;
+}
+void Editor::publish_path_preview() {
+    Point point;
+    publish_image(path_preview_point(point) ? document.path_image(&point) : document.image, *canvas_);
+}
 void Editor::refresh() {
     if (text.active) {
         text.refresh(document.ink.primary, document.ink.secondary);
         Image composed = document.visible_image();
         composite(composed, text.preview, text.bounds.x, text.bounds.y);
         publish_image(composed, *canvas_);
+    } else if (document.tool == Tool::Path && document.path.extending) {
+        publish_path_preview();
     } else if (preview_active_) {
         publish_image(preview_, *canvas_);
     } else if (document.selection.active) {
@@ -512,8 +550,13 @@ void Editor::pointer(const gf::PointerEvent& event) {
             cursor_client_ = client;
         }
         update_cursor_status();
-        if (document.tool == Tool::Stamp || document.tool == Tool::Pencil || document.tool == Tool::Eraser) {
+        if (document.tool == Tool::Stamp || document.tool == Tool::Pencil || document.tool == Tool::Eraser ||
+            document.tool == Tool::Magnifier || document.tool == Tool::Path) {
             (*canvas_).invalidate(gf::Dirty::paint);
+        }
+        if (document.tool == Tool::Path &&
+            (event.action == gf::PointerAction::move || event.action == gf::PointerAction::leave)) {
+            publish_path_preview();
         }
         if (event.action == gf::PointerAction::wheel) {
             if (gf::has_modifier(event.modifiers, gf::Modifier::control) ||
@@ -647,13 +690,7 @@ void Editor::begin(Point point, bool secondary) {
         document.continuous_path = false;
     }
     if (document.tool == Tool::Path) {
-        for (std::size_t index = 0; index < document.path.nodes.size(); ++index) {
-            Point node = document.path.nodes[index];
-            if (std::hypot(node.x - point.x, node.y - point.y) * (*canvas_).zoom() < 9) {
-                point = node;
-                break;
-            }
-        }
+        point = snap_path_point(point);
         document.add_path_node(point);
         if (!document.continuous_path && document.path.nodes.size() - document.path.start > 2 &&
             point.x == document.path.nodes[document.path.start].x &&
@@ -665,7 +702,7 @@ void Editor::begin(Point point, bool secondary) {
     }
     if (document.tool == Tool::Stamp) {
         document.commit_selection();
-        bool loaded = !document.stamp.pixels.empty() && !stamp_pending_ && !warp_worker_.busy() &&
+        bool loaded = !document.stamp.pixels.empty() && !stamp_pending_ &&
                       !stamp_preview_.pixels.empty();
         stamp_at(point);
         if (loaded) {
@@ -1388,7 +1425,12 @@ void Editor::execute(const std::string& command) {
         } else if (command == "crop") {
             finish_text(true);
             release_gesture();
-            document.crop();
+            if (document.selection.active) {
+                document.crop();
+            } else {
+                choose_tool(Tool::Select);
+                (*ribbon_).show_tool_context();
+            }
         } else if (command == "resize") {
             finish_text(true);
             open_editor_dialog(EditorDialogKind::resize);

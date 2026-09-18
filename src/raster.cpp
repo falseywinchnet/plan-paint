@@ -513,30 +513,107 @@ void draw_shape(Image& image, Shape shape, Point start, Point end, const Ink& in
     polygon(image, points, ink, outline, fill,
             shape != Shape::Line && shape != Shape::Bezier && shape != Shape::Arc, fill_brush);
 }
+Shape stamp_geometry_shape(StampShape shape) {
+    const Shape shapes[] = {Shape::Circle, Shape::RoundedRectangle, Shape::Rectangle, Shape::Rectangle, Shape::Line, Shape::Bezier, Shape::Oval, Shape::RoundedRectangle, Shape::Polygon, Shape::Triangle, Shape::RightTriangle, Shape::Diamond, Shape::Pentagon, Shape::Hexagon, Shape::RightArrow, Shape::LeftArrow, Shape::UpArrow, Shape::DownArrow, Shape::Star4, Shape::Star5, Shape::Star6, Shape::RoundedCallout, Shape::OvalCallout, Shape::CloudCallout, Shape::Heart, Shape::Lightning, Shape::Octagon, Shape::Trapezoid, Shape::Parallelogram, Shape::Chevron, Shape::DoubleArrow, Shape::Cross, Shape::Gear, Shape::Crescent, Shape::Teardrop, Shape::Leaf, Shape::Star8, Shape::Burst, Shape::Arc};
+    return shapes[static_cast<int>(shape)];
+}
+const char* stamp_shape_name(StampShape shape) {
+    if (shape == StampShape::Pill) {
+        return "Pill";
+    }
+    if (shape == StampShape::Square) {
+        return "Square";
+    }
+    return shape_names[static_cast<int>(stamp_geometry_shape(shape))];
+}
+std::vector<Point> stamp_outline(StampShape shape, int width, int height) {
+    if (shape == StampShape::Pill) {
+        std::vector<Point> points;
+        double rx = width * 0.5, ry = height * 0.5, radius = std::min(rx, ry);
+        for (int i = 0; i < 96; ++i) {
+            double angle = i * 2 * std::numbers::pi / 96;
+            double cosine = std::cos(angle), sine = std::sin(angle);
+            points.push_back({rx + std::copysign(rx - radius, cosine) + radius * cosine,
+                              ry + std::copysign(ry - radius, sine) + radius * sine});
+        }
+        return points;
+    }
+    Shape geometry = stamp_geometry_shape(shape);
+    std::vector<Point> points;
+    if (geometry == Shape::Bezier || geometry == Shape::Arc) {
+        // A fixed curved mask has no interactive control points. Keep the full
+        // three-pixel stroke inside the capture rectangle, including its caps.
+        for (int i = 0; i <= 96; ++i) {
+            double t = i / 96.0, u = 1 - t;
+            double x = t, y = 3 * u * u * t + t * t * t;
+            if (geometry == Shape::Arc) {
+                x = 0.5 - 0.5 * std::cos(t * std::numbers::pi);
+                y = 1 - std::sin(t * std::numbers::pi);
+            }
+            double inset_x = std::min(1.5, width * 0.5);
+            double inset_y = std::min(1.5, height * 0.5);
+            points.push_back({inset_x + x * (width - 2 * inset_x),
+                              inset_y + y * (height - 2 * inset_y)});
+        }
+        return points;
+    }
+    if (geometry == Shape::Polygon) {
+        return {{width * 0.08, height * 0.15}, {width * 0.8, 0},
+                {double(width), height * 0.72}, {width * 0.42, double(height)},
+                {0, height * 0.6}};
+    }
+    points = shape_points(geometry, {0, 0},
+                          {static_cast<double>(width), static_cast<double>(height)});
+    // Some drawing shapes deliberately extend beyond their drag box (callout
+    // tails and circles). A stamp mask must fit its entire capture rectangle.
+    double left = 0, top = 0, right = width, bottom = height;
+    for (const Point& point : points) {
+        left = std::min(left, point.x);
+        top = std::min(top, point.y);
+        right = std::max(right, point.x);
+        bottom = std::max(bottom, point.y);
+    }
+    if (right > left && bottom > top) {
+        for (Point& point : points) {
+            point.x = (point.x - left) * width / (right - left);
+            point.y = (point.y - top) * height / (bottom - top);
+        }
+    }
+    return points;
+}
 Image make_stamp(const Image& image, Rect bounds, StampShape shape, bool transparent, Color key) {
     Image result = cropped(image, bounds);
-    double rx = bounds.w * 0.5, ry = bounds.h * 0.5;
+    std::vector<Point> outline = stamp_outline(shape, bounds.w, bounds.h);
+    Shape geometry = stamp_geometry_shape(shape);
+    bool open = geometry == Shape::Line || geometry == Shape::Bezier || geometry == Shape::Arc;
     for (int y = 0; y < bounds.h; ++y) {
         for (int x = 0; x < bounds.w; ++x) {
-            double dx = x + 0.5 - rx, dy = y + 0.5 - ry;
-            bool inside = true;
-            if (shape == StampShape::Circle) {
-                inside = dx * dx / (rx * rx) + dy * dy / (ry * ry) <= 1.0;
-            }
-            if (shape == StampShape::Pill) {
-                double radius = std::min(rx, ry);
-                double ax = std::max(0.0, std::abs(dx) - (rx - radius));
-                double ay = std::max(0.0, std::abs(dy) - (ry - radius));
-                inside = ax * ax + ay * ay <= radius * radius;
+            int covered = 0;
+            for (int sy = 0; sy < 4; ++sy) {
+                for (int sx = 0; sx < 4; ++sx) {
+                    Point sample{x + (sx + 0.5) / 4, y + (sy + 0.5) / 4};
+                    bool inside = !open && inside_polygon(outline, sample.x, sample.y);
+                    if (open) {
+                        for (std::size_t i = 1; i < outline.size(); ++i) {
+                            inside = inside || segment_distance(sample, outline[i - 1], outline[i]) <= 1.5;
+                        }
+                    }
+                    covered += inside ? 1 : 0;
+                }
             }
             Color pixel = result.get(x, y);
-            if (!inside || (transparent && equal(pixel, key))) {
+            if (!covered || (transparent && equal(pixel, key))) {
                 result.set(x, y, {0, 0, 0, 0});
-            } else if (!transparent && pixel.a < 255) {
-                Color opaque = key;
-                opaque.a = 255;
-                result.set(x, y, opaque);
-                result.blend(x, y, pixel);
+            } else {
+                if (!transparent && pixel.a < 255) {
+                    Color opaque = key;
+                    opaque.a = 255;
+                    result.set(x, y, opaque);
+                    result.blend(x, y, pixel);
+                    pixel = result.get(x, y);
+                }
+                pixel.a = static_cast<std::uint8_t>((pixel.a * covered + 8) / 16);
+                result.set(x, y, pixel);
             }
         }
     }

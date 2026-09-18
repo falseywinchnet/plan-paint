@@ -46,12 +46,21 @@ set_target_properties(rainstar-paint-forms PROPERTIES
   MACOSX_BUNDLE_GUI_IDENTIFIER "org.rainstar.paint"
   MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
   MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+# The consumer selects its font pack; optional CJK/emoji and extra mono faces
+# remain available in the SDK without being bundled into Paint.
+file(STRINGS "${PROJECT_SOURCE_DIR}/packaging/fonts.txt" paint_font_names)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/packaging/fonts.txt")
+set(toolkit_fonts)
+foreach(name IN LISTS paint_font_names)
+  list(APPEND toolkit_fonts "${GUIForms_FONT_DIR}/${name}")
+endforeach()
+file(GLOB cairo_files CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/assets/fonts/cairo-unicode/*")
+list(APPEND toolkit_fonts ${cairo_files})
 if(APPLE)
   enable_language(OBJCXX)
   target_sources(paint_forms PRIVATE src/platform_mac.mm)
   target_link_libraries(paint_forms PRIVATE "-framework Cocoa" "-framework UniformTypeIdentifiers")
   target_compile_definitions(paint_forms PRIVATE RAINSTAR_FORMS_NATIVE_PRINT=1)
-  file(GLOB toolkit_fonts CONFIGURE_DEPENDS "${GUIForms_FONT_DIR}/*")
   set_source_files_properties(${toolkit_fonts} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/fonts")
   target_sources(rainstar-paint-forms PRIVATE ${toolkit_fonts} assets/app-icon.icns)
   set_source_files_properties(assets/app-icon.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
@@ -97,9 +106,14 @@ if(APPLE OR WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
   if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # One producer owns the shared runtime directory even under parallel builds.
     set(forms_runtime_stamp "${CMAKE_CURRENT_BINARY_DIR}/forms-runtime.stamp")
-    file(GLOB forms_runtime_fonts CONFIGURE_DEPENDS "${GUIForms_FONT_DIR}/*")
+    set(forms_runtime_fonts ${toolkit_fonts})
+    set(runtime_font_commands)
+    foreach(font IN LISTS forms_runtime_fonts)
+      list(APPEND runtime_font_commands COMMAND ${CMAKE_COMMAND} -E copy_if_different "${font}" "${CMAKE_CURRENT_BINARY_DIR}/fonts")
+    endforeach()
     add_custom_command(OUTPUT "${forms_runtime_stamp}"
-      COMMAND ${CMAKE_COMMAND} -E copy_directory "${GUIForms_FONT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/fonts"
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/fonts"
+      ${runtime_font_commands}
       COMMAND ${CMAKE_COMMAND} -E touch "${forms_runtime_stamp}"
       DEPENDS ${forms_runtime_fonts}
       VERBATIM)

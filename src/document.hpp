@@ -68,7 +68,7 @@ struct Document {
     bool transparent_selection = false;
     bool shape_outline = true, shape_fill = false;
     Brush shape_fill_brush = Brush::Round;
-    bool continuous_path = false;
+    bool continuous_path = true;
     EditablePath path;
     std::uint64_t next_path_session = 1;
     EditableCurve curve;

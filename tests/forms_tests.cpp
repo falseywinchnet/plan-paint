@@ -333,11 +333,16 @@ void selection_move_path_and_stamp() {
 }
 std::shared_ptr<gf::Button> require_button(gf::Window& window, const std::string& id) {
     std::shared_ptr<gf::Button> button = std::dynamic_pointer_cast<gf::Button>(window.find(id));
-    require(static_cast<bool>(button), "expected retained button exists");
+    if (!button) {
+        throw std::runtime_error("expected retained button: " + id);
+    }
     return button;
 }
 void routed_button(gf::Window& window, const std::string& id) {
-    std::shared_ptr<gf::Button> button = require_button(window, id);
+    std::shared_ptr<gf::ButtonBase> button = std::dynamic_pointer_cast<gf::ButtonBase>(window.find(id));
+    if (!button) {
+        throw std::runtime_error("expected routed button: " + id);
+    }
     window.perform_layout();
     gf::Rect bounds = (*button).absolute_bounds();
     gf::Point point{bounds.x + bounds.width / 2, bounds.y + bounds.height / 2};
@@ -362,14 +367,15 @@ void ribbon_galleries_and_modal_transactions() {
     require(editor.document.tool == paint::Tool::Brush && editor.document.ink.brush == paint::Brush::Oil &&
                 !window.find("ribbon-popup"),
             "gallery selection changes brush and closes popup");
-    routed_button(window, "fill-menu");
+    routed_button(window, "patterns-tab");
     window.perform_layout();
-    routed_button(window, "popup-pattern-12");
+    routed_button(window, "r-pattern-12");
     require(editor.document.ink.pattern == paint::Pattern::Checker,
             "pattern gallery changes the actual ink pattern");
     editor.choose_shape(paint::Shape::Bezier);
     fixture.drag(12, 20, 85, 70);
     require(editor.document.curve.line_set, "curve is live before shape switch");
+    routed_button(window, "home-tab");
     routed_button(window, "shape-3");
     require(!editor.document.curve.line_set && editor.document.shape == paint::Shape::Rectangle,
             "shape switch commits prior editable curve");
@@ -465,12 +471,13 @@ void ribbon_tabs_status_and_context() {
     require(editor.document.ink.grain_scale == 1.75, "material settings update drawing ink");
     editor.choose_tool(paint::Tool::Stamp);
     routed_button(window, "tool-tab");
-    require((*window.find("stamp-shape-0")).visible() && !(*window.find("grain-scale")).visible(),
+    require((*window.find("stamp-shapes-menu")).visible() && !(*window.find("grain-scale")).visible(),
             "stamp context hides unrelated material settings");
-    routed_button(window, "stamp-shape-1");
+    routed_button(window, "stamp-shapes-menu");
+    routed_button(window, "popup-stamp-shape-1");
     require(editor.document.stamp_shape == paint::StampShape::Pill, "context changes stamp capture shape");
     editor.choose_tool(paint::Tool::Brush);
-    require(!(*window.find("stamp-shape-0")).visible() && (*window.find("grain-scale")).visible(),
+    require(!(*window.find("stamp-shapes-menu")).visible() && (*window.find("grain-scale")).visible(),
             "context swaps when active tool changes");
     routed_button(window, "home-tab");
     routed_button(window, "shapes-menu");
@@ -842,12 +849,15 @@ void desktop_transactions_drop_and_handles() {
 }
 class PreviewPainter final : public gf::Painter {
   public:
-    int pencil_pixels = 0, eraser_discs = 0;
+    int pencil_pixels = 0, eraser_discs = 0, lens_samples = 0;
+    bool lens_caption = false;
     void save() override {}
     void restore() override {}
     void translate(gf::Point) override {}
     void clip_rect(gf::Rect) override {}
     void fill_rect(gf::Rect rectangle, gf::Color color) override {
+        if (color.red == 20 && color.green == 70 && color.blue == 110 &&
+            rectangle.width == 4 && rectangle.height == 4) ++lens_samples;
         if (color.red == 20 && color.green == 70 && color.blue == 110 && rectangle.width == 8 &&
             rectangle.height == 8) {
             ++pencil_pixels;
@@ -861,7 +871,9 @@ class PreviewPainter final : public gf::Painter {
     }
     void stroke_rect(gf::Rect, gf::Color, double) override {}
     void draw_line(gf::Point, gf::Point, gf::Color, double) override {}
-    void draw_text_utf8(gf::Point, std::string_view, gf::FontSpec, gf::Color) override {}
+    void draw_text_utf8(gf::Point, std::string_view text, gf::FontSpec, gf::Color) override {
+        if (text == "4×") lens_caption = true;
+    }
     void draw_image(gf::ImageId, gf::Rect, double) override {}
 };
 void pencil_and_eraser_hover_are_display_only() {
@@ -888,6 +900,26 @@ void pencil_and_eraser_hover_are_display_only() {
                 std::memcmp(editor.document.image.pixels.data(), original.pixels.data(),
                             original.pixels.size() * sizeof(paint::Color)) == 0,
             "hover previews never modify artwork or undo history");
+}
+void magnifier_hover_is_display_only() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.image.set(20, 30, {20, 70, 110, 255});
+    editor.choose_tool(paint::Tool::Magnifier);
+    std::size_t undo = editor.document.undo_history.size();
+    paint::Image before = editor.document.image;
+    fixture.pointer(gf::PointerAction::move, 20, 30, gf::PointerButton::none);
+    PreviewPainter lens;
+    editor.paint_canvas_overlay(lens, {});
+    require(lens.lens_samples == 1 && lens.lens_caption,
+            "magnifier previews the pointed source pixel at four screen pixels per image pixel");
+    require(editor.document.undo_history.size() == undo &&
+                std::memcmp(before.pixels.data(), editor.document.image.pixels.data(), before.pixels.size() * 4) == 0,
+            "magnifier hover never edits the document");
+    fixture.pointer(gf::PointerAction::leave, 20, 30, gf::PointerButton::none);
+    PreviewPainter gone;
+    editor.paint_canvas_overlay(gone, {});
+    require(!gone.lens_caption, "magnifier disappears after leaving the canvas");
 }
 void zoom_out_clamps_each_axis() {
     Fixture fixture;
@@ -959,11 +991,133 @@ void restored_help_and_selection_workflows() {
             "F1 opens the original docked book and reduces canvas viewport");
     require((*window.find("help-body-1")).visible() && !(*window.find("help-body-2")).visible(),
             "first chapter is open and remaining topics are folded");
+    routed_button(window, "help-topic-1");
     routed_button(window, "help-topic-2");
     require((*window.find("help-body-2")).visible(), "help chapters expand through normal routed buttons");
     static_cast<void>(window.dispatch_key(help));
     window.perform_layout();
     require(!editor.show_help && editor.canvas().client_rectangle().width == width, "F1 closes book");
+}
+bool display_white(paint::forms::Editor& editor, int x, int y) {
+    std::shared_ptr<gui_drawing::Bitmap> bitmap = editor.canvas().bitmap();
+    gui_drawing::BitmapLockView view = (*bitmap).lock(gui_drawing::BitmapLockMode::read);
+    const std::byte* pixel = view.data + y * view.row_bytes + x * 4;
+    bool result = pixel[0] == std::byte{255} && pixel[1] == std::byte{255} && pixel[2] == std::byte{255};
+    (*bitmap).unlock(view.token);
+    return result;
+}
+void path_hover_snap_and_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    routed_button(window, "tool-9");
+    require(editor.document.tool == paint::Tool::Path && !window.find("ribbon-popup"),
+            "Path has one main action without a duplicate continuous dropdown");
+    fixture.click(15, 20);
+    std::size_t undo = editor.document.undo_history.size();
+    fixture.pointer(gf::PointerAction::move, 95, 50, gf::PointerButton::none);
+    require(white(editor.document.image.get(55, 35)) && !display_white(editor, 55, 35),
+            "pending path segment floats in presentation without entering document pixels");
+    require(editor.document.undo_history.size() == undo, "path hover makes no undo records");
+    fixture.click(95, 50);
+    fixture.pointer(gf::PointerAction::move, 19, 23, gf::PointerButton::none);
+    paint::Image snapped = editor.document.path_image(&editor.document.path.nodes.front());
+    gui_drawing::BitmapLockView display = (*editor.canvas().bitmap()).lock(gui_drawing::BitmapLockMode::read);
+    for (int y = 0; y < snapped.height; ++y) {
+        for (int x = 0; x < snapped.width; ++x) {
+            const std::byte* pixel = display.data + y * display.row_bytes + x * 4;
+            paint::Color expected = snapped.get(x, y);
+            require(pixel[0] == static_cast<std::byte>(expected.b) &&
+                        pixel[1] == static_cast<std::byte>(expected.g) &&
+                        pixel[2] == static_cast<std::byte>(expected.r),
+                    "floating segment and anchor snapping share exactly the same geometry");
+        }
+    }
+    (*editor.canvas().bitmap()).unlock(display.token);
+    fixture.click(19, 23);
+    require(editor.document.path.nodes.back().x == 15 && editor.document.path.nodes.back().y == 20,
+            "click snaps to the same anchor shown by the floating preview");
+    editor.execute("finish-path");
+    fixture.pointer(gf::PointerAction::move, 80, 80, gf::PointerButton::none);
+    require(display_white(editor, 80, 80), "ending a run removes its floating segment");
+    editor.execute("release");
+    editor.document.new_image(128, 96);
+    editor.choose_tool(paint::Tool::Path);
+    routed_button(window, "tool-tab");
+    std::shared_ptr<gf::CheckBox> continuous =
+        std::dynamic_pointer_cast<gf::CheckBox>(window.find("continuous-path"));
+    require((*continuous).checked(), "continuous path starts checked for an open chain");
+    fixture.click(15, 20);
+    fixture.click(95, 20);
+    fixture.click(95, 80);
+    require(white(editor.document.image.get(55, 50)), "checked continuous path has no closing edge");
+    routed_button(window, "continuous-path");
+    require(!(*continuous).checked() && !editor.document.continuous_path &&
+                !white(editor.document.image.get(55, 50)),
+            "unchecked continuous path closes the polygon and matches checkbox state");
+    routed_button(window, "continuous-path");
+    require((*continuous).checked() && white(editor.document.image.get(55, 50)),
+            "checked continuous path removes the closing edge again");
+    require(!(*window.find("r-pattern-0")).visible(), "path context does not duplicate Patterns");
+    routed_button(window, "home-tab");
+    editor.document.ink.brush = paint::Brush::Airbrush;
+    routed_button(window, "outline-menu");
+    routed_button(window, "popup-outline-on");
+    require(editor.document.ink.brush == paint::Brush::Round,
+            "Solid outline cannot retain the airbrush's random deposition");
+}
+void crop_and_help_actions() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    std::size_t undo = editor.document.undo_history.size();
+    routed_button(window, "crop");
+    require(editor.document.tool == paint::Tool::Select && editor.document.image.width == 128 &&
+                editor.document.undo_history.size() == undo,
+            "Crop without a selection activates Selection without editing the image");
+    fixture.drag(20, 20, 60, 50);
+    routed_button(window, "context-crop");
+    require(editor.document.image.width == 40 && editor.document.image.height == 30,
+            "Crop with a selection crops normally");
+    gf::KeyEvent help{gf::KeyAction::down, gf::PhysicalKey::f1};
+    static_cast<void>(window.dispatch_key(help));
+    require((*require_button(window, "help")).selected(), "F1 highlights the Help button");
+    routed_button(window, "help-close");
+    require(!editor.show_help && !(*require_button(window, "help")).selected(),
+            "visible Close Help button closes the book and clears the highlight");
+    routed_button(window, "help");
+    require(editor.show_help && (*require_button(window, "help")).selected(),
+            "Help button opens and highlights itself");
+    routed_button(window, "help");
+    require(!editor.show_help, "selected Help button closes the book");
+}
+void stamp_reset_and_recapture() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.image.set(20, 20, {231, 45, 60, 255});
+    editor.document.image.set(60, 20, {20, 150, 90, 255});
+    editor.choose_tool(paint::Tool::Stamp);
+    editor.stamp_width = editor.stamp_height = 12;
+    editor.document.stamp_shape = paint::StampShape::Square;
+    fixture.click(20, 20);
+    require(!editor.background_busy(), "unaltered stamp is immediately ready without a transform job");
+    fixture.click(20, 60);
+    require(paint::equal(editor.document.image.get(20, 60), {231, 45, 60, 255}),
+            "unaltered stamp preserves its exact source pixels");
+    editor.stamp_angle = 37;
+    editor.regenerate_stamp();
+    fixture.pointer(gf::PointerAction::down, 20, 60, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 20, 60, gf::PointerButton::secondary);
+    require(editor.document.stamp.pixels.empty() && editor.stamp_angle == 0 && editor.stamp_scale == 1,
+            "right click clears capture and transform state even during background work");
+    fixture.click(60, 20);
+    fixture.click(90, 60);
+    require(paint::equal(editor.document.image.get(90, 60), {20, 150, 90, 255}),
+            "new stamp can be captured and placed immediately after right click");
+    await_background(fixture);
+    fixture.click(60, 60);
+    require(paint::equal(editor.document.image.get(60, 60), {20, 150, 90, 255}),
+            "stale transform completion cannot replace the newly captured stamp");
 }
 void stamp_scrubs_one_undo_gesture() {
     Fixture fixture;
@@ -1015,10 +1169,14 @@ int main() {
         retained_curve_save_undo_and_release();
         selection_move_path_and_stamp();
         zoom_anchors_the_point();
+        magnifier_hover_is_display_only();
         zoom_out_clamps_each_axis();
         pencil_and_eraser_hover_are_display_only();
         restored_help_and_selection_workflows();
         stamp_scrubs_one_undo_gesture();
+        path_hover_snap_and_controls();
+        crop_and_help_actions();
+        stamp_reset_and_recapture();
         atlas_grid_frames_and_cursor_save();
         desktop_transactions_drop_and_handles();
         atlas_large_sheet_uses_visible_thumbnail_resources();

@@ -99,6 +99,10 @@ class Editor final : public gui_forms::Control {
 
   private:
     bool help_shortcut();
+    void close_help(gui_forms::ButtonBase& button);
+    Point snap_path_point(Point point) const;
+    bool path_preview_point(Point& point) const;
+    void publish_path_preview();
     gui_forms::AcceleratorToken help_accelerator_;
     WarpWorker warp_worker_;
     enum class WarpMode { none, mesh, rotation, transform };
@@ -107,6 +111,7 @@ class Editor final : public gui_forms::Control {
     ReshapeMesh reshape_mesh_;
     std::shared_ptr<const ConvWarpField> warp_field_, stamp_field_;
     Image stamp_preview_;
+    std::vector<Point> stamp_boundary_;
     gui_forms::ImageId stamp_image_;
     void publish_stamp_preview();
     std::uint64_t warp_generation_ = 0, stamp_generation_ = 0, stamp_source_generation_ = 0;

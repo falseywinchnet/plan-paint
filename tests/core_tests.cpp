@@ -321,6 +321,78 @@ void test_continuous_geometry_coverage() {
         }
     }
 }
+void test_stamp_masks_and_oblique_edges() {
+    paint::Image source;
+    source.reset(80, 64, {75, 130, 190, 255});
+    for (int i = 0; i < paint::stamp_shape_count; ++i) {
+        paint::StampShape shape = static_cast<paint::StampShape>(i);
+        std::vector<paint::Point> points = paint::stamp_outline(shape, 58, 42);
+        require(points.size() >= 2, "stamp has no usable outline");
+        for (const paint::Point& point : points) {
+            require(point.x >= 0 && point.y >= 0 && point.x <= 58 && point.y <= 42,
+                    "stamp outline escapes its capture bounds");
+        }
+        for (const paint::Point& point : paint::stamp_outline(shape, 1, 1)) {
+            require(point.x >= 0 && point.y >= 0 && point.x <= 1 && point.y <= 1,
+                    "minimum stamp size has out-of-bounds geometry");
+        }
+        paint::Image mask = paint::make_stamp(source, {0, 0, 58, 42}, shape, false, {255,255,255,255});
+        int visible = 0;
+        for (const paint::Color& pixel : mask.pixels) visible += pixel.a > 0;
+        require(visible > 20, "stamp shape produced an empty mask");
+        if (shape == paint::StampShape::Bezier || shape == paint::StampShape::Arc) {
+            require(points.size() > 10, "curved stamp degenerated to a straight segment");
+        }
+    }
+    paint::Ink ink;
+    ink.size = 1;
+    // Check geometric support and connectivity at awkward, fractional angles.
+    // Antialiasing may soften a boundary but must never deposit isolated islands.
+    for (int degrees = 1; degrees < 180; degrees += 7) {
+        double angle = (degrees + 0.37) * std::numbers::pi / 180;
+        paint::Point a{48.23 - 32 * std::cos(angle), 48.41 - 32 * std::sin(angle)};
+        paint::Point b{48.23 + 32 * std::cos(angle), 48.41 + 32 * std::sin(angle)};
+        std::vector<paint::Point> nodes{a, b, {44.71, 77.23}};
+        for (int closed = 0; closed < 2; ++closed) {
+            paint::Image image;
+            image.reset(96, 96, {0, 0, 0, 0});
+            if (closed) paint::polygon(image, nodes, ink, true, false);
+            else paint::stroke(image, a, b, ink);
+            int first = -1, total = 0;
+            for (int y = 0; y < 96; ++y) {
+                for (int x = 0; x < 96; ++x) {
+                    if (image.get(x, y).a == 0) continue;
+                    if (first < 0) first = y * 96 + x;
+                    ++total;
+                    double distance = reference_segment_distance({double(x), double(y)}, a, b);
+                    if (closed) {
+                        distance = std::min(distance, reference_segment_distance({double(x), double(y)}, b, nodes[2]));
+                        distance = std::min(distance, reference_segment_distance({double(x), double(y)}, nodes[2], a));
+                    }
+                    require(distance <= 0.5 + std::sqrt(0.5), "solid edge grew pixels outside its geometric support");
+                }
+            }
+            require(first >= 0, "smooth line disappeared");
+            std::vector<bool> visited(96 * 96);
+            std::vector<int> queue{first};
+            visited[first] = true;
+            for (std::size_t i = 0; i < queue.size(); ++i) {
+                int x = queue[i] % 96, y = queue[i] / 96;
+                for (int dy = -1; dy <= 1; ++dy) {
+                    for (int dx = -1; dx <= 1; ++dx) {
+                        int nx = x + dx, ny = y + dy, index = ny * 96 + nx;
+                        if (nx < 0 || ny < 0 || nx >= 96 || ny >= 96 || visited[index]) continue;
+                        if (image.get(nx, ny).a) {
+                            visited[index] = true;
+                            queue.push_back(index);
+                        }
+                    }
+                }
+            }
+            require(static_cast<int>(queue.size()) == total, "solid edge contains detached pixels");
+        }
+    }
+}
 void test_curves() {
     paint::CurveGeometry curve;
     curve.set_line({10, 10}, {110, 10});
@@ -542,6 +614,7 @@ int main() {
         test_eraser_and_pixel_target();
         test_continuous_geometry_coverage();
         test_path_history();
+        test_stamp_masks_and_oblique_edges();
         test_curves();
         test_codecs();
         std::cout << "Color, CONV, editing and seven-format codec tests passed.\n";

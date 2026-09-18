@@ -9,9 +9,11 @@ class HelpBook final : public gui_forms::ScrollableControl {
     void initialize_control_tree();
     void arrange(gui_forms::Rect bounds) override;
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
+    gui_forms::Event<gui_forms::ButtonBase&>& close_clicked();
 
   private:
     std::shared_ptr<gui_forms::Label> title_, introduction_;
+    std::shared_ptr<gui_forms::Button> close_;
     std::vector<std::shared_ptr<gui_forms::Button>> headers_;
     std::vector<std::shared_ptr<gui_forms::Label>> bodies_;
     std::vector<gui_forms::SubscriptionToken> subscriptions_;

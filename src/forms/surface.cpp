@@ -58,12 +58,52 @@ void PaintCanvas::on_paint(gf::Painter& painter, gf::Rect damage) {
     RasterCanvas::on_paint(painter, damage);
 }
 void Editor::paint_tool_preview(gf::Painter& painter) {
-    if (!cursor_client_ || (document.tool != Tool::Pencil && document.tool != Tool::Eraser)) {
+    if (!cursor_client_ || (document.tool != Tool::Pencil && document.tool != Tool::Eraser &&
+                             document.tool != Tool::Magnifier)) {
         return;
     }
     gui_drawing::PointF point = (*canvas_).client_to_bitmap(*cursor_client_);
     int x = static_cast<int>(std::floor(point.x)), y = static_cast<int>(std::floor(point.y));
     if (!document.image.contains(x, y)) {
+        return;
+    }
+    if (document.tool == Tool::Magnifier) {
+        gf::Rect viewport = (*canvas_).client_rectangle();
+        double left = (*cursor_client_).x + 24, top = (*cursor_client_).y + 24;
+        if (left + 132 > viewport.width) {
+            left = (*cursor_client_).x - 156;
+        }
+        if (top + 152 > viewport.height) {
+            top = (*cursor_client_).y - 176;
+        }
+        left = std::clamp(left, 2.0, std::max(2.0, viewport.width - 134));
+        top = std::clamp(top, 2.0, std::max(2.0, viewport.height - 154));
+        gf::Rect lens{left, top, 132, 152};
+        painter.draw_box_shadow(lens, 2, {2, 3}, 5, 0, gf::Color::rgba(30, 40, 55, 90));
+        painter.fill_rect(lens, gf::Color::rgba(250, 252, 255));
+        Image lens_pixels;
+        lens_pixels.reset(32, 32, {0, 0, 0, 0});
+        for (int row = 0; row < 32; ++row) {
+            for (int column = 0; column < 32; ++column) {
+                int px = x + column - 16, py = y + row - 16;
+                Color color = document.image.get(px, py);
+                Color base = ((px / 4 + py / 4) & 1) ? Color{225, 225, 225, 255}
+                                                       : Color{255, 255, 255, 255};
+                lens_pixels.set(column, row, base);
+                lens_pixels.blend(column, row, color);
+                if (document.selection.active) {
+                    Color selected = document.selection.image.get(px - document.selection.x,
+                                                                  py - document.selection.y);
+                    lens_pixels.blend(column, row, selected);
+                }
+                color = lens_pixels.get(column, row);
+                painter.fill_rect({left + 2 + column * 4, top + 2 + row * 4, 4, 4},
+                                  gf::Color::rgba(color.r, color.g, color.b));
+            }
+        }
+        painter.stroke_rect(lens, gf::Color::rgba(45, 90, 140), 1);
+        painter.draw_text_utf8({left + 6, top + 146}, "4×", {gf::FontRole::control, 12, 400, false},
+                               gf::Color::rgba(35, 60, 90));
         return;
     }
     double scale = (*canvas_).zoom();

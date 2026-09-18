@@ -73,7 +73,7 @@ gf::SurfaceMaterial ribbon_material(bool selected, bool hot, bool pressed) {
 Color ribbon_color(int index) {
     return office_color(std::clamp(index, 0, 29));
 }
-std::shared_ptr<const gf::Theme> ribbon_theme() {
+static std::shared_ptr<const gf::Theme> make_ribbon_theme() {
     gf::ThemeDefinition definition = gf::windows_professional_theme_definition();
     definition.id = "rainstar-classic-ribbon";
     definition.structure.typography.control = {gf::FontRole::control, 14, 400, false, 0};
@@ -91,6 +91,31 @@ std::shared_ptr<const gf::Theme> ribbon_theme() {
         }
     }
     return gf::Theme::create(std::move(definition));
+}
+std::shared_ptr<const gf::Theme> ribbon_theme() {
+    static const std::shared_ptr<const gf::Theme> theme = make_ribbon_theme();
+    return theme;
+}
+static std::shared_ptr<const gf::Theme> make_ribbon_tab_theme() {
+    gf::ThemeDefinition tab = (*ribbon_theme()).definition();
+    tab.id = "rainstar-home-tab";
+    for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
+        gf::SurfaceMaterial& material =
+            tab.roles[static_cast<std::size_t>(gf::ControlVisualRole::button)].selected[state].material;
+        material.fills = {gf::MaterialFillLayer::linear(
+            {0, 0}, {0, 1}, {{0, gf::Color::rgba(255, 255, 255)},
+                             {1, gf::Color::rgba(249, 252, 255)}})};
+        material.keylines.clear();
+        material.keylines.push_back({gf::MaterialEdge::top, gf::Color::rgba(255, 255, 255), 1, 1});
+        material.keylines.push_back({gf::MaterialEdge::bottom, gf::Color::rgba(249, 252, 255), 1, 0});
+        material.border = gf::MaterialBorder{gf::Color::rgba(178, 198, 219), 1};
+        material.corner_radius = 2;
+    }
+    return gf::Theme::create(std::move(tab));
+}
+static std::shared_ptr<const gf::Theme> ribbon_tab_theme() {
+    static const std::shared_ptr<const gf::Theme> theme = make_ribbon_tab_theme();
+    return theme;
 }
 SwatchButton::SwatchButton(gf::StableId id, std::string text, Color color)
     : Button(std::move(id), std::move(text)), color_(color) {}
@@ -134,22 +159,7 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
         result = gf::make_control<gf::Button>(gf::StableId(id), text);
     }
     if (id.ends_with("-tab")) {
-        gf::ThemeDefinition tab = (*ribbon_theme()).definition();
-        tab.id = "rainstar-home-tab";
-        for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
-            gf::SurfaceMaterial& material =
-                tab.roles[static_cast<std::size_t>(gf::ControlVisualRole::button)].selected[state].material;
-            material.fills = {gf::MaterialFillLayer::linear(
-                {0, 0}, {0, 1}, {{0, gf::Color::rgba(255, 255, 255)},
-                                 {1, gf::Color::rgba(249, 252, 255)}})};
-            material.keylines.clear();
-            material.keylines.push_back({gf::MaterialEdge::top, gf::Color::rgba(255, 255, 255), 1, 1});
-            material.keylines.push_back(
-                {gf::MaterialEdge::bottom, gf::Color::rgba(249, 252, 255), 1, 0});
-            material.border = gf::MaterialBorder{gf::Color::rgba(178, 198, 219), 1};
-            material.corner_radius = 2;
-        }
-        (*result).set_theme_override(gf::Theme::create(std::move(tab)));
+        (*result).set_theme_override(ribbon_tab_theme());
     }
     (*result).set_requested_bounds(bounds);
     (*result).set_accessible_name(text.empty() ? id : text);
@@ -205,7 +215,7 @@ void Ribbon::initialize_control_tree() {
     button("tool-6", "", 12, {304, 80, 28, 30});
     button("brush-menu", "Brushes", 13, {344, 34, 61, 83}, true, true);
     button("tool-10", "Stamp", 20, {410, 34, 59, 83}, true, true, true);
-    button("tool-9", "Path", 21, {475, 34, 58, 83}, true, true, true);
+    button("tool-9", "Path", 21, {475, 34, 58, 83}, true);
     for (std::size_t i = 0; i < std::size(home_shapes); ++i) {
         button("shape-" + std::to_string(static_cast<int>(home_shapes[i])), "",
                100 + static_cast<int>(home_shapes[i]), {546 + 25.0 * (i % 7), 36 + 25.0 * (i / 7), 25, 25});
@@ -306,7 +316,7 @@ void Ribbon::add_options() {
     check("show-status", "Status bar", {234, 92, 144, 25});
     button("full-screen", "Full screen", 5, {400, 35, 98, 81}, true);
     button("fit", "Fit window", 5, {507, 35, 98, 81}, true);
-    building_page_ = 12;
+    building_page_ = 4;
     for (int i = 0; i < 18; ++i) {
         std::shared_ptr<gf::Button> swatch =
             gf::make_control<PatternButton>(gf::StableId("r-pattern-" + std::to_string(i)), i);
@@ -319,6 +329,7 @@ void Ribbon::add_options() {
         add_child(swatch);
     }
     check("transparent-pattern", "Transparent second color", {242, 96, 300, 25});
+    building_page_ = 12;
     grain_ = number("grain-scale", "Grain scale", {560, 35, 273, 25}, 0.3, 4, 1, 2);
     tooth_ = number("paper-tooth", "Paper tooth", {560, 64, 273, 25}, 0, 1, 0.65, 2);
     load_ = number("paint-load", "Paint load", {560, 93, 273, 25}, 0, 1, 0.65, 2);
@@ -337,11 +348,8 @@ void Ribbon::add_options() {
     button("context-invert-selection", "Invert", -1, {116, 65, 100, 25});
     button("context-crop", "Crop", 4, {12, 94, 95, 25});
     button("context-delete", "Delete", -1, {116, 94, 100, 25});
-    for (int i = 0; i < 4; ++i) {
-        const char* names[] = {"Circle", "Pill", "Square", "Rectangle"};
-        button("stamp-shape-" + std::to_string(i), names[i], -1,
-               {12.0 + 105 * (i % 2), 36.0 + 28 * (i / 2), 100, 25});
-    }
+    button("stamp-shapes-menu", "Circle", 100 + static_cast<int>(Shape::Circle),
+           {12, 36, 204, 54}, false, true);
     check("stamp-transparent", "Transparent stamp", {12, 94, 210, 25});
     button("context-stamp-clear", "Clear stamp", -1, {242, 36, 135, 30});
     button("context-zoom-in", "Zoom in", 12, {12, 36, 95, 78}, true);
@@ -365,7 +373,6 @@ void Ribbon::add_options() {
                                    "15°. Escape places; Undo cancels.");
     option(warp_hint, {920, 36, 320, 75});
     building_page_ = 16;
-    font_paths_ = installed_fonts();
     std::vector<std::string> fonts{"Portsmouth", "Portsmouth Mono"};
     for (const std::string& path : font_paths_) {
         fonts.push_back(std::filesystem::path(path).stem().string());
@@ -410,6 +417,18 @@ void Ribbon::show_tool_context() {
     close_popup();
     synchronize();
 }
+void Ribbon::ensure_fonts() {
+    if (fonts_loaded_) {
+        return;
+    }
+    fonts_loaded_ = true;
+    font_paths_ = installed_fonts();
+    for (const std::string& path : font_paths_) {
+        (*font_).add_item(std::filesystem::path(path).filename() == "Cairo.ttf"
+                             ? "Cairo Unicode (Dingbats)"
+                             : std::filesystem::path(path).stem().string());
+    }
+}
 void Ribbon::font_changed(std::optional<std::size_t> index) {
     if (synchronizing_ || !index) {
         return;
@@ -439,6 +458,9 @@ void Ribbon::show_page() {
     bool selection = tool == Tool::Select || tool == Tool::Lasso;
     bool ink = tool == Tool::Pencil || tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape ||
                tool == Tool::Path;
+    if (page_ == 4 && !ink) {
+        page_ = 8;
+    }
     bool material = tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
@@ -446,7 +468,7 @@ void Ribbon::show_page() {
         bool visible = button_pages_[i] == 0 || (button_pages_[i] & page_) != 0;
         if (page_ == 8 && button_pages_[i] != 0) {
             if (id.starts_with("r-pattern-")) {
-                visible = ink;
+                visible = false;
             }
             if (id == "edge-medium" || id == "fill-medium" || id == "new-grain") {
                 visible = material;
@@ -456,7 +478,7 @@ void Ribbon::show_page() {
                           : id.starts_with("context-zoom-") ? tool == Tool::Magnifier
                                                             : selection;
             }
-            if (id.starts_with("stamp-shape-")) {
+            if (id.starts_with("stamp-shape-") || id == "stamp-shapes-menu") {
                 visible = tool == Tool::Stamp;
             }
         }
@@ -464,6 +486,9 @@ void Ribbon::show_page() {
             visible = page_ == 8 && selection && (*editor).document.selection.active;
             control.set_enabled(id == "warp-place" || id == "warp-cancel" ? (*editor).warp_active()
                                                                           : !(*editor).warp_active());
+        }
+        if (id == "patterns-tab") {
+            control.set_enabled(ink);
         }
         control.set_visible(visible);
     }
@@ -473,7 +498,7 @@ void Ribbon::show_page() {
         bool visible = (option_pages_[i] & page_) != 0;
         if (page_ == 8 && visible) {
             if (id == "transparent-pattern") {
-                visible = ink;
+                visible = false;
             }
             if (id.starts_with("grain-") || id.starts_with("paper-") || id.starts_with("paint-load")) {
                 visible = material;
@@ -619,24 +644,20 @@ void Ribbon::on_attached_to_window() {
     small_icons_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{16, 16});
     medium_icons_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{24, 24});
     large_icons_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{32, 32});
-    for (int i = 0; i < 25 + shape_count; ++i) {
-        int icon = i < 25 ? i : 100 + i - 25;
-        static_cast<void>((*small_icons_).add_png(std::to_string(icon), ribbon_icon_png(icon, 16), 2));
-        static_cast<void>((*medium_icons_).add_png(std::to_string(icon), ribbon_icon_png(icon, 24), 2));
-        static_cast<void>((*large_icons_).add_png(std::to_string(icon), ribbon_icon_png(icon, 32), 2));
-    }
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
         if (control.stable_id().value() == "undo" || control.stable_id().value() == "redo" ||
             control.stable_id().value() == "save") {
+            std::string key = control.image_key();
+            if (!(*medium_icons_).contains_key(key)) {
+                static_cast<void>((*medium_icons_).add_png(key, ribbon_icon_png(std::stoi(key), 24), 2));
+            }
             control.set_image_list(medium_icons_);
             continue;
         }
         if (!control.image_key().empty()) {
-            control.set_image_list(control.requested_bounds().height > 45 &&
-                                           control.requested_bounds().width > 25
-                                       ? large_icons_
-                                       : small_icons_);
+            bind_icon(control, std::stoi(control.image_key()), control.requested_bounds().height > 45 &&
+                                                               control.requested_bounds().width > 25);
         }
     }
 }
@@ -644,15 +665,20 @@ void Ribbon::bind_icon(gf::Button& button, int icon, bool large) {
     if (icon < 0) {
         return;
     }
-    button.set_image_list(large ? large_icons_ : small_icons_);
-    button.set_image_key(std::to_string(icon));
+    std::shared_ptr<gf::ImageList> images = large ? large_icons_ : small_icons_;
+    std::string key = std::to_string(icon);
+    if (images && !(*images).contains_key(key)) {
+        static_cast<void>((*images).add_png(key, ribbon_icon_png(icon, large ? 32 : 16), 2));
+    }
+    button.set_image_list(images);
+    button.set_image_key(key);
 }
 void Ribbon::arrange(gf::Rect bounds) {
     arrange_self(bounds);
     set_child_layout(atlas_, {0, 27, bounds.width, 116});
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Rect rectangle = (*buttons_[i]).requested_bounds();
-        if (page_ == 4 && button_pages_[i] == 12) {
+        if (page_ == 4 && (button_pages_[i] == 12 || button_pages_[i] == 4)) {
             rectangle.x -= rectangle.x < 548 ? 230 : 218;
         }
         set_child_layout(buttons_[i], rectangle);
@@ -743,6 +769,9 @@ void Ribbon::synchronize() {
         return;
     }
     Document& document = (*editor).document;
+    if (document.tool == Tool::Text) {
+        ensure_fonts();
+    }
     (*primary_).set_color(document.ink.primary);
     (*secondary_).set_color(document.ink.secondary);
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
@@ -763,6 +792,9 @@ void Ribbon::synchronize() {
         if (id == "brush-menu") {
             selected = document.tool == Tool::Brush;
         }
+        if (id == "help") {
+            selected = (*editor).show_help;
+        }
         if (id == "primary") {
             selected = !secondary_color_;
         }
@@ -781,6 +813,11 @@ void Ribbon::synchronize() {
         }
         if (id.starts_with("stamp-shape-")) {
             selected = static_cast<int>(document.stamp_shape) == std::stoi(id.substr(12));
+        }
+        if (id == "stamp-shapes-menu") {
+            control.set_text(stamp_shape_name(document.stamp_shape));
+            control.set_accessible_name(stamp_shape_name(document.stamp_shape));
+            bind_icon(control, 100 + static_cast<int>(stamp_geometry_shape(document.stamp_shape)), false);
         }
         if (id == "tool-tab") {
             const char* names[] = {"Selection", "Selection",    "Pencil",    "Fill",  "Text",
@@ -940,7 +977,19 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
     material.shadows.push_back({{0, 3}, 7, 0, gf::Color::rgba(30, 50, 75, 60), false});
     (*panel).set_authored_surface_material(material);
     double width = 232, height = 10;
-    if (id == "shapes-menu") {
+    if (id == "stamp-shapes-menu") {
+        width = 280;
+        height = 8 + 34 * ((stamp_shape_count + 6) / 7);
+        for (int i = 0; i < stamp_shape_count; ++i) {
+            StampShape shape = static_cast<StampShape>(i);
+            std::shared_ptr<gf::Button> item = add_popup_button(
+                *panel, "stamp-shape-" + std::to_string(i), "",
+                100 + static_cast<int>(stamp_geometry_shape(shape)),
+                {6.0 + (i % 7) * 38, 5.0 + (i / 7) * 34, 37, 33}, document.stamp_shape == shape);
+            (*item).set_accessible_name(stamp_shape_name(shape));
+
+        }
+    } else if (id == "shapes-menu") {
         width = 280;
         height = 8 + 34 * ((shape_count + 6) / 7);
         for (int i = 0; i < shape_count; ++i) {
@@ -1003,7 +1052,7 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             add_popup_button(*panel, "size-" + std::to_string(values[i]), std::to_string(values[i]) + " px",
                              -1, {4, 4 + i * 28.0, width - 8, 27}, document.ink.size == values[i]);
         }
-    } else if (id == "fill-menu" || id == "tool-pattern-menu") {
+    } else if (id == "tool-pattern-menu") {
         if (!pattern_previews_) {
             pattern_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{82, 28});
             for (int i = 0; i < 18; ++i) {
@@ -1066,10 +1115,6 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             ids = {"zoom-in", "zoom-out", "actual-size", "fit"};
             texts = {"Zoom in", "Zoom out", "100%", "Fit canvas"};
         }
-        if (id == "tool-9") {
-            ids = {"tool-9", "continuous-path"};
-            texts = {"Draw path", "Continuous path"};
-        }
         if (id == "tool-10") {
             ids = {"tool-10", "stamp-clear"};
             texts = {"Capture / place stamp", "Clear captured stamp"};
@@ -1091,6 +1136,12 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             .dismiss_requested()
             .subscribe(*this, gf::Delegate<gf::PopupDismissReason>::bind<Ribbon, &Ribbon::dismissed>(*this)));
     popup_ = (*attached_window()).open_popup(popup_owner_, popup_layer_);
+    if (id == "stamp-shapes-menu") {
+        for (int i = 0; i < stamp_shape_count; ++i) {
+            gf::Control::Ptr shape = (*attached_window()).find("popup-stamp-shape-" + std::to_string(i));
+            (*tooltips_).set_tool_tip(shape, stamp_shape_name(static_cast<StampShape>(i)));
+        }
+    }
     if (id == "shapes-menu") {
         for (int i = 0; i < shape_count; ++i) {
             gf::Control::Ptr shape = (*attached_window()).find("popup-shape-" + std::to_string(i));
@@ -1132,7 +1183,10 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
     }
     close_popup();
     Document& document = (*editor).document;
-    if (id.starts_with("shape-")) {
+    if (id.starts_with("stamp-shape-")) {
+        (*editor).reset_stamp();
+        document.stamp_shape = static_cast<StampShape>(std::stoi(id.substr(12)));
+    } else if (id.starts_with("shape-")) {
         (*editor).choose_shape(static_cast<Shape>(std::stoi(id.substr(6))));
     } else if (id.starts_with("fill-brush-") || id.starts_with("edge-brush-")) {
         if (id.starts_with("fill-brush-")) {
@@ -1152,6 +1206,9 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         document.shape_fill = true;
     } else if (id == "outline-on" || id == "outline-off") {
         document.shape_outline = id == "outline-on";
+        if (document.shape_outline) {
+            document.ink.brush = Brush::Round;
+        }
     } else if (id == "fill-on" || id == "fill-off") {
         document.shape_fill = id == "fill-on";
     } else if (id == "stamp-clear") {

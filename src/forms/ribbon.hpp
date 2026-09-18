@@ -52,7 +52,8 @@ class Ribbon final : public gui_forms::Control {
     std::shared_ptr<SwatchButton> primary_, secondary_;
     bool secondary_color_ = false;
     int page_ = 1, building_page_ = 1;
-    bool synchronizing_ = false;
+    bool synchronizing_ = false, fonts_loaded_ = false;
+    void ensure_fonts();
     std::vector<int> button_pages_;
     std::vector<std::shared_ptr<gui_forms::Control>> option_controls_;
     std::vector<int> option_pages_;

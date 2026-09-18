@@ -2,6 +2,7 @@
 """Bundle the native frontend and its complete musl dependency closure."""
 from pathlib import Path
 from release_version import project_version
+from font_pack import copy_fonts
 import argparse
 import hashlib
 import json
@@ -52,7 +53,7 @@ def main():
         if library.name.startswith(("libc.musl", "ld-musl")):
             continue
         subprocess.run(["patchelf", "--set-rpath", "$ORIGIN", str(library)], check=True)
-    shutil.copytree(sdk / "share/GUIForms/fonts", bundle / "bin/fonts")
+    copy_fonts(sdk, bundle / "bin/fonts")
     locale = Path("/usr/share/X11/locale")
     if not locale.is_dir():
         raise RuntimeError("X11 locale data is required for keyboard input.")
