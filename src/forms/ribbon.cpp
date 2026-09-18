@@ -403,19 +403,17 @@ void Ribbon::add_options() {
         add_child(swatch);
     }
 
-    building_page_ = 12;
-    grain_ = number("grain-scale", "Grain scale", {560, 35, 273, 25}, 0.3, 4, 1, 2);
-    tooth_ = number("paper-tooth", "Paper tooth", {560, 64, 273, 25}, 0, 1, 0.65, 2);
-    load_ = number("paint-load", "Paint load", {560, 93, 273, 25}, 0, 1, 0.65, 2);
-    button("edge-medium", "Line materials…", 13, {858, 35, 185, 26});
-    button("fill-medium", "Fill materials…", 8, {1055, 35, 185, 26});
-    angle_ = number("grain-angle", "Grain angle", {858, 65, 240, 25}, -180, 180, -20);
-    button("new-grain", "New grain", -1, {1110, 65, 130, 25});
+    building_page_ = 4;
+    grain_ = number("grain-scale", "Grain scale", {982, 34, 273, 22}, 0.3, 4, 1, 2);
+    tooth_ = number("paper-tooth", "Paper tooth", {982, 58, 273, 22}, 0, 1, 0.65, 2);
+    load_ = number("paint-load", "Paint load", {982, 82, 273, 22}, 0, 1, 0.65, 2);
+    angle_ = number("grain-angle", "Grain angle", {982, 106, 202, 22}, -180, 180, -20);
+    button("new-grain", "New", -1, {1188, 106, 67, 22});
     building_page_ = 8;
     tool_size_ = number("tool-size", "Size (px)", {12, 36, 204, 25}, 1, 64, 3);
     check("soft-eraser", "Soft eraser", {12, 65, 210, 25});
     building_page_ = 12;
-    check("smooth-lines", "Smooth lines", {858, 96, 240, 25});
+    check("smooth-lines", "Smooth lines", {244, 36, 210, 25});
     building_page_ = 8;
     check("continuous-path", "Continuous path", {12, 65, 210, 25});
     check("outline", "Edge", {12, 94, 90, 25});
@@ -549,15 +547,9 @@ void Ribbon::show_page() {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());
         bool visible = button_pages_[i] == 0 || (button_pages_[i] & page_) != 0;
-        if (page_ == 4 && (id == "edge-medium" || id == "fill-medium" || id == "new-grain")) {
-            visible = false;
-        }
         if (page_ == 8 && button_pages_[i] != 0) {
             if (id.starts_with("r-pattern-")) {
                 visible = false;
-            }
-            if (id == "edge-medium" || id == "fill-medium" || id == "new-grain") {
-                visible = material;
             }
             if (id.starts_with("context-")) {
                 visible = id == "context-stamp-clear"       ? tool == Tool::Stamp
@@ -582,15 +574,9 @@ void Ribbon::show_page() {
         gf::Control& control = *option_controls_[i];
         std::string id(control.stable_id().value());
         bool visible = (option_pages_[i] & page_) != 0;
-        if (page_ == 4 && id.starts_with("grain-angle")) {
-            visible = false;
-        }
         if (page_ == 8 && visible) {
             if (id == "transparent-pattern") {
                 visible = false;
-            }
-            if (id.starts_with("grain-") || id.starts_with("paper-") || id.starts_with("paint-load")) {
-                visible = material;
             }
             if (id.starts_with("tool-size")) {
                 visible = tool == Tool::Pencil || tool == Tool::Eraser || material;
@@ -815,9 +801,6 @@ void Ribbon::arrange(gf::Rect bounds) {
             std::string id((*control).stable_id().value());
             if (id == "smooth-lines") {
                 rectangle = {140, 111, 190, 22};
-            } else if (id.starts_with("grain-scale") || id.starts_with("paper-tooth") ||
-                       id.starts_with("paint-load")) {
-                rectangle.x += 422;
             }
         }
         set_child_layout(control, rectangle);
@@ -855,12 +838,12 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
             : page_ == 16 ? std::vector<std::string>{"Font", "Text box", "Finish text"}
             : page_ == 2  ? std::vector<std::string>{"Zoom", "Show or hide", "Display"}
             : page_ == 4  ? std::vector<std::string>{"Apply to", "Brushes", "Patterns", "Material"}
-                          : std::vector<std::string>{"Tool settings", "Patterns", "Material", "Media"};
+                          : std::vector<std::string>{"Tool settings"};
         const std::vector<double> edges = selection     ? std::vector<double>{0, 230, 496, 764, 906, width}
                                           : page_ == 16 ? std::vector<double>{0, 455, 692, 1134}
                                           : page_ == 2  ? std::vector<double>{0, 220, 390, 620}
                                           : page_ == 4  ? std::vector<double>{0, 132, 660, 974, width}
-                                                        : std::vector<double>{0, 232, 548, 846, width};
+                                                        : std::vector<double>{0, width};
         for (std::size_t i = 0; i < labels.size(); ++i) {
             if (selection && i > 0 && !(*editor).document.selection.active) {
                 continue;
@@ -1075,9 +1058,8 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         show_materials(false);
         return;
     }
-    if (id == "outline-menu" || id == "fill-menu" || id == "edge-medium" || id == "fill-medium" ||
-        id == "material-edge" || id == "material-fill") {
-        show_materials(id == "fill-menu" || id == "fill-medium" || id == "material-fill");
+    if (id == "outline-menu" || id == "fill-menu" || id == "material-edge" || id == "material-fill") {
+        show_materials(id == "fill-menu" || id == "material-fill");
         return;
     }
     if (id == "material-enabled") {

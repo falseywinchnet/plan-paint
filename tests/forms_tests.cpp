@@ -490,8 +490,9 @@ void ribbon_tabs_status_and_context() {
     routed_button(window, "popup-stamp-shape-1");
     require(editor.document.stamp_shape == paint::StampShape::Pill, "context changes stamp capture shape");
     editor.choose_tool(paint::Tool::Brush);
-    require(!(*window.find("stamp-shapes-menu")).visible() && (*window.find("grain-scale")).visible(),
-            "context swaps when active tool changes");
+    require(!(*window.find("stamp-shapes-menu")).visible() && !(*window.find("grain-scale")).visible() &&
+                (*window.find("tool-size")).visible(),
+            "context swaps tool settings while materials remain on their shared pane");
     open_tab(window, "home-tab");
     routed_button(window, "shapes-menu");
     window.perform_layout();
@@ -1344,6 +1345,16 @@ void centered_circle_and_materials() {
             "line brush changes independently from fill");
     routed_button(window, "smooth-lines");
     require(!editor.document.ink.smooth, "Smooth lines is a visible working toggle in Materials");
+    open_tab(window, "tool-tab");
+    require((*window.find("tool-size")).visible() && (*window.find("outline")).visible() &&
+                (*window.find("fill")).visible() && (*window.find("smooth-lines")).visible() &&
+                !(*window.find("grain-scale")).visible() && !(*window.find("grain-angle")).visible() &&
+                !(*window.find("new-grain")).visible() && !window.find("edge-medium") &&
+                !window.find("fill-medium"),
+            "shape tools contain only tool settings and use shared Primary and Alt materials");
+    open_tab(window, "patterns-tab");
+    require((*window.find("grain-angle")).visible() && (*window.find("new-grain")).visible(),
+            "all texture settings are available together in Materials");
 }
 void independent_color_materials_and_no_color() {
     Fixture fixture;
