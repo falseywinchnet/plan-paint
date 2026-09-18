@@ -2,6 +2,7 @@
 #include "codecs.hpp"
 #include "conv.hpp"
 #include "raster.hpp"
+#include "text.hpp"
 #include <algorithm>
 #include <avif/avif.h>
 #include <cmath>
@@ -9,6 +10,7 @@
 #include <filesystem>
 #include <lunasvg.h>
 #include <memory>
+#include <mutex>
 #include <regex>
 #include <stdexcept>
 #include <tinyxml2.h>
@@ -161,6 +163,27 @@ Image decode_avif(const void* data, std::size_t size) {
     return image;
 }
 namespace {
+void register_svg_fallback_fonts() {
+    // SVG imports must retain text even on a clean machine without system fonts.
+    // These immutable bytes are the same bundled faces used by Paint's text tool.
+    struct Face {
+        const unsigned char* bytes;
+        unsigned int length;
+        bool bold;
+        bool italic;
+    };
+    const Face faces[] = {{embedded_font, embedded_font_size, false, false},
+                          {embedded_font_bold, embedded_font_bold_size, true, false},
+                          {embedded_font_italic, embedded_font_italic_size, false, true},
+                          {embedded_font_bolditalic, embedded_font_bolditalic_size, true, true}};
+    for (std::size_t index = 0; index < std::size(faces); ++index) {
+        const Face& face = faces[index];
+        if (!lunasvg_add_font_face_from_data("", face.bold, face.italic, face.bytes, face.length, nullptr,
+                                             nullptr)) {
+            throw std::runtime_error("Could not load the bundled SVG fallback font.");
+        }
+    }
+}
 std::string svg_local_name(const char* name) {
     const char* colon = std::strchr(name, ':');
     return colon ? colon + 1 : name;
@@ -225,6 +248,8 @@ void prepare_svg_element(tinyxml2::XMLElement& element, const std::filesystem::p
 }
 } // namespace
 Image rasterize_svg(const std::string& path, int width, int height) {
+    static std::once_flag fonts_ready;
+    std::call_once(fonts_ready, register_svg_fallback_fonts);
     std::vector<std::uint8_t> bytes = read_image_bytes(path);
     tinyxml2::XMLDocument xml;
     if (xml.Parse(reinterpret_cast<const char*>(bytes.data()), bytes.size()) != tinyxml2::XML_SUCCESS ||

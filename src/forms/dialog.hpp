@@ -1,6 +1,7 @@
 #pragma once
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
+#include <gui_forms/controls/panel/combo_box/combo_box.hpp>
 #include <gui_forms/controls/panel/numeric_up_down/numeric_up_down.hpp>
 #include <gui_forms/controls/panel/text_box/text_box.hpp>
 namespace paint::forms {
@@ -16,7 +17,9 @@ enum class EditorDialogKind {
     hotspot,
     atlas_gallery,
     properties,
-    print_preview
+    print_preview,
+    linux_print,
+    linux_page_setup
 };
 class ColorPlane final : public gui_forms::Control {
   public:
@@ -56,6 +59,7 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::NumericUpDown> red_, green_, blue_, alpha_, light_, a_, b_, width_, height_,
         skew_horizontal_, skew_vertical_;
     std::shared_ptr<gui_forms::TextBox> hex_;
+    std::shared_ptr<gui_forms::ComboBox> printer_;
     std::shared_ptr<gui_forms::CheckBox> lock_, scale_;
     std::shared_ptr<gui_forms::Label> error_;
     std::shared_ptr<gui_forms::Button> primary_tab_, secondary_tab_, pixel_tab_, percent_tab_;

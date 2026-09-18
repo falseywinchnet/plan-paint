@@ -176,9 +176,9 @@ void Editor::rebuild_file_menu() {
     }
     items.push_back(menu_item("save", "Save"));
     items.push_back(menu_item("save-as", "Save as…"));
+    items.push_back(menu_item("print-preview", "Print preview…"));
 #if RAINSTAR_FORMS_NATIVE_PRINT
     items.push_back(menu_item("print", "Print…"));
-    items.push_back(menu_item("print-preview", "Print preview…"));
     items.push_back(menu_item("page-setup", "Page setup…"));
     items.push_back(menu_item("acquire", "From scanner or camera…"));
     gf::MenuItemSpec wallpaper;
@@ -1297,18 +1297,26 @@ void Editor::execute(const std::string& command) {
         } else if (command == "properties") {
             finish_controls();
             open_editor_dialog(EditorDialogKind::properties);
+        } else if (command == "print-preview") {
+            finish_controls();
+            open_editor_dialog(EditorDialogKind::print_preview);
         } else if (command == "save" || command == "save-as") {
             static_cast<void>(save(command == "save-as"));
         }
 #if RAINSTAR_FORMS_NATIVE_PRINT
         else if (command == "print") {
             finish_controls();
+#if defined(__linux__)
+            open_editor_dialog(EditorDialogKind::linux_print);
+#else
             static_cast<void>(print_image(document.output_image()));
-        } else if (command == "print-preview") {
-            finish_controls();
-            open_editor_dialog(EditorDialogKind::print_preview);
+#endif
         } else if (command == "page-setup") {
+#if defined(__linux__)
+            open_editor_dialog(EditorDialogKind::linux_page_setup);
+#else
             page_setup();
+#endif
         } else if (command == "acquire") {
             if (can_replace()) {
                 std::string path;

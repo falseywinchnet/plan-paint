@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
         std::unique_ptr<gui_forms::Window> window =
             std::make_unique<gui_forms::Window>(editor, gui_forms::Size{1280, 820});
         gui_forms::ApplicationWindowOptions options;
-        options.title = "Rainstar Paint — GUI.Forms port";
+        options.title = "Rainstar Paint";
         options.initial_size = {1280, 820};
         options.minimum_size = {1280, 600};
         options.print_metrics_on_close = false;

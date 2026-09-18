@@ -11,94 +11,55 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  windows:
-    runs-on: windows-2022
-    env:
-      VCPKG_BINARY_SOURCES: clear;files,C:/vcpkg-binary-cache,readwrite
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache/restore@v4
-        id: vcpkg
-        with:
-          path: C:/vcpkg-binary-cache
-          key: vcpkg-windows-static-2026-09-17-atlas
-          restore-keys: vcpkg-windows-static-2026-09-17
-      - name: Install native dependencies
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force C:/vcpkg-binary-cache | Out-Null
-          vcpkg install sdl3:x64-windows-static tiff:x64-windows-static libwebp:x64-windows-static dav1d:x64-windows-static
-      - uses: actions/cache/save@v4
-        if: steps.vcpkg.outputs.cache-hit != 'true'
-        with:
-          path: C:/vcpkg-binary-cache
-          key: vcpkg-windows-static-2026-09-17-atlas
-      - name: Configure
-        shell: pwsh
-        run: cmake -S . -B build -T ClangCL -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DRAINSTAR_COMPILER_REPORTS=ON -DRAINSTAR_BENCHMARKS=ON
-      - name: Compile and test
-        shell: pwsh
-        run: |
-          cmake --build build --config Release --parallel 4
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          ctest --test-dir build -C Release --output-on-failure
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python scripts/check-style.py
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $paintProcess = Start-Process -FilePath build/Release/rainstar-paint.exe -ArgumentList '--demo', '--screenshot', "$env:TEMP/rainstar-windows.png" -Wait -PassThru
-          if ($paintProcess.ExitCode -ne 0) { exit $paintProcess.ExitCode }
-          if (!(Test-Path "$env:TEMP/rainstar-windows.png")) { throw "GUI startup did not produce a screenshot" }
-          foreach ($mode in @('text', 'materials', 'pointed', 'geometry', 'atlas', 'path', 'curves')) {
-            $testProcess = Start-Process -FilePath build/Release/paint-ui-tests.exe -ArgumentList "--$mode-render-test", "$env:TEMP/rainstar-$mode.png" -Wait -PassThru
-            if ($testProcess.ExitCode -ne 0) { exit $testProcess.ExitCode }
-          }
-      - name: Package portable folder
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force dist/RainstarPaint | Out-Null
-          Copy-Item build/Release/rainstar-paint.exe dist/RainstarPaint/
-          Copy-Item LICENSE,THIRD_PARTY_NOTICES.md dist/RainstarPaint/
-          Copy-Item packaging/README.txt dist/RainstarPaint/README.txt
-          Copy-Item -Recurse packaging/licenses dist/RainstarPaint/
-          Get-ChildItem C:/vcpkg/installed/x64-windows-static/share/*/copyright | ForEach-Object {
-            Copy-Item $_.FullName ("dist/RainstarPaint/licenses/" + $_.Directory.Name + "-copyright.txt")
-          }
-          $version = python scripts/release_version.py
-          Compress-Archive -Path dist/RainstarPaint -DestinationPath "dist/rainstar-paint-$version-windows-x64.zip"
-          Copy-Item "$env:TEMP/rainstar-*.png*" dist/
-      - uses: actions/upload-artifact@v4
-        with:
-          name: rainstar-paint-windows-x64
-          path: |
-            dist/*.zip
-            dist/rainstar-*.png*
-            build/compiler-reports/*.asm
-            build/**/*.s
   linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Install native dependencies
-        run: sudo apt-get update && sudo apt-get install -y libtiff-dev libwebp-dev libdav1d-dev libgtk-3-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libxtst-dev libwayland-dev libxkbcommon-dev libasound2-dev libpulse-dev libdbus-1-dev libudev-dev libgl1-mesa-dev libegl1-mesa-dev xvfb
-      - name: Configure and compile
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DRAINSTAR_SYSTEM_SDL=OFF -DRAINSTAR_BUNDLED_TIFF=ON -DRAINSTAR_COMPILER_REPORTS=ON -DRAINSTAR_BENCHMARKS=ON && cmake --build build --parallel 4
-      - name: Test core and graphical startup
+      - name: Fetch verified GUI.Forms source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/fetch-gui-forms.py --github-cli
+      - name: Build and verify the musl package on Linux x64
+        run: docker run --rm -v "$PWD:/work" -w /work alpine:3.24.2 sh scripts/ci-linux.sh
+      - name: Launch the package on the glibc host
         run: |
-          ctest --test-dir build --output-on-failure
-          python3 scripts/check-style.py
-          xvfb-run -a build/rainstar-paint --demo --screenshot /tmp/rainstar-linux.png
-          for mode in text materials pointed geometry atlas path curves; do
-            xvfb-run -a build/paint-ui-tests --"$mode"-render-test /tmp/rainstar-"$mode".png
-          done
-      - name: Package portable folder
-        run: |
-          python3 scripts/package-linux.py
-          xvfb-run -a 'dist/RainstarPaint/Rainstar Paint' --demo --screenshot /tmp/rainstar-linux-portable.png
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+          test ! -e /lib/ld-musl-x86_64.so.1
+          set +e
+          xvfb-run -a timeout 3 'dist/RainstarPaint/Rainstar Paint'
+          result=$?
+          set -e
+          test "$result" = 124
+          GUI_FORMS_FONT_DIR="$PWD/dist/RainstarPaint/bin/fonts" xvfb-run -a \
+            "$PWD/dist/RainstarPaint/lib/ld-musl-x86_64.so.1" \
+            --library-path "$PWD/dist/RainstarPaint/lib" "$PWD/build-linux/paint-forms-native-tests"
       - uses: actions/upload-artifact@v4
         with:
           name: rainstar-paint-linux-x64
-          path: |
-            dist/*.tar.gz
-            /tmp/rainstar-*.png*
-            build/compiler-reports/*.txt
-            build/CMakeFiles/paint_core.dir/src/*.s
+          path: dist/*.tar.gz
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch verified GUI.Forms source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/fetch-gui-forms.py --github-cli
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja mingw-w64-x86_64-python
+            mingw-w64-x86_64-pkgconf mingw-w64-x86_64-libtiff
+            mingw-w64-x86_64-libwebp mingw-w64-x86_64-dav1d
+            git
+      - name: Build, run native checks and package
+        shell: msys2 {0}
+        run: sh scripts/ci-windows.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rainstar-paint-windows-x64
+          path: dist/*.zip

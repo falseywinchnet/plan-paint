@@ -22,16 +22,16 @@ def dependencies(path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--build")
-    parser.add_argument("--frontend", choices=("legacy", "forms"), default="legacy")
+    parser.add_argument("--frontend", choices=("legacy", "forms"), default="forms")
     parser.add_argument("--output")
     parser.add_argument("--gui-forms-sdk", type=Path)
     parser.add_argument("--version", default=project_version())
     args = parser.parse_args()
     forms = args.frontend == "forms"
     build = args.build or ("build-forms" if forms else "build")
-    distribution = ROOT / (args.output or ("dist/gui-forms" if forms else "dist"))
+    distribution = ROOT / (args.output or "dist")
     distribution.mkdir(parents=True, exist_ok=True)
-    app = distribution / ("Rainstar Paint GUI.Forms.app" if forms else "Rainstar Paint.app")
+    app = distribution / "Rainstar Paint.app"
     if app.exists():
         shutil.rmtree(app)
     binary_name = "rainstar-paint-forms" if forms else "rainstar-paint"
@@ -68,8 +68,8 @@ def main():
         if sdk_notices.is_dir():
             shutil.copytree(sdk_notices, notices / "GUIForms", dirs_exist_ok=True)
         (resources / "README-GUIForms.txt").write_text(
-            "Rainstar Paint — GUI.Forms development build\n\n"
-            "This application is a local preview of the native GUI.Forms port.\n"
+            "Rainstar Paint\n\n"
+            "The application uses the native GUI.Forms interface.\n"
             "It includes its toolkit, codec libraries, and fonts.\n"
             "The signature is ad hoc, not Developer ID notarized.\n"
             "Author: Astra\nSponsor: Rainstar\n", encoding="utf-8")
@@ -142,9 +142,9 @@ def main():
     run(["codesign", "--force", "--deep", "--sign", "-", str(app)])
     run(["codesign", "--verify", "--deep", "--strict", str(app)])
     architecture = run(["uname", "-m"])
-    package_name = "rainstar-paint-gui-forms" if forms else "rainstar-paint"
+    package_name = "rainstar-paint"
     package = distribution / f"{package_name}-{args.version}-macos-{architecture}.pkg"
-    run(["pkgbuild", "--component", str(app), "--install-location", "/Applications", "--identifier", "org.rainstar.paint.forms" if forms else "org.rainstar.paint", "--version", args.version, str(package)])
+    run(["pkgbuild", "--component", str(app), "--install-location", "/Applications", "--identifier", "org.rainstar.paint", "--version", args.version, str(package)])
     (distribution / "macos-bundle-receipt.json").write_text(json.dumps({"package": package.name, "architecture": architecture, "dependencies": bundled, "signature": "ad-hoc; not Developer ID notarized"}, indent=2) + "\n")
     print(package)
 

@@ -2,8 +2,12 @@ Rainstar Paint
 ==============
 
 Windows: extract the complete folder, then open rainstar-paint.exe.
-Linux: extract the complete folder, then open Rainstar Paint. A graphical
-Ubuntu 22.04-or-newer desktop with GTK 3 is required.
+Linux: choose the archive matching your CPU, extract the complete folder,
+then open Rainstar Paint. An X11 desktop, including dwm, or a Wayland desktop
+with XWayland is required. The folder includes its loader, libraries and fonts;
+startup does not download or install packages. Keep the complete folder together.
+Printer/scanner actions use the desktop's configured CUPS or acquisition service.
+macOS: run the installer, then open Rainstar Paint from Applications.
 
 Press F1 for the drawing guide and keyboard shortcuts.
 

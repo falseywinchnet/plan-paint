@@ -42,8 +42,8 @@ target_include_directories(paint_forms PUBLIC src)
 add_executable(rainstar-paint-forms MACOSX_BUNDLE src/forms/main.cpp)
 target_link_libraries(rainstar-paint-forms PRIVATE paint_forms)
 set_target_properties(rainstar-paint-forms PROPERTIES
-  MACOSX_BUNDLE_BUNDLE_NAME "Rainstar Paint GUI.Forms"
-  MACOSX_BUNDLE_GUI_IDENTIFIER "org.rainstar.paint.forms"
+  MACOSX_BUNDLE_BUNDLE_NAME "Rainstar Paint"
+  MACOSX_BUNDLE_GUI_IDENTIFIER "org.rainstar.paint"
   MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
   MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
 if(APPLE)
@@ -59,8 +59,25 @@ if(APPLE)
 endif()
 if(WIN32)
   target_sources(paint_forms PRIVATE src/print_windows.cpp src/desktop_windows.cpp)
+  target_sources(rainstar-paint-forms PRIVATE packaging/windows.rc)
+  target_include_directories(rainstar-paint-forms PRIVATE assets)
+  set_target_properties(rainstar-paint-forms PROPERTIES WIN32_EXECUTABLE TRUE)
+  if(MSVC)
+    target_link_options(rainstar-paint-forms PRIVATE /ENTRY:mainCRTStartup)
+  endif()
   target_link_libraries(paint_forms PRIVATE comdlg32 gdi32 ole32 oleaut32)
   target_compile_definitions(paint_forms PRIVATE RAINSTAR_FORMS_NATIVE_PRINT=1)
+endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_sources(paint_forms PRIVATE src/forms/linux_desktop.cpp)
+  target_compile_definitions(paint_forms PRIVATE RAINSTAR_FORMS_NATIVE_PRINT=1)
+  add_executable(paint-linux-print-tests tests/linux_print.cpp)
+  target_link_libraries(paint-linux-print-tests PRIVATE paint_forms)
+  find_program(RAINSTAR_GHOSTSCRIPT gs)
+  find_package(Python3 COMPONENTS Interpreter QUIET)
+  if(RAINSTAR_GHOSTSCRIPT AND Python3_Interpreter_FOUND)
+    add_test(NAME paint-linux-print COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/linux_print_render.py" "$<TARGET_FILE:paint-linux-print-tests>" "${RAINSTAR_GHOSTSCRIPT}")
+  endif()
 endif()
 if(NOT MSVC)
   target_compile_options(paint_forms PRIVATE -Wall -Wextra -Wpedantic)
@@ -69,7 +86,7 @@ add_executable(paint-forms-tests tests/forms_tests.cpp)
 target_link_libraries(paint-forms-tests PRIVATE paint_forms)
 add_test(NAME paint-forms COMMAND paint-forms-tests)
 install(TARGETS rainstar-paint-forms BUNDLE DESTINATION . RUNTIME DESTINATION .)
-if(APPLE OR WIN32)
+if(APPLE OR WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_executable(paint-forms-native-tests MACOSX_BUNDLE tests/forms_native.cpp)
   target_link_libraries(paint-forms-native-tests PRIVATE paint_forms)
   if(APPLE)
@@ -77,12 +94,23 @@ if(APPLE OR WIN32)
     set_target_properties(paint-forms-native-tests PROPERTIES
       MACOSX_BUNDLE_GUI_IDENTIFIER "org.rainstar.paint.forms.validation")
   endif()
-  if(WIN32)
-    foreach(forms_target IN ITEMS rainstar-paint-forms paint-forms-native-tests paint-forms-tests)
-      add_custom_command(TARGET ${forms_target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${GUIForms_FONT_DIR}" "$<TARGET_FILE_DIR:${forms_target}>/fonts"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GUIForms::Application>" "$<TARGET_FILE_DIR:${forms_target}>"
+  if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # One producer owns the shared runtime directory even under parallel builds.
+    set(forms_runtime_stamp "${CMAKE_CURRENT_BINARY_DIR}/forms-runtime.stamp")
+    file(GLOB forms_runtime_fonts CONFIGURE_DEPENDS "${GUIForms_FONT_DIR}/*")
+    add_custom_command(OUTPUT "${forms_runtime_stamp}"
+      COMMAND ${CMAKE_COMMAND} -E copy_directory "${GUIForms_FONT_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/fonts"
+      COMMAND ${CMAKE_COMMAND} -E touch "${forms_runtime_stamp}"
+      DEPENDS ${forms_runtime_fonts}
+      VERBATIM)
+    add_custom_target(paint-forms-runtime DEPENDS "${forms_runtime_stamp}")
+    if(WIN32)
+      add_custom_command(TARGET paint-forms-runtime POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GUIForms::Application>" "${CMAKE_CURRENT_BINARY_DIR}"
         VERBATIM)
+    endif()
+    foreach(forms_target IN ITEMS rainstar-paint-forms paint-forms-native-tests paint-forms-tests)
+      add_dependencies(${forms_target} paint-forms-runtime)
     endforeach()
   endif()
   add_test(NAME paint-forms-native COMMAND paint-forms-native-tests)

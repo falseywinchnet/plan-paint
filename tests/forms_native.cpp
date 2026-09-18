@@ -2,6 +2,9 @@
 #include <functional>
 #include <iostream>
 #include <stdexcept>
+#ifdef _WIN32
+#include <gui_forms/platform/windows_host.hpp>
+#endif
 namespace {
 namespace gf = gui_forms;
 struct NativeExercise {
@@ -64,6 +67,21 @@ struct NativeExercise {
         }
     }
 };
+#ifdef _WIN32
+// The interactive fixture exposes the existing host automation transport so
+// platform checks can capture the exact CPU surface and route real host input.
+struct WindowsFixtureReady {
+    NativeExercise* exercise;
+    gf::Window* window;
+    void operator()(std::function<void()>, std::function<void()>,
+                    std::function<gf::HostDialogResult(const gf::HostDialogRequest&)>,
+                    std::function<gf::HostServiceStatus(const gf::HostTooltipRequest&)>,
+                    std::function<void()>, std::function<gf::HostClipboardTextResult()>,
+                    std::function<gf::HostServiceStatus(std::string_view)>) const {
+        (*exercise).ready(*window, {});
+    }
+};
+#endif
 } // namespace
 int main(int argc, char**) {
     try {
@@ -77,6 +95,19 @@ int main(int argc, char**) {
         options.print_metrics_on_close = false;
         options.ready = std::bind(&NativeExercise::ready, std::ref(exercise), std::placeholders::_1,
                                   std::placeholders::_2);
+#ifdef _WIN32
+        if (exercise.keep_open) {
+            std::unique_ptr<gf::Window> window =
+                std::make_unique<gf::Window>(exercise.editor, options.initial_size);
+            gf::host::WindowsHostOptions host_options;
+            host_options.title = options.title;
+            host_options.initial_size = options.initial_size;
+            host_options.minimum_size = options.minimum_size;
+            host_options.automation_enabled = true;
+            host_options.host_ready = WindowsFixtureReady{&exercise, window.get()};
+            return gf::host::run_windows(std::move(window), std::move(host_options));
+        }
+#endif
         gf::ApplicationResult result = gf::Application::run(
             std::make_unique<gf::Window>(exercise.editor, options.initial_size), std::move(options));
         if (result.callback_exception) {

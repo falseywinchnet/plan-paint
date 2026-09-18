@@ -3,6 +3,9 @@
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
 #include "forms/ribbon.hpp"
+#if defined(__linux__)
+#include "forms/linux_desktop.hpp"
+#endif
 #include <algorithm>
 #include <cmath>
 #include <gui_forms/delegate.hpp>
@@ -225,6 +228,45 @@ void EditorDialog::initialize_control_tree() {
         scale_ = gf::make_control<gf::CheckBox>(gf::StableId("properties-monochrome"),
                                                 "Convert to black and white");
         put(scale_, {24, 210, 410, 28});
+#if defined(__linux__)
+    } else if (kind_ == EditorDialogKind::linux_print || kind_ == EditorDialogKind::linux_page_setup) {
+        panel_ = {0, 0, 580, 390};
+        const LinuxPrintSettings& settings = linux_print_settings();
+        label("paper-hint", "Paper size and margins in millimetres. The image is centered to fit.",
+              {20, 45, 540, 28});
+        label("paper-width-label", "Width", {20, 90, 140, 28});
+        label("paper-height-label", "Height", {20, 130, 140, 28});
+        label("paper-margin-label", "Margin", {20, 170, 140, 28});
+        atlas_numbers_.push_back(number("paper-width", {170, 90, 140, 30}, 25, 2000, settings.width_mm, 1));
+        atlas_numbers_.push_back(
+            number("paper-height", {170, 130, 140, 30}, 25, 2000, settings.height_mm, 1));
+        atlas_numbers_.push_back(number("paper-margin", {170, 170, 140, 30}, 0, 200, settings.margin_mm, 1));
+        button("paper-a4", "A4", {350, 90, 90, 30});
+        button("paper-letter", "Letter", {450, 90, 90, 30});
+        button("paper-rotate", "Swap orientation", {350, 130, 190, 30});
+        if (kind_ == EditorDialogKind::linux_print) {
+            label("printer-label", "Printer", {20, 214, 140, 28});
+            printer_ = gf::make_control<gf::ComboBox>(gf::StableId("print-printer"));
+            std::vector<std::string> names;
+            try {
+                names = linux_printers();
+            } catch (const std::exception&) {
+            }
+            names.insert(names.begin(), "Default printer");
+            std::size_t selected = 0;
+            for (std::size_t i = 1; i < names.size(); ++i) {
+                if (names[i] == settings.printer) {
+                    selected = i;
+                }
+            }
+            (*printer_).set_items(std::move(names));
+            (*printer_).set_selected_index(selected);
+            put(printer_, {170, 214, 370, 30});
+            label("copies-label", "Copies", {20, 258, 140, 28});
+            atlas_numbers_.push_back(number("print-copies", {170, 258, 140, 30}, 1, 999, settings.copies));
+            label("printer-hint", "Blank uses the CUPS default printer.", {320, 258, 230, 28});
+        }
+#endif
     } else if (kind_ == EditorDialogKind::print_preview) {
         panel_ = {0, 0, 860, 650};
         label("print-preview-hint", "Fit preview. Use Page setup to choose the paper and orientation.",
@@ -330,10 +372,12 @@ void EditorDialog::initialize_control_tree() {
     (*error_).set_text_wrapping(gf::TextWrapping::word);
     put(error_, {20, panel_.height - (kind_ == EditorDialogKind::color ? 74 : 86), panel_.width - 40,
                  kind_ == EditorDialogKind::color ? 25.0 : 36.0});
-    std::shared_ptr<gf::Button> ok = button(
-        "dialog-ok",
-        kind_ == EditorDialogKind::atlas_gallery || kind_ == EditorDialogKind::print_preview ? "Close" : "OK",
-        {panel_.width - 212, panel_.height - 41, 90, 28});
+    std::shared_ptr<gf::Button> ok =
+        button("dialog-ok",
+               kind_ == EditorDialogKind::atlas_gallery || kind_ == EditorDialogKind::print_preview ? "Close"
+               : kind_ == EditorDialogKind::linux_print                                             ? "Print"
+                                                                                                    : "OK",
+               {panel_.width - 212, panel_.height - 41, 90, 28});
     (*ok).set_default_button(true);
     if (kind_ == EditorDialogKind::atlas_grid) {
         atlas_changed(0);
@@ -423,6 +467,10 @@ std::string EditorDialog::title() const {
         return "Image properties";
     case EditorDialogKind::print_preview:
         return "Print preview";
+    case EditorDialogKind::linux_print:
+        return "Print";
+    case EditorDialogKind::linux_page_setup:
+        return "Page setup";
     }
     return "";
 }
@@ -554,6 +602,13 @@ void EditorDialog::height_changed(double value) {
 }
 void EditorDialog::clicked(gf::ButtonBase& control) {
     std::string id(control.stable_id().value());
+    if (id == "paper-a4" || id == "paper-letter" || id == "paper-rotate") {
+        const double width = (*atlas_numbers_[0]).value();
+        const double height = (*atlas_numbers_[1]).value();
+        (*atlas_numbers_[0]).set_value(id == "paper-a4" ? 210 : id == "paper-letter" ? 215.9 : height);
+        (*atlas_numbers_[1]).set_value(id == "paper-a4" ? 297 : id == "paper-letter" ? 279.4 : width);
+        return;
+    }
     if (id == "preview-print" || id == "preview-page-setup") {
         std::shared_ptr<Editor> editor = editor_.lock();
         if (editor) {
@@ -649,6 +704,24 @@ void EditorDialog::accept() {
                 }
             }
             (*editor).jpeg_quality = static_cast<int>((*atlas_numbers_[2]).value());
+#if defined(__linux__)
+        } else if (kind_ == EditorDialogKind::linux_print || kind_ == EditorDialogKind::linux_page_setup) {
+            LinuxPrintSettings settings = linux_print_settings();
+            settings.width_mm = (*atlas_numbers_[0]).value();
+            settings.height_mm = (*atlas_numbers_[1]).value();
+            settings.margin_mm = (*atlas_numbers_[2]).value();
+            if (2 * settings.margin_mm >= std::min(settings.width_mm, settings.height_mm)) {
+                throw std::runtime_error("The margins must leave room for the picture.");
+            }
+            if (kind_ == EditorDialogKind::linux_print) {
+                settings.printer = (*printer_).selected_index().value_or(0) == 0
+                                       ? ""
+                                       : std::string((*printer_).selected_text());
+                settings.copies = static_cast<int>((*atlas_numbers_[3]).value());
+                linux_print_image((*editor).document.output_image(), settings);
+            }
+            linux_print_settings() = settings;
+#endif
         } else if (kind_ == EditorDialogKind::print_preview) {
             // Preview is read-only.
         } else if (kind_ == EditorDialogKind::atlas_gallery) {
