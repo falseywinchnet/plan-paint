@@ -12,7 +12,7 @@ bool Document::dirty() const {
 std::size_t Snapshot::bytes() const {
     // Counting shared bases conservatively keeps the history bound predictable.
     return image.pixels.size() * sizeof(Color) + atlas.bytes() + path.nodes.size() * sizeof(Point) +
-           (path.base ? (*path.base).pixels.size() * sizeof(Color) : 0) +
+           path.runs.size() * sizeof(PathRun) + (path.base ? (*path.base).pixels.size() * sizeof(Color) : 0) +
            (curve.base ? (*curve.base).pixels.size() * sizeof(Color) : 0);
 }
 void Document::checkpoint() {
@@ -292,6 +292,25 @@ void Document::invert_colors() {
         pixel.b = 255 - pixel.b;
     }
 }
+Ink Document::primary_ink() const {
+    Ink result = ink;
+    if (alt_ink.pattern == Pattern::None) {
+        result.secondary.a = 0;
+    }
+    return result;
+}
+Ink Document::alternate_ink() const {
+    Ink result = alt_ink;
+    result.primary = ink.secondary;
+    result.secondary = ink.primary;
+    if (ink.pattern == Pattern::None) {
+        result.secondary.a = 0;
+    }
+    result.brush = shape_fill_brush;
+    result.size = ink.size;
+    result.smooth = ink.smooth;
+    return result;
+}
 void Document::commit_path() {
     sync_path();
     path = {};
@@ -308,6 +327,7 @@ void Document::restore_path(const EditablePath& previous) {
     path = previous;
     if (!path.nodes.empty()) {
         ink = path.ink;
+        alt_ink = path.alternate;
         shape_outline = path.outline;
         shape_fill = path.fill;
         continuous_path = path.continuous;
@@ -321,8 +341,10 @@ void Document::add_path_node(Point point) {
     }
     sync_path();
     checkpoint();
-    if (!path.extending) {
+    if (!path.base) {
         path.base = std::make_shared<const Image>(image);
+    }
+    if (!path.extending) {
         path.start = path.nodes.size();
     }
     path.nodes.push_back(point);
@@ -330,32 +352,67 @@ void Document::add_path_node(Point point) {
     sync_path();
 }
 void Document::end_path_geometry() {
+    if (!path.extending) {
+        return;
+    }
     sync_path();
+    path.runs.push_back({path.start, path.nodes.size() - path.start, path.ink, path.alternate, path.outline,
+                         path.fill, path.continuous, path.fill_brush});
     path.extending = false;
 }
+void Document::move_path_node(std::size_t index, Point point) {
+    if (index >= path.nodes.size()) {
+        return;
+    }
+    Point previous = path.nodes[index];
+    // Snapped nodes are one junction: all connected runs follow its movement.
+    for (Point& node : path.nodes) {
+        if (node.x == previous.x && node.y == previous.y) {
+            node = point;
+        }
+    }
+    sync_path();
+}
 Image Document::path_image(const Point* next) const {
-    if (!path.extending || !path.base) {
+    if (!path.base) {
         return image;
     }
     Image result = *path.base;
-    std::vector<Point> run(path.nodes.begin() + path.start, path.nodes.end());
-    if (next) {
-        run.push_back(*next);
+    for (const PathRun& saved : path.runs) {
+        std::vector<Point> run(path.nodes.begin() + saved.start,
+                               path.nodes.begin() + saved.start + saved.count);
+        Ink material = saved.ink;
+        if (saved.alternate.pattern == Pattern::None) {
+            material.secondary.a = 0;
+        }
+        polygon(result, run, material, saved.outline, saved.fill, !saved.continuous, saved.fill_brush,
+                &saved.alternate);
     }
-    if (run.size() > 1) {
-        polygon(result, run, ink, shape_outline, shape_fill, !continuous_path, shape_fill_brush);
+    if (path.extending) {
+        std::vector<Point> run(path.nodes.begin() + path.start, path.nodes.end());
+        if (next) {
+            run.push_back(*next);
+        }
+        if (run.size() > 1) {
+            Ink alternate = alternate_ink();
+            polygon(result, run, primary_ink(), shape_outline, shape_fill, !continuous_path, shape_fill_brush,
+                    &alternate);
+        }
     }
     return result;
 }
 void Document::sync_path() {
-    if (!path.extending) {
+    if (!path.base) {
         return;
     }
-    path.ink = ink;
-    path.outline = shape_outline;
-    path.fill = shape_fill;
-    path.continuous = continuous_path;
-    path.fill_brush = shape_fill_brush;
+    if (path.extending) {
+        path.ink = ink;
+        path.alternate = alternate_ink();
+        path.outline = shape_outline;
+        path.fill = shape_fill;
+        path.continuous = continuous_path;
+        path.fill_brush = shape_fill_brush;
+    }
     Image rendered = path_image();
     if (!std::equal(image.pixels.begin(), image.pixels.end(), rendered.pixels.begin(), rendered.pixels.end(),
                     equal)) {

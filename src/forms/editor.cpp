@@ -192,21 +192,24 @@ void Editor::rebuild_file_menu() {
     items.push_back(std::move(wallpaper));
 #endif
     items.push_back(menu_item("properties", "Properties…"));
+    items.push_back(menu_item("settings", "Settings…"));
     items.push_back(menu_item("about", "About Rainstar Paint"));
     items.push_back(menu_item("quit", "Exit"));
     (*menu_).set_items({{"file", "File", std::move(items)}});
 }
 void Editor::arrange(gf::Rect bounds) {
     arrange_self(bounds);
-    set_child_layout(ribbon_, {0, 0, bounds.width, 143});
+    double ribbon_height = (*ribbon_).ribbon_height();
+    set_child_layout(ribbon_, {0, 0, bounds.width, ribbon_height});
     set_child_layout(menu_, {0, 0, 56, 27});
     double ruler = show_rulers ? 20 : 0;
     double footer = show_status ? 30 : 0;
     double sidebar = show_help ? std::min(370.0, bounds.width * 0.38) : 0;
     (*help_).set_visible(show_help);
-    set_child_layout(help_, {bounds.width - sidebar, 143, sidebar, bounds.height - 143 - footer});
-    set_child_layout(canvas_, {ruler, 143 + ruler, bounds.width - ruler - sidebar,
-                               std::max(1.0, bounds.height - 143 - ruler - footer)});
+    set_child_layout(
+        help_, {bounds.width - sidebar, ribbon_height, sidebar, bounds.height - ribbon_height - footer});
+    set_child_layout(canvas_, {ruler, ribbon_height + ruler, bounds.width - ruler - sidebar,
+                               std::max(1.0, bounds.height - ribbon_height - ruler - footer)});
     for (const std::shared_ptr<gf::Control>& control : std::vector<std::shared_ptr<gf::Control>>{
              status_, cursor_status_, selection_status_, dimensions_status_, zoom_reset_, zoom_out_,
              zoom_slider_, zoom_in_}) {
@@ -226,6 +229,7 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
     gf::Rect bounds = committed_arranged_bounds();
     painter.fill_rect({0, 0, bounds.width, bounds.height}, gf::Color::rgba(232, 240, 249));
     if (show_rulers) {
+        double ribbon_height = (*ribbon_).ribbon_height();
         gf::Rect area = (*canvas_).committed_arranged_bounds();
         gui_drawing::PointF origin = (*canvas_).view_origin();
         double scale = (*canvas_).zoom();
@@ -235,8 +239,8 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
         }
         const gf::FontSpec font{gf::FontRole::control, 10, 400, false};
         const gf::Color color = gf::Color::rgba(81, 103, 127);
-        painter.fill_rect({20, 143, area.width, 20}, gf::Color::rgba(245, 248, 252));
-        painter.fill_rect({0, 163, 20, area.height}, gf::Color::rgba(245, 248, 252));
+        painter.fill_rect({20, ribbon_height, area.width, 20}, gf::Color::rgba(245, 248, 252));
+        painter.fill_rect({0, (ribbon_height + 20), 20, area.height}, gf::Color::rgba(245, 248, 252));
         for (int axis = 0; axis < 2; ++axis) {
             double start = axis == 0 ? origin.x : origin.y;
             double length = axis == 0 ? area.width : area.height;
@@ -245,24 +249,27 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
                 double position = (value - start) * scale;
                 bool major = std::abs(value / step - std::round(value / step)) < 0.001;
                 if (axis == 0) {
-                    painter.draw_line({20 + position, 163}, {20 + position, major ? 155.0 : 159.0}, color, 1);
+                    painter.draw_line({20 + position, (ribbon_height + 20)},
+                                      {20 + position, major ? (ribbon_height + 12) : (ribbon_height + 16)},
+                                      color, 1);
                     if (major) {
-                        painter.draw_text_utf8({23 + position, 153},
+                        painter.draw_text_utf8({23 + position, (ribbon_height + 10)},
                                                std::to_string(static_cast<int>(std::round(value))), font,
                                                color);
                     }
                 } else {
-                    painter.draw_line({20, 163 + position}, {major ? 12.0 : 16.0, 163 + position}, color, 1);
+                    painter.draw_line({20, (ribbon_height + 20) + position},
+                                      {major ? 12.0 : 16.0, (ribbon_height + 20) + position}, color, 1);
                     if (major) {
-                        painter.draw_text_utf8({1, 160 + position},
+                        painter.draw_text_utf8({1, ribbon_height + 17 + position},
                                                std::to_string(static_cast<int>(std::round(value))), font,
                                                color);
                     }
                 }
             }
         }
-        painter.draw_line({20, 143}, {20, 163 + area.height}, color, 1);
-        painter.draw_line({0, 163}, {20 + area.width, 163}, color, 1);
+        painter.draw_line({20, ribbon_height}, {20, (ribbon_height + 20) + area.height}, color, 1);
+        painter.draw_line({0, (ribbon_height + 20)}, {20 + area.width, (ribbon_height + 20)}, color, 1);
     }
     if (!show_status) {
         return;
@@ -393,20 +400,25 @@ void Editor::close_help(gf::ButtonBase&) {
         execute("help");
     }
 }
-Point Editor::snap_path_point(Point point) const {
+int Editor::hit_path_node(Point point) const {
     double nearest = 12;
-    Point snapped = point;
-    for (Point node : document.path.nodes) {
+    int result = -1;
+    for (std::size_t index = 0; index < document.path.nodes.size(); ++index) {
+        Point node = document.path.nodes[index];
         double distance = std::hypot(node.x - point.x, node.y - point.y) * (*canvas_).zoom();
         if (distance < nearest) {
             nearest = distance;
-            snapped = node;
+            result = static_cast<int>(index);
         }
     }
-    return snapped;
+    return result;
+}
+Point Editor::snap_path_point(Point point) const {
+    int index = hit_path_node(point);
+    return index < 0 ? point : document.path.nodes[static_cast<std::size_t>(index)];
 }
 bool Editor::path_preview_point(Point& point) const {
-    if (document.tool != Tool::Path || !document.path.extending || !cursor_client_) {
+    if (document.tool != Tool::Path || !document.path.extending || path_node_ >= 0 || !cursor_client_) {
         return false;
     }
     gui_drawing::PointF mapped = (*canvas_).client_to_bitmap(*cursor_client_);
@@ -414,7 +426,14 @@ bool Editor::path_preview_point(Point& point) const {
                                  static_cast<int>(std::floor(mapped.y)))) {
         return false;
     }
-    point = snap_path_point({mapped.x, mapped.y});
+    point = {mapped.x, mapped.y};
+    // Clicking a retained junction starts a new run there; it must not preview
+    // a closing segment that will never be committed.
+    if (document.continuous_path && hit_path_node(point) >= 0 &&
+        document.path.nodes.size() - document.path.start > 1) {
+        return false;
+    }
+    point = snap_path_point(point);
     return true;
 }
 void Editor::publish_path_preview() {
@@ -479,7 +498,10 @@ void Editor::update_status() {
         .set_text(std::to_string(document.image.width) + " × " + std::to_string(document.image.height) +
                   " px");
     std::string selection;
-    if (document.selection.active) {
+    if (resize_handle_ >= 0 && resize_selection_) {
+        selection =
+            std::to_string(resize_preview_.w) + " × " + std::to_string(resize_preview_.h) + " px selected";
+    } else if (document.selection.active) {
         selection = std::to_string(document.selection.image.width) + " × " +
                     std::to_string(document.selection.image.height) + " px selected";
     } else if (dragging_ && (document.tool == Tool::Select || document.tool == Tool::Lasso)) {
@@ -522,6 +544,7 @@ void Editor::release_gesture() {
     moving_selection_ = false;
     preview_active_ = false;
     curve_handle_ = -1;
+    path_node_ = -1;
     resize_handle_ = -1;
     lasso_.clear();
     eraser_.clear();
@@ -552,6 +575,7 @@ void Editor::choose_tool(Tool tool) {
 void Editor::pointer(const gf::PointerEvent& event) {
     try {
         shift_ = gf::has_modifier(event.modifiers, gf::Modifier::shift);
+        control_ = gf::has_modifier(event.modifiers, gf::Modifier::control);
         gf::Point client = (*canvas_).point_from_window(event.position);
         gui_drawing::PointF mapped = (*canvas_).client_to_bitmap(client);
         Point point{mapped.x, mapped.y};
@@ -575,8 +599,14 @@ void Editor::pointer(const gf::PointerEvent& event) {
                 zoom(event.wheel_delta.y >= 0 ? 1.25 : 0.8, client);
             } else {
                 gui_drawing::PointF origin = (*canvas_).view_origin();
-                origin.x -= event.wheel_delta.x * 30 / (*canvas_).zoom();
-                origin.y -= event.wheel_delta.y * 30 / (*canvas_).zoom();
+                const double scale = (*canvas_).zoom();
+                const gf::Rect viewport = (*canvas_).committed_arranged_bounds();
+                const double half_width = viewport.width / (2 * scale);
+                const double half_height = viewport.height / (2 * scale);
+                origin.x = std::clamp(origin.x - event.wheel_delta.x * settings.scroll_distance / scale,
+                                      -half_width, document.image.width - half_width);
+                origin.y = std::clamp(origin.y - event.wheel_delta.y * settings.scroll_distance / scale,
+                                      -half_height, document.image.height - half_height);
                 (*canvas_).set_view_origin(origin);
                 if (warp_mode_ == WarpMode::rotation || (resize_handle_ >= 0 && resize_selection_)) {
                     update_transform_preview();
@@ -621,6 +651,17 @@ void Editor::pointer(const gf::PointerEvent& event) {
             if (event.button == gf::PointerButton::secondary &&
                 (document.tool == Tool::Path || document.tool == Tool::Stamp)) {
                 if (document.tool == Tool::Path) {
+                    int node = hit_path_node(point);
+                    if (node >= 0) {
+                        path_node_ = node;
+                        Point anchor = document.path.nodes[static_cast<std::size_t>(node)];
+                        handle_offset_ = {point.x - anchor.x, point.y - anchor.y};
+                        handle_checkpoint_ = false;
+                        dragging_ = true;
+                        (*canvas_).set_pointer_capture(true);
+                        refresh();
+                        return;
+                    }
                     document.end_path_geometry();
                 } else {
                     reset_stamp();
@@ -654,10 +695,8 @@ void Editor::pointer(const gf::PointerEvent& event) {
 }
 void Editor::begin(Point point, bool secondary) {
     start_ = last_ = current_ = point;
-    gesture_ink_ = document.ink;
-    if (secondary) {
-        std::swap(gesture_ink_.primary, gesture_ink_.secondary);
-    }
+    gesture_ink_ = secondary ? document.alternate_ink() : document.primary_ink();
+    gesture_fill_ink_ = secondary ? document.primary_ink() : document.alternate_ink();
     if (document.curve.line_set) {
         for (int index = 0; index < document.curve.geometry.handle_count(); ++index) {
             Point handle = document.curve.geometry.handle(index);
@@ -696,6 +735,9 @@ void Editor::begin(Point point, bool secondary) {
         } else {
             document.ink.primary = color;
         }
+        Ink& material = secondary ? document.alt_ink : document.ink;
+        material.pattern = Pattern::Solid;
+        material.transparent_pattern = false;
         refresh();
         return;
     }
@@ -704,7 +746,12 @@ void Editor::begin(Point point, bool secondary) {
         document.continuous_path = false;
     }
     if (document.tool == Tool::Path) {
+        int node = hit_path_node(point);
         point = snap_path_point(point);
+        if (node >= 0 && document.path.extending && document.continuous_path &&
+            document.path.nodes.size() - document.path.start > 1) {
+            document.end_path_geometry();
+        }
         document.add_path_node(point);
         if (!document.continuous_path && document.path.nodes.size() - document.path.start > 2 &&
             point.x == document.path.nodes[document.path.start].x &&
@@ -716,8 +763,7 @@ void Editor::begin(Point point, bool secondary) {
     }
     if (document.tool == Tool::Stamp) {
         document.commit_selection();
-        bool loaded = !document.stamp.pixels.empty() && !stamp_pending_ &&
-                      !stamp_preview_.pixels.empty();
+        bool loaded = !document.stamp.pixels.empty() && !stamp_pending_ && !stamp_preview_.pixels.empty();
         stamp_at(point);
         if (loaded) {
             dragging_ = true;
@@ -760,7 +806,8 @@ void Editor::begin(Point point, bool secondary) {
     move(point);
 }
 void Editor::move(Point point) {
-    if (shift_ && document.tool == Tool::Shape && curve_handle_ < 0) {
+    if (shift_ && document.tool == Tool::Shape && curve_handle_ < 0 &&
+        !(control_ && (document.shape == Shape::Circle || document.shape == Shape::Oval))) {
         Point anchor = document.curve.base ? document.curve.geometry.start : start_;
         double dx = point.x - anchor.x, dy = point.y - anchor.y;
         if (document.shape == Shape::Line || document.shape == Shape::Bezier ||
@@ -774,7 +821,17 @@ void Editor::move(Point point) {
         }
     }
     current_ = point;
-    if (curve_handle_ >= 0) {
+    if (path_node_ >= 0) {
+        Point next{point.x - handle_offset_.x, point.y - handle_offset_.y};
+        Point before = document.path.nodes[static_cast<std::size_t>(path_node_)];
+        if (std::hypot(next.x - before.x, next.y - before.y) > 1e-9) {
+            if (!handle_checkpoint_) {
+                document.checkpoint();
+                handle_checkpoint_ = true;
+            }
+            document.move_path_node(static_cast<std::size_t>(path_node_), next);
+        }
+    } else if (curve_handle_ >= 0) {
         Point next{point.x - handle_offset_.x, point.y - handle_offset_.y};
         Point before = document.curve.geometry.handle(curve_handle_);
         if (std::hypot(next.x - before.x, next.y - before.y) > 1e-9) {
@@ -797,8 +854,14 @@ void Editor::move(Point point) {
             preview_ = document.curve_image(&point);
         } else {
             preview_ = document.image;
-            draw_shape(preview_, document.shape, start_, point, gesture_ink_, document.shape_outline,
-                       document.shape_fill, document.shape_fill_brush);
+            Point first = start_, last = point;
+            if (control_ && (document.shape == Shape::Circle || document.shape == Shape::Oval)) {
+                double radius = std::hypot(point.x - start_.x, point.y - start_.y);
+                first = {start_.x - radius, start_.y - radius};
+                last = {start_.x + radius, start_.y + radius};
+            }
+            draw_shape(preview_, document.shape, first, last, gesture_ink_, document.shape_outline,
+                       document.shape_fill, gesture_fill_ink_.brush, &gesture_fill_ink_);
         }
         preview_active_ = true;
     } else if (document.tool == Tool::Stamp) {
@@ -1164,7 +1227,9 @@ void Editor::paste() {
         Image image = load_image(files.paths_utf8.front());
         finish_controls();
         document.paste(image);
-        if (window()) static_cast<void>((*window()).request_focus(canvas_));
+        if (window()) {
+            static_cast<void>((*window()).request_focus(canvas_));
+        }
         refresh();
         return;
     }
@@ -1184,7 +1249,9 @@ void Editor::paste() {
     }
     finish_controls();
     document.paste(image);
-    if (window()) static_cast<void>((*window()).request_focus(canvas_));
+    if (window()) {
+        static_cast<void>((*window()).request_focus(canvas_));
+    }
     refresh();
 }
 void Editor::open_editor_dialog(EditorDialogKind kind, bool secondary) {
@@ -1239,14 +1306,17 @@ void Editor::on_drag(gf::DragEvent& event) {
         if (event.action == gf::DragAction::drop) {
             try {
                 Image image = load_image((*files).paths_utf8.front());
-                gui_drawing::PointF point = canvas().client_to_bitmap(canvas().point_from_window(event.position));
+                gui_drawing::PointF point =
+                    canvas().client_to_bitmap(canvas().point_from_window(event.position));
                 int x = std::clamp(static_cast<int>(std::floor(point.x)), 0,
                                    std::max(0, document.image.width - image.width));
                 int y = std::clamp(static_cast<int>(std::floor(point.y)), 0,
                                    std::max(0, document.image.height - image.height));
                 finish_controls();
                 document.paste(image, x, y);
-                if (window()) static_cast<void>((*window()).request_focus(canvas_));
+                if (window()) {
+                    static_cast<void>((*window()).request_focus(canvas_));
+                }
                 refresh();
             } catch (const std::exception& exception) {
                 error(exception.what());
@@ -1363,6 +1433,8 @@ void Editor::execute(const std::string& command) {
                     deferred_open_path = path;
                 }
             }
+        } else if (command == "settings") {
+            open_editor_dialog(EditorDialogKind::settings);
         } else if (command == "properties") {
             finish_controls();
             open_editor_dialog(EditorDialogKind::properties);
@@ -1439,6 +1511,9 @@ void Editor::execute(const std::string& command) {
             finish_controls();
             document.select_all();
             document.tool = Tool::Select;
+            if (window()) {
+                static_cast<void>((*window()).request_focus(canvas_));
+            }
         } else if (command == "invert-selection") {
             document.invert_selection();
         } else if (command == "delete") {
@@ -1489,6 +1564,8 @@ void Editor::execute(const std::string& command) {
             document.shape_outline = !document.shape_outline;
         } else if (command == "fill") {
             document.shape_fill = !document.shape_fill;
+        } else if (command == "smooth-lines") {
+            document.ink.smooth = !document.ink.smooth;
         } else if (command == "continuous-path") {
             document.continuous_path = !document.continuous_path;
         } else if (command == "transparent-pattern") {
@@ -1539,7 +1616,7 @@ void Editor::execute(const std::string& command) {
                       "This work is dedicated in gratitude for the nourishment that sustains human life, "
                       "the energy that powers our tools, and the opportunity to weave information into "
                       "works of use and beauty.\n\n"
-                      "Rainstar Paint\n\nAuthor: Astra\nSponsor: Rainstar\n\n"
+                      "Rainstar Paint " RAINSTAR_VERSION "\n\nAuthor: Astra\nSponsor: Rainstar\n\n"
                       "Copyright (c) 2026 joshuah.rainstar@gmail.com\n"
                       "Free and open source under the MIT license.\n"
                       "Anyone may use, study, change, and share this program.\n\n"

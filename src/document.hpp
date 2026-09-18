@@ -27,15 +27,24 @@ struct FloatingSelection {
     std::vector<std::uint8_t> coverage;
     std::vector<Point> outline;
 };
-// A session retains junctions from every finished run. The current run is
-// rasterized from an immutable base so translucent joins are painted only once.
+// Every run shares an immutable session background. Retained node edits replay
+// the runs in order, preserving their styles and the artwork underneath.
+struct PathRun {
+    std::size_t start = 0, count = 0;
+    Ink ink;
+    Ink alternate;
+    bool outline = true, fill = false, continuous = true;
+    Brush fill_brush = Brush::Round;
+};
 struct EditablePath {
     std::vector<Point> nodes;
+    std::vector<PathRun> runs;
     std::shared_ptr<const Image> base;
     std::size_t start = 0;
     std::uint64_t session = 0;
     bool extending = false;
     Ink ink;
+    Ink alternate;
     bool outline = true, fill = false, continuous = false;
     Brush fill_brush = Brush::Round;
 };
@@ -60,7 +69,9 @@ struct Document {
     std::uint64_t atlas_epoch = 0;
     FloatingSelection selection;
     Image stamp;
-    Ink ink;
+    Ink ink, alt_ink;
+    Ink primary_ink() const;
+    Ink alternate_ink() const;
     Tool tool = Tool::Pencil;
     Shape shape = Shape::Rectangle;
     StampShape stamp_shape = StampShape::Circle;
@@ -112,6 +123,7 @@ struct Document {
     void commit_path();
     void add_path_node(Point point);
     void end_path_geometry();
+    void move_path_node(std::size_t index, Point point);
     void sync_path();
     void restore_path(const EditablePath& previous);
     Image path_image(const Point* next = nullptr) const;

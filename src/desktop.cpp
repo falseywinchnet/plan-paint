@@ -37,6 +37,29 @@ std::string preference_directory() {
     std::filesystem::create_directories(directory);
     return path_to_utf8(directory) + std::string(1, std::filesystem::path::preferred_separator);
 }
+void EditorSettings::load() {
+    if (storage_path.empty()) {
+        return;
+    }
+    std::ifstream input(path_from_utf8(storage_path));
+    std::string magic;
+    double distance = 0;
+    if (input >> magic >> distance && magic == "RSPS1" && std::isfinite(distance) && distance >= 0.1 &&
+        distance <= 100) {
+        scroll_distance = distance;
+    }
+}
+void EditorSettings::save() const {
+    if (storage_path.empty()) {
+        return;
+    }
+    std::ofstream output(path_from_utf8(storage_path), std::ios::trunc);
+    output << "RSPS1\n" << scroll_distance << '\n';
+    output.close();
+    if (!output) {
+        throw std::runtime_error("Paint could not save its settings file.");
+    }
+}
 void RecentFiles::load() {
     paths.clear();
     if (storage_path.empty()) {

@@ -7,7 +7,8 @@ struct HelpTopic {
 };
 inline constexpr std::string_view help_welcome =
     "Hello! A picture can begin with one little mark. This guide shows you where to "
-    "click and how to try again. Close this book with the × at its upper left, or click the yellow ? button. F1 also hides or shows it.";
+    "click and how to try again. Close this book with the × at its upper left, or click the yellow ? button. "
+    "F1 also hides or shows it.";
 inline constexpr HelpTopic help_topics[] = {
     {"Atlas: sprite sheets, icons and cursors",
      "Open a sprite sheet and choose Rows and Columns. Filenames containing sprite, sheet, atlas, "
@@ -26,22 +27,26 @@ inline constexpr HelpTopic help_topics[] = {
      "Click Pencil in Home, then hold the mouse button and move it on the white paper. Let go to "
      "stop. Try Brushes for wider marks. Pick a little colored square to change your "
      "color.\n\nMade a mistake? Click the curved Undo arrow at the top. You can also hold Ctrl and "
-     "press Z. On a Mac, Command+Z works too. Redo brings a change back.",
+     "press Z. On a Mac, Command+Z works too. Redo brings a change back.\n\n"
+     "Click the selected ribbon tab to collapse it; click again or choose another tab to reopen. "
+     "Wheel and trackpad scrolling stop when the viewport center reaches a canvas edge. "
+     "File > Settings saves a scroll-distance multiplier in screen pixels, adjusted for zoom.",
      true},
     {"2. Colors, brushes and patterns",
-     "Color 1 is the color you draw with. Color 2 is the background color. Click either box, then click a "
-     "swatch. Right-clicking a swatch always picks Color 2. Drawing with the right mouse button swaps the "
-     "colors.\n\nThe swatches use the classic Microsoft Office theme and its pastel tints. Edit colors "
-     "opens a big color chooser. You can type RGB values, a six-digit hex code such as #4F81BD, or OKLab "
-     "L, a and b. L is lightness from 0 to 1. The other two numbers steer the hue. Colors outside the "
-     "screen's range are clipped to sRGB. The sixteen Custom colors boxes remember colors after Paint "
-     "closes. Click a slot, choose your color, then Add to custom colors. Click a saved box to use it "
-     "again. Original restores the color you started with; OK applies your choice and Cancel leaves "
-     "the drawing color alone.\n\nBrushes includes round, two calligraphy nibs, airbrush, oil, "
-     "crayon, marker, natural pencil, watercolor, bristles, soft pastel and charcoal. Size changes the "
-     "width. The Patterns tab is available for drawing and filling. It lets "
-     "brushes and the bucket use two-color dots, stripes, checks, bricks, woven cloth, houndstooth and "
-     "seven dither densities. Transparent second pattern color leaves those spaces untouched."},
+     "Primary and Alt each have their own color, brush and pattern. Select either box, then choose a "
+     "color or use the Materials pane to choose its brush and pattern together. Right-click a color, "
+     "brush or pattern to assign it to Alt directly. The two color boxes preview their materials. "
+     "Drawing with the right mouse button uses Alt. Choosing a new color resets that material to Solid.\n\n"
+     "No Color is the white pattern tile crossed by a red slash. It makes the selected material "
+     "transparent; use it for Alt to leave the second color of a two-color pattern untouched. "
+     "Enabled turns an outline or fill on or off. Smooth lines switches between antialiased and "
+     "crisp pixel edges. Size sets stroke width.\n\n"
+     "The twelve brushes include round, calligraphy nibs, airbrush, oil, crayon, marker, natural pencil, "
+     "watercolor, bristles, soft pastel and charcoal. Materials also offers dots, stripes, checks, "
+     "bricks, woven cloth, houndstooth and seven dither densities, plus grain, paper tooth and load.\n\n"
+     "Edit colors opens RGB, hex and OKLab controls. Custom colors remembers sixteen saved colors "
+     "between launches. Choose a slot, set its color and click Add to custom colors. OK applies the "
+     "choice; Cancel keeps the original."},
     {"3. Fill, erase, pick and magnify",
      "The bucket fills the connected patch you click. A closed outline keeps the color inside; even a "
      "tiny gap lets it reach the outside. Undo if it went farther than you wanted. Patterns use the same "
@@ -50,31 +55,33 @@ inline constexpr HelpTopic help_topics[] = {
      "touched pixel to transparency. Soft erases most strongly under the center and tapers toward the "
      "edge. "
      "Undo restores erased marks. The eyedropper picks a color from the picture.\n\nThe magnifying glass "
-     "shows a floating 4× pixel preview beside the pointer. Click to zoom in around that point; right-click zooms "
+     "shows a floating 4× pixel preview beside the pointer. Click to zoom in around that point; right-click "
+     "zooms "
      "out. "
      "The bottom slider goes up to 1600%. The pencil previews the exact pixel under its tip before you "
      "click. "
      "Hover previews and zoom do not change your saved picture."},
     {"4. Lines, curves and shapes",
      "Choose a shape in the little gallery. Hold the mouse button where it should start, drag, "
-     "then release. Outline uses Color 1; Fill uses Color 2. Their menus let you turn either part "
-     "off. Size sets outline thickness. Hold Shift for constrained lines and equal-sided "
-     "shapes.\n\nChoose Bézier or Arc. Drag the starting line, or click its two endpoints. "
+     "then release. Outline uses Primary; Fill uses Alt. Materials lets you turn either part "
+     "off. Size sets outline thickness. Hold Ctrl while drawing Circle or Oval to keep the initial "
+     "click at the center and grow the radius toward the pointer. Hold Shift for constrained lines "
+     "and equal-sided shapes.\n\nChoose Bézier or Arc. Drag the starting line, or click its two endpoints. "
      "Bézier has a draggable control handle from each endpoint; Arc has one middle handle. "
      "Keep dragging the handles until the curve is right. Undo and Redo keep the controls editable. "
      "Escape or choosing another tool releases the curve and keeps the drawing. If you only placed "
      "the first point, Escape cancels it without leaving a mark. A polygon is made "
      "by clicking corners; clicking the first corner closes it. Escape also finishes it."},
     {"5. The continuous junction path",
-     "Choose Path at the right of Home. Click to "
-     "place each corner. The next segment follows the pointer until you click. Blue dots mark the junctions; move near one to preview an exact snap. Click that dot to snap your new "
-     "segment exactly onto the old junction. You can keep drawing from there, including through "
-     "loops.\n\nRight-click ends the current run without dropping its junctions. Click an old junction "
-     "to begin a branch, or elsewhere to start a separate run. Undo removes one node and its segment "
-     "at a time; Redo restores them. The remaining junctions stay available. Saving keeps them too. "
-     "Escape or choosing another tool releases all junctions; the drawing remains, and its segments "
-     "can still be undone individually.\n\nReturning to the first point does not finish the continuous "
-     "path. The Continuous path checkbox in Path tools keeps the run open when checked; uncheck it to add a closing edge. The ordinary polygon closes when you return to the first corner of its current run."},
+     "Choose Path at the right of Home. Click to place each corner; the next segment follows the "
+     "pointer until you click. Blue dots mark editable junctions. Right-drag a dot to move it, "
+     "including every branch sharing that junction.\n\n"
+     "Click an existing junction to start another branch there. Right-click empty canvas to finish "
+     "the current run, then click elsewhere to start a separate run. Earlier runs remain visible "
+     "when new ones overlap them. Undo and Redo preserve the editable geometry. Escape or changing "
+     "tools finishes the paths and releases every node while leaving the drawing in place.\n\n"
+     "Continuous path keeps each run open. Uncheck it to add a closing edge. An ordinary polygon "
+     "closes when you click its first corner."},
     {"6. Select, move, copy and paste",
      "Select draws a rectangle around part of the picture. The little arrow beneath Select also offers "
      "Free-form selection: draw a lasso around an object. Drag inside the selected area to move it. Arrow "
@@ -82,10 +89,13 @@ inline constexpr HelpTopic help_topics[] = {
      "original. Cut removes it. Paste makes a new movable selection. Paste from opens an image file as a "
      "selection. Drag an image file from Finder or your file manager onto this window to paste it "
      "immediately. A larger pasted picture expands the canvas.\n\nTransparent selection skips pixels "
-     "exactly equal to Color 2. Crop keeps only the selected rectangle. With nothing selected, Crop first switches to Select so you can mark the area. Delete removes selected content. "
+     "exactly equal to Color 2. Crop keeps only the selected rectangle. With nothing selected, Crop first "
+     "switches to Select so you can mark the area. Delete removes selected content. Ctrl+A followed by "
+     "Delete clears the whole picture without a drag. "
      "Without a selection, Delete clears the canvas to Color 2."},
     {"7. The rubber stamp",
-     "Choose Stamp at the right of Home. Open Stamp tools and pick one of 39 masks, including stars, arrows, hearts, callouts, curves and the original circle, pill, square and rectangle. "
+     "Choose Stamp at the right of Home. Open Stamp tools and pick one of 39 masks, including stars, arrows, "
+     "hearts, callouts, curves and the original circle, pill, square and rectangle. "
      "Choose its width and height. The outline under the pointer shows what you will lift. Click once "
      "over a part of the picture to load the stamp. The original stays on the page.\n\nNow click in other "
      "places to print repeated copies, or hold and drag to scrub with the sample. R turns the stamp 15 "

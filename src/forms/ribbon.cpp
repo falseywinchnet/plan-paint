@@ -58,8 +58,7 @@ gf::SurfaceMaterial ribbon_material(bool selected, bool hot, bool pressed) {
             top = gf::Color::rgba(246, 193, 91);
             bottom = gf::Color::rgba(255, 226, 151);
         }
-        material.fills.push_back(gf::MaterialFillLayer::linear(
-            {0, 0}, {0, 1}, {{0, top}, {1, bottom}}));
+        material.fills.push_back(gf::MaterialFillLayer::linear({0, 0}, {0, 1}, {{0, top}, {1, bottom}}));
         material.border =
             gf::MaterialBorder{selected ? gf::Color::rgba(196, 147, 50) : gf::Color::rgba(219, 182, 109), 1};
         material.corner_radius = 2;
@@ -103,8 +102,7 @@ static std::shared_ptr<const gf::Theme> make_ribbon_tab_theme() {
         gf::SurfaceMaterial& material =
             tab.roles[static_cast<std::size_t>(gf::ControlVisualRole::button)].selected[state].material;
         material.fills = {gf::MaterialFillLayer::linear(
-            {0, 0}, {0, 1}, {{0, gf::Color::rgba(255, 255, 255)},
-                             {1, gf::Color::rgba(249, 252, 255)}})};
+            {0, 0}, {0, 1}, {{0, gf::Color::rgba(255, 255, 255)}, {1, gf::Color::rgba(249, 252, 255)}})};
         material.keylines.clear();
         material.keylines.push_back({gf::MaterialEdge::top, gf::Color::rgba(255, 255, 255), 1, 1});
         material.keylines.push_back({gf::MaterialEdge::bottom, gf::Color::rgba(249, 252, 255), 1, 0});
@@ -123,12 +121,63 @@ void SwatchButton::set_color(Color color) {
     color_ = color;
     invalidate(gf::Dirty::paint);
 }
+static bool same_material(const Ink& left, const Ink& right) {
+    return equal(left.primary, right.primary) && equal(left.secondary, right.secondary) &&
+           left.pattern == right.pattern && left.brush == right.brush &&
+           left.transparent_pattern == right.transparent_pattern && left.noise == right.noise &&
+           left.grain_scale == right.grain_scale && left.paper_roughness == right.paper_roughness &&
+           left.pigment_load == right.pigment_load && left.material_angle == right.material_angle &&
+           left.smooth == right.smooth;
+}
+void SwatchButton::set_material(const Ink& ink) {
+    color_ = ink.primary;
+    if (!attached_window() || (material_ink_ && same_material(*material_ink_, ink))) {
+        return;
+    }
+    material_ink_ = ink;
+    Image sample;
+    sample.reset(48, 36, {255, 255, 255, 255});
+    for (int y = 0; y < sample.height; ++y) {
+        for (int x = 0; x < sample.width; ++x) {
+            if (((x / 6) + (y / 6)) % 2) {
+                sample.set(x, y, {220, 220, 220, 255});
+            }
+        }
+    }
+    Ink fill = ink;
+    draw_shape(sample, Shape::Rectangle, {-1, -1}, {49, 37}, fill, false, true, fill.brush, &fill);
+    if (sample.pixels.size() == material_pixels_.size() &&
+        std::equal(sample.pixels.begin(), sample.pixels.end(), material_pixels_.begin(), equal)) {
+        return;
+    }
+    material_pixels_ = sample.pixels;
+    std::vector<std::uint8_t> png = encode_png(sample);
+    if (!material_preview_) {
+        material_preview_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{48, 36});
+        static_cast<void>((*material_preview_).add_png("material", std::as_bytes(std::span(png))));
+    } else {
+        static_cast<void>(
+            (*material_preview_)
+                .set_variant_png("material", gf::ImageVisualState::normal, 1, std::as_bytes(std::span(png))));
+    }
+    set_accessible_name(text() + ": " + brush_names[static_cast<int>(ink.brush)] + ", " +
+                        pattern_names[static_cast<int>(ink.pattern)]);
+    invalidate(gf::Dirty::paint);
+}
 void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
     Button::on_paint(painter, damage);
     gf::Rect bounds = committed_arranged_bounds();
     gf::Rect swatch = text().empty() ? gf::Rect{3, 3, bounds.width - 6, bounds.height - 6}
                                      : gf::Rect{9, 7, bounds.width - 18, 30};
-    painter.fill_rect(swatch, gf::Color::rgba(color_.r, color_.g, color_.b, color_.a));
+    if (material_ink_ && (*material_ink_).pattern == Pattern::None) {
+        painter.fill_rect(swatch, gf::Color::rgba(255, 255, 255));
+        painter.draw_line({swatch.x + 2, swatch.y + swatch.height - 2},
+                          {swatch.x + swatch.width - 2, swatch.y + 2}, gf::Color::rgba(210, 35, 40), 3);
+    } else if (material_preview_) {
+        painter.draw_image((*material_preview_).resolve("material").image, swatch);
+    } else {
+        painter.fill_rect(swatch, gf::Color::rgba(color_.r, color_.g, color_.b, color_.a));
+    }
     painter.stroke_rect(swatch, gf::Color::rgba(112, 132, 152), 1);
     painter.draw_line({swatch.x + 1, swatch.y + 1}, {swatch.x + swatch.width - 1, swatch.y + 1},
                       gf::Color::rgba(255, 255, 255, 120), 1);
@@ -189,7 +238,7 @@ void Ribbon::initialize_control_tree() {
     building_page_ = 0;
     button("home-tab", "Home", -1, {57, 0, 61, 27});
     button("view-tab", "View", -1, {118, 0, 63, 27});
-    button("patterns-tab", "Patterns", -1, {184, 0, 100, 27});
+    button("patterns-tab", "Materials", -1, {184, 0, 100, 27});
     button("tool-tab", "Pencil", -1, {286, 0, 142, 27});
     button("atlas-tab", "Atlas", -1, {431, 0, 72, 27});
     atlas_ = gf::make_control<AtlasPanel>(gf::StableId("atlas-panel"), editor_);
@@ -213,7 +262,7 @@ void Ribbon::initialize_control_tree() {
     button("tool-4", "", 10, {240, 80, 28, 30});
     button("tool-5", "", 11, {272, 80, 28, 30});
     button("tool-6", "", 12, {304, 80, 28, 30});
-    button("brush-menu", "Brushes", 13, {344, 34, 61, 83}, true, true);
+    button("brush-menu", "Brushes", 13, {344, 34, 61, 83}, true);
     button("tool-10", "Stamp", 20, {410, 34, 59, 83}, true, true, true);
     button("tool-9", "Path", 21, {475, 34, 58, 83}, true);
     for (std::size_t i = 0; i < std::size(home_shapes); ++i) {
@@ -221,8 +270,8 @@ void Ribbon::initialize_control_tree() {
                100 + static_cast<int>(home_shapes[i]), {546 + 25.0 * (i % 7), 36 + 25.0 * (i / 7), 25, 25});
     }
     button("shapes-menu", "", -1, {722, 36, 18, 75}, false, true);
-    button("outline-menu", "Edge", -1, {747, 39, 64, 28}, false, true);
-    button("fill-menu", "Fill", -1, {747, 79, 64, 28}, false, true);
+    button("outline-menu", "Edge", -1, {747, 39, 64, 28});
+    button("fill-menu", "Fill", -1, {747, 79, 64, 28});
     button("size-menu", "", 23, {824, 34, 48, 83}, true, true);
     primary_ = gf::make_control<SwatchButton>(gf::StableId("primary"), "Primary", Color{0, 0, 0, 255});
     secondary_ = gf::make_control<SwatchButton>(gf::StableId("secondary"), "Alt", Color{255, 255, 255, 255});
@@ -260,6 +309,11 @@ class PatternButton final : public gf::Button {
         Button::on_paint(painter, damage);
         Ink ink;
         ink.pattern = static_cast<Pattern>(pattern_);
+        if (ink.pattern == Pattern::None) {
+            painter.fill_rect({3, 3, 20, 18}, gf::Color::rgba(255, 255, 255));
+            painter.draw_line({4, 20}, {22, 4}, gf::Color::rgba(210, 35, 40), 2.5);
+            return;
+        }
         ink.primary = {40, 80, 120, 255};
         ink.secondary = {245, 248, 252, 255};
         for (int y = 0; y < 24; ++y) {
@@ -317,10 +371,30 @@ void Ribbon::add_options() {
     button("full-screen", "Full screen", 5, {400, 35, 98, 81}, true);
     button("fit", "Fit window", 5, {507, 35, 98, 81}, true);
     building_page_ = 4;
-    for (int i = 0; i < 18; ++i) {
+    button("material-edge", "Primary", -1, {10, 34, 114, 22});
+    button("material-fill", "Alt", -1, {10, 59, 114, 22});
+    check("material-enabled", "Enabled", {10, 84, 114, 22});
+    const char* material_names[] = {"Brush",      "Calligraphy 1", "Calligraphy 2", "Airbrush",
+                                    "Oil",        "Crayon",        "Marker",        "Pencil",
+                                    "Watercolor", "Bristle",       "Pastel",        "Charcoal"};
+    for (int i = 0; i < brush_count; ++i) {
+        std::shared_ptr<gf::Button> choice =
+            button("material-brush-" + std::to_string(i), material_names[i], -1,
+                   {140.0 + (i % 4) * 128, 35.0 + (i / 4) * 27, 126, 25});
+        (*choice).set_accessible_name(brush_names[i]);
+        (*choice).set_font({gf::FontRole::control, 11, 400, false});
+        (*choice).set_content_padding({2, 1, 2, 1});
+        (*choice).set_image_key(std::to_string(i));
+    }
+    for (int i = 0; i < pattern_count; ++i) {
         std::shared_ptr<gf::Button> swatch =
             gf::make_control<PatternButton>(gf::StableId("r-pattern-" + std::to_string(i)), i);
-        (*swatch).set_requested_bounds({242.0 + (i % 9) * 33, 36.0 + (i / 9) * 32, 29, 28});
+        (*swatch).set_requested_bounds({670.0 + (i % 9) * 33, 36.0 + (i / 9) * 32, 29, 28});
+        if (i == static_cast<int>(Pattern::None)) {
+            (*swatch).set_requested_bounds({670, 100, 108, 25});
+            (*swatch).set_text("No color");
+            (*swatch).set_content_padding({32, 1, 1, 1});
+        }
         (*swatch).set_accessible_name(pattern_names[i]);
         subscriptions_.push_back((*swatch).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<Ribbon, &Ribbon::clicked>(*this)));
@@ -328,18 +402,21 @@ void Ribbon::add_options() {
         buttons_.push_back(swatch);
         add_child(swatch);
     }
-    check("transparent-pattern", "Transparent second color", {242, 96, 300, 25});
+
     building_page_ = 12;
     grain_ = number("grain-scale", "Grain scale", {560, 35, 273, 25}, 0.3, 4, 1, 2);
     tooth_ = number("paper-tooth", "Paper tooth", {560, 64, 273, 25}, 0, 1, 0.65, 2);
     load_ = number("paint-load", "Paint load", {560, 93, 273, 25}, 0, 1, 0.65, 2);
-    button("edge-medium", "Edge medium", 13, {858, 35, 185, 26}, false, true);
-    button("fill-medium", "Fill medium", 8, {1055, 35, 185, 26}, false, true);
+    button("edge-medium", "Line materials…", 13, {858, 35, 185, 26});
+    button("fill-medium", "Fill materials…", 8, {1055, 35, 185, 26});
     angle_ = number("grain-angle", "Grain angle", {858, 65, 240, 25}, -180, 180, -20);
     button("new-grain", "New grain", -1, {1110, 65, 130, 25});
     building_page_ = 8;
     tool_size_ = number("tool-size", "Size (px)", {12, 36, 204, 25}, 1, 64, 3);
     check("soft-eraser", "Soft eraser", {12, 65, 210, 25});
+    building_page_ = 12;
+    check("smooth-lines", "Smooth lines", {858, 96, 240, 25});
+    building_page_ = 8;
     check("continuous-path", "Continuous path", {12, 65, 210, 25});
     check("outline", "Edge", {12, 94, 90, 25});
     check("fill", "Fill", {116, 94, 100, 25});
@@ -348,8 +425,8 @@ void Ribbon::add_options() {
     button("context-invert-selection", "Invert", -1, {116, 65, 100, 25});
     button("context-crop", "Crop", 4, {12, 94, 95, 25});
     button("context-delete", "Delete", -1, {116, 94, 100, 25});
-    button("stamp-shapes-menu", "Circle", 100 + static_cast<int>(Shape::Circle),
-           {12, 36, 204, 54}, false, true);
+    button("stamp-shapes-menu", "Circle", 100 + static_cast<int>(Shape::Circle), {12, 36, 204, 54}, false,
+           true);
     check("stamp-transparent", "Transparent stamp", {12, 94, 210, 25});
     button("context-stamp-clear", "Clear stamp", -1, {242, 36, 135, 30});
     button("context-zoom-in", "Zoom in", 12, {12, 36, 95, 78}, true);
@@ -401,17 +478,23 @@ void Ribbon::add_options() {
     button("text-font-file", "Open font…", -1, {1006, 79, 114, 30});
     building_page_ = 1;
 }
+double Ribbon::ribbon_height() const {
+    return collapsed_ ? 27 : 143;
+}
 void Ribbon::show_atlas() {
+    collapsed_ = false;
     page_ = 64;
     synchronize();
     invalidate(gf::Dirty::paint);
 }
 void Ribbon::show_transforms() {
+    collapsed_ = false;
     page_ = 8;
     close_popup();
     synchronize();
 }
 void Ribbon::show_tool_context() {
+    collapsed_ = false;
     std::shared_ptr<Editor> editor = editor_.lock();
     page_ = editor && (*editor).document.tool == Tool::Text ? 16 : 8;
     close_popup();
@@ -425,8 +508,8 @@ void Ribbon::ensure_fonts() {
     font_paths_ = installed_fonts();
     for (const std::string& path : font_paths_) {
         (*font_).add_item(std::filesystem::path(path).filename() == "Cairo.ttf"
-                             ? "Cairo Unicode (Dingbats)"
-                             : std::filesystem::path(path).stem().string());
+                              ? "Cairo Unicode (Dingbats)"
+                              : std::filesystem::path(path).stem().string());
     }
 }
 void Ribbon::font_changed(std::optional<std::size_t> index) {
@@ -446,7 +529,7 @@ void Ribbon::show_page() {
     if (!editor) {
         return;
     }
-    (*atlas_).set_visible(page_ == 64);
+    (*atlas_).set_visible(page_ == 64 && !collapsed_);
     (*editor).show_hotspot = page_ == 64;
     if (page_ == 64) {
         (*atlas_).synchronize();
@@ -466,6 +549,9 @@ void Ribbon::show_page() {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());
         bool visible = button_pages_[i] == 0 || (button_pages_[i] & page_) != 0;
+        if (page_ == 4 && (id == "edge-medium" || id == "fill-medium" || id == "new-grain")) {
+            visible = false;
+        }
         if (page_ == 8 && button_pages_[i] != 0) {
             if (id.starts_with("r-pattern-")) {
                 visible = false;
@@ -490,12 +576,15 @@ void Ribbon::show_page() {
         if (id == "patterns-tab") {
             control.set_enabled(ink);
         }
-        control.set_visible(visible);
+        control.set_visible(visible && (!collapsed_ || button_pages_[i] == 0));
     }
     for (std::size_t i = 0; i < option_controls_.size(); ++i) {
         gf::Control& control = *option_controls_[i];
         std::string id(control.stable_id().value());
         bool visible = (option_pages_[i] & page_) != 0;
+        if (page_ == 4 && id.starts_with("grain-angle")) {
+            visible = false;
+        }
         if (page_ == 8 && visible) {
             if (id == "transparent-pattern") {
                 visible = false;
@@ -508,6 +597,9 @@ void Ribbon::show_page() {
             }
             if (id == "soft-eraser") {
                 visible = tool == Tool::Eraser;
+            }
+            if (id == "smooth-lines") {
+                visible = material;
             }
             if (id == "continuous-path") {
                 visible = tool == Tool::Path;
@@ -528,9 +620,10 @@ void Ribbon::show_page() {
         if (option_pages_[i] == 40) {
             visible = page_ == 8 && selection && (*editor).document.selection.active;
         }
-        control.set_visible(visible);
+        control.set_visible(visible && !collapsed_);
     }
     invalidate(gf::Dirty::layout | gf::Dirty::paint);
+    (*editor).invalidate(gf::Dirty::layout | gf::Dirty::paint);
 }
 void Ribbon::options_changed(double) {
     if (synchronizing_) {
@@ -540,12 +633,12 @@ void Ribbon::options_changed(double) {
     if (!editor) {
         return;
     }
-    Ink& ink = (*editor).document.ink;
+    Ink& ink = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
     ink.grain_scale = (*grain_).value();
     ink.paper_roughness = (*tooth_).value();
     ink.pigment_load = (*load_).value();
     ink.material_angle = (*angle_).value();
-    ink.size = static_cast<int>((*tool_size_).value());
+    (*editor).document.ink.size = static_cast<int>((*tool_size_).value());
     (*editor).text.style.size = static_cast<int>((*text_size_).value());
     (*editor).stamp_width = static_cast<int>((*stamp_width_).value());
     (*editor).stamp_height = static_cast<int>((*stamp_height_).value());
@@ -646,6 +739,9 @@ void Ribbon::on_attached_to_window() {
     large_icons_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{32, 32});
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
+        if (control.stable_id().value().starts_with("material-brush-")) {
+            continue;
+        }
         if (control.stable_id().value() == "undo" || control.stable_id().value() == "redo" ||
             control.stable_id().value() == "save") {
             std::string key = control.image_key();
@@ -656,10 +752,43 @@ void Ribbon::on_attached_to_window() {
             continue;
         }
         if (!control.image_key().empty()) {
-            bind_icon(control, std::stoi(control.image_key()), control.requested_bounds().height > 45 &&
-                                                               control.requested_bounds().width > 25);
+            bind_icon(control, std::stoi(control.image_key()),
+                      control.requested_bounds().height > 45 && control.requested_bounds().width > 25);
         }
     }
+}
+void Ribbon::prepare_material_previews() {
+    if (brush_previews_) {
+        return;
+    }
+    brush_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{28, 20});
+    fill_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{28, 20});
+    for (int i = 0; i < brush_count; ++i) {
+        Ink ink;
+        ink.primary = {48, 83, 123, 255};
+        ink.secondary = ink.primary;
+        ink.brush = static_cast<Brush>(i);
+        ink.size = 11;
+        for (int fill = 0; fill < 2; ++fill) {
+            Image sample;
+            sample.reset(56, 40, {255, 255, 255, 255});
+            if (fill) {
+                draw_shape(sample, Shape::Rectangle, {4, 4}, {51, 35}, ink, false, true, ink.brush);
+            } else {
+                stroke(sample, {5, 29}, {50, 10}, ink);
+            }
+            std::vector<std::uint8_t> png = encode_png(sample);
+            std::shared_ptr<gf::ImageList> images = fill ? fill_previews_ : brush_previews_;
+            static_cast<void>((*images).add_png(std::to_string(i), std::as_bytes(std::span(png)), 2));
+        }
+    }
+}
+void Ribbon::show_materials(bool fill) {
+    collapsed_ = false;
+    close_popup();
+    secondary_color_ = fill;
+    page_ = 4;
+    synchronize();
 }
 void Ribbon::bind_icon(gf::Button& button, int icon, bool large) {
     if (icon < 0) {
@@ -678,15 +807,18 @@ void Ribbon::arrange(gf::Rect bounds) {
     set_child_layout(atlas_, {0, 27, bounds.width, 116});
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Rect rectangle = (*buttons_[i]).requested_bounds();
-        if (page_ == 4 && (button_pages_[i] == 12 || button_pages_[i] == 4)) {
-            rectangle.x -= rectangle.x < 548 ? 230 : 218;
-        }
         set_child_layout(buttons_[i], rectangle);
     }
     for (const std::shared_ptr<gf::Control>& control : option_controls_) {
         gf::Rect rectangle = (*control).requested_bounds();
         if (page_ == 4) {
-            rectangle.x -= rectangle.x < 548 ? 230 : 218;
+            std::string id((*control).stable_id().value());
+            if (id == "smooth-lines") {
+                rectangle = {140, 111, 190, 22};
+            } else if (id.starts_with("grain-scale") || id.starts_with("paper-tooth") ||
+                       id.starts_with("paint-load")) {
+                rectangle.x += 422;
+            }
         }
         set_child_layout(control, rectangle);
     }
@@ -696,6 +828,10 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     const gf::GradientStop tabs[] = {{0, gf::Color::rgba(241, 247, 253)},
                                      {1, gf::Color::rgba(224, 235, 248)}};
     painter.fill_linear_gradient({0, 0, width, 27}, {0, 0}, {0, 27}, tabs);
+    if (collapsed_) {
+        painter.draw_line({0, 26}, {width, 26}, gf::Color::rgba(145, 172, 202), 1);
+        return;
+    }
     // Broadly spaced stops keep the body continuous behind every tool group.
     const gf::GradientStop stops[] = {{0, gf::Color::rgba(249, 252, 255)},
                                       {0.28, gf::Color::rgba(241, 247, 253)},
@@ -718,12 +854,12 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
             selection     ? std::vector<std::string>{"Selection", "Rotation", "Mesh", "Finish", "Controls"}
             : page_ == 16 ? std::vector<std::string>{"Font", "Text box", "Finish text"}
             : page_ == 2  ? std::vector<std::string>{"Zoom", "Show or hide", "Display"}
-            : page_ == 4  ? std::vector<std::string>{"Patterns", "Material", "Media"}
+            : page_ == 4  ? std::vector<std::string>{"Apply to", "Brushes", "Patterns", "Material"}
                           : std::vector<std::string>{"Tool settings", "Patterns", "Material", "Media"};
         const std::vector<double> edges = selection     ? std::vector<double>{0, 230, 496, 764, 906, width}
                                           : page_ == 16 ? std::vector<double>{0, 455, 692, 1134}
                                           : page_ == 2  ? std::vector<double>{0, 220, 390, 620}
-                                          : page_ == 4  ? std::vector<double>{0, 326, 628, width}
+                                          : page_ == 4  ? std::vector<double>{0, 132, 660, 974, width}
                                                         : std::vector<double>{0, 232, 548, 846, width};
         for (std::size_t i = 0; i < labels.size(); ++i) {
             if (selection && i > 0 && !(*editor).document.selection.active) {
@@ -749,7 +885,7 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
         paint_separator(painter, x);
     }
     const gf::GradientStop gallery[] = {{0, gf::Color::rgba(248, 251, 255)},
-                                       {1, gf::Color::rgba(255, 255, 255)}};
+                                        {1, gf::Color::rgba(255, 255, 255)}};
     painter.fill_linear_gradient({546, 36, 176, 75}, {0, 36}, {0, 111}, gallery);
     painter.stroke_rect({545.5, 35.5, 195, 76}, gf::Color::rgba(148, 172, 200), 1);
     painter.draw_line({546, 36.5}, {721, 36.5}, gf::Color::rgba(111, 142, 177, 35), 1);
@@ -768,12 +904,16 @@ void Ribbon::synchronize() {
     if (!editor) {
         return;
     }
+    show_page();
     Document& document = (*editor).document;
     if (document.tool == Tool::Text) {
         ensure_fonts();
     }
-    (*primary_).set_color(document.ink.primary);
-    (*secondary_).set_color(document.ink.secondary);
+    if (attached_window()) {
+        prepare_material_previews();
+    }
+    (*primary_).set_material(document.primary_ink());
+    (*secondary_).set_material(document.alternate_ink());
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());
@@ -788,6 +928,14 @@ void Ribbon::synchronize() {
         }
         if (id == "text") {
             selected = document.tool == Tool::Text;
+        }
+        if (id.starts_with("material-brush-")) {
+            selected = std::stoi(id.substr(15)) ==
+                       static_cast<int>(secondary_color_ ? document.shape_fill_brush : document.ink.brush);
+            control.set_image_list(secondary_color_ ? fill_previews_ : brush_previews_);
+        }
+        if (id == "material-edge" || id == "material-fill") {
+            selected = secondary_color_ == (id == "material-fill");
         }
         if (id == "brush-menu") {
             selected = document.tool == Tool::Brush;
@@ -809,7 +957,8 @@ void Ribbon::synchronize() {
                                             : "tool-tab");
         }
         if (id.starts_with("r-pattern-")) {
-            selected = static_cast<int>(document.ink.pattern) == std::stoi(id.substr(10));
+            selected = static_cast<int>(secondary_color_ ? document.alt_ink.pattern : document.ink.pattern) ==
+                       std::stoi(id.substr(10));
         }
         if (id.starts_with("stamp-shape-")) {
             selected = static_cast<int>(document.stamp_shape) == std::stoi(id.substr(12));
@@ -831,10 +980,11 @@ void Ribbon::synchronize() {
         control.set_selected(selected);
     }
     synchronizing_ = true;
-    (*grain_).set_value(document.ink.grain_scale);
-    (*tooth_).set_value(document.ink.paper_roughness);
-    (*load_).set_value(document.ink.pigment_load);
-    (*angle_).set_value(document.ink.material_angle);
+    const Ink& material = secondary_color_ ? document.alt_ink : document.ink;
+    (*grain_).set_value(material.grain_scale);
+    (*tooth_).set_value(material.paper_roughness);
+    (*load_).set_value(material.pigment_load);
+    (*angle_).set_value(material.material_angle);
     (*tool_size_).set_value(document.ink.size);
     (*text_size_).set_value((*editor).text.style.size);
     (*stamp_width_).set_value((*editor).stamp_width);
@@ -875,15 +1025,44 @@ void Ribbon::synchronize() {
                              : id == "show-rulers"           ? (*editor).show_rulers
                              : id == "show-grid"             ? (*editor).show_grid
                              : id == "show-status"           ? (*editor).show_status
-                             : id == "transparent-pattern"   ? document.ink.transparent_pattern
+                             : id == "transparent-pattern"   ? material.transparent_pattern
                              : id == "transparent-selection" ? document.transparent_selection
                              : id == "stamp-transparent"     ? document.stamp_transparent
-                             : id == "continuous-path"       ? document.continuous_path
-                             : id == "outline"               ? document.shape_outline
-                                                             : document.shape_fill);
+                             : id == "material-enabled"
+                                 ? (secondary_color_ ? document.shape_fill : document.shape_outline)
+                             : id == "smooth-lines"    ? document.ink.smooth
+                             : id == "continuous-path" ? document.continuous_path
+                             : id == "outline"         ? document.shape_outline
+                                                       : document.shape_fill);
     }
     synchronizing_ = false;
-    show_page();
+}
+void Ribbon::on_pointer_preview(gf::PointerEvent& event) {
+    if (event.button != gf::PointerButton::secondary) {
+        return;
+    }
+    if (event.action == gf::PointerAction::down) {
+        for (const std::shared_ptr<gf::Button>& choice : buttons_) {
+            std::string id((*choice).stable_id().value());
+            if ((id.starts_with("swatch-") || id.starts_with("r-pattern-") ||
+                 id.starts_with("material-brush-")) &&
+                (*choice).visible() && (*choice).enabled() &&
+                (*choice).absolute_bounds().contains(event.position)) {
+                secondary_target_ = choice;
+                set_pointer_capture(true);
+                event.handled = true;
+                return;
+            }
+        }
+    } else if (event.action == gf::PointerAction::up && secondary_target_) {
+        std::shared_ptr<gf::Button> choice = std::move(secondary_target_);
+        set_pointer_capture(false);
+        event.handled = true;
+        if ((*choice).absolute_bounds().contains(event.position)) {
+            secondary_color_ = true;
+            clicked(*choice);
+        }
+    }
 }
 void Ribbon::clicked(gf::ButtonBase& button) {
     std::shared_ptr<Editor> editor = editor_.lock();
@@ -891,19 +1070,45 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         return;
     }
     std::string id(button.stable_id().value());
-    if (id == "tool-tab") {
-        show_tool_context();
+    if (id == "brush-menu") {
+        (*editor).choose_tool(Tool::Brush);
+        show_materials(false);
+        return;
+    }
+    if (id == "outline-menu" || id == "fill-menu" || id == "edge-medium" || id == "fill-medium" ||
+        id == "material-edge" || id == "material-fill") {
+        show_materials(id == "fill-menu" || id == "fill-medium" || id == "material-fill");
+        return;
+    }
+    if (id == "material-enabled") {
+        (*editor).execute(secondary_color_ ? "fill" : "outline");
+        return;
+    }
+    if (id.starts_with("material-brush-")) {
+        Brush selected = static_cast<Brush>(std::stoi(id.substr(15)));
+        if (secondary_color_) {
+            (*editor).document.shape_fill_brush = selected;
+            (*editor).document.shape_fill = true;
+        } else {
+            (*editor).document.ink.brush = selected;
+            (*editor).document.shape_outline = true;
+        }
+        (*editor).document.sync_curve();
+        (*editor).document.sync_path();
+        (*editor).refresh();
         return;
     }
     if (id.ends_with("-tab")) {
         close_popup();
-        page_ = id == "home-tab"       ? 1
-                : id == "view-tab"     ? 2
-                : id == "patterns-tab" ? 4
-                : id == "atlas-tab"    ? 64
-                                       : 8;
+        int next = id == "home-tab"                        ? 1
+                   : id == "view-tab"                      ? 2
+                   : id == "patterns-tab"                  ? 4
+                   : id == "atlas-tab"                     ? 64
+                   : (*editor).document.tool == Tool::Text ? 16
+                                                           : 8;
+        collapsed_ = next == page_ ? !collapsed_ : false;
+        page_ = next;
         synchronize();
-        invalidate(gf::Dirty::paint);
         return;
     }
     if (id == "primary" || id == "secondary") {
@@ -915,9 +1120,39 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         (*editor).execute(secondary_color_ ? "secondary" : "primary");
         return;
     }
+    if (id == "transparent-pattern") {
+        Ink& material = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
+        material.transparent_pattern = !material.transparent_pattern;
+        (*editor).document.sync_path();
+        (*editor).refresh();
+        return;
+    }
+    if (id == "new-grain") {
+        Ink& material = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
+        ++material.noise;
+        (*editor).document.sync_path();
+        (*editor).refresh();
+        return;
+    }
+    if (id.starts_with("r-pattern-")) {
+        Ink& material = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
+        material.pattern = static_cast<Pattern>(std::stoi(id.substr(10)));
+        if (secondary_color_) {
+            (*editor).document.shape_fill = true;
+        } else {
+            (*editor).document.shape_outline = true;
+        }
+        (*editor).document.sync_curve();
+        (*editor).document.sync_path();
+        (*editor).refresh();
+        return;
+    }
     if (id.starts_with("swatch-")) {
         Color& color = secondary_color_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;
         color = ribbon_color(std::stoi(id.substr(7)));
+        Ink& material = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
+        material.pattern = Pattern::Solid;
+        material.transparent_pattern = false;
         (*editor).document.sync_curve();
         (*editor).document.sync_path();
         (*editor).refresh();
@@ -951,6 +1186,10 @@ std::shared_ptr<gf::Button> Ribbon::add_popup_button(gf::Panel& panel, const std
     if (id.starts_with("shape-")) {
         std::string name = shape_names[std::stoi(id.substr(6))];
         (*item).set_accessible_name(name);
+        std::string key = std::to_string(icon);
+        if (!(*medium_icons_).contains_key(key)) {
+            static_cast<void>((*medium_icons_).add_png(key, ribbon_icon_png(icon, 24), 2));
+        }
         (*item).set_image_list(medium_icons_);
         (*item).set_content_padding({4, 4, 4, 4});
     }
@@ -987,7 +1226,6 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
                 100 + static_cast<int>(stamp_geometry_shape(shape)),
                 {6.0 + (i % 7) * 38, 5.0 + (i / 7) * 34, 37, 33}, document.stamp_shape == shape);
             (*item).set_accessible_name(stamp_shape_name(shape));
-
         }
     } else if (id == "shapes-menu") {
         width = 280;
@@ -996,53 +1234,6 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             add_popup_button(*panel, "shape-" + std::to_string(i), "", 100 + i,
                              {6.0 + (i % 7) * 38, 5.0 + (i / 7) * 34, 37, 33},
                              document.shape == static_cast<Shape>(i));
-        }
-    } else if (id == "brush-menu" || id == "edge-medium" || id == "fill-medium") {
-        if (!brush_previews_) {
-            brush_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{104, 42});
-            for (int i = 0; i < brush_count; ++i) {
-                Image sample;
-                sample.reset(208, 84, {255, 255, 255, 255});
-                Ink ink;
-                ink.primary = {48, 83, 123, 255};
-                ink.size = 25;
-                ink.brush = static_cast<Brush>(i);
-                MaterialStroke material;
-                Point previous{18, 51};
-                for (int step = 1; step <= 18; ++step) {
-                    Point next{18 + step * 9.4, 44 + 16 * std::sin(step * 0.33)};
-                    if (textured_brush(ink.brush)) {
-                        material.segment(sample, previous, next, ink);
-                    } else {
-                        stroke(sample, previous, next, ink);
-                    }
-                    previous = next;
-                }
-                std::vector<std::uint8_t> png = encode_png(sample);
-                static_cast<void>(
-                    (*brush_previews_).add_png(std::to_string(i), std::as_bytes(std::span(png)), 2));
-            }
-        }
-        width = 382;
-        height = 8 + 78 * 4;
-        const char* labels[] = {"Brush",      "Calligraphy 1", "Calligraphy 2", "Airbrush",
-                                "Oil brush",  "Crayon",        "Marker",        "Natural pencil",
-                                "Watercolor", "Bristle brush", "Soft pastel",   "Charcoal"};
-        for (int i = 0; i < brush_count; ++i) {
-            std::shared_ptr<gf::Button> item =
-                add_popup_button(*panel,
-                                 (id == "fill-medium"   ? "fill-brush-"
-                                  : id == "edge-medium" ? "edge-brush-"
-                                                        : "brush-") +
-                                     std::to_string(i),
-                                 labels[i], -1, {6.0 + (i % 3) * 124, 4.0 + (i / 3) * 78, 122, 76},
-                                 (id == "fill-medium" ? document.shape_fill_brush : document.ink.brush) ==
-                                     static_cast<Brush>(i));
-            (*item).set_image_list(brush_previews_);
-            (*item).set_image_key(std::to_string(i));
-            (*item).set_text_image_relation(gf::TextImageRelation::image_above_text);
-            (*item).set_text_alignment(gf::ContentAlignment::middle_center);
-            (*item).set_image_alignment(gf::ContentAlignment::middle_center);
         }
     } else if (id == "size-menu") {
         const int values[] = {1, 2, 3, 4, 5, 7, 8, 12, 16, 24, 32, 48, 64};

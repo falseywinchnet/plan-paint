@@ -155,10 +155,17 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
     }
     resize_preview_.w = std::clamp(resize_preview_.w, 1, 32768);
     resize_preview_.h = std::clamp(resize_preview_.h, 1, 32768);
+    if (resize_handle_ == 0 || resize_handle_ == 6 || resize_handle_ == 7) {
+        resize_preview_.x = resize_original_.x + resize_original_.w - resize_preview_.w;
+    }
+    if (resize_handle_ == 0 || resize_handle_ == 1 || resize_handle_ == 2) {
+        resize_preview_.y = resize_original_.y + resize_original_.h - resize_preview_.h;
+    }
     if (resize_selection_) {
         update_transform_preview();
     }
     canvas().invalidate(gf::Dirty::paint);
+    update_status();
     if (event.action == gf::PointerAction::up && event.button == gf::PointerButton::primary) {
         if (resize_selection_) {
             document.resize(resize_preview_.w, resize_preview_.h, true);

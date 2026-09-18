@@ -17,6 +17,7 @@ enum class EditorDialogKind {
     hotspot,
     atlas_gallery,
     properties,
+    settings,
     print_preview,
     linux_print,
     linux_page_setup

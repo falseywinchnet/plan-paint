@@ -52,6 +52,7 @@ endif()
 add_library(paint_forms STATIC src/forms/editor.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/text.cpp src/forms/warp.cpp src/forms/atlas.cpp src/forms/selection.cpp src/forms/help.cpp src/forms/surface.cpp)
 target_link_libraries(paint_forms PUBLIC paint_core GUIForms::Application)
 target_include_directories(paint_forms PUBLIC src)
+target_compile_definitions(paint_forms PUBLIC RAINSTAR_VERSION="${PROJECT_VERSION}")
 add_executable(rainstar-paint-forms MACOSX_BUNDLE src/forms/main.cpp)
 target_link_libraries(rainstar-paint-forms PRIVATE paint_forms)
 set_target_properties(rainstar-paint-forms PROPERTIES

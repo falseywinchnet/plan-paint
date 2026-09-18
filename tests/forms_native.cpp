@@ -1,5 +1,6 @@
 #include "forms/editor.hpp"
 #include <functional>
+#include <gui_forms/timer.hpp>
 #include <iostream>
 #include <stdexcept>
 #ifdef _WIN32
@@ -9,7 +10,30 @@ namespace {
 namespace gf = gui_forms;
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
-    bool keep_open = false;
+    bool keep_open = false, resize_preview = false;
+    gf::Window* resize_window = nullptr;
+    std::unique_ptr<gf::Timer> resize_timer;
+    gf::SubscriptionToken resize_tick;
+    void show_resize_preview() {
+        (*resize_timer).stop();
+        gf::RasterCanvas& canvas = (*editor).canvas();
+        gui_drawing::PointF origin = canvas.view_origin();
+        gf::Point start =
+            canvas.point_to_window({(256 - origin.x) * canvas.zoom(), (120 - origin.y) * canvas.zoom()});
+        gf::Point end =
+            canvas.point_to_window({(480 - origin.x) * canvas.zoom(), (120 - origin.y) * canvas.zoom()});
+        static_cast<void>(
+            (*resize_window).dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, start}));
+        static_cast<void>(
+            (*resize_window).dispatch_pointer({gf::PointerAction::move, gf::PointerButton::primary, end}));
+        if (!canvas.has_pointer_capture() || (*editor).document.selection.image.width != 192) {
+            throw std::runtime_error(
+                "Live resize must hold capture without replacing the source before release");
+        }
+        std::cout << "Resize preview held before mouse-up: original 192 x 112, displayed 416 x 112\n"
+                  << std::flush;
+    }
+
     bool entered = false;
     void stroke(gf::Window& window, paint::Point first, paint::Point last) {
         gf::RasterCanvas& canvas = (*editor).canvas();
@@ -37,6 +61,27 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (resize_preview) {
+            paint::Image sample;
+            sample.reset(192, 112, {230, 70, 40, 255});
+            for (int y = 0; y < sample.height; ++y) {
+                for (int x = 0; x < sample.width; ++x) {
+                    if ((x / 24) % 2) {
+                        sample.set(x, y, {30, 110, 190, 255});
+                    }
+                }
+            }
+            document.paste(sample, 64, 64);
+            (*editor).refresh();
+            resize_window = &window;
+            resize_timer = std::make_unique<gf::Timer>(window, std::chrono::milliseconds(1000));
+            resize_tick = (*resize_timer)
+                              .tick()
+                              .subscribe(std::bind(&NativeExercise::show_resize_preview, std::ref(*this)));
+            (*resize_timer).start();
+            entered = true;
+            return;
+        }
         document.ink.primary = {40, 109, 183, 255};
         document.shape = paint::Shape::RoundedRectangle;
         document.shape_fill = true;
@@ -83,10 +128,11 @@ struct WindowsFixtureReady {
 };
 #endif
 } // namespace
-int main(int argc, char**) {
+int main(int argc, char** argv) {
     try {
         NativeExercise exercise;
         exercise.keep_open = argc > 1;
+        exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));
         gf::ApplicationWindowOptions options;
         options.title = "Rainstar Paint — GUI.Forms native interaction check";

@@ -33,10 +33,7 @@ Image Document::curve_image(const Point* pending_end) const {
     if (!curve.line_set && pending_end) {
         geometry.set_line(geometry.start, *pending_end);
     }
-    Ink stroke_ink = ink;
-    if (curve.secondary) {
-        std::swap(stroke_ink.primary, stroke_ink.secondary);
-    }
+    Ink stroke_ink = curve.secondary ? alternate_ink() : primary_ink();
     polygon(result, geometry.samples(), stroke_ink, true, false, false);
     return result;
 }

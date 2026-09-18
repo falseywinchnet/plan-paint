@@ -10,6 +10,12 @@ struct RecentFiles {
     void load();
     void remember(const std::string& path);
 };
+struct EditorSettings {
+    std::string storage_path;
+    double scroll_distance = 6;
+    void load();
+    void save() const;
+};
 struct CustomColors {
     std::string storage_path;
     std::array<Color, 16> colors;

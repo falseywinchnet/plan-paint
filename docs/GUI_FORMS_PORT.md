@@ -1,6 +1,6 @@
 # Native GUI.Forms application
 
-Rainstar Paint 0.2.2 uses GUI.Forms by default. The executable links the installed
+Rainstar Paint 0.2.3 uses GUI.Forms by default. The executable links the installed
 `GUIForms::Application` target and Paint's document, raster, material, CONV and
 format libraries. It does not link SDL, ImGui or GTK. The optional comparison
 frontend remains available with `RAINSTAR_LEGACY_UI=ON`.
@@ -85,7 +85,7 @@ CONV preparation runs outside the UI thread, posts completion through the toolki
 dispatcher, and rejects stale generations. Closing or cancelling an operation
 preserves lifetime boundaries.
 
-The ribbon provides Home, View, Patterns, Atlas and context-sensitive tool pages.
+The ribbon provides Home, View, Materials, Atlas and context-sensitive tool pages.
 Selection includes mesh, rotation, placement and cancellation. Stamp Scale and
 Angle labels support scrubbing. The help sidebar is bundled locally. Printing
 remains application code over native window ownership; it does not introduce a

@@ -16,10 +16,14 @@ class SwatchButton final : public gui_forms::Button {
   public:
     SwatchButton(gui_forms::StableId id, std::string text, Color color);
     void set_color(Color color);
+    void set_material(const Ink& ink);
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
 
   private:
     Color color_;
+    std::shared_ptr<gui_forms::ImageList> material_preview_;
+    std::vector<Color> material_pixels_;
+    std::optional<Ink> material_ink_;
 };
 class Ribbon final : public gui_forms::Control {
   public:
@@ -27,12 +31,14 @@ class Ribbon final : public gui_forms::Control {
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
     void arrange(gui_forms::Rect bounds) override;
+    void on_pointer_preview(gui_forms::PointerEvent& event) override;
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
     void synchronize();
     void close_popup();
     void show_tool_context();
     void show_transforms();
     void show_atlas();
+    double ribbon_height() const;
 
   protected:
     void on_attached_to_window() override;
@@ -41,7 +47,7 @@ class Ribbon final : public gui_forms::Control {
     std::weak_ptr<Editor> editor_;
     std::shared_ptr<AtlasPanel> atlas_;
     std::shared_ptr<gui_forms::ImageList> small_icons_, medium_icons_, large_icons_, brush_previews_,
-        pattern_previews_;
+        pattern_previews_, fill_previews_;
     std::shared_ptr<gui_forms::ToolTip> tooltips_;
     std::vector<std::shared_ptr<gui_forms::Button>> buttons_;
     std::vector<gui_forms::SubscriptionToken> subscriptions_, popup_subscriptions_;
@@ -51,8 +57,11 @@ class Ribbon final : public gui_forms::Control {
     std::shared_ptr<gui_forms::DropDownButton> popup_owner_;
     std::shared_ptr<SwatchButton> primary_, secondary_;
     bool secondary_color_ = false;
+    std::shared_ptr<gui_forms::Button> secondary_target_;
+    void show_materials(bool fill);
+    void prepare_material_previews();
     int page_ = 1, building_page_ = 1;
-    bool synchronizing_ = false, fonts_loaded_ = false;
+    bool synchronizing_ = false, fonts_loaded_ = false, collapsed_ = false;
     void ensure_fonts();
     std::vector<int> button_pages_;
     std::vector<std::shared_ptr<gui_forms::Control>> option_controls_;

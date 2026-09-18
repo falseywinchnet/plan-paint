@@ -62,6 +62,7 @@ class Editor final : public gui_forms::Control {
     bool pick_hotspot = false, show_hotspot = false;
     Document document;
     CustomColors custom_colors;
+    EditorSettings settings;
     RecentFiles recent;
     int jpeg_quality = 92;
     TextSession text;
@@ -100,6 +101,7 @@ class Editor final : public gui_forms::Control {
   private:
     bool help_shortcut();
     void close_help(gui_forms::ButtonBase& button);
+    int hit_path_node(Point point) const;
     Point snap_path_point(Point point) const;
     bool path_preview_point(Point& point) const;
     void publish_path_preview();
@@ -161,8 +163,9 @@ class Editor final : public gui_forms::Control {
     Image preview_;
     EraserStroke eraser_;
     MaterialStroke material_;
-    bool shift_ = false;
-    Ink gesture_ink_;
+    bool shift_ = false, control_ = false;
+    int path_node_ = -1;
+    Ink gesture_ink_, gesture_fill_ink_;
     bool dragging_ = false, moving_selection_ = false, preview_active_ = false, panning_ = false;
     bool handle_checkpoint_ = false;
     int curve_handle_ = -1;

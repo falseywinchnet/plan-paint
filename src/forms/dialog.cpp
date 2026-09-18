@@ -209,6 +209,13 @@ void EditorDialog::initialize_control_tree() {
                 *this, gf::Delegate<double>::bind<EditorDialog, &EditorDialog::lab_changed>(*this)));
         }
         set_color(original_);
+    } else if (kind_ == EditorDialogKind::settings) {
+        panel_ = {0, 0, 490, 270};
+        label("settings-scroll-label", "Scroll distance", {24, 58, 220, 28});
+        atlas_numbers_.push_back(
+            number("settings-scroll", {280, 57, 180, 30}, 0.1, 100, (*editor).settings.scroll_distance, 1));
+        label("settings-scroll-unit", "Screen pixels per wheel / trackpad unit", {24, 97, 440, 26});
+        label("settings-scroll-hint", "Default: 6. Smaller values move the canvas less.", {24, 129, 440, 26});
     } else if (kind_ == EditorDialogKind::properties) {
         panel_ = {0, 0, 460, 345};
         Document& document = (*editor).document;
@@ -463,6 +470,8 @@ std::string EditorDialog::title() const {
         return "Cursor hotspot";
     case EditorDialogKind::atlas_gallery:
         return "Atlas frames";
+    case EditorDialogKind::settings:
+        return "Settings";
     case EditorDialogKind::properties:
         return "Image properties";
     case EditorDialogKind::print_preview:
@@ -684,8 +693,17 @@ void EditorDialog::accept() {
             }
             Color& target = secondary_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;
             target = color_;
+            Ink& material = secondary_ ? (*editor).document.alt_ink : (*editor).document.ink;
+            material.pattern = Pattern::Solid;
+            material.transparent_pattern = false;
             (*editor).document.sync_curve();
             (*editor).document.sync_path();
+        } else if (kind_ == EditorDialogKind::settings) {
+            EditorSettings settings = (*editor).settings;
+            settings.scroll_distance = (*atlas_numbers_[0]).value();
+            settings.save();
+            (*editor).settings = settings;
+            (*editor).close_editor_dialog();
         } else if (kind_ == EditorDialogKind::properties) {
             Document& document = (*editor).document;
             int width = static_cast<int>((*atlas_numbers_[0]).value());

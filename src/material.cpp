@@ -161,7 +161,7 @@ void MaterialStroke::segment(Image& image, Point start, Point end, const Ink& in
                            : 0;
             double distance = std::hypot(x - start.x - t * dx, y - start.y - t * dy);
             double depth = radius - distance;
-            if (depth <= -0.707107) {
+            if (depth <= (ink.smooth ? -0.707107 : 0.0)) {
                 continue;
             }
             int index = y * image.width + x;
@@ -176,7 +176,7 @@ void MaterialStroke::segment(Image& image, Point start, Point end, const Ink& in
             for (int word = 0; word < 16; ++word) {
                 covered.bits[word] = UINT64_MAX;
             }
-            if (depth < 0.707107) {
+            if (ink.smooth && depth < 0.707107) {
                 covered = {};
                 // Integrate the continuous swept disk on a shared 32x32 pixel-area grid.
                 // Samples are unioned across segments, so overlaps and joins never darken twice.
@@ -272,6 +272,12 @@ void material_fill(Image& image, const std::vector<Point>& points, const Ink& in
         }
         for (int x = left; x < right; ++x) {
             std::size_t index = static_cast<std::size_t>(row) * width + x - left;
+            if (!ink.smooth) {
+                bool inside = inside_polygon(points, x, top + row);
+                for (int word = 0; word < 16; ++word) {
+                    row_coverage[x - left].bits[word] = inside ? UINT64_MAX : 0;
+                }
+            }
             int count = row_coverage[x - left].count();
             coverage[index] = static_cast<std::uint16_t>(count);
             distance[index] = count ? 32 : 0;

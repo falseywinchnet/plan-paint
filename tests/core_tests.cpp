@@ -336,9 +336,11 @@ void test_stamp_masks_and_oblique_edges() {
             require(point.x >= 0 && point.y >= 0 && point.x <= 1 && point.y <= 1,
                     "minimum stamp size has out-of-bounds geometry");
         }
-        paint::Image mask = paint::make_stamp(source, {0, 0, 58, 42}, shape, false, {255,255,255,255});
+        paint::Image mask = paint::make_stamp(source, {0, 0, 58, 42}, shape, false, {255, 255, 255, 255});
         int visible = 0;
-        for (const paint::Color& pixel : mask.pixels) visible += pixel.a > 0;
+        for (const paint::Color& pixel : mask.pixels) {
+            visible += pixel.a > 0;
+        }
         require(visible > 20, "stamp shape produced an empty mask");
         if (shape == paint::StampShape::Bezier || shape == paint::StampShape::Arc) {
             require(points.size() > 10, "curved stamp degenerated to a straight segment");
@@ -356,20 +358,30 @@ void test_stamp_masks_and_oblique_edges() {
         for (int closed = 0; closed < 2; ++closed) {
             paint::Image image;
             image.reset(96, 96, {0, 0, 0, 0});
-            if (closed) paint::polygon(image, nodes, ink, true, false);
-            else paint::stroke(image, a, b, ink);
+            if (closed) {
+                paint::polygon(image, nodes, ink, true, false);
+            } else {
+                paint::stroke(image, a, b, ink);
+            }
             int first = -1, total = 0;
             for (int y = 0; y < 96; ++y) {
                 for (int x = 0; x < 96; ++x) {
-                    if (image.get(x, y).a == 0) continue;
-                    if (first < 0) first = y * 96 + x;
+                    if (image.get(x, y).a == 0) {
+                        continue;
+                    }
+                    if (first < 0) {
+                        first = y * 96 + x;
+                    }
                     ++total;
                     double distance = reference_segment_distance({double(x), double(y)}, a, b);
                     if (closed) {
-                        distance = std::min(distance, reference_segment_distance({double(x), double(y)}, b, nodes[2]));
-                        distance = std::min(distance, reference_segment_distance({double(x), double(y)}, nodes[2], a));
+                        distance = std::min(distance,
+                                            reference_segment_distance({double(x), double(y)}, b, nodes[2]));
+                        distance = std::min(distance,
+                                            reference_segment_distance({double(x), double(y)}, nodes[2], a));
                     }
-                    require(distance <= 0.5 + std::sqrt(0.5), "solid edge grew pixels outside its geometric support");
+                    require(distance <= 0.5 + std::sqrt(0.5),
+                            "solid edge grew pixels outside its geometric support");
                 }
             }
             require(first >= 0, "smooth line disappeared");
@@ -381,7 +393,9 @@ void test_stamp_masks_and_oblique_edges() {
                 for (int dy = -1; dy <= 1; ++dy) {
                     for (int dx = -1; dx <= 1; ++dx) {
                         int nx = x + dx, ny = y + dy, index = ny * 96 + nx;
-                        if (nx < 0 || ny < 0 || nx >= 96 || ny >= 96 || visited[index]) continue;
+                        if (nx < 0 || ny < 0 || nx >= 96 || ny >= 96 || visited[index]) {
+                            continue;
+                        }
                         if (image.get(nx, ny).a) {
                             visited[index] = true;
                             queue.push_back(index);
@@ -484,6 +498,29 @@ void test_curves() {
             "undo after curve release resurrected handles or lost the prior raster");
     doc.undo();
     require(!doc.curve.base && doc.image.get(50, 20).r == 255, "curve baseline undo failed");
+}
+void test_line_smoothing() {
+    paint::Image smooth, hard;
+    smooth.reset(64, 64, {255, 255, 255, 255});
+    hard = smooth;
+    paint::Ink ink;
+    ink.size = 3;
+    paint::stroke(smooth, {7, 9}, {53, 37}, ink);
+    ink.smooth = false;
+    paint::stroke(hard, {7, 9}, {53, 37}, ink);
+    int gray = 0, black = 0;
+    for (std::size_t i = 0; i < hard.pixels.size(); ++i) {
+        require(hard.pixels[i].r == 0 || hard.pixels[i].r == 255,
+                "hard lines contain only whole-pixel edges");
+        if (hard.pixels[i].r == 0) {
+            ++black;
+        }
+        if (smooth.pixels[i].r > 0 && smooth.pixels[i].r < 255) {
+            ++gray;
+        }
+    }
+    require(gray > 20 && black > 80,
+            "smoothing toggle preserves a solid stroke while changing edge coverage");
 }
 void test_path_history() {
     paint::Document doc;
@@ -613,6 +650,7 @@ int main() {
         test_materials_and_shapes();
         test_eraser_and_pixel_target();
         test_continuous_geometry_coverage();
+        test_line_smoothing();
         test_path_history();
         test_stamp_masks_and_oblique_edges();
         test_curves();

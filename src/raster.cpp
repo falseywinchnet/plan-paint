@@ -4,10 +4,10 @@
 #include <cmath>
 #include <numbers>
 namespace paint {
-const char* pattern_names[18] = {
-    "Solid",        "Dither 12.5%", "Dither 25%",  "Dither 37.5%", "Dither 50%", "Dither 62.5%",
-    "Dither 75%",   "Dither 87.5%", "Horizontal",  "Vertical",     "Diagonal",   "Crosshatch",
-    "Checkerboard", "Bricks",       "Woven cloth", "Houndstooth",  "Polka dots", "Waves"};
+const char* pattern_names[pattern_count] = {
+    "Solid",        "Dither 12.5%", "Dither 25%", "Dither 37.5%", "Dither 50%", "Dither 62.5%", "Dither 75%",
+    "Dither 87.5%", "Horizontal",   "Vertical",   "Diagonal",     "Crosshatch", "Checkerboard", "Bricks",
+    "Woven cloth",  "Houndstooth",  "Polka dots", "Waves",        "No color"};
 const char* brush_names[brush_count] = {
     "Brush",  "Calligraphy brush 1", "Calligraphy brush 2", "Airbrush",      "Oil brush",   "Crayon",
     "Marker", "Natural pencil",      "Watercolor brush",    "Bristle brush", "Soft pastel", "Charcoal"};
@@ -49,6 +49,9 @@ const char* shape_names[shape_count] = {"Line",
                                         "Burst",
                                         "Arc"};
 Color patterned(const Ink& ink, int x, int y) {
+    if (ink.pattern == Pattern::None) {
+        return {0, 0, 0, 0};
+    }
     const int bayer[8][8] = {{0, 48, 12, 60, 3, 51, 15, 63}, {32, 16, 44, 28, 35, 19, 47, 31},
                              {8, 56, 4, 52, 11, 59, 7, 55},  {40, 24, 36, 20, 43, 27, 39, 23},
                              {2, 50, 14, 62, 1, 49, 13, 61}, {34, 18, 46, 30, 33, 17, 45, 29},
@@ -308,7 +311,7 @@ bool inside_polygon(const std::vector<Point>& points, double x, double y) {
     return inside;
 }
 void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, bool outline, bool fill,
-             bool closed, Brush fill_brush) {
+             bool closed, Brush fill_brush, const Ink* fill_material) {
     if (points.empty()) {
         return;
     }
@@ -317,6 +320,9 @@ void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, boo
         Ink fill_ink = ink;
         fill_ink.primary = ink.secondary;
         fill_ink.secondary = ink.primary;
+        if (fill_material) {
+            fill_ink = *fill_material;
+        }
         material_fill(image, points, fill_ink, fill_brush, outline ? &boundary : nullptr);
     }
     if (outline) {
@@ -508,13 +514,51 @@ std::vector<Point> shape_points(Shape shape, Point start, Point end) {
     return normalized;
 }
 void draw_shape(Image& image, Shape shape, Point start, Point end, const Ink& ink, bool outline, bool fill,
-                Brush fill_brush) {
+                Brush fill_brush, const Ink* fill_material) {
     std::vector<Point> points = shape_points(shape, start, end);
     polygon(image, points, ink, outline, fill,
-            shape != Shape::Line && shape != Shape::Bezier && shape != Shape::Arc, fill_brush);
+            shape != Shape::Line && shape != Shape::Bezier && shape != Shape::Arc, fill_brush, fill_material);
 }
 Shape stamp_geometry_shape(StampShape shape) {
-    const Shape shapes[] = {Shape::Circle, Shape::RoundedRectangle, Shape::Rectangle, Shape::Rectangle, Shape::Line, Shape::Bezier, Shape::Oval, Shape::RoundedRectangle, Shape::Polygon, Shape::Triangle, Shape::RightTriangle, Shape::Diamond, Shape::Pentagon, Shape::Hexagon, Shape::RightArrow, Shape::LeftArrow, Shape::UpArrow, Shape::DownArrow, Shape::Star4, Shape::Star5, Shape::Star6, Shape::RoundedCallout, Shape::OvalCallout, Shape::CloudCallout, Shape::Heart, Shape::Lightning, Shape::Octagon, Shape::Trapezoid, Shape::Parallelogram, Shape::Chevron, Shape::DoubleArrow, Shape::Cross, Shape::Gear, Shape::Crescent, Shape::Teardrop, Shape::Leaf, Shape::Star8, Shape::Burst, Shape::Arc};
+    const Shape shapes[] = {Shape::Circle,
+                            Shape::RoundedRectangle,
+                            Shape::Rectangle,
+                            Shape::Rectangle,
+                            Shape::Line,
+                            Shape::Bezier,
+                            Shape::Oval,
+                            Shape::RoundedRectangle,
+                            Shape::Polygon,
+                            Shape::Triangle,
+                            Shape::RightTriangle,
+                            Shape::Diamond,
+                            Shape::Pentagon,
+                            Shape::Hexagon,
+                            Shape::RightArrow,
+                            Shape::LeftArrow,
+                            Shape::UpArrow,
+                            Shape::DownArrow,
+                            Shape::Star4,
+                            Shape::Star5,
+                            Shape::Star6,
+                            Shape::RoundedCallout,
+                            Shape::OvalCallout,
+                            Shape::CloudCallout,
+                            Shape::Heart,
+                            Shape::Lightning,
+                            Shape::Octagon,
+                            Shape::Trapezoid,
+                            Shape::Parallelogram,
+                            Shape::Chevron,
+                            Shape::DoubleArrow,
+                            Shape::Cross,
+                            Shape::Gear,
+                            Shape::Crescent,
+                            Shape::Teardrop,
+                            Shape::Leaf,
+                            Shape::Star8,
+                            Shape::Burst,
+                            Shape::Arc};
     return shapes[static_cast<int>(shape)];
 }
 const char* stamp_shape_name(StampShape shape) {
@@ -552,18 +596,18 @@ std::vector<Point> stamp_outline(StampShape shape, int width, int height) {
             }
             double inset_x = std::min(1.5, width * 0.5);
             double inset_y = std::min(1.5, height * 0.5);
-            points.push_back({inset_x + x * (width - 2 * inset_x),
-                              inset_y + y * (height - 2 * inset_y)});
+            points.push_back({inset_x + x * (width - 2 * inset_x), inset_y + y * (height - 2 * inset_y)});
         }
         return points;
     }
     if (geometry == Shape::Polygon) {
-        return {{width * 0.08, height * 0.15}, {width * 0.8, 0},
-                {double(width), height * 0.72}, {width * 0.42, double(height)},
+        return {{width * 0.08, height * 0.15},
+                {width * 0.8, 0},
+                {double(width), height * 0.72},
+                {width * 0.42, double(height)},
                 {0, height * 0.6}};
     }
-    points = shape_points(geometry, {0, 0},
-                          {static_cast<double>(width), static_cast<double>(height)});
+    points = shape_points(geometry, {0, 0}, {static_cast<double>(width), static_cast<double>(height)});
     // Some drawing shapes deliberately extend beyond their drag box (callout
     // tails and circles). A stamp mask must fit its entire capture rectangle.
     double left = 0, top = 0, right = width, bottom = height;

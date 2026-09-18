@@ -12,6 +12,8 @@ int main(int argc, char** argv) {
             std::filesystem::path preferences = paint::path_from_utf8(paint::preference_directory());
             (*editor).custom_colors.storage_path = paint::path_to_utf8(preferences / "custom-colors.bin");
             (*editor).custom_colors.load();
+            (*editor).settings.storage_path = paint::path_to_utf8(preferences / "settings.txt");
+            (*editor).settings.load();
             (*editor).recent.storage_path = paint::path_to_utf8(preferences / "recent.bin");
             (*editor).recent.load();
         } catch (const std::exception&) {
@@ -25,9 +27,8 @@ int main(int argc, char** argv) {
         options.initial_size = {1280, 820};
         options.minimum_size = {1280, 600};
         options.print_metrics_on_close = false;
-        options.ready =
-            std::bind(&paint::forms::Editor::ready, editor, std::placeholders::_1, std::placeholders::_2,
-                      initial_path);
+        options.ready = std::bind(&paint::forms::Editor::ready, editor, std::placeholders::_1,
+                                  std::placeholders::_2, initial_path);
         options.closing = std::bind(&paint::forms::Editor::closing, editor, std::placeholders::_1);
         gui_forms::ApplicationResult result =
             gui_forms::Application::run(std::move(window), std::move(options));
