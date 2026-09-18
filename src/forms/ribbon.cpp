@@ -837,7 +837,7 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
             selection     ? std::vector<std::string>{"Selection", "Rotation", "Mesh", "Finish", "Controls"}
             : page_ == 16 ? std::vector<std::string>{"Font", "Text box", "Finish text"}
             : page_ == 2  ? std::vector<std::string>{"Zoom", "Show or hide", "Display"}
-            : page_ == 4  ? std::vector<std::string>{"Apply to", "Brushes", "Patterns", "Material"}
+            : page_ == 4  ? std::vector<std::string>{"Apply to", "Brushes", "Patterns"}
                           : std::vector<std::string>{"Tool settings"};
         const std::vector<double> edges = selection     ? std::vector<double>{0, 230, 496, 764, 906, width}
                                           : page_ == 16 ? std::vector<double>{0, 455, 692, 1134}
