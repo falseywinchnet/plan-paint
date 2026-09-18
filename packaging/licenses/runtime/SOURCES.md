@@ -16,3 +16,6 @@ GCC runtime libraries retain the GCC Runtime Library Exception.
 
 Windows MinGW-w64 14.0.0 sources: https://sourceforge.net/projects/mingw-w64/files/mingw-w64/mingw-w64-release/mingw-w64-v14.0.0.tar.bz2
 Windows GCC 16.1.0 runtime sources: https://gcc.gnu.org/pub/gcc/releases/gcc-16.1.0/
+
+The locally cross-compiled Windows package uses the pinned Chromium zlib source
+from GUI.Forms: https://chromium.googlesource.com/chromium/src/third_party/zlib/+/646b7f569718921d7d4b5b8e22572ff6c76f2596

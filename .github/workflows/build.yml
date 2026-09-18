@@ -8,8 +8,10 @@ on:
 concurrency:
   group: native-${{ github.ref }}
   cancel-in-progress: true
+# GitHub restricts draft-release asset reads to a token with contents write.
+# The token is supplied only to the verified source-download step.
 permissions:
-  contents: read
+  contents: write
 jobs:
   linux:
     runs-on: ubuntu-24.04
