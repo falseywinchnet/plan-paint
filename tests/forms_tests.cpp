@@ -276,11 +276,11 @@ void selection_move_path_and_stamp() {
     paint::forms::Editor& editor = *fixture.editor;
     fixture.drag(10, 10, 25, 10);
     editor.choose_tool(paint::Tool::Select);
-    fixture.drag(8, 8, 28, 15);
+    fixture.drag(8, 2, 38, 28);
     require(editor.document.selection.active && white(editor.document.image.get(15, 10)),
             "selection lifts pixels");
-    fixture.drag(15, 10, 45, 30);
-    require(editor.document.selection.x == 38 && editor.document.selection.y == 28,
+    fixture.drag(15, 15, 45, 35);
+    require(editor.document.selection.x == 38 && editor.document.selection.y == 22,
             "selection retains drag offset");
     editor.execute("release");
     require(!white(editor.document.image.get(45, 30)), "placing selection composites at new position");
@@ -319,8 +319,11 @@ void routed_button(gf::Window& window, const std::string& id) {
     window.perform_layout();
     gf::Rect bounds = (*button).absolute_bounds();
     gf::Point point{bounds.x + bounds.width / 2, bounds.y + bounds.height / 2};
-    require(window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, point}),
-            "button consumes routed pointer down");
+    if (!window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, point})) {
+        throw std::runtime_error("button consumes routed pointer down: " + id +
+                                 " bounds=" + std::to_string(bounds.x) + "," + std::to_string(bounds.y) +
+                                 "," + std::to_string(bounds.width) + "," + std::to_string(bounds.height));
+    }
     require(window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, point}),
             "button consumes routed pointer up");
 }
@@ -615,6 +618,206 @@ void background_rotation_mesh_and_stamp() {
         (*closing.editor).request_rotation(13);
     }
 }
+void atlas_grid_frames_and_cursor_save() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.execute("atlas-grid");
+    window.perform_layout();
+    std::shared_ptr<gf::NumericUpDown> columns =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("atlas-0"));
+    std::shared_ptr<gf::NumericUpDown> rows =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("atlas-1"));
+    require(columns && rows, "atlas grid has native numeric controls");
+    (*columns).set_value(3);
+    (*rows).set_value(2);
+    routed_button(window, "dialog-cancel");
+    require(editor.document.atlas.kind == paint::AtlasKind::None, "grid cancel preserves document");
+    editor.execute("atlas-grid");
+    window.perform_layout();
+    columns = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("atlas-0"));
+    rows = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("atlas-1"));
+    (*columns).set_value(4);
+    (*rows).set_value(2);
+    routed_button(window, "dialog-ok");
+    require(editor.document.atlas.count() == 8 && editor.document.image.width == 32 &&
+                editor.document.image.height == 48,
+            "grid splits document into editable frames");
+    editor.choose_tool(paint::Tool::Pencil);
+    fixture.drag(4, 5, 12, 5);
+    paint::Image painted = editor.document.image;
+    routed_button(window, "atlas-frame-1");
+    require(editor.document.atlas.active == 1 && white(editor.document.image.get(4, 5)),
+            "thumbnail switches to distinct untouched frame");
+    editor.select_frame(0);
+    require(std::equal(editor.document.image.pixels.begin(), editor.document.image.pixels.end(),
+                       painted.pixels.begin(), paint::equal),
+            "switching frames retains finished artwork");
+    editor.select_frame(3, true);
+    require(editor.document.atlas.sequence == std::vector<int>({0, 3}),
+            "control frame selection retains sequence");
+    editor.execute("atlas-next");
+    require(editor.document.atlas.active == 0 && editor.document.atlas.sequence.size() == 2,
+            "next loops selected sequence");
+    editor.execute("atlas-previous");
+    require(editor.document.atlas.active == 3, "previous loops selected sequence");
+    editor.execute("atlas-gallery");
+    window.perform_layout();
+    routed_button(window, "gallery-frame-0");
+    require(editor.document.atlas.active == 0, "expanded gallery routes frame selection");
+    routed_button(window, "dialog-ok");
+    editor.execute("atlas-whole");
+    require(editor.document.image.width == 128 && !white(editor.document.image.get(4, 5)),
+            "whole sheet includes frame edits");
+    editor.execute("atlas-leave");
+    require(editor.document.atlas.kind == paint::AtlasKind::None && editor.document.image.width == 128,
+            "leaving atlas restores edited sheet");
+    editor.execute("undo");
+    require(editor.document.atlas.kind == paint::AtlasKind::Sheet, "undo restores atlas structure");
+    editor.execute("atlas-leave");
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{1280, 820}, 1}}).accepted(),
+            "atlas test host attaches");
+    services.path = (std::filesystem::temp_directory_path() / "rainstar-forms-atlas.cur").string();
+    require(!editor.save(true) && window.find("icon-size-16"), "cursor save waits for explicit frame sizes");
+    routed_button(window, "dialog-ok");
+    require(editor.document.atlas.kind == paint::AtlasKind::Cursor && editor.document.atlas.count() == 4 &&
+                !editor.document.dirty(),
+            "size acceptance creates and saves all cursor frames");
+    editor.execute("atlas-hotspot");
+    window.perform_layout();
+    routed_button(window, "hotspot-pick");
+    fixture.click(13, 17);
+    require(!editor.pick_hotspot &&
+                editor.document.atlas.icons[editor.document.atlas.active].hotspot_x == 13 &&
+                editor.document.atlas.icons[editor.document.atlas.active].hotspot_y == 17,
+            "canvas picks current frame hotspot");
+    require(editor.save(false), "cursor frames save without repeated size dialog");
+    paint::ImageContainer saved = paint::load_container(services.path);
+    require(saved.frames.size() == 4 && saved.frames.back().hotspot_x == 13 &&
+                saved.frames.back().hotspot_y == 17,
+            "CUR reload preserves all frames and hotspot");
+    std::filesystem::remove(services.path);
+}
+void atlas_large_sheet_uses_visible_thumbnail_resources() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    paint::AtlasGrid grid;
+    grid.columns = 64;
+    grid.rows = 64;
+    editor.document.configure_atlas(grid);
+    routed_button(window, "atlas-tab");
+    window.perform_layout();
+    require(window.image_resource_snapshot().resource_count < 400,
+            "4096-frame atlas retains images only for visible thumbnails");
+    editor.select_frame(4095);
+    window.perform_layout();
+    require(window.find("atlas-frame-4095") && window.image_resource_snapshot().resource_count < 400,
+            "scrolling to last frame keeps image resources bounded");
+    std::uint64_t before_gallery = window.image_resource_snapshot().resource_count;
+    editor.execute("atlas-gallery");
+    window.perform_layout();
+    require(window.find("gallery-frame-4095") && window.image_resource_snapshot().resource_count < 500,
+            "large gallery retains only visible thumbnail images");
+    gf::Rect selected = (*window.find("gallery-frame-4095")).absolute_bounds();
+    gf::Rect gallery_bounds = (*window.find("gallery-frames")).absolute_bounds();
+    require(selected.y >= gallery_bounds.y && selected.bottom() <= gallery_bounds.bottom(),
+            "opening gallery reveals current frame after layout");
+    routed_button(window, "dialog-ok");
+    require(window.image_resource_snapshot().resource_count == before_gallery,
+            "closing gallery releases its thumbnail resources");
+}
+void desktop_transactions_drop_and_handles() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{1280, 820}, 1}}).accepted(),
+            "desktop test host attaches");
+    editor.document.image.set(4, 4, {230, 170, 70, 129});
+    paint::Image original = editor.document.image;
+    editor.execute("properties");
+    window.perform_layout();
+    std::shared_ptr<gf::CheckBox> monochrome =
+        std::dynamic_pointer_cast<gf::CheckBox>(window.find("properties-monochrome"));
+    require(static_cast<bool>(monochrome), "properties exposes monochrome conversion");
+    (*monochrome).set_checked(true);
+    routed_button(window, "dialog-cancel");
+    require(paint::equal(editor.document.image.get(4, 4), original.get(4, 4)),
+            "properties cancel preserves image");
+    editor.execute("properties");
+    window.perform_layout();
+    monochrome = std::dynamic_pointer_cast<gf::CheckBox>(window.find("properties-monochrome"));
+    (*monochrome).set_checked(true);
+    routed_button(window, "dialog-ok");
+    require(paint::equal(editor.document.image.get(4, 4), {255, 255, 255, 129}),
+            "monochrome conversion preserves alpha");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(4, 4), original.get(4, 4)),
+            "properties transaction can be undone");
+    editor.execute("print-preview");
+    window.perform_layout();
+    require(window.find("print-preview-image") != nullptr, "print preview contains actual document bitmap");
+    routed_button(window, "dialog-ok");
+    editor.document.image.set(4, 4, {230, 170, 70, 255});
+    original = editor.document.image;
+    fixture.drag(128, 96, 151, 115);
+    require(editor.document.image.width == 151 && editor.document.image.height == 115 &&
+                paint::equal(editor.document.image.get(4, 4), original.get(4, 4)),
+            "canvas handle expands boundary without scaling artwork");
+    editor.execute("undo");
+    require(editor.document.image.width == 128 && editor.document.image.height == 96,
+            "canvas handle resize is undoable");
+    editor.document.select({10, 10, 30, 20});
+    editor.refresh();
+    fixture.drag(40, 30, 60, 45);
+    require(editor.document.selection.image.width == 50 && editor.document.selection.image.height == 35,
+            "selection corner resizes floating artwork");
+    editor.execute("release");
+    paint::Image drop_image;
+    drop_image.reset(37, 29, {70, 110, 190, 255});
+    std::string path = (std::filesystem::temp_directory_path() / "rainstar-forms-drop.png").string();
+    paint::save_image(drop_image, path);
+    gf::DragEvent drag;
+    drag.action = gf::DragAction::enter;
+    drag.session_id = 123;
+    drag.position = fixture.position(20, 20);
+    drag.allowed_effects = gf::DragEffect::copy;
+    drag.items = {gf::DragFileListData{{path}}};
+    require(window.dispatch_drag(drag).accepted_effect == gf::DragEffect::copy,
+            "file drop advertises copy acceptance");
+    drag.action = gf::DragAction::drop;
+    require(window.dispatch_drag(drag).accepted_effect == gf::DragEffect::none &&
+                editor.document.image.width == 128,
+            "unsaved-work cancellation rejects dropped file");
+    services.choice = gf::HostDialogChoice::no;
+    drag.action = gf::DragAction::enter;
+    ++drag.session_id;
+    static_cast<void>(window.dispatch_drag(drag));
+    drag.action = gf::DragAction::drop;
+    require(window.dispatch_drag(drag).accepted_effect == gf::DragEffect::copy &&
+                editor.document.image.width == 37 && editor.recent.paths.front() == path,
+            "accepted drop loads image and remembers path");
+    editor.document.new_image(33, 25);
+    editor.document.checkpoint();
+    editor.refresh();
+    services.path = (std::filesystem::temp_directory_path() / "rainstar-forms-deferred.ico").string();
+    services.choice = gf::HostDialogChoice::yes;
+    editor.execute("new");
+    require(window.find("icon-size-16") && editor.deferred_command == "new",
+            "new waits while icon save sizes are chosen");
+    routed_button(window, "dialog-ok");
+    require(editor.document.filename.empty() && editor.document.atlas.kind == paint::AtlasKind::None &&
+                !editor.document.dirty(),
+            "successful icon save resumes New request");
+    paint::ImageContainer saved = paint::load_container(services.path);
+    require(saved.frames.size() == 4, "deferred save writes chosen icon sizes before replacing image");
+    std::filesystem::remove(path);
+    std::filesystem::remove(services.path);
+}
 void zoom_anchors_the_point() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -638,6 +841,9 @@ int main() {
         retained_curve_save_undo_and_release();
         selection_move_path_and_stamp();
         zoom_anchors_the_point();
+        atlas_grid_frames_and_cursor_save();
+        desktop_transactions_drop_and_handles();
+        atlas_large_sheet_uses_visible_thumbnail_resources();
         background_rotation_mesh_and_stamp();
         skew_transaction_and_undo();
         canvas_text_editing_and_commit();

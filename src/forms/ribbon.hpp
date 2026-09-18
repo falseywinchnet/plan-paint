@@ -9,6 +9,7 @@
 #include <gui_forms/window.hpp>
 namespace paint::forms {
 class Editor;
+class AtlasPanel;
 Color ribbon_color(int index);
 std::shared_ptr<const gui_forms::Theme> ribbon_theme();
 class SwatchButton final : public gui_forms::Button {
@@ -31,12 +32,14 @@ class Ribbon final : public gui_forms::Control {
     void close_popup();
     void show_tool_context();
     void show_transforms();
+    void show_atlas();
 
   protected:
     void on_attached_to_window() override;
 
   private:
     std::weak_ptr<Editor> editor_;
+    std::shared_ptr<AtlasPanel> atlas_;
     std::shared_ptr<gui_forms::ImageList> small_icons_, medium_icons_, large_icons_, brush_previews_,
         pattern_previews_;
     std::shared_ptr<gui_forms::ToolTip> tooltips_;

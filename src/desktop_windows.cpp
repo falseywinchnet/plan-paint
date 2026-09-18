@@ -1,7 +1,10 @@
 #include "desktop.hpp"
 #include "paths.hpp"
+#if !RAINSTAR_FORMS_NATIVE_PRINT
 #include <SDL3/SDL.h>
+#endif
 #include <array>
+#include <chrono>
 #include <filesystem>
 #include <stdexcept>
 #define WIN32_LEAN_AND_MEAN
@@ -93,7 +96,8 @@ bool acquire_picture(std::string& acquired_path) {
     if (picture.value.vt != VT_DISPATCH || !picture.value.pdispVal) {
         return false;
     }
-    acquired_path = preference_directory() + "Capture-" + std::to_string(SDL_GetTicksNS()) + ".bmp";
+    acquired_path = preference_directory() + "Capture-" +
+                    std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".bmp";
     std::wstring native_path = path_from_utf8(acquired_path).wstring();
     AutomationValue destination;
     destination.value.vt = VT_BSTR;
@@ -119,8 +123,13 @@ void compose_email(SDL_Window* window, const std::string& path) {
     MapiMessageW message{};
     message.nFileCount = 1;
     message.lpFiles = &attachment;
+#if RAINSTAR_FORMS_NATIVE_PRINT
+    static_cast<void>(window);
+    void* native_window = nullptr;
+#else
     void* native_window =
         SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+#endif
     ULONG result =
         send_mail(0, reinterpret_cast<ULONG_PTR>(native_window), &message, MAPI_DIALOG | MAPI_LOGON_UI, 0);
     FreeLibrary(module);

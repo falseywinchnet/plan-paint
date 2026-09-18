@@ -1,5 +1,6 @@
 #include "forms/ribbon.hpp"
 #include "codecs.hpp"
+#include "forms/atlas.hpp"
 #include "forms/editor.hpp"
 #include "forms/ribbon_icons.hpp"
 #include "material.hpp"
@@ -152,6 +153,9 @@ void Ribbon::initialize_control_tree() {
     button("view-tab", "View", -1, {118, 0, 63, 27});
     button("patterns-tab", "Patterns & tools", -1, {184, 0, 144, 27});
     button("tool-tab", "Pencil", -1, {330, 0, 142, 27});
+    button("atlas-tab", "Atlas", -1, {475, 0, 72, 27});
+    atlas_ = gf::make_control<AtlasPanel>(gf::StableId("atlas-panel"), editor_);
+    add_child(atlas_);
     button("help", "?", -1, {1240, 0, 32, 27});
     building_page_ = 1;
     button("save", "Save", 14, {5, 35, 64, 34});
@@ -365,6 +369,11 @@ void Ribbon::add_options() {
     button("text-font-file", "Open font…", -1, {1006, 79, 114, 30});
     building_page_ = 1;
 }
+void Ribbon::show_atlas() {
+    page_ = 64;
+    synchronize();
+    invalidate(gf::Dirty::paint);
+}
 void Ribbon::show_transforms() {
     page_ = 32;
     close_popup();
@@ -392,6 +401,11 @@ void Ribbon::show_page() {
     std::shared_ptr<Editor> editor = editor_.lock();
     if (!editor) {
         return;
+    }
+    (*atlas_).set_visible(page_ == 64);
+    (*editor).show_hotspot = page_ == 64;
+    if (page_ == 64) {
+        (*atlas_).synchronize();
     }
     Tool tool = (*editor).document.tool;
     if (page_ == 8 || page_ == 16) {
@@ -607,6 +621,7 @@ void Ribbon::bind_icon(gf::Button& button, int icon, bool large) {
 }
 void Ribbon::arrange(gf::Rect bounds) {
     arrange_self(bounds);
+    set_child_layout(atlas_, {0, 27, bounds.width, 116});
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         set_child_layout(buttons_[i], (*buttons_[i]).requested_bounds());
     }
@@ -623,6 +638,9 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     painter.fill_linear_gradient({0, 27, width, 116}, {0, 27}, {0, 143}, stops);
     painter.draw_line({0, 27}, {width, 27}, gf::Color::rgba(182, 199, 218), 1);
     painter.draw_line({0, 142}, {width, 142}, gf::Color::rgba(160, 182, 207), 1);
+    if (page_ == 64) {
+        return;
+    }
     if (page_ != 1) {
         const gf::FontSpec font{gf::FontRole::control, 12, 400, false, 0.08};
         const std::vector<std::string> labels =
@@ -701,10 +719,11 @@ void Ribbon::synchronize() {
             selected = secondary_color_;
         }
         if (id.ends_with("-tab")) {
-            selected = id == (page_ == 1   ? "home-tab"
-                              : page_ == 2 ? "view-tab"
-                              : page_ == 4 ? "patterns-tab"
-                                           : "tool-tab");
+            selected = id == (page_ == 1    ? "home-tab"
+                              : page_ == 2  ? "view-tab"
+                              : page_ == 4  ? "patterns-tab"
+                              : page_ == 64 ? "atlas-tab"
+                                            : "tool-tab");
         }
         if (id.starts_with("r-pattern-")) {
             selected = static_cast<int>(document.ink.pattern) == std::stoi(id.substr(10));
@@ -789,7 +808,11 @@ void Ribbon::clicked(gf::ButtonBase& button) {
     }
     if (id.ends_with("-tab")) {
         close_popup();
-        page_ = id == "home-tab" ? 1 : id == "view-tab" ? 2 : id == "patterns-tab" ? 4 : 8;
+        page_ = id == "home-tab"       ? 1
+                : id == "view-tab"     ? 2
+                : id == "patterns-tab" ? 4
+                : id == "atlas-tab"    ? 64
+                                       : 8;
         synchronize();
         invalidate(gf::Dirty::paint);
         return;

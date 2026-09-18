@@ -9,32 +9,11 @@ int main(int argc, char** argv) {
         const std::shared_ptr<paint::forms::Editor> editor =
             gui_forms::make_control<paint::forms::Editor>(gui_forms::StableId("paint.editor"));
         try {
-            std::filesystem::path preferences;
-#if defined(__APPLE__)
-            const char* home = std::getenv("HOME");
-            if (home) {
-                preferences =
-                    std::filesystem::path(home) / "Library/Application Support/rainstar/RainstarPaint";
-            }
-#elif defined(_WIN32)
-            const char* appdata = std::getenv("APPDATA");
-            if (appdata) {
-                preferences = paint::path_from_utf8(appdata) / "rainstar" / "RainstarPaint";
-            }
-#else
-            const char* config = std::getenv("XDG_DATA_HOME");
-            const char* home = std::getenv("HOME");
-            if (config) {
-                preferences = std::filesystem::path(config) / "rainstar/RainstarPaint";
-            } else if (home) {
-                preferences = std::filesystem::path(home) / ".local/share/rainstar/RainstarPaint";
-            }
-#endif
-            if (!preferences.empty()) {
-                std::filesystem::create_directories(preferences);
-                (*editor).custom_colors.storage_path = paint::path_to_utf8(preferences / "custom-colors.bin");
-                (*editor).custom_colors.load();
-            }
+            std::filesystem::path preferences = paint::path_from_utf8(paint::preference_directory());
+            (*editor).custom_colors.storage_path = paint::path_to_utf8(preferences / "custom-colors.bin");
+            (*editor).custom_colors.load();
+            (*editor).recent.storage_path = paint::path_to_utf8(preferences / "recent.bin");
+            (*editor).recent.load();
         } catch (const std::exception&) {
             (*editor).custom_colors.storage_path.clear();
         }

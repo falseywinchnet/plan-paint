@@ -48,8 +48,12 @@ class Editor final : public gui_forms::Control {
     void regenerate_stamp();
     int stamp_width = 80, stamp_height = 80;
     double stamp_scale = 1, stamp_angle = 0, rotation_angle = 0, mesh_spacing = 60;
+    void select_frame(int index, bool sequence = false);
+    bool pick_hotspot = false, show_hotspot = false;
     Document document;
     CustomColors custom_colors;
+    RecentFiles recent;
+    int jpeg_quality = 92;
     TextSession text;
     void text_input(gui_forms::TextInputEvent& event);
     bool text_key(gui_forms::KeyEvent& event);
@@ -64,6 +68,7 @@ class Editor final : public gui_forms::Control {
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
     void paint_canvas_overlay(gui_forms::Painter& painter, gui_forms::Rect damage);
     void on_key_preview(gui_forms::KeyEvent& event) override;
+    void on_drag(gui_forms::DragEvent& event) override;
     void ready(gui_forms::Window& window, gui_forms::ApplicationWindowHandle handle);
     void closing(gui_forms::HostCloseRequest& request);
     void execute(const std::string& command);
@@ -72,6 +77,9 @@ class Editor final : public gui_forms::Control {
     void refresh();
     void open_file(const std::string& path);
     bool save(bool save_as);
+    void save_path(const std::string& path);
+    std::string pending_save_path, deferred_command, deferred_open_path;
+    void complete_deferred_save();
     gui_forms::RasterCanvas& canvas();
     void pointer(const gui_forms::PointerEvent& event);
 
@@ -110,7 +118,8 @@ class Editor final : public gui_forms::Control {
     gui_forms::PopupToken editor_dialog_popup_;
     gui_forms::FocusScopeId editor_dialog_focus_;
     std::vector<std::shared_ptr<gui_forms::Command>> commands_;
-    std::vector<gui_forms::SubscriptionToken> subscriptions_;
+    std::vector<gui_forms::SubscriptionToken> subscriptions_, menu_subscriptions_;
+    void rebuild_file_menu();
     gui_forms::ApplicationWindowHandle handle_;
     std::uint64_t next_dialog_id_ = 1;
     gui_forms::FrameRequestToken text_caret_frame_;
@@ -118,6 +127,7 @@ class Editor final : public gui_forms::Control {
     int text_drag_ = -3;
     Rect text_drag_bounds_;
     Point text_drag_start_;
+    void paint_atlas_overlay(gui_forms::Painter& painter);
     void paint_text_overlay(gui_forms::Painter& painter);
     void text_pointer(const gui_forms::PointerEvent& event, Point point);
     void reset_text_caret();
@@ -133,6 +143,12 @@ class Editor final : public gui_forms::Control {
     bool dragging_ = false, moving_selection_ = false, preview_active_ = false, panning_ = false;
     bool handle_checkpoint_ = false;
     int curve_handle_ = -1;
+    int resize_handle_ = -1;
+    bool resize_selection_ = false;
+    Point resize_start_;
+    Rect resize_original_, resize_preview_;
+    bool resize_pointer(const gui_forms::PointerEvent& event, Point point);
+    void paint_resize_overlay(gui_forms::Painter& painter);
     void update_status();
     void update_cursor_status();
     void zoom_slider_changed(double value);

@@ -8,9 +8,10 @@ feature-complete comparison application while integration proceeds.
 
 ## Build
 
-Use the macOS ARM64 GUI.Forms SDK built from `codex/paint-canvas-extension`,
-commit `8d448f5`, or an SDK that includes its canvas, ribbon composition,
-and native full-screen handle extensions. The original `9a4b156`
+Use the macOS ARM64 GUI.Forms SDK built from `codex/paint-canvas-extension`
+(commit `ae40f6e`), with the canvas, ribbon composition, native full-screen, scrolling-layout,
+keyboard, and diagonal-cursor extensions. The CMake configuration checks the
+required API before compiling the frontend. The original `9a4b156`
 package declares RasterCanvas final and cannot build this frontend. The extension
 allows an application canvas to override normal Control input and overlay hooks;
 bitmap presentation and resource ownership remain in GUI.Forms.
@@ -28,9 +29,20 @@ ctest --test-dir build-forms --output-on-failure
 Set both UI options to ON to build both executables together. An ordinary build
 continues to build the existing frontend. No GUI.Forms source checkout or private
 renderer headers are included by Paint. Font resources come from the installed
-SDK and are copied into the macOS bundle. This is a development build: its SDK
-and codec dynamic libraries must remain available. It is not a redistributable
-release package.
+SDK and are copied into the macOS bundle and beside Windows executables.
+The build-directory executable uses development SDK and codec libraries.
+
+To produce the separate macOS development application and installer:
+
+```sh
+python3 scripts/package-macos.py --frontend forms --gui-forms-sdk /path/to/sdk
+```
+
+The output under `dist/gui-forms/` includes its dependency closure, fonts and
+licenses. The packager resolves `@rpath` references, rewrites them to bundled
+libraries, removes development search paths, and verifies the ad-hoc signature.
+The app is named `Rainstar Paint GUI.Forms.app`, with a separate installer
+identifier. It is a local development package, not a notarized public release.
 
 ## Connected behavior
 
@@ -70,25 +82,50 @@ release package.
   angle controls use the compiled CONV material and a retained cursor preview.
   Worker completion posts through GUI.Forms' dispatcher; generation checks reject
   obsolete results. Cancellation and destruction preserve ownership boundaries.
+- Atlas thumbnail strip and scrollable gallery, equal-frame sprite grids with
+  margins/spacing, frame sequences, whole-sheet editing, and icon/cursor size
+  generation. Cursor hotspots support numeric entry and canvas picking. Legacy
+  XOR cursor pixels display against the checkerboard while save retains metadata.
+  Thumbnail image resources are limited to visible frames, including 4096-frame
+  sheets. Opening the gallery reveals the current frame after layout.
+- Recent pictures, native file drops, image properties, monochrome conversion,
+  JPEG quality, print preview, acquisition, email composition, and desktop
+  backgrounds through the existing native services. Deferred New/Open/Close
+  requests resume after the icon-size save dialog succeeds.
+- Canvas boundary handles and eight selection resize handles, with diagonal
+  native cursors. Selection resizing uses CONV; canvas resizing uses the existing
+  boundary operation. The comparison frontend's keyboard shortcuts are connected.
 - Brush movement publishes only a conservative affected rectangle. GUI.Forms
   owns the tiled display update. Selection and shape previews currently publish
   the complete composed image.
 
 ## Remaining integration
 
-The GUI.Forms executable does **not** yet have feature parity. In particular,
-these accepted functions remain in the comparison frontend:
+The accepted command groups are connected on macOS, but cross-platform parity
+has not been established:
 
-- Full atlas/frame/cursor-hotspot UI and property dialogs.
-- Recent-file menus, acquisition, email/wallpaper commands, print preview,
-  drag-and-drop and the full keyboard set.
-- Windows native execution and packaging; Linux native execution requires the
-  toolkit's native Linux host. Neither is established by this macOS port.
+- Windows source syntax checks pass; this frontend still needs a complete native
+  Windows build, runtime interaction checks and packaging validation.
+- Native Linux execution requires the toolkit's native Linux host.
+- Acquisition devices, email attachment handoff, wallpaper changes and actual
+  printer jobs have not been exercised end-to-end in this port session. Their
+  command handlers reuse Paint's existing platform implementations.
 
-Do not replace the default frontend or advertise parity until those behaviors
-are carried across and compared against the existing interaction tests.
+Keep the existing frontend available until those platform and service checks
+are complete. The native preview is a fit-to-window artwork preview, not a
+printer-specific pagination proof.
 
 ## Toolkit findings
+
+`FlowLayoutPanel` now measures its flowed content into the inherited scrolling
+viewport. Wrapping remeasures when a scrollbar consumes width; scrolling moves
+layout, clipping and input together. The regression covers horizontal scrolling,
+wrapped rows, scroll-into-view and resize convergence. Paint uses the existing
+control rather than maintaining a separate scrolling implementation.
+
+Physical-key constants now cover the full F1–F12 range and stamp size keys.
+Diagonal cursor kinds map to Win32 resize cursors and AppKit frame-resize cursors
+on macOS 15 and later, with a crosshair fallback on older macOS.
 
 `DropDownButtonEdge::bottom` puts the disclosure in a narrow lower strip for
 large icon commands while preserving the same split-button routing. Multiline
@@ -130,7 +167,12 @@ dismissal and reopening, plus modal color/resize transactions and RGBA palette
 persistence. Text tests compare placed pixels with its preview and cover Unicode
 editing, undo, and cancellation. Transform tests compare rotated image bytes
 with the CONV renderer and cover mesh/stamp/skew cancellation, late results,
-document undo and destruction during background work.
+document undo and destruction during background work. Atlas tests cover grid
+cancellation, editing across frame switches, sequences, expanded gallery input,
+CUR save/reload with hotspots, and bounded resources across 4096 frames. Desktop
+transaction tests cover property cancellation/undo, alpha-preserving monochrome
+conversion, image drops with unsaved-work cancellation, deferred icon saving,
+print preview, and canvas/selection resize handles.
 `paint-forms-native-tests` exercises application startup, native host attachment,
 routed drawing/curve handles, capture release and application close. Run its
 macOS bundle with `--keep-open` to inspect the real rendered interaction fixture.
@@ -138,4 +180,4 @@ This fixture uses Paint's actual tools; it is not a mockup.
 
 Continue running the existing core, format, warp and interaction suites. A
 successful toolkit gallery or the current integration fixture is not evidence
-for the still-unported behavior listed above.
+for the remaining platform and service checks listed above.

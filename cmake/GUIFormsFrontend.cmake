@@ -14,6 +14,18 @@ int main() {
   static_cast<void>(handle.toggle_full_screen());
   return 0;
 }" RAINSTAR_RIBBON_CONTROLS)
+check_cxx_source_compiles("#include <gui_forms/controls/scrollable_control/scrollable_control.hpp>
+#include <gui_forms/events/input_events/input_events.hpp>
+class Probe : public gui_forms::ScrollableControl {
+ public:
+  Probe() : ScrollableControl(gui_forms::StableId(\"probe\")) {}
+  void check() { arrange_scroll_viewport({100, 100}, {200, 200}); }
+};
+int main() {
+  Probe probe; probe.check();
+  probe.set_cursor(gui_forms::CursorKind::resize_diagonal_down);
+  return gui_forms::PhysicalKey::f12 == 0x45U ? 0 : 1;
+}" RAINSTAR_SCROLLING_LAYOUT)
 unset(CMAKE_REQUIRED_LIBRARIES)
 if(NOT RAINSTAR_EXTENSIBLE_CANVAS)
   message(FATAL_ERROR "Rainstar Paint requires GUI.Forms with the RasterCanvas extension (7444815 or later). See docs/GUI_FORMS_PORT.md.")
@@ -21,7 +33,10 @@ endif()
 if(NOT RAINSTAR_RIBBON_CONTROLS)
   message(FATAL_ERROR "Rainstar Paint requires the GUI.Forms ribbon composition extension. See docs/GUI_FORMS_PORT.md.")
 endif()
-add_library(paint_forms STATIC src/forms/editor.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/text.cpp src/forms/warp.cpp)
+if(NOT RAINSTAR_SCROLLING_LAYOUT)
+  message(FATAL_ERROR "Rainstar Paint requires the GUI.Forms scrolling-layout, keyboard, and diagonal-cursor extensions. See docs/GUI_FORMS_PORT.md.")
+endif()
+add_library(paint_forms STATIC src/forms/editor.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/text.cpp src/forms/warp.cpp src/forms/atlas.cpp src/forms/selection.cpp)
 target_link_libraries(paint_forms PUBLIC paint_core GUIForms::Application)
 target_include_directories(paint_forms PUBLIC src)
 add_executable(rainstar-paint-forms MACOSX_BUNDLE src/forms/main.cpp)
@@ -43,8 +58,8 @@ if(APPLE)
   set_target_properties(rainstar-paint-forms PROPERTIES MACOSX_BUNDLE_ICON_FILE app-icon.icns)
 endif()
 if(WIN32)
-  target_sources(paint_forms PRIVATE src/print_windows.cpp)
-  target_link_libraries(paint_forms PRIVATE comdlg32 gdi32)
+  target_sources(paint_forms PRIVATE src/print_windows.cpp src/desktop_windows.cpp)
+  target_link_libraries(paint_forms PRIVATE comdlg32 gdi32 ole32 oleaut32)
   target_compile_definitions(paint_forms PRIVATE RAINSTAR_FORMS_NATIVE_PRINT=1)
 endif()
 if(NOT MSVC)
@@ -61,6 +76,14 @@ if(APPLE OR WIN32)
     target_sources(paint-forms-native-tests PRIVATE ${toolkit_fonts})
     set_target_properties(paint-forms-native-tests PROPERTIES
       MACOSX_BUNDLE_GUI_IDENTIFIER "org.rainstar.paint.forms.validation")
+  endif()
+  if(WIN32)
+    foreach(forms_target IN ITEMS rainstar-paint-forms paint-forms-native-tests paint-forms-tests)
+      add_custom_command(TARGET ${forms_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${GUIForms_FONT_DIR}" "$<TARGET_FILE_DIR:${forms_target}>/fonts"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GUIForms::Application>" "$<TARGET_FILE_DIR:${forms_target}>"
+        VERBATIM)
+    endforeach()
   endif()
   add_test(NAME paint-forms-native COMMAND paint-forms-native-tests)
 endif()

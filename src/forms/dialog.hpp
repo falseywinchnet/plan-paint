@@ -7,7 +7,17 @@ namespace paint::forms {
 class Editor;
 class SwatchButton;
 class EditorDialog;
-enum class EditorDialogKind { color, resize };
+enum class EditorDialogKind {
+    color,
+    resize,
+    atlas_grid,
+    icon_sizes,
+    cursor_sizes,
+    hotspot,
+    atlas_gallery,
+    properties,
+    print_preview
+};
 class ColorPlane final : public gui_forms::Control {
   public:
     ColorPlane(gui_forms::StableId id, std::weak_ptr<EditorDialog> dialog, bool hue_strip);
@@ -63,6 +73,10 @@ class EditorDialog final : public gui_forms::Control {
     void width_changed(double value);
     void height_changed(double value);
     void set_color(Color color, bool update_hsv = true);
+    std::vector<std::shared_ptr<gui_forms::NumericUpDown>> atlas_numbers_;
+    std::vector<std::shared_ptr<gui_forms::CheckBox>> icon_sizes_;
+    std::string title() const;
+    void atlas_changed(double value);
     void accept();
 };
 } // namespace paint::forms

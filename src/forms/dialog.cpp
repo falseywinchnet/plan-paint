@@ -1,4 +1,6 @@
 #include "forms/dialog.hpp"
+#include "forms/atlas.hpp"
+#include "forms/display.hpp"
 #include "forms/editor.hpp"
 #include "forms/ribbon.hpp"
 #include <algorithm>
@@ -204,6 +206,90 @@ void EditorDialog::initialize_control_tree() {
                 *this, gf::Delegate<double>::bind<EditorDialog, &EditorDialog::lab_changed>(*this)));
         }
         set_color(original_);
+    } else if (kind_ == EditorDialogKind::properties) {
+        panel_ = {0, 0, 460, 345};
+        Document& document = (*editor).document;
+        label("properties-info",
+              "RGBA image · " + std::to_string(document.image.width) + " × " +
+                  std::to_string(document.image.height) + " pixels",
+              {24, 50, 410, 26});
+        label("properties-width-label", "Canvas width", {24, 95, 200, 28});
+        label("properties-height-label", "Canvas height", {24, 131, 200, 28});
+        label("properties-quality-label", "JPEG quality", {24, 167, 200, 28});
+        atlas_numbers_.push_back(
+            number("properties-width", {242, 94, 186, 30}, 1, 32768, document.image.width));
+        atlas_numbers_.push_back(
+            number("properties-height", {242, 130, 186, 30}, 1, 32768, document.image.height));
+        atlas_numbers_.push_back(
+            number("properties-quality", {242, 166, 186, 30}, 1, 100, (*editor).jpeg_quality));
+        scale_ = gf::make_control<gf::CheckBox>(gf::StableId("properties-monochrome"),
+                                                "Convert to black and white");
+        put(scale_, {24, 210, 410, 28});
+    } else if (kind_ == EditorDialogKind::print_preview) {
+        panel_ = {0, 0, 860, 650};
+        label("print-preview-hint", "Fit preview. Use Page setup to choose the paper and orientation.",
+              {22, 47, 810, 28});
+        button("preview-print", "Print…", {22, 87, 124, 30});
+        button("preview-page-setup", "Page setup…", {156, 87, 144, 30});
+        std::shared_ptr<gf::RasterCanvas> preview =
+            gf::make_control<gf::RasterCanvas>(gf::StableId("print-preview-image"));
+        (*preview).set_canvas_background(gf::Color::rgba(255, 255, 255));
+        (*preview).set_transparency_grid(false);
+        Image image = (*editor).document.output_image();
+        publish_image(image, *preview);
+        double zoom = std::min(776.0 / image.width, 392.0 / image.height);
+        (*preview).set_view(zoom, {-(816.0 / zoom - image.width) / 2, -(432.0 / zoom - image.height) / 2});
+        put(preview, {22, 133, 816, 432});
+    } else if (kind_ == EditorDialogKind::atlas_gallery) {
+        panel_ = {0, 0, 1030, 630};
+        std::shared_ptr<AtlasPanel> gallery =
+            gf::make_control<AtlasPanel>(gf::StableId("atlas-gallery-panel"), editor_, true);
+        put(gallery, {15, 48, 1000, 492});
+        (*gallery).synchronize();
+    } else if (kind_ == EditorDialogKind::atlas_grid) {
+        panel_ = {0, 0, 490, 420};
+        const AtlasGrid& grid = (*editor).document.atlas.grid;
+        label("atlas-grid-hint", "Split the whole image into equal-sized frames.", {24, 49, 440, 26});
+        const char* ids[] = {
+            "Columns",         "Rows", "Horizontal margin", "Vertical margin", "Horizontal spacing",
+            "Vertical spacing"};
+        int values[] = {grid.columns,  grid.rows,      grid.margin_x,
+                        grid.margin_y, grid.spacing_x, grid.spacing_y};
+        for (int i = 0; i < 6; ++i) {
+            label("atlas-label-" + std::to_string(i), ids[i], {24, 89 + i * 34.0, 218, 28});
+            std::shared_ptr<gf::NumericUpDown> field =
+                number("atlas-" + std::to_string(i), {252, 88 + i * 34.0, 206, 28}, i < 2 ? 1 : 0,
+                       i < 2 ? 4096 : 32768, values[i]);
+            (*field).set_accessible_name(ids[i]);
+            atlas_numbers_.push_back(field);
+            subscriptions_.push_back((*field).value_changed().subscribe(
+                *this, gf::Delegate<double>::bind<EditorDialog, &EditorDialog::atlas_changed>(*this)));
+        }
+    } else if (kind_ == EditorDialogKind::icon_sizes || kind_ == EditorDialogKind::cursor_sizes) {
+        panel_ = {0, 0, 460, 330};
+        label("icon-hint", "Generate square frames from the current image (CONV*).", {22, 50, 420, 26});
+        const int sizes[] = {16, 24, 32, 48, 64, 96, 128, 256};
+        for (int i = 0; i < 8; ++i) {
+            std::shared_ptr<gf::CheckBox> field =
+                gf::make_control<gf::CheckBox>(gf::StableId("icon-size-" + std::to_string(sizes[i])),
+                                               std::to_string(sizes[i]) + " × " + std::to_string(sizes[i]));
+            (*field).set_checked(sizes[i] == 16 || sizes[i] == 32 || sizes[i] == 48 || sizes[i] == 256);
+            put(field, {28 + (i % 2) * 216.0, 90 + (i / 2) * 35.0, 188, 28});
+            icon_sizes_.push_back(field);
+        }
+    } else if (kind_ == EditorDialogKind::hotspot) {
+        panel_ = {0, 0, 430, 286};
+        const Document& document = (*editor).document;
+        const IconFrame& frame = document.atlas.icons[document.atlas.active];
+        label("hotspot-hint", "The hotspot is the pixel used as the cursor's click point.",
+              {20, 47, 390, 26});
+        label("hotspot-x-label", "X", {25, 94, 30, 28});
+        label("hotspot-y-label", "Y", {222, 94, 30, 28});
+        atlas_numbers_.push_back(
+            number("hotspot-x", {59, 92, 134, 30}, 0, document.image.width - 1, frame.hotspot_x));
+        atlas_numbers_.push_back(
+            number("hotspot-y", {256, 92, 134, 30}, 0, document.image.height - 1, frame.hotspot_y));
+        button("hotspot-pick", "Pick on canvas", {25, 143, 170, 30});
     } else {
         panel_ = {0, 0, 450, 500};
         Document& document = (*editor).document;
@@ -244,10 +330,17 @@ void EditorDialog::initialize_control_tree() {
     (*error_).set_text_wrapping(gf::TextWrapping::word);
     put(error_, {20, panel_.height - (kind_ == EditorDialogKind::color ? 74 : 86), panel_.width - 40,
                  kind_ == EditorDialogKind::color ? 25.0 : 36.0});
-    std::shared_ptr<gf::Button> ok =
-        button("dialog-ok", "OK", {panel_.width - 212, panel_.height - 41, 90, 28});
+    std::shared_ptr<gf::Button> ok = button(
+        "dialog-ok",
+        kind_ == EditorDialogKind::atlas_gallery || kind_ == EditorDialogKind::print_preview ? "Close" : "OK",
+        {panel_.width - 212, panel_.height - 41, 90, 28});
     (*ok).set_default_button(true);
-    button("dialog-cancel", "Cancel", {panel_.width - 110, panel_.height - 41, 90, 28});
+    if (kind_ == EditorDialogKind::atlas_grid) {
+        atlas_changed(0);
+    }
+    if (kind_ != EditorDialogKind::atlas_gallery && kind_ != EditorDialogKind::print_preview) {
+        button("dialog-cancel", "Cancel", {panel_.width - 110, panel_.height - 41, 90, 28});
+    }
 }
 void EditorDialog::arrange(gf::Rect bounds) {
     if (attached_window()) {
@@ -271,8 +364,7 @@ void EditorDialog::on_paint(gf::Painter& painter, gf::Rect) {
     painter.fill_rounded_rect(panel_, 3, gf::Color::rgba(244, 247, 250));
     painter.fill_rect({panel_.x + 1, panel_.y + 1, panel_.width - 2, 35}, gf::Color::rgba(215, 230, 247));
     painter.stroke_rounded_rect(panel_, 3, gf::Color::rgba(126, 150, 178), 1);
-    painter.draw_text_utf8({panel_.x + 16, panel_.y + 24},
-                           kind_ == EditorDialogKind::color ? "Edit Colors" : "Resize",
+    painter.draw_text_utf8({panel_.x + 16, panel_.y + 24}, title(),
                            {gf::FontRole::control, 15, 600, false, 0.08}, gf::Color::rgba(35, 60, 86));
     painter.draw_line({panel_.x + 1, panel_.y + panel_.height - 53},
                       {panel_.x + panel_.width - 1, panel_.y + panel_.height - 53},
@@ -283,6 +375,15 @@ void EditorDialog::on_pointer(gf::PointerEvent& event) {
 }
 void EditorDialog::on_key_preview(gf::KeyEvent& event) {
     if (event.action != gf::KeyAction::down) {
+        return;
+    }
+    if (kind_ == EditorDialogKind::atlas_gallery &&
+        (event.physical_key == gf::PhysicalKey::left || event.physical_key == gf::PhysicalKey::right)) {
+        std::shared_ptr<Editor> editor = editor_.lock();
+        if (editor) {
+            (*editor).execute(event.physical_key == gf::PhysicalKey::left ? "atlas-previous" : "atlas-next");
+        }
+        event.handled = true;
         return;
     }
     if (event.physical_key == gf::PhysicalKey::escape) {
@@ -299,8 +400,63 @@ void EditorDialog::on_key_preview(gf::KeyEvent& event) {
 gf::SemanticDescriptor EditorDialog::semantic_descriptor() const {
     gf::SemanticDescriptor result = Control::semantic_descriptor();
     result.role = gf::SemanticRole::group;
-    result.name = kind_ == EditorDialogKind::color ? "Edit Colors" : "Resize";
+    result.name = title();
     return result;
+}
+std::string EditorDialog::title() const {
+    switch (kind_) {
+    case EditorDialogKind::color:
+        return "Edit Colors";
+    case EditorDialogKind::resize:
+        return "Resize";
+    case EditorDialogKind::atlas_grid:
+        return "Sprite sheet grid";
+    case EditorDialogKind::icon_sizes:
+        return "Icon sizes";
+    case EditorDialogKind::cursor_sizes:
+        return "Cursor sizes";
+    case EditorDialogKind::hotspot:
+        return "Cursor hotspot";
+    case EditorDialogKind::atlas_gallery:
+        return "Atlas frames";
+    case EditorDialogKind::properties:
+        return "Image properties";
+    case EditorDialogKind::print_preview:
+        return "Print preview";
+    }
+    return "";
+}
+void EditorDialog::atlas_changed(double) {
+    if (!error_ || atlas_numbers_.size() != 6) {
+        return;
+    }
+    std::shared_ptr<Editor> editor = editor_.lock();
+    if (!editor) {
+        return;
+    }
+    try {
+        AtlasGrid grid;
+        grid.columns = static_cast<int>((*atlas_numbers_[0]).value());
+        grid.rows = static_cast<int>((*atlas_numbers_[1]).value());
+        grid.margin_x = static_cast<int>((*atlas_numbers_[2]).value());
+        grid.margin_y = static_cast<int>((*atlas_numbers_[3]).value());
+        grid.spacing_x = static_cast<int>((*atlas_numbers_[4]).value());
+        grid.spacing_y = static_cast<int>((*atlas_numbers_[5]).value());
+        const Document& document = (*editor).document;
+        const Image& sheet = document.atlas.kind == AtlasKind::Sheet ? document.atlas.sheet : document.image;
+        Rect frame = grid.frame(sheet, 0);
+        int unused_x =
+            sheet.width - 2 * grid.margin_x - (grid.columns - 1) * grid.spacing_x - grid.columns * frame.w;
+        int unused_y =
+            sheet.height - 2 * grid.margin_y - (grid.rows - 1) * grid.spacing_y - grid.rows * frame.h;
+        (*error_).set_text(std::to_string(grid.columns * grid.rows) + " frames · " + std::to_string(frame.w) +
+                           " × " + std::to_string(frame.h) + " pixels · unused right/bottom: " +
+                           std::to_string(unused_x) + "/" + std::to_string(unused_y) + " px");
+        (*error_).set_foreground(gf::Color::rgba(45, 66, 88));
+    } catch (const std::exception& exception) {
+        (*error_).set_text(exception.what());
+        (*error_).set_foreground(gf::Color::rgba(161, 49, 39));
+    }
 }
 void EditorDialog::choose_hsv(double h, double s, double v) {
     hue = h;
@@ -398,6 +554,21 @@ void EditorDialog::height_changed(double value) {
 }
 void EditorDialog::clicked(gf::ButtonBase& control) {
     std::string id(control.stable_id().value());
+    if (id == "preview-print" || id == "preview-page-setup") {
+        std::shared_ptr<Editor> editor = editor_.lock();
+        if (editor) {
+            (*editor).execute(id == "preview-print" ? "print" : "page-setup");
+        }
+        return;
+    }
+    if (id == "hotspot-pick") {
+        std::shared_ptr<Editor> editor = editor_.lock();
+        if (editor) {
+            (*editor).pick_hotspot = true;
+            (*editor).close_editor_dialog();
+        }
+        return;
+    }
     std::shared_ptr<Editor> editor = editor_.lock();
     if (!editor) {
         return;
@@ -460,6 +631,49 @@ void EditorDialog::accept() {
             target = color_;
             (*editor).document.sync_curve();
             (*editor).document.sync_path();
+        } else if (kind_ == EditorDialogKind::properties) {
+            Document& document = (*editor).document;
+            int width = static_cast<int>((*atlas_numbers_[0]).value());
+            int height = static_cast<int>((*atlas_numbers_[1]).value());
+            if (width != document.image.width || height != document.image.height) {
+                document.resize(width, height, false);
+            } else if ((*scale_).checked()) {
+                document.checkpoint();
+            }
+            if ((*scale_).checked()) {
+                for (std::size_t i = 0; i < document.image.pixels.size(); ++i) {
+                    Color& pixel = document.image.pixels[i];
+                    unsigned brightness = 54U * pixel.r + 183U * pixel.g + 19U * pixel.b;
+                    std::uint8_t value = brightness >= 128U * 256U ? 255 : 0;
+                    pixel.r = pixel.g = pixel.b = value;
+                }
+            }
+            (*editor).jpeg_quality = static_cast<int>((*atlas_numbers_[2]).value());
+        } else if (kind_ == EditorDialogKind::print_preview) {
+            // Preview is read-only.
+        } else if (kind_ == EditorDialogKind::atlas_gallery) {
+            // Frame selection is immediate; closing the gallery changes no pixels.
+        } else if (kind_ == EditorDialogKind::atlas_grid) {
+            AtlasGrid grid;
+            grid.columns = static_cast<int>((*atlas_numbers_[0]).value());
+            grid.rows = static_cast<int>((*atlas_numbers_[1]).value());
+            grid.margin_x = static_cast<int>((*atlas_numbers_[2]).value());
+            grid.margin_y = static_cast<int>((*atlas_numbers_[3]).value());
+            grid.spacing_x = static_cast<int>((*atlas_numbers_[4]).value());
+            grid.spacing_y = static_cast<int>((*atlas_numbers_[5]).value());
+            (*editor).document.configure_atlas(grid);
+        } else if (kind_ == EditorDialogKind::icon_sizes || kind_ == EditorDialogKind::cursor_sizes) {
+            const int values[] = {16, 24, 32, 48, 64, 96, 128, 256};
+            std::vector<int> sizes;
+            for (std::size_t i = 0; i < icon_sizes_.size(); ++i) {
+                if ((*icon_sizes_[i]).checked()) {
+                    sizes.push_back(values[i]);
+                }
+            }
+            (*editor).document.make_icon_sizes(sizes, kind_ == EditorDialogKind::cursor_sizes);
+        } else if (kind_ == EditorDialogKind::hotspot) {
+            (*editor).document.set_hotspot(static_cast<int>((*atlas_numbers_[0]).value()),
+                                           static_cast<int>((*atlas_numbers_[1]).value()));
         } else {
             double width = (*width_).value() * (percent_ ? original_width_ / 100.0 : 1);
             double height = (*height_).value() * (percent_ ? original_height_ / 100.0 : 1);
@@ -476,8 +690,11 @@ void EditorDialog::accept() {
                                           static_cast<int>(std::round(height)), (*scale_).checked());
             }
         }
+        if (!(*editor).pending_save_path.empty()) {
+            (*editor).save_path((*editor).pending_save_path);
+        }
         (*editor).refresh();
-        (*editor).close_editor_dialog();
+        (*editor).complete_deferred_save();
     } catch (const std::exception& exception) {
         (*error_).set_text(exception.what());
     }

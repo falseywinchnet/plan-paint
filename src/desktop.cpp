@@ -2,22 +2,40 @@
 #include "codecs.hpp"
 #include "conv.hpp"
 #include "paths.hpp"
-#include <SDL3/SDL.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
 namespace paint {
 std::string preference_directory() {
-    char* raw = SDL_GetPrefPath("rainstar", "RainstarPaint");
-    if (!raw) {
-        throw std::runtime_error("Paint could not open its preferences folder.");
+    std::filesystem::path directory;
+#if defined(__APPLE__)
+    const char* home = std::getenv("HOME");
+    if (home) {
+        directory = std::filesystem::path(home) / "Library/Application Support/rainstar/RainstarPaint";
     }
-    std::string result(raw);
-    SDL_free(raw);
-    return result;
+#elif defined(_WIN32)
+    const wchar_t* appdata = _wgetenv(L"APPDATA");
+    if (appdata) {
+        directory = std::filesystem::path(appdata) / L"rainstar" / L"RainstarPaint";
+    }
+#else
+    const char* data = std::getenv("XDG_DATA_HOME");
+    const char* home = std::getenv("HOME");
+    if (data && *data) {
+        directory = std::filesystem::path(data) / "rainstar/RainstarPaint";
+    } else if (home) {
+        directory = std::filesystem::path(home) / ".local/share/rainstar/RainstarPaint";
+    }
+#endif
+    if (directory.empty()) {
+        throw std::runtime_error("Paint could not find its preferences folder.");
+    }
+    std::filesystem::create_directories(directory);
+    return path_to_utf8(directory) + std::string(1, std::filesystem::path::preferred_separator);
 }
 void RecentFiles::load() {
     paths.clear();

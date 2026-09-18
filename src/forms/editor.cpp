@@ -1,5 +1,6 @@
 #include "forms/editor.hpp"
 #include "codecs.hpp"
+#include "forms/atlas.hpp"
 #include "forms/display.hpp"
 #include "platform.hpp"
 #include <algorithm>
@@ -75,12 +76,15 @@ void PaintCanvas::on_paint_overlay(gf::Painter& painter, gf::Rect damage) {
 }
 Editor::Editor(gf::StableId id) : Control(std::move(id)) {}
 void Editor::initialize_control_tree() {
+    set_allow_drop(true);
     initialize_warp();
     canvas_ = gf::make_control<PaintCanvas>(gf::StableId("canvas"),
                                             std::static_pointer_cast<Editor>(shared_from_this()));
     (*canvas_).set_focusable(true);
     (*canvas_).set_tab_stop(true);
     (*canvas_).set_view(1.0, {-16, -16});
+    (*canvas_).set_transparency_colors(gf::Color::rgba(255, 255, 255), gf::Color::rgba(240, 240, 240));
+    (*canvas_).set_transparency_cell_size(12);
     (*canvas_).set_canvas_background(gf::Color::rgba(211, 221, 232));
     add_child(canvas_);
     ribbon_ = gf::make_control<Ribbon>(gf::StableId("ribbon"),
@@ -105,14 +109,7 @@ void Editor::initialize_control_tree() {
     }
     (*menu_).set_theme_override(gf::Theme::create(std::move(file_theme)));
     (*menu_).set_item_padding(17);
-    (*menu_).set_items({{"file",
-                         "File",
-                         {menu_item("new", "New"), menu_item("open", "Open…"), menu_item("save", "Save"),
-                          menu_item("save-as", "Save as…"),
-#if RAINSTAR_FORMS_NATIVE_PRINT
-                          menu_item("print", "Print…"), menu_item("page-setup", "Page setup…"),
-#endif
-                          menu_item("quit", "Exit")}}});
+    rebuild_file_menu();
     add_child(menu_);
     status_ = gf::make_control<gf::Label>(gf::StableId("status"));
     cursor_status_ = gf::make_control<gf::Label>(gf::StableId("cursor-status"));
@@ -154,10 +151,45 @@ void Editor::initialize_control_tree() {
 }
 gf::MenuItemSpec Editor::menu_item(const std::string& id, const std::string& text) {
     std::shared_ptr<gf::Command> command = std::make_shared<gf::Command>(id, text);
-    subscriptions_.push_back((*command).invoked().subscribe(
+    menu_subscriptions_.push_back((*command).invoked().subscribe(
         *this, gf::Delegate<const gf::CommandInvocation&>::bind<Editor, &Editor::command_invoked>(*this)));
     commands_.push_back(command);
     return {id, gf::MenuItemKind::command, command, text};
+}
+void Editor::rebuild_file_menu() {
+    menu_subscriptions_.clear();
+    commands_.clear();
+    std::vector<gf::MenuItemSpec> items = {menu_item("new", "New"), menu_item("open", "Open…")};
+    if (!recent.paths.empty()) {
+        gf::MenuItemSpec recent_menu;
+        recent_menu.stable_id = "recent-files";
+        recent_menu.kind = gf::MenuItemKind::submenu;
+        recent_menu.text = "Recent pictures";
+        for (std::size_t i = 0; i < recent.paths.size(); ++i) {
+            recent_menu.children.push_back(menu_item("recent-" + std::to_string(i), recent.paths[i]));
+        }
+        items.push_back(std::move(recent_menu));
+    }
+    items.push_back(menu_item("save", "Save"));
+    items.push_back(menu_item("save-as", "Save as…"));
+#if RAINSTAR_FORMS_NATIVE_PRINT
+    items.push_back(menu_item("print", "Print…"));
+    items.push_back(menu_item("print-preview", "Print preview…"));
+    items.push_back(menu_item("page-setup", "Page setup…"));
+    items.push_back(menu_item("acquire", "From scanner or camera…"));
+    items.push_back(menu_item("email", "Send in email…"));
+    gf::MenuItemSpec wallpaper;
+    wallpaper.stable_id = "wallpaper";
+    wallpaper.kind = gf::MenuItemKind::submenu;
+    wallpaper.text = "Set as desktop background";
+    wallpaper.children = {menu_item("wallpaper-fill", "Fill"), menu_item("wallpaper-tile", "Tile"),
+                          menu_item("wallpaper-center", "Center")};
+    items.push_back(std::move(wallpaper));
+#endif
+    items.push_back(menu_item("properties", "Properties…"));
+    items.push_back(menu_item("about", "About Rainstar Paint"));
+    items.push_back(menu_item("quit", "Exit"));
+    (*menu_).set_items({{"file", "File", std::move(items)}});
 }
 void Editor::arrange(gf::Rect bounds) {
     arrange_self(bounds);
@@ -242,6 +274,16 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     painter.save();
     painter.clip_rect(
         {0, 0, (*canvas_).committed_arranged_bounds().width, (*canvas_).committed_arranged_bounds().height});
+    paint_atlas_overlay(painter);
+    if ((show_hotspot || pick_hotspot) && document.atlas.kind == AtlasKind::Cursor &&
+        document.atlas.active >= 0) {
+        const IconFrame& frame = document.atlas.icons[document.atlas.active];
+        gf::Point point = screen({frame.hotspot_x + 0.5, frame.hotspot_y + 0.5});
+        painter.draw_line({point.x - 9, point.y}, {point.x + 9, point.y}, gf::Color::rgba(255, 255, 255), 3);
+        painter.draw_line({point.x, point.y - 9}, {point.x, point.y + 9}, gf::Color::rgba(255, 255, 255), 3);
+        painter.draw_line({point.x - 9, point.y}, {point.x + 9, point.y}, gf::Color::rgba(180, 25, 45), 1);
+        painter.draw_line({point.x, point.y - 9}, {point.x, point.y + 9}, gf::Color::rgba(180, 25, 45), 1);
+    }
     if (show_grid && (*canvas_).zoom() >= 4) {
         double scale = (*canvas_).zoom();
         gui_drawing::PointF origin = (*canvas_).view_origin();
@@ -292,16 +334,21 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         gf::Point point = screen(document.path.nodes[index]);
         painter.fill_rect({point.x - 3, point.y - 3, 6, 6}, gf::Color::rgba(30, 100, 190));
     }
+    paint_resize_overlay(painter);
     paint_warp_overlay(painter);
     paint_text_overlay(painter);
     painter.restore();
 }
 void Editor::ready(gf::Window&, gf::ApplicationWindowHandle handle) {
     handle_ = handle;
+    rebuild_file_menu();
     refresh();
 }
 void Editor::closing(gf::HostCloseRequest& request) {
     request.cancel = !can_replace();
+    if (request.cancel && !pending_save_path.empty()) {
+        deferred_command = "quit";
+    }
 }
 gf::RasterCanvas& Editor::canvas() {
     return *canvas_;
@@ -321,6 +368,13 @@ void Editor::refresh() {
     }
     if (ribbon_) {
         (*ribbon_).synchronize();
+    }
+    if (window() && editor_dialog_) {
+        std::shared_ptr<AtlasPanel> gallery =
+            std::dynamic_pointer_cast<AtlasPanel>((*window()).find("atlas-gallery-panel"));
+        if (gallery) {
+            (*gallery).synchronize();
+        }
     }
     update_status();
     invalidate(gf::Dirty::paint);
@@ -392,6 +446,7 @@ void Editor::release_gesture() {
     moving_selection_ = false;
     preview_active_ = false;
     curve_handle_ = -1;
+    resize_handle_ = -1;
     lasso_.clear();
     eraser_.clear();
     material_.clear();
@@ -447,11 +502,22 @@ void Editor::pointer(const gf::PointerEvent& event) {
             }
             return;
         }
+        if (pick_hotspot && event.action == gf::PointerAction::down &&
+            event.button == gf::PointerButton::primary) {
+            document.set_hotspot(static_cast<int>(std::floor(point.x)),
+                                 static_cast<int>(std::floor(point.y)));
+            pick_hotspot = false;
+            refresh();
+            return;
+        }
         if (warp_pointer(event, point)) {
             return;
         }
         if (text.active && event.button != gf::PointerButton::middle && !panning_) {
             text_pointer(event, point);
+            return;
+        }
+        if (resize_pointer(event, point)) {
             return;
         }
         if (event.action == gf::PointerAction::down) {
@@ -726,7 +792,7 @@ void Editor::zoom(double factor, gf::Point anchor) {
     refresh();
 }
 void Editor::on_key_preview(gf::KeyEvent& event) {
-    if (event.action != gf::KeyAction::down || (*menu_).is_open()) {
+    if (event.action != gf::KeyAction::down || (*menu_).is_open() || editor_dialog_) {
         return;
     }
     if (window() && (*window()).focused_control() == canvas_ && text.active && text_key(event)) {
@@ -745,8 +811,29 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
                    gf::has_modifier(event.modifiers, gf::Modifier::meta);
     bool shift = gf::has_modifier(event.modifiers, gf::Modifier::shift);
     std::string action;
-    if (command) {
+    if (event.physical_key == gf::PhysicalKey::f1) {
+        action = "help";
+    } else if (event.physical_key == gf::PhysicalKey::f11) {
+        action = "full-screen";
+    } else if (event.physical_key == gf::PhysicalKey::f12) {
+        action = "save-as";
+    } else if (command) {
         switch (event.physical_key) {
+        case gf::PhysicalKey::p:
+            action = "print";
+            break;
+        case gf::PhysicalKey::e:
+            action = "properties";
+            break;
+        case gf::PhysicalKey::w:
+            action = "resize";
+            break;
+        case gf::PhysicalKey::i:
+            action = "invert";
+            break;
+        case gf::PhysicalKey::g:
+            action = "show-grid";
+            break;
         case gf::PhysicalKey::n:
             action = "new";
             break;
@@ -779,18 +866,26 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
         }
     } else if (window() && (*window()).focused_control() == canvas_) {
         if (event.physical_key == gf::PhysicalKey::escape) {
+            pick_hotspot = false;
             action = "release";
         } else if (event.physical_key == gf::PhysicalKey::enter) {
             action = "finish-path";
         } else if (event.physical_key == gf::PhysicalKey::delete_forward ||
                    event.physical_key == gf::PhysicalKey::backspace) {
             action = "delete";
+        } else if (document.atlas.kind != AtlasKind::None && !document.selection.active && !warp_active() &&
+                   !dragging_ &&
+                   (event.physical_key == gf::PhysicalKey::left ||
+                    event.physical_key == gf::PhysicalKey::right)) {
+            action = event.physical_key == gf::PhysicalKey::left ? "atlas-previous" : "atlas-next";
         } else if (document.tool == Tool::Stamp && !document.stamp.pixels.empty()) {
             if (event.physical_key == gf::PhysicalKey::r) {
                 stamp_angle = std::remainder(stamp_angle + (shift ? -15 : 15), 360.0);
-            } else if (event.physical_key == 0x2eU /* USB HID equals / plus */) {
+            } else if ((event.physical_key == gf::PhysicalKey::equal ||
+                        event.physical_key == gf::PhysicalKey::keypad_plus)) {
                 stamp_scale = std::min(8.0, stamp_scale * 1.1);
-            } else if (event.physical_key == 0x2dU /* USB HID minus */) {
+            } else if ((event.physical_key == gf::PhysicalKey::minus ||
+                        event.physical_key == gf::PhysicalKey::keypad_minus)) {
                 stamp_scale = std::max(0.1, stamp_scale / 1.1);
             } else {
                 return;
@@ -882,8 +977,15 @@ void Editor::open_file(const std::string& path) {
     ImageContainer image = load_container(path);
     finish_controls();
     document.replace_container(std::move(image), path);
+    recent.remember(path);
+    rebuild_file_menu();
     (*canvas_).set_view(1, {-16, -16});
     refresh();
+    if (document.atlas.kind != AtlasKind::None) {
+        (*ribbon_).show_atlas();
+    } else if (sprite_sheet_filename(path)) {
+        execute("atlas-grid");
+    }
 }
 bool Editor::save(bool save_as) {
     finish_warp(false);
@@ -903,6 +1005,18 @@ bool Editor::save(bool save_as) {
         }
         path = result.paths.front();
     }
+    std::string extension = image_extension(path);
+    if ((extension == ".ico" || extension == ".cur") && document.atlas.kind != AtlasKind::Icon &&
+        document.atlas.kind != AtlasKind::Cursor) {
+        open_editor_dialog(extension == ".cur" ? EditorDialogKind::cursor_sizes
+                                               : EditorDialogKind::icon_sizes);
+        pending_save_path = path;
+        return false;
+    }
+    save_path(path);
+    return true;
+}
+void Editor::save_path(const std::string& path) {
     document.sync_curve();
     document.sync_path();
     // Saving a selection or retained curve must not release its editing session.
@@ -910,12 +1024,13 @@ bool Editor::save(bool save_as) {
     if (extension == ".ico" || extension == ".cur") {
         save_container(document.output_container(extension == ".cur"), path);
     } else {
-        save_image(document.output_image(), path);
+        save_image(document.output_image(), path, jpeg_quality);
     }
     document.filename = path;
     document.saved_revision = document.revision;
+    recent.remember(path);
+    rebuild_file_menu();
     refresh();
-    return true;
 }
 void Editor::copy() {
     Image image = document.selection.active ? document.selection.image : document.visible_image();
@@ -955,8 +1070,18 @@ void Editor::open_editor_dialog(EditorDialogKind kind, bool secondary) {
         gf::StableId("editor-dialog"), std::static_pointer_cast<Editor>(shared_from_this()), kind, secondary);
     editor_dialog_popup_ = (*attached_window()).open_popup(shared_from_this(), editor_dialog_);
     editor_dialog_focus_ = (*attached_window()).begin_focus_scope(editor_dialog_);
+    if (kind == EditorDialogKind::atlas_gallery) {
+        std::shared_ptr<AtlasPanel> gallery =
+            std::dynamic_pointer_cast<AtlasPanel>((*attached_window()).find("atlas-gallery-panel"));
+        if (gallery) {
+            (*gallery).reveal_current();
+        }
+    }
 }
 void Editor::close_editor_dialog() {
+    pending_save_path.clear();
+    deferred_command.clear();
+    deferred_open_path.clear();
     if (editor_dialog_focus_ && attached_window()) {
         static_cast<void>((*attached_window()).end_focus_scope(editor_dialog_focus_));
         editor_dialog_focus_ = {};
@@ -964,12 +1089,73 @@ void Editor::close_editor_dialog() {
     editor_dialog_popup_.disconnect();
     editor_dialog_.reset();
 }
+void Editor::complete_deferred_save() {
+    std::string command = deferred_command, path = deferred_open_path;
+    close_editor_dialog();
+    if (!path.empty()) {
+        open_file(path);
+    } else if (!command.empty()) {
+        execute(command);
+    }
+}
+void Editor::on_drag(gf::DragEvent& event) {
+    if (editor_dialog_ || !gf::has_drag_effect(event.allowed_effects, gf::DragEffect::copy)) {
+        return;
+    }
+    for (std::size_t i = 0; i < event.items.size(); ++i) {
+        const gf::DragFileListData* files = std::get_if<gf::DragFileListData>(&event.items[i]);
+        if (!files || (*files).paths_utf8.empty()) {
+            continue;
+        }
+        event.accepted_effect = gf::DragEffect::copy;
+        event.handled = true;
+        if (event.action == gf::DragAction::drop) {
+            try {
+                std::string path = (*files).paths_utf8.front();
+                if (can_replace()) {
+                    open_file(path);
+                } else if (!pending_save_path.empty()) {
+                    deferred_open_path = path;
+                } else {
+                    event.accepted_effect = gf::DragEffect::none;
+                }
+            } catch (const std::exception& exception) {
+                error(exception.what());
+                event.accepted_effect = gf::DragEffect::none;
+            }
+        }
+        return;
+    }
+}
 void Editor::edit_color(bool secondary) {
     open_editor_dialog(EditorDialogKind::color, secondary);
 }
 
 void Editor::execute(const std::string& command) {
     try {
+        if (command.starts_with("atlas-")) {
+            finish_controls();
+            if (command == "atlas-gallery") {
+                open_editor_dialog(EditorDialogKind::atlas_gallery);
+            } else if (command == "atlas-grid") {
+                (*ribbon_).show_atlas();
+                open_editor_dialog(EditorDialogKind::atlas_grid);
+            } else if (command == "atlas-icons" || command == "atlas-cursors") {
+                (*ribbon_).show_atlas();
+                open_editor_dialog(command == "atlas-icons" ? EditorDialogKind::icon_sizes
+                                                            : EditorDialogKind::cursor_sizes);
+            } else if (command == "atlas-hotspot" && document.atlas.kind == AtlasKind::Cursor) {
+                open_editor_dialog(EditorDialogKind::hotspot);
+            } else if (command == "atlas-whole") {
+                document.atlas_select(-1, false);
+            } else if (command == "atlas-leave") {
+                document.leave_atlas();
+            } else if (command == "atlas-next" || command == "atlas-previous") {
+                document.atlas_step(command == "atlas-next" ? 1 : -1);
+            }
+            refresh();
+            return;
+        }
         if (command == "reshape") {
             start_reshape();
             refresh();
@@ -1022,9 +1208,14 @@ void Editor::execute(const std::string& command) {
             if (can_replace()) {
                 finish_controls();
                 document.new_image();
+            } else if (!pending_save_path.empty()) {
+                deferred_command = "new";
             }
         } else if (command == "open") {
             if (!can_replace()) {
+                if (!pending_save_path.empty()) {
+                    deferred_command = "open";
+                }
                 return;
             }
             gf::HostOpenFileDialogRequest request;
@@ -1033,14 +1224,63 @@ void Editor::execute(const std::string& command) {
             if (result.outcome == gf::HostDialogOutcome::accepted && !result.paths.empty()) {
                 open_file(result.paths.front());
             }
+        } else if (command.starts_with("recent-")) {
+            std::size_t index = std::stoul(command.substr(7));
+            if (index < recent.paths.size()) {
+                std::string path = recent.paths[index];
+                if (can_replace()) {
+                    open_file(path);
+                } else if (!pending_save_path.empty()) {
+                    deferred_open_path = path;
+                }
+            }
+        } else if (command == "properties") {
+            finish_controls();
+            open_editor_dialog(EditorDialogKind::properties);
         } else if (command == "save" || command == "save-as") {
             static_cast<void>(save(command == "save-as"));
         }
 #if RAINSTAR_FORMS_NATIVE_PRINT
         else if (command == "print") {
+            finish_controls();
             static_cast<void>(print_image(document.output_image()));
+        } else if (command == "print-preview") {
+            finish_controls();
+            open_editor_dialog(EditorDialogKind::print_preview);
         } else if (command == "page-setup") {
             page_setup();
+        } else if (command == "acquire") {
+            if (can_replace()) {
+                std::string path;
+                if (acquire_picture(path)) {
+                    open_file(path);
+                }
+            } else if (!pending_save_path.empty()) {
+                deferred_command = "acquire";
+            }
+        } else if (command == "email") {
+            finish_controls();
+            compose_email(nullptr, desktop_export(document.output_image(), "Email"));
+        } else if (command.starts_with("wallpaper-")) {
+            finish_controls();
+            gf::HostMonitorResult monitors = services().query_monitors();
+            if (!monitors.status.accepted() || monitors.monitors.empty()) {
+                throw std::runtime_error("The desktop display size is unavailable.");
+            }
+            gf::HostMonitor monitor = monitors.monitors.front();
+            for (std::size_t i = 0; i < monitors.monitors.size(); ++i) {
+                if (monitors.monitors[i].primary) {
+                    monitor = monitors.monitors[i];
+                    break;
+                }
+            }
+            WallpaperLayout layout = command == "wallpaper-fill"   ? WallpaperLayout::Fill
+                                     : command == "wallpaper-tile" ? WallpaperLayout::Tile
+                                                                   : WallpaperLayout::Center;
+            Image image = wallpaper_image(document.output_image(),
+                                          static_cast<int>(monitor.frame.width * monitor.scale),
+                                          static_cast<int>(monitor.frame.height * monitor.scale), layout);
+            set_wallpaper(desktop_export(image, "Wallpaper"));
         }
 #endif
         else if (command == "quit") {
@@ -1149,15 +1389,25 @@ void Editor::execute(const std::string& command) {
             request.title = "Rainstar Paint";
             request.message =
                 command == "about"
-                    ? "For the people who keep making things.\n\nAuthor: Astra\nSponsor: "
-                      "Rainstar\n\nGUI.Forms integration build"
+                    ? "To the Holy One, blessed be He, from whom all good things come. "
+                      "This work is dedicated in gratitude for the nourishment that sustains human life, "
+                      "the energy that powers our tools, and the opportunity to weave information into "
+                      "works of use and beauty.\n\n"
+                      "Rainstar Paint\n\nAuthor: Astra\nSponsor: Rainstar\n\n"
+                      "Copyright (c) 2026 joshuah.rainstar@gmail.com\n"
+                      "Free and open source under the MIT license.\n"
+                      "Anyone may use, study, change, and share this program.\n\n"
+                      "An independent implementation inspired by Windows 7/10 Paint. "
+                      "Microsoft and Windows are trademarks of Microsoft Corporation."
                     : "Draw with the left button; the right button uses Alt. Drag selections to move "
                       "them. Drag Bézier and arc handles after setting their line. Escape releases editing "
                       "controls. Enter or right-click ends a path run. Middle-drag pans; Ctrl/Command + "
                       "wheel zooms. Text has its own font ribbon; Ctrl/Command+Enter places it. "
                       "Select an object for Mesh or drag its rotation handle. Shift snaps rotation. "
                       "Stamp: R rotates; + and - resize. Right-click resets the stamp.\n\n"
-                      "The atlas UI and several desktop commands are still being ported.";
+                      "Atlas: split sprite sheets, select frames, and create icon or cursor sizes. "
+                      "Ctrl-click frames to choose a sequence. Cursor hotspots can be entered or picked on "
+                      "the canvas.";
             static_cast<void>(dialog(request));
         }
         document.sync_curve();
