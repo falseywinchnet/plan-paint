@@ -1,9 +1,17 @@
 #include "warp_session.hpp"
-#include "idle_render.hpp"
 #include <stdexcept>
 #include <utility>
 namespace paint {
 WarpWorker::~WarpWorker() {
+    wait();
+}
+void WarpWorker::set_completion(std::function<void()> completion) {
+    if (busy_) {
+        throw std::logic_error("Cannot replace an active worker completion.");
+    }
+    completion_ = std::move(completion);
+}
+void WarpWorker::wait() {
     if (thread_.joinable()) {
         thread_.join();
     }
@@ -61,14 +69,14 @@ void WarpWorker::affine(WarpTask task, std::shared_ptr<const ConvWarpField> fiel
     map_.ty -= bounds.y;
     launch(task);
 }
-void WarpWorker::transform(const Image& source, const AffineMap& map, Rect bounds) {
+void WarpWorker::transform(const Image& source, const AffineMap& map, Rect bounds, std::uint64_t generation) {
     if (busy_) {
         throw std::logic_error("A warp operation is already running.");
     }
     source_ = source;
     map_ = map;
     bounds_ = bounds;
-    generation_ = 0;
+    generation_ = generation;
     map_.tx -= bounds.x;
     map_.ty -= bounds.y;
     launch(WarpTask::Transform);
@@ -105,13 +113,19 @@ void WarpWorker::run(WarpWorker& worker) {
     }
     worker.result_ = std::move(result);
     worker.finished_.store(true, std::memory_order_release);
-    wake_event_loop();
+    if (worker.completion_) {
+        try {
+            worker.completion_();
+        } catch (...) {
+            // A host may have detached while the numerical operation finished.
+        }
+    }
 }
 bool WarpWorker::take(WarpResult& result) {
     if (!busy_ || !finished_.load(std::memory_order_acquire)) {
         return false;
     }
-    thread_.join();
+    wait();
     result = std::move(result_);
     source_ = {};
     mesh_ = {};

@@ -4,6 +4,7 @@
 #include <gui_forms/components/tool_tip/tool_tip.hpp>
 #include <gui_forms/controls/button_base/button/drop_down_button/drop_down_button.hpp>
 #include <gui_forms/controls/panel/anchored_popup_layer/anchored_popup_layer.hpp>
+#include <gui_forms/controls/panel/combo_box/combo_box.hpp>
 #include <gui_forms/controls/panel/numeric_up_down/numeric_up_down.hpp>
 #include <gui_forms/window.hpp>
 namespace paint::forms {
@@ -28,6 +29,8 @@ class Ribbon final : public gui_forms::Control {
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
     void synchronize();
     void close_popup();
+    void show_tool_context();
+    void show_transforms();
 
   protected:
     void on_attached_to_window() override;
@@ -51,7 +54,12 @@ class Ribbon final : public gui_forms::Control {
     std::vector<std::shared_ptr<gui_forms::Control>> option_controls_;
     std::vector<int> option_pages_;
     std::vector<std::shared_ptr<gui_forms::CheckBox>> checks_;
-    std::shared_ptr<gui_forms::NumericUpDown> grain_, tooth_, load_, angle_, tool_size_;
+    std::shared_ptr<gui_forms::NumericUpDown> grain_, tooth_, load_, angle_, tool_size_, text_size_;
+    std::shared_ptr<gui_forms::NumericUpDown> stamp_width_, stamp_height_, stamp_scale_, stamp_angle_,
+        rotation_, mesh_spacing_;
+    std::shared_ptr<gui_forms::ComboBox> font_;
+    std::vector<std::string> font_paths_;
+    void font_changed(std::optional<std::size_t> index);
     void add_options();
     void options_changed(double value);
     void apply_choice(const std::string& id);

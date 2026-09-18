@@ -33,7 +33,17 @@ art = art[:start] + r'''
         return;
     }
 ''' + art[end:]
-art = art.replace('    switch (icon) {', """    if (icon == 23) {
+art = art.replace('    switch (icon) {', """    if (icon == 9) {
+        draw.ShapePath("M3 14 L8 2 L13 14 M5 9 H11 M1.5 14 H5 M11 14 H14.5",color,1.6f,s/16);
+        return;
+    }
+    if (icon == 15 || icon == 16) {
+        const char* path=icon==15 ? "M5 4 C12 1 17 10 10 14 M5 4 L5 1 M5 4 L8 5"
+            : "M11 4 C4 1 -1 10 6 14 M11 4 L11 1 M11 4 L8 5";
+        draw.ShapePath(path,icon_rgba(61,132,185,255),1.7f,s/16);
+        return;
+    }
+    if (icon == 23) {
         for (int i=0;i<4;++i) draw.AddRectFilled({s*.08f,s*(.10f+i*.22f)},{s*.92f,s*(.13f+i*.25f)},color);
         return;
     }

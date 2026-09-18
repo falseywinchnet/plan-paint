@@ -1,6 +1,7 @@
 #pragma once
 #include "warp.hpp"
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <string>
 #include <thread>
@@ -34,17 +35,20 @@ class WarpWorker {
     WarpWorker(const WarpWorker&) = delete;
     WarpWorker& operator=(const WarpWorker&) = delete;
     bool busy() const;
+    void set_completion(std::function<void()> completion);
+    void wait();
     void compile(WarpTask task, const Image& source, std::uint64_t generation = 0);
     void mesh(WarpTask task, std::shared_ptr<const ConvWarpField> field, const ReshapeMesh& mesh, Rect bounds,
               std::uint64_t generation);
     void affine(WarpTask task, std::shared_ptr<const ConvWarpField> field, const AffineMap& map, Rect bounds,
                 std::uint64_t generation);
-    void transform(const Image& source, const AffineMap& map, Rect bounds);
+    void transform(const Image& source, const AffineMap& map, Rect bounds, std::uint64_t generation = 0);
     bool take(WarpResult& result);
 
   private:
     void launch(WarpTask task);
     static void run(WarpWorker& worker);
+    std::function<void()> completion_;
     Image source_;
     std::shared_ptr<const ConvWarpField> field_;
     ReshapeMesh mesh_;

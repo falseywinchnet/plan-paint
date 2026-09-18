@@ -43,7 +43,8 @@ class EditorDialog final : public gui_forms::Control {
     std::vector<std::shared_ptr<SwatchButton>> custom_;
     std::shared_ptr<SwatchButton> old_, preview_;
     std::shared_ptr<ColorPlane> plane_, hue_strip_;
-    std::shared_ptr<gui_forms::NumericUpDown> red_, green_, blue_, alpha_, light_, a_, b_, width_, height_;
+    std::shared_ptr<gui_forms::NumericUpDown> red_, green_, blue_, alpha_, light_, a_, b_, width_, height_,
+        skew_horizontal_, skew_vertical_;
     std::shared_ptr<gui_forms::TextBox> hex_;
     std::shared_ptr<gui_forms::CheckBox> lock_, scale_;
     std::shared_ptr<gui_forms::Label> error_;

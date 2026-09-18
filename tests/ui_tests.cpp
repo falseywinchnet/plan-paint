@@ -262,6 +262,7 @@ void idle_rendering(UiFixture& ui) {
     paint::Image source;
     source.reset(16, 16, {255, 0, 0, 255});
     paint::WarpWorker worker;
+    worker.set_completion(paint::wake_event_loop);
     worker.compile(paint::WarpTask::CompileStamp, source);
     SDL_Event event{};
     bool woke = false;

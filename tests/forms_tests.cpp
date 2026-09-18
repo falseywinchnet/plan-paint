@@ -1,10 +1,13 @@
 #include "codecs.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
+#include <chrono>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
 namespace {
 namespace gf = gui_forms;
 void require(bool condition, const char* message) {
@@ -22,7 +25,7 @@ struct Fixture {
         editor = gf::make_control<paint::forms::Editor>(gf::StableId("test.editor"));
         (*editor).document.new_image(128, 96);
         (*editor).refresh();
-        window = std::make_unique<gf::Window>(editor, gf::Size{1180, 820});
+        window = std::make_unique<gf::Window>(editor, gf::Size{1280, 820});
         (*window).perform_layout();
     }
     gf::Point position(double x, double y) {
@@ -46,6 +49,16 @@ struct Fixture {
         drag(x, y, x, y);
     }
 };
+void await_background(Fixture& fixture) {
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while ((*fixture.editor).background_busy()) {
+        static_cast<void>((*fixture.window).drain_posted_work());
+        require(std::chrono::steady_clock::now() < deadline,
+                "background renderer finishes through UI dispatcher");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
 gf::HostCapabilities service_capabilities() {
     gf::HostCapabilities capabilities;
     capabilities.available = gf::HostCapability::lifecycle | gf::HostCapability::pointer_capture |
@@ -290,6 +303,7 @@ void selection_move_path_and_stamp() {
     fixture.click(40, 40);
     require(editor.document.stamp.width == 80 && editor.document.revision == revision,
             "stamp click lifts without painting");
+    await_background(fixture);
     fixture.click(80, 40);
     require(editor.document.revision != revision, "next stamp click paints");
     fixture.pointer(gf::PointerAction::down, 80, 40, gf::PointerButton::secondary);
@@ -455,6 +469,152 @@ void ribbon_tabs_status_and_context() {
     window.perform_layout();
     require(window.find("popup-shape-3") != nullptr, "shape gallery can reopen after tooltip cleanup");
 }
+void canvas_text_editing_and_commit() {
+    Fixture fixture;
+    gf::Window& window = *fixture.window;
+    paint::forms::Editor& editor = *fixture.editor;
+    routed_button(window, "text");
+    require(editor.document.tool == paint::Tool::Text && (*window.find("text-font")).visible(),
+            "Text opens its formatting ribbon");
+    fixture.click(12, 14);
+    require(editor.text.active && editor.canvas().semantic_descriptor().role == gf::SemanticRole::text_box,
+            "canvas text starts as accessible editing session");
+    require(window.dispatch_text({"Aé\nPaint"}), "native text input reaches canvas text");
+    require(editor.text.edit.content == "Aé\nPaint", "UTF-8 and multiline text retained");
+    require(!editor.document.dirty(), "text preview does not mutate document");
+    require(window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::z, gf::Modifier::control}),
+            "text owns undo");
+    require(editor.text.edit.content.empty(), "text undo restores content independently");
+    require(window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::y, gf::Modifier::control}),
+            "text owns redo");
+    require(editor.text.edit.content == "Aé\nPaint", "text redo restores UTF-8");
+    editor.text.edit.caret = editor.text.edit.anchor = 3;
+    require(window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::backspace}), "text backspace routed");
+    require(editor.text.edit.content == "A\nPaint", "backspace removes whole UTF-8 character");
+    editor.execute("undo");
+    editor.text.style.bold = true;
+    editor.text.style.opaque = true;
+    editor.text.resize({12, 14, 92, 74});
+    editor.refresh();
+    paint::Image expected = editor.document.image;
+    paint::composite(expected, editor.text.preview, 12, 14);
+    routed_button(window, "text-place");
+    require(!editor.text.active && std::memcmp(editor.document.image.pixels.data(), expected.pixels.data(),
+                                               expected.pixels.size() * sizeof(paint::Color)) == 0,
+            "placed text exactly matches raster preview");
+    editor.execute("undo");
+    require(white(editor.document.image.get(20, 20)), "placed text is one document undo");
+    fixture.click(8, 10);
+    require(window.dispatch_text({"Cancel me"}), "second text session receives input");
+    editor.execute("text-cancel");
+    require(!editor.text.active && !editor.document.dirty(), "Cancel discards text without changing picture");
+}
+void skew_transaction_and_undo() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.new_image(16, 12);
+    paint::Image original = editor.document.image;
+    editor.request_skew(16, 12, true, 20, 0);
+    await_background(fixture);
+    require(!editor.warp_active() && !editor.document.selection.active && editor.document.image.width > 16,
+            "asynchronous skew expands canvas and ends transaction");
+    editor.execute("undo");
+    require(editor.document.image.width == 16 && editor.document.image.height == 12 &&
+                std::memcmp(original.pixels.data(), editor.document.image.pixels.data(),
+                            original.pixels.size() * sizeof(paint::Color)) == 0,
+            "skew undo restores exact original canvas");
+    editor.execute("select-all");
+    editor.request_skew(16, 12, false, -20, 10);
+    editor.cancel_warp();
+    await_background(fixture);
+    require(editor.document.selection.image.width == 16 && editor.document.selection.image.height == 12,
+            "canceled skew cannot publish a late result");
+    bool rejected = false;
+    try {
+        editor.request_skew(16, 12, true, 45, 45);
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected && !editor.warp_active(), "singular skew fails before starting a transaction");
+}
+void background_rotation_mesh_and_stamp() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.new_image(24, 20);
+    editor.document.ink.primary = {200, 20, 40, 255};
+    editor.choose_tool(paint::Tool::Pencil);
+    fixture.drag(5, 5, 12, 9);
+    paint::Image original = editor.document.image;
+    editor.execute("select-all");
+    editor.request_rotation(27);
+    await_background(fixture);
+    require(!editor.warp_active() && editor.document.selection.active,
+            "rotation completes as a floating selection");
+    paint::ConvWarpField field;
+    field.compile(original);
+    double radians = 27 * std::acos(-1.0) / 180;
+    double cosine = std::cos(radians), sine = std::sin(radians);
+    double x = (original.width - 1) * 0.5, y = (original.height - 1) * 0.5;
+    paint::AffineMap map{cosine, -sine, x - cosine * x + sine * y, sine, cosine, y - sine * x - cosine * y};
+    paint::Rect bounds = paint::affine_bounds(field, map);
+    map.tx -= bounds.x;
+    map.ty -= bounds.y;
+    paint::Image expected;
+    paint::render_affine(field, map, bounds.w, bounds.h, expected);
+    require(editor.document.selection.image.pixels.size() == expected.pixels.size() &&
+                std::memcmp(editor.document.selection.image.pixels.data(), expected.pixels.data(),
+                            expected.pixels.size() * sizeof(paint::Color)) == 0,
+            "GUI.Forms free rotation uses authoritative CONV result bytes");
+    editor.execute("undo");
+    require(editor.document.image.pixels.size() == original.pixels.size() &&
+                std::memcmp(editor.document.image.pixels.data(), original.pixels.data(),
+                            original.pixels.size() * sizeof(paint::Color)) == 0,
+            "rotation undo returns original document");
+    editor.execute("select-all");
+    editor.start_reshape();
+    fixture.drag(-0.5, -0.5, -3, -2);
+    require(editor.warp_active(), "mesh remains editable after node release");
+    editor.cancel_warp();
+    await_background(fixture);
+    require(editor.document.selection.image.width == original.width &&
+                std::memcmp(editor.document.selection.image.pixels.data(), original.pixels.data(),
+                            original.pixels.size() * sizeof(paint::Color)) == 0,
+            "mesh cancel restores original and rejects late render");
+    editor.start_reshape();
+    fixture.drag(-0.5, -0.5, -3, -2);
+    editor.finish_warp(true);
+    require(!editor.warp_active() && !editor.document.selection.active,
+            "mesh commits and releases its controls");
+    editor.execute("undo");
+    require(std::memcmp(editor.document.image.pixels.data(), original.pixels.data(),
+                        original.pixels.size() * sizeof(paint::Color)) == 0,
+            "mesh undo restores original");
+    editor.choose_tool(paint::Tool::Stamp);
+    editor.stamp_width = 8;
+    editor.stamp_height = 6;
+    fixture.click(8, 8);
+    editor.stamp_scale = 0.5;
+    editor.stamp_angle = 32;
+    editor.regenerate_stamp();
+    editor.reset_stamp();
+    await_background(fixture);
+    require(editor.document.stamp.pixels.empty(), "stamp reset rejects pending compilation and preview");
+    fixture.click(8, 8);
+    await_background(fixture);
+    editor.stamp_angle = 90;
+    editor.stamp_scale = 0.5;
+    editor.regenerate_stamp();
+    await_background(fixture);
+    std::uint64_t revision = editor.document.revision;
+    fixture.click(16, 12);
+    require(editor.document.revision != revision, "transformed stamp places after asynchronous preview");
+    // Destruction must join without a callback retaining the last owner on its worker.
+    {
+        Fixture closing;
+        (*closing.editor).document.new_image(10, 10);
+        (*closing.editor).request_rotation(13);
+    }
+}
 void zoom_anchors_the_point() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -478,6 +638,9 @@ int main() {
         retained_curve_save_undo_and_release();
         selection_move_path_and_stamp();
         zoom_anchors_the_point();
+        background_rotation_mesh_and_stamp();
+        skew_transaction_and_undo();
+        canvas_text_editing_and_commit();
         ribbon_tabs_status_and_context();
         ribbon_galleries_and_modal_transactions();
         std::cout << "GUI.Forms: RGBA, routed capture, undo, material strokes, curves/save, selections, "

@@ -75,6 +75,7 @@ void PaintCanvas::on_paint_overlay(gf::Painter& painter, gf::Rect damage) {
 }
 Editor::Editor(gf::StableId id) : Control(std::move(id)) {}
 void Editor::initialize_control_tree() {
+    initialize_warp();
     canvas_ = gf::make_control<PaintCanvas>(gf::StableId("canvas"),
                                             std::static_pointer_cast<Editor>(shared_from_this()));
     (*canvas_).set_focusable(true);
@@ -142,7 +143,7 @@ void Editor::initialize_control_tree() {
     (*zoom_slider_).set_small_change(0.25);
     (*zoom_slider_).set_large_change(1);
     (*zoom_slider_).set_show_ticks(false);
-    (*zoom_slider_).set_visual_style(gf::TrackBarVisualStyle::compact);
+    (*zoom_slider_).set_visual_style(gf::TrackBarVisualStyle::classic);
     (*zoom_slider_).set_accessible_name("Zoom percentage");
     subscriptions_.push_back(
         (*zoom_slider_)
@@ -176,9 +177,9 @@ void Editor::arrange(gf::Rect bounds) {
     set_child_layout(cursor_status_, {260, y, 165, 26});
     set_child_layout(selection_status_, {445, y, 164, 26});
     set_child_layout(dimensions_status_, {632, y, 210, 26});
-    set_child_layout(zoom_reset_, {bounds.width - 292, y + 1, 65, 25});
-    set_child_layout(zoom_out_, {bounds.width - 221, y + 1, 26, 25});
-    set_child_layout(zoom_slider_, {bounds.width - 189, y + 1, 148, 25});
+    set_child_layout(zoom_reset_, {bounds.width - 382, y + 1, 65, 25});
+    set_child_layout(zoom_out_, {bounds.width - 311, y + 1, 26, 25});
+    set_child_layout(zoom_slider_, {bounds.width - 279, y + 1, 238, 25});
     set_child_layout(zoom_in_, {bounds.width - 34, y + 1, 26, 25});
 }
 void Editor::on_paint(gf::Painter& painter, gf::Rect) {
@@ -228,7 +229,7 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
     }
     double y = bounds.height - 30;
     painter.draw_line({0, y}, {bounds.width, y}, gf::Color::rgba(172, 193, 214), 1);
-    for (double x : {249.0, 434.0, 621.0, bounds.width - 303}) {
+    for (double x : {249.0, 434.0, 621.0, bounds.width - 393}) {
         painter.draw_line({x, y + 5}, {x, bounds.height - 5}, gf::Color::rgba(193, 208, 224), 1);
     }
 }
@@ -291,6 +292,8 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         gf::Point point = screen(document.path.nodes[index]);
         painter.fill_rect({point.x - 3, point.y - 3, 6, 6}, gf::Color::rgba(30, 100, 190));
     }
+    paint_warp_overlay(painter);
+    paint_text_overlay(painter);
     painter.restore();
 }
 void Editor::ready(gf::Window&, gf::ApplicationWindowHandle handle) {
@@ -304,7 +307,12 @@ gf::RasterCanvas& Editor::canvas() {
     return *canvas_;
 }
 void Editor::refresh() {
-    if (preview_active_) {
+    if (text.active) {
+        text.refresh(document.ink.primary, document.ink.secondary);
+        Image composed = document.visible_image();
+        composite(composed, text.preview, text.bounds.x, text.bounds.y);
+        publish_image(composed, *canvas_);
+    } else if (preview_active_) {
         publish_image(preview_, *canvas_);
     } else if (document.selection.active) {
         publish_image(document.visible_image(), *canvas_);
@@ -337,7 +345,7 @@ void Editor::update_status() {
     (*status_).set_text((document.filename.empty()
                              ? "Untitled"
                              : std::filesystem::path(document.filename).filename().string()) +
-                        (document.dirty() ? " *" : ""));
+                        (document.dirty() ? " *" : "") + (background_busy() ? " · Rendering…" : ""));
     (*dimensions_status_)
         .set_text(std::to_string(document.image.width) + " × " + std::to_string(document.image.height) +
                   " px");
@@ -390,6 +398,8 @@ void Editor::release_gesture() {
     (*canvas_).set_pointer_capture(false);
 }
 void Editor::finish_controls() {
+    finish_text(true);
+    finish_warp(true);
     release_gesture();
     document.commit_selection();
     document.commit_path();
@@ -420,6 +430,9 @@ void Editor::pointer(const gf::PointerEvent& event) {
             cursor_client_ = client;
         }
         update_cursor_status();
+        if (document.tool == Tool::Stamp) {
+            (*canvas_).invalidate(gf::Dirty::paint);
+        }
         if (event.action == gf::PointerAction::wheel) {
             if (gf::has_modifier(event.modifiers, gf::Modifier::control) ||
                 gf::has_modifier(event.modifiers, gf::Modifier::meta)) {
@@ -432,6 +445,13 @@ void Editor::pointer(const gf::PointerEvent& event) {
                 update_cursor_status();
                 invalidate(gf::Dirty::paint);
             }
+            return;
+        }
+        if (warp_pointer(event, point)) {
+            return;
+        }
+        if (text.active && event.button != gf::PointerButton::middle && !panning_) {
+            text_pointer(event, point);
             return;
         }
         if (event.action == gf::PointerAction::down) {
@@ -453,7 +473,7 @@ void Editor::pointer(const gf::PointerEvent& event) {
                 if (document.tool == Tool::Path) {
                     document.end_path_geometry();
                 } else {
-                    document.stamp = {};
+                    reset_stamp();
                 }
                 release_gesture();
                 refresh();
@@ -506,6 +526,15 @@ void Editor::begin(Point point, bool secondary) {
                                  static_cast<int>(std::floor(point.y)))) {
         return;
     }
+    if (document.tool == Tool::Text) {
+        finish_controls();
+        text.begin(point);
+        text.bounds.w = std::max(80, std::min(440, document.image.width - text.bounds.x));
+        (*ribbon_).show_tool_context();
+        reset_text_caret();
+        refresh();
+        return;
+    }
     if (document.tool == Tool::Magnifier) {
         zoom(secondary ? 0.5 : 2, screen(point));
         return;
@@ -543,15 +572,7 @@ void Editor::begin(Point point, bool secondary) {
     }
     if (document.tool == Tool::Stamp) {
         document.commit_selection();
-        if (document.stamp.pixels.empty()) {
-            document.stamp = make_stamp(
-                document.image, {static_cast<int>(point.x - 40), static_cast<int>(point.y - 40), 80, 80},
-                document.stamp_shape, document.stamp_transparent, document.ink.secondary);
-        } else {
-            document.checkpoint();
-            composite(document.image, document.stamp, static_cast<int>(point.x - document.stamp.width / 2.0),
-                      static_cast<int>(point.y - document.stamp.height / 2.0));
-        }
+        stamp_at(point);
         refresh();
         return;
     }
@@ -708,6 +729,18 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
     if (event.action != gf::KeyAction::down || (*menu_).is_open()) {
         return;
     }
+    if (window() && (*window()).focused_control() == canvas_ && text.active && text_key(event)) {
+        return;
+    }
+    if (window() && (*window()).focused_control() != canvas_) {
+        gf::Control::Ptr focused = (*window()).focused_control();
+        if (focused) {
+            gf::SemanticRole role = (*focused).semantic_descriptor().role;
+            if (role == gf::SemanticRole::text_box || role == gf::SemanticRole::numeric_field) {
+                return;
+            }
+        }
+    }
     bool command = gf::has_modifier(event.modifiers, gf::Modifier::control) ||
                    gf::has_modifier(event.modifiers, gf::Modifier::meta);
     bool shift = gf::has_modifier(event.modifiers, gf::Modifier::shift);
@@ -752,7 +785,21 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
         } else if (event.physical_key == gf::PhysicalKey::delete_forward ||
                    event.physical_key == gf::PhysicalKey::backspace) {
             action = "delete";
-        } else if (document.selection.active) {
+        } else if (document.tool == Tool::Stamp && !document.stamp.pixels.empty()) {
+            if (event.physical_key == gf::PhysicalKey::r) {
+                stamp_angle = std::remainder(stamp_angle + (shift ? -15 : 15), 360.0);
+            } else if (event.physical_key == 0x2eU /* USB HID equals / plus */) {
+                stamp_scale = std::min(8.0, stamp_scale * 1.1);
+            } else if (event.physical_key == 0x2dU /* USB HID minus */) {
+                stamp_scale = std::max(0.1, stamp_scale / 1.1);
+            } else {
+                return;
+            }
+            regenerate_stamp();
+            refresh();
+            event.handled = true;
+            return;
+        } else if (document.selection.active && !warp_active()) {
             int step = shift ? 10 : 1;
             if (event.physical_key == gf::PhysicalKey::left) {
                 document.selection.x -= step;
@@ -809,6 +856,8 @@ void Editor::error(const std::string& message) {
 }
 
 bool Editor::can_replace() {
+    finish_text(true);
+    finish_warp(false);
     if (!document.dirty()) {
         return true;
     }
@@ -837,6 +886,8 @@ void Editor::open_file(const std::string& path) {
     refresh();
 }
 bool Editor::save(bool save_as) {
+    finish_warp(false);
+    finish_text(true);
     std::string path = document.filename;
     if (save_as || path.empty() || !writable_image_path(path)) {
         gf::HostSaveFileDialogRequest request;
@@ -919,6 +970,50 @@ void Editor::edit_color(bool secondary) {
 
 void Editor::execute(const std::string& command) {
     try {
+        if (command == "reshape") {
+            start_reshape();
+            refresh();
+            return;
+        }
+        if (command == "warp-cancel") {
+            cancel_warp();
+            refresh();
+            return;
+        }
+        if (command == "warp-place") {
+            finish_warp(true);
+            refresh();
+            return;
+        }
+        if (warp_active() && command == "undo") {
+            cancel_warp();
+            refresh();
+            return;
+        }
+        if (warp_active() && command != "zoom-in" && command != "zoom-out" && command != "fit" &&
+            command != "actual-size") {
+            finish_warp(false);
+        }
+        if (text_command(command)) {
+            return;
+        }
+        if (command == "text") {
+            choose_tool(Tool::Text);
+            (*ribbon_).show_tool_context();
+            return;
+        }
+        if (command == "text-font-file") {
+            gf::HostOpenFileDialogRequest request;
+            request.title = "Open a font";
+            request.filters = {{"Fonts", {"ttf", "otf"}}};
+            gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
+            if (result.outcome == gf::HostDialogOutcome::accepted && !result.paths.empty()) {
+                text.style.face_path = result.paths.front();
+                text.style.mono = false;
+                refresh();
+            }
+            return;
+        }
         if (command.starts_with("tool-")) {
             choose_tool(tools[std::stoul(command.substr(5))]);
             return;
@@ -973,24 +1068,38 @@ void Editor::execute(const std::string& command) {
         } else if (command == "invert-selection") {
             document.invert_selection();
         } else if (command == "delete") {
-            document.delete_selection();
+            finish_text(true);
+            document.commit_path();
+            document.commit_curve();
+            if (document.selection.active) {
+                document.delete_selection();
+            } else {
+                document.checkpoint();
+                document.image.reset(document.image.width, document.image.height, document.ink.secondary);
+            }
         } else if (command == "crop") {
+            finish_text(true);
             release_gesture();
             document.crop();
         } else if (command == "resize") {
+            finish_text(true);
             open_editor_dialog(EditorDialogKind::resize);
         } else if (command == "rotate-right" || command == "rotate-left" || command == "rotate-180") {
-            finish_controls();
+            finish_text(true);
+            document.commit_curve();
+            document.commit_path();
             document.rotate(command == "rotate-right" ? 1 : command == "rotate-left" ? 3 : 2);
         } else if (command == "flip-horizontal" || command == "flip-vertical") {
-            finish_controls();
+            finish_text(true);
+            document.commit_curve();
+            document.commit_path();
             document.flip(command == "flip-horizontal");
         } else if (command == "invert") {
             finish_controls();
             document.invert_colors();
         } else if (command == "release") {
             finish_controls();
-            document.stamp = {};
+            reset_stamp();
         } else if (command == "finish-path") {
             if (document.tool == Tool::Path) {
                 document.end_path_geometry();
@@ -1045,9 +1154,10 @@ void Editor::execute(const std::string& command) {
                     : "Draw with the left button; the right button uses Alt. Drag selections to move "
                       "them. Drag Bézier and arc handles after setting their line. Escape releases editing "
                       "controls. Enter or right-click ends a path run. Middle-drag pans; Ctrl/Command + "
-                      "wheel zooms.\n\nThis integration build is still being ported. Text editing, CONV "
-                      "reshape and rotation controls, atlas UI and desktop commands remain in the comparison "
-                      "frontend.";
+                      "wheel zooms. Text has its own font ribbon; Ctrl/Command+Enter places it. "
+                      "Select an object for Mesh or drag its rotation handle. Shift snaps rotation. "
+                      "Stamp: R rotates; + and - resize. Right-click resets the stamp.\n\n"
+                      "The atlas UI and several desktop commands are still being ported.";
             static_cast<void>(dialog(request));
         }
         document.sync_curve();

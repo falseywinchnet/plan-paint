@@ -205,7 +205,7 @@ void EditorDialog::initialize_control_tree() {
         }
         set_color(original_);
     } else {
-        panel_ = {0, 0, 450, 400};
+        panel_ = {0, 0, 450, 500};
         Document& document = (*editor).document;
         original_width_ = document.selection.active ? document.selection.image.width : document.image.width;
         original_height_ =
@@ -232,12 +232,17 @@ void EditorDialog::initialize_control_tree() {
         (*scale_).set_checked(true);
         put(scale_, {24, 242, 360, 25});
         label("resize-hint", "Turn scaling off to change the canvas boundary.", {24, 269, 394, 22});
+        label("skew-label", "Skew (degrees)", {24, 308, 390, 24}, true);
+        label("skew-horizontal-label", "Horizontal", {24, 341, 112, 28});
+        label("skew-vertical-label", "Vertical", {24, 377, 112, 28});
+        skew_horizontal_ = number("skew-horizontal", {148, 340, 176, 30}, -80, 80, 0, 1);
+        skew_vertical_ = number("skew-vertical", {148, 376, 176, 30}, -80, 80, 0, 1);
     }
     error_ = gf::make_control<gf::Label>(gf::StableId("dialog-error"));
     (*error_).set_font({gf::FontRole::control, 12, 400, false});
     (*error_).set_foreground(gf::Color::rgba(161, 49, 39));
     (*error_).set_text_wrapping(gf::TextWrapping::word);
-    put(error_, {20, panel_.height - (kind_ == EditorDialogKind::color ? 74 : 94), panel_.width - 40,
+    put(error_, {20, panel_.height - (kind_ == EditorDialogKind::color ? 74 : 86), panel_.width - 40,
                  kind_ == EditorDialogKind::color ? 25.0 : 36.0});
     std::shared_ptr<gf::Button> ok =
         button("dialog-ok", "OK", {panel_.width - 212, panel_.height - 41, 90, 28});
@@ -462,8 +467,14 @@ void EditorDialog::accept() {
                 (*error_).set_text("Choose dimensions between 1 and 32768 pixels.");
                 return;
             }
-            (*editor).document.resize(static_cast<int>(std::round(width)),
-                                      static_cast<int>(std::round(height)), (*scale_).checked());
+            if ((*skew_horizontal_).value() != 0 || (*skew_vertical_).value() != 0) {
+                (*editor).request_skew(static_cast<int>(std::round(width)),
+                                       static_cast<int>(std::round(height)), (*scale_).checked(),
+                                       (*skew_horizontal_).value(), (*skew_vertical_).value());
+            } else {
+                (*editor).document.resize(static_cast<int>(std::round(width)),
+                                          static_cast<int>(std::round(height)), (*scale_).checked());
+            }
         }
         (*editor).refresh();
         (*editor).close_editor_dialog();

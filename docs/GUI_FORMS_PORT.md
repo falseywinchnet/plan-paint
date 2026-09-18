@@ -41,13 +41,14 @@ release package.
 - Pencil, material brushes, flood fill, eraser, color picker, rectangular and
   lasso selections, movement, cut/copy/paste, crop, quarter turns and flips.
 - Shape drawing, Shift constraints, retained Bézier and arc handles, path nodes
-  and branching, outline/fill, patterns and basic click-to-lift stamping.
+  and branching, outline/fill, and patterns.
 - Open, save and save-as through native dialogs and the existing format engine;
   saving keeps live curve/path sessions. Clipboard images use GUI.Forms host
   services. macOS printing and page setup reuse Paint's native implementation.
 - A classic icon ribbon with Home, View, Patterns & tools, and an active-tool
   context page. The context page follows selection, stamp, brush, shape, path,
-  pencil, fill, eraser, picker, and magnifier settings. Text and mesh remain disabled.
+  pencil, fill, eraser, picker, magnifier, and text settings. Transform controls
+  include mesh editing, arbitrary-angle rotation, placement and cancellation.
 - Optical-size SVG icon artwork at 16, 24 and 32 logical pixels, rasterized at
   twice density and embedded as PNG. Expanded shapes have named hover/focus
   tooltips. Brush and pattern galleries show samples from the actual raster engine.
@@ -59,7 +60,16 @@ release package.
   plus/minus and a percentage button that resets to 100%.
 - Retained color and resize dialogs with modal focus/input boundaries. Color
   editing includes HSV, RGBA, hex, OKLab and the persistent custom palette. Resize
-  supports pixels/percentages, aspect lock, CONV scaling or canvas boundary changes.
+  supports pixels/percentages, aspect lock, CONV scaling, canvas boundary changes,
+  and horizontal/vertical skew.
+- Editable canvas text with Unicode caret/selection, clipboard, local text undo,
+  installed/custom fonts, formatting, wrapping, opaque backgrounds, and draggable
+  bounds. Placing uses the same text rasterizer as the comparison frontend.
+- Asynchronous CONV mesh deformation and free rotation. Rotation has a canvas
+  handle, numeric angle and Shift snapping. Stamp capture dimensions, scale and
+  angle controls use the compiled CONV material and a retained cursor preview.
+  Worker completion posts through GUI.Forms' dispatcher; generation checks reject
+  obsolete results. Cancellation and destruction preserve ownership boundaries.
 - Brush movement publishes only a conservative affected rectangle. GUI.Forms
   owns the tiled display update. Selection and shape previews currently publish
   the complete composed image.
@@ -69,10 +79,7 @@ release package.
 The GUI.Forms executable does **not** yet have feature parity. In particular,
 these accepted functions remain in the comparison frontend:
 
-- Canvas text editing, its formatting and custom-font controls.
-- Asynchronous CONV reshape, free rotation and transform controls; stamp size,
-  scale and angle controls and its compiled CONV preview.
-- Full atlas/frame/cursor-hotspot UI and skew/property dialogs.
+- Full atlas/frame/cursor-hotspot UI and property dialogs.
 - Recent-file menus, acquisition, email/wallpaper commands, print preview,
   drag-and-drop and the full keyboard set.
 - Windows native execution and packaging; Linux native execution requires the
@@ -120,7 +127,10 @@ selection movement, path branching, stamp reset, pointer-anchored zoom, ribbon
 page switching, context settings, material values, status controls and cursor
 coordinates after pan/zoom. Gallery tests verify shape tooltip scheduling,
 dismissal and reopening, plus modal color/resize transactions and RGBA palette
-persistence.
+persistence. Text tests compare placed pixels with its preview and cover Unicode
+editing, undo, and cancellation. Transform tests compare rotated image bytes
+with the CONV renderer and cover mesh/stamp/skew cancellation, late results,
+document undo and destruction during background work.
 `paint-forms-native-tests` exercises application startup, native host attachment,
 routed drawing/curve handles, capture release and application close. Run its
 macOS bundle with `--keep-open` to inspect the real rendered interaction fixture.

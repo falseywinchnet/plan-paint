@@ -2,6 +2,7 @@
 #include "codecs.hpp"
 #include "conv.hpp"
 #include "gui_scope.hpp"
+#include "idle_render.hpp"
 #include "imgui_impl_sdlrenderer3.h"
 #include "paths.hpp"
 #include <algorithm>
@@ -20,6 +21,7 @@ ImU32 packed(Color color) {
 }
 Application::Application(SDL_Window* input_window, SDL_Renderer* input_renderer, bool preferences)
     : window(input_window), renderer(input_renderer) {
+    warp_worker.set_completion(wake_event_loop);
     if (preferences) {
         try {
             recent_files.storage_path = preference_directory() + "recent-files.bin";

@@ -4,6 +4,8 @@
 #include "forms/dialog.hpp"
 #include "forms/ribbon.hpp"
 #include "material.hpp"
+#include "text_session.hpp"
+#include "warp_session.hpp"
 #include <gui_forms/application.hpp>
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
@@ -19,6 +21,11 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
     PaintCanvas(gui_forms::StableId id, std::weak_ptr<Editor> editor);
     void on_pointer(gui_forms::PointerEvent& event) override;
     void on_paint_overlay(gui_forms::Painter& painter, gui_forms::Rect damage) override;
+    void on_text_input(gui_forms::TextInputEvent& event) override;
+    void on_focus_changed(bool focused) override;
+    void on_frame(gui_forms::FrameTime now) override;
+    gui_forms::SemanticDescriptor semantic_descriptor() const override;
+    bool on_semantic_action(gui_forms::SemanticAction action, std::string_view value) override;
 
   private:
     std::weak_ptr<Editor> editor_;
@@ -26,10 +33,30 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
 class Editor final : public gui_forms::Control {
   public:
     explicit Editor(gui_forms::StableId id);
+    ~Editor() override;
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
+    void poll_warp();
+    void start_reshape();
+    void request_rotation(double degrees);
+    void request_skew(int width, int height, bool scale, double horizontal, double vertical);
+    void finish_warp(bool place);
+    void cancel_warp();
+    bool warp_active() const;
+    bool background_busy() const;
+    void reset_stamp();
+    void regenerate_stamp();
+    int stamp_width = 80, stamp_height = 80;
+    double stamp_scale = 1, stamp_angle = 0, rotation_angle = 0, mesh_spacing = 60;
     Document document;
     CustomColors custom_colors;
+    TextSession text;
+    void text_input(gui_forms::TextInputEvent& event);
+    bool text_key(gui_forms::KeyEvent& event);
+    bool text_command(const std::string& command);
+    void finish_text(bool place);
+    void text_focus(bool focused);
+    void text_frame();
     bool show_rulers = false, show_grid = false, show_status = true, full_screen = false;
     void open_editor_dialog(EditorDialogKind kind, bool secondary = false);
     void close_editor_dialog();
@@ -49,6 +76,28 @@ class Editor final : public gui_forms::Control {
     void pointer(const gui_forms::PointerEvent& event);
 
   private:
+    WarpWorker warp_worker_;
+    enum class WarpMode { none, mesh, rotation, transform };
+    WarpMode warp_mode_ = WarpMode::none;
+    FloatingSelection warp_original_;
+    ReshapeMesh reshape_mesh_;
+    std::shared_ptr<const ConvWarpField> warp_field_, stamp_field_;
+    Image stamp_preview_;
+    gui_forms::ImageId stamp_image_;
+    void publish_stamp_preview();
+    std::uint64_t warp_generation_ = 0, stamp_generation_ = 0, stamp_source_generation_ = 0;
+    bool warp_pending_ = false, warp_commit_ = false, warp_whole_image_ = false;
+    bool stamp_pending_ = false, rotation_dragging_ = false;
+    int mesh_node_ = -1;
+    double rotation_pointer_start_ = 0;
+    void initialize_warp();
+    void start_rotation();
+    void commit_warp();
+    AffineMap rotation_map() const;
+    gui_forms::Point rotation_handle() const;
+    bool warp_pointer(const gui_forms::PointerEvent& event, Point point);
+    void paint_warp_overlay(gui_forms::Painter& painter);
+    void stamp_at(Point point);
     std::shared_ptr<gui_forms::RasterCanvas> canvas_;
     std::shared_ptr<gui_forms::Label> status_, cursor_status_, dimensions_status_, selection_status_;
     std::shared_ptr<gui_forms::Button> zoom_out_, zoom_in_, zoom_reset_;
@@ -64,6 +113,14 @@ class Editor final : public gui_forms::Control {
     std::vector<gui_forms::SubscriptionToken> subscriptions_;
     gui_forms::ApplicationWindowHandle handle_;
     std::uint64_t next_dialog_id_ = 1;
+    gui_forms::FrameRequestToken text_caret_frame_;
+    bool text_caret_visible_ = true;
+    int text_drag_ = -3;
+    Rect text_drag_bounds_;
+    Point text_drag_start_;
+    void paint_text_overlay(gui_forms::Painter& painter);
+    void text_pointer(const gui_forms::PointerEvent& event, Point point);
+    void reset_text_caret();
     Point start_, last_, current_, selection_offset_, handle_offset_;
     gui_drawing::PointF pan_origin_;
     gui_forms::Point pan_start_;
