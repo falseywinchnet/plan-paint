@@ -57,7 +57,7 @@ identifier. It is a local development package, not a notarized public release.
 - Open, save and save-as through native dialogs and the existing format engine;
   saving keeps live curve/path sessions. Clipboard images use GUI.Forms host
   services. macOS printing and page setup reuse Paint's native implementation.
-- A classic icon ribbon with Home, View, Patterns & tools, and an active-tool
+- A classic icon ribbon with Home, View, Patterns, and an active-tool
   context page. The context page follows selection, stamp, brush, shape, path,
   pencil, fill, eraser, picker, magnifier, and text settings. Transform controls
   include mesh editing, arbitrary-angle rotation, placement and cancellation.
@@ -89,7 +89,7 @@ identifier. It is a local development package, not a notarized public release.
   Thumbnail image resources are limited to visible frames, including 4096-frame
   sheets. Opening the gallery reveals the current frame after layout.
 - Recent pictures, native file drops, image properties, monochrome conversion,
-  JPEG quality, print preview, acquisition, email composition, and desktop
+  JPEG quality, print preview, acquisition, and desktop
   backgrounds through the existing native services. Deferred New/Open/Close
   requests resume after the icon-size save dialog succeeds.
 - Canvas boundary handles and eight selection resize handles, with diagonal
@@ -107,7 +107,7 @@ has not been established:
 - Windows source syntax checks pass; this frontend still needs a complete native
   Windows build, runtime interaction checks and packaging validation.
 - Native Linux execution requires the toolkit's native Linux host.
-- Acquisition devices, email attachment handoff, wallpaper changes and actual
+- Acquisition devices, wallpaper changes and actual
   printer jobs have not been exercised end-to-end in this port session. Their
   command handlers reuse Paint's existing platform implementations.
 
@@ -181,3 +181,32 @@ This fixture uses Paint's actual tools; it is not a mockup.
 Continue running the existing core, format, warp and interaction suites. A
 successful toolkit gallery or the current integration fixture is not evidence
 for the remaining platform and service checks listed above.
+
+## Refinement checkpoint
+
+The workspace now uses a restrained fiber texture and a shaded canvas boundary.
+Ribbon surfaces have layered highlights; control labels are 14 logical pixels.
+Patterns contains pattern samples and material settings only. Mesh and arbitrary
+rotation appear on Selection after a rectangular or lasso selection exists.
+The Select button stays selected for a lasso, whose in-progress outline follows
+the traced contour without an additional rectangle. Stamp dragging deposits
+continuously between pointer events and creates one undo checkpoint per gesture.
+
+The original yellow F1 help book, chapter text, expanding headers and 18-pixel
+reading type are restored as a docked sidebar. F1 also works without a focused
+control. Pencil hover fills its image pixel and the eraser shows its translucent
+pink footprint, including the soft eraser's spherical falloff. Neither preview
+changes document pixels or undo history. Send in email has been removed from both
+frontends and their platform services.
+
+Zoom-in preserves the image coordinate under the focus. Zoom-out first performs
+that focal scale change, then independently clamps each screen translation to
+`[viewport - image * scale, 0]` while the image exceeds that viewport dimension.
+Once an axis fits, its translation is `(viewport - image * scale) / 2`. This is
+the recovered Five Foot World edge-clamp rule; it adds no centerward interpolation.
+The wheel, ribbon commands, status buttons and slider share it. Fit uses balanced
+margins on both axes.
+
+The owner has verified that the macOS print command opens the native dialog and
+that scanner acquisition works on their machine. Actual print-job output and
+other platform services still need their own evidence.

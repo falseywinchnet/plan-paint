@@ -18,7 +18,6 @@ enum class Command {
     PageSetup,
     PrintPreview,
     Acquire,
-    Email,
     WallpaperFill,
     WallpaperTile,
     WallpaperCenter,

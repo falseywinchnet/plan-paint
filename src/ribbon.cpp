@@ -467,7 +467,6 @@ void Application::ribbon(float width) {
         command_menu("Page setup...", nullptr, *this, Command::PageSetup);
         command_menu("Print preview", nullptr, *this, Command::PrintPreview);
         command_menu("From scanner or camera...", nullptr, *this, Command::Acquire);
-        command_menu("Send in email...", nullptr, *this, Command::Email);
         if (ImGui::BeginMenu("Set as desktop background")) {
             GuiScope menu_scope(GuiEnd::Menu);
             command_menu("Fill", nullptr, *this, Command::WallpaperFill);

@@ -213,14 +213,6 @@ void Application::execute(Command requested) {
         }
         break;
     }
-    case Command::Email: {
-        finish_text();
-        document.sync_curve();
-        document.sync_path();
-        compose_email(window, desktop_export(document.visible_image(), "Email"));
-        status = "Requested a mail draft with your picture attached.";
-        break;
-    }
     case Command::WallpaperFill:
     case Command::WallpaperTile:
     case Command::WallpaperCenter: {

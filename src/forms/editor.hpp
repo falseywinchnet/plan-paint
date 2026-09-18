@@ -2,6 +2,7 @@
 #include "desktop.hpp"
 #include "document.hpp"
 #include "forms/dialog.hpp"
+#include "forms/help.hpp"
 #include "forms/ribbon.hpp"
 #include "material.hpp"
 #include "text_session.hpp"
@@ -20,6 +21,14 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
   public:
     PaintCanvas(gui_forms::StableId id, std::weak_ptr<Editor> editor);
     void on_pointer(gui_forms::PointerEvent& event) override;
+    void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
+
+  protected:
+    void on_attached_to_window() override;
+    void on_detaching_from_window(gui_forms::Window& former_window) noexcept override;
+    void on_dispose() noexcept override;
+
+  public:
     void on_paint_overlay(gui_forms::Painter& painter, gui_forms::Rect damage) override;
     void on_text_input(gui_forms::TextInputEvent& event) override;
     void on_focus_changed(bool focused) override;
@@ -29,6 +38,7 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
 
   private:
     std::weak_ptr<Editor> editor_;
+    gui_forms::ImageId felt_;
 };
 class Editor final : public gui_forms::Control {
   public:
@@ -61,6 +71,7 @@ class Editor final : public gui_forms::Control {
     void finish_text(bool place);
     void text_focus(bool focused);
     void text_frame();
+    bool show_help = false, eraser_soft = false;
     bool show_rulers = false, show_grid = false, show_status = true, full_screen = false;
     void open_editor_dialog(EditorDialogKind kind, bool secondary = false);
     void close_editor_dialog();
@@ -73,6 +84,8 @@ class Editor final : public gui_forms::Control {
     void closing(gui_forms::HostCloseRequest& request);
     void execute(const std::string& command);
     void choose_tool(Tool tool);
+    void on_attached_to_window() override;
+    void on_detaching_from_window(gui_forms::Window& former_window) noexcept override;
     void choose_shape(Shape shape);
     void refresh();
     void open_file(const std::string& path);
@@ -84,6 +97,8 @@ class Editor final : public gui_forms::Control {
     void pointer(const gui_forms::PointerEvent& event);
 
   private:
+    bool help_shortcut();
+    gui_forms::AcceleratorToken help_accelerator_;
     WarpWorker warp_worker_;
     enum class WarpMode { none, mesh, rotation, transform };
     WarpMode warp_mode_ = WarpMode::none;
@@ -105,7 +120,7 @@ class Editor final : public gui_forms::Control {
     gui_forms::Point rotation_handle() const;
     bool warp_pointer(const gui_forms::PointerEvent& event, Point point);
     void paint_warp_overlay(gui_forms::Painter& painter);
-    void stamp_at(Point point);
+    void stamp_at(Point point, bool checkpoint = true);
     std::shared_ptr<gui_forms::RasterCanvas> canvas_;
     std::shared_ptr<gui_forms::Label> status_, cursor_status_, dimensions_status_, selection_status_;
     std::shared_ptr<gui_forms::Button> zoom_out_, zoom_in_, zoom_reset_;
@@ -114,6 +129,7 @@ class Editor final : public gui_forms::Control {
     bool synchronizing_zoom_ = false;
     std::shared_ptr<gui_forms::MenuStrip> menu_;
     std::shared_ptr<Ribbon> ribbon_;
+    std::shared_ptr<HelpBook> help_;
     std::shared_ptr<EditorDialog> editor_dialog_;
     gui_forms::PopupToken editor_dialog_popup_;
     gui_forms::FocusScopeId editor_dialog_focus_;
@@ -128,6 +144,7 @@ class Editor final : public gui_forms::Control {
     Rect text_drag_bounds_;
     Point text_drag_start_;
     void paint_atlas_overlay(gui_forms::Painter& painter);
+    void paint_tool_preview(gui_forms::Painter& painter);
     void paint_text_overlay(gui_forms::Painter& painter);
     void text_pointer(const gui_forms::PointerEvent& event, Point point);
     void reset_text_caret();

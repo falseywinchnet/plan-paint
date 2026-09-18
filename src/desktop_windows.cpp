@@ -106,38 +106,7 @@ bool acquire_picture(std::string& acquired_path) {
     invoke_method(*picture.value.pdispVal, save, &destination.value, 1, nullptr);
     return true;
 }
-void compose_email(SDL_Window* window, const std::string& path) {
-    std::wstring native_path = path_from_utf8(path).wstring();
-    HMODULE module = LoadLibraryExW(L"MAPI32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
-    if (!module) {
-        throw std::runtime_error("Install and configure a desktop mail application to attach this picture.");
-    }
-    LPMAPISENDMAILW send_mail = reinterpret_cast<LPMAPISENDMAILW>(GetProcAddress(module, "MAPISendMailW"));
-    if (!send_mail) {
-        FreeLibrary(module);
-        throw std::runtime_error("The installed mail service does not support Unicode attachments.");
-    }
-    MapiFileDescW attachment{};
-    attachment.nPosition = static_cast<ULONG>(-1);
-    attachment.lpszPathName = native_path.data();
-    MapiMessageW message{};
-    message.nFileCount = 1;
-    message.lpFiles = &attachment;
-#if RAINSTAR_FORMS_NATIVE_PRINT
-    static_cast<void>(window);
-    void* native_window = nullptr;
-#else
-    void* native_window =
-        SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
-#endif
-    ULONG result =
-        send_mail(0, reinterpret_cast<ULONG_PTR>(native_window), &message, MAPI_DIALOG | MAPI_LOGON_UI, 0);
-    FreeLibrary(module);
-    if (result != SUCCESS_SUCCESS && result != MAPI_USER_ABORT) {
-        throw std::runtime_error(
-            "The mail application could not open a draft. Check its default-app settings.");
-    }
-}
+
 void set_wallpaper(const std::string& path) {
     std::wstring native_path = path_from_utf8(path).wstring();
     if (!SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, native_path.data(),

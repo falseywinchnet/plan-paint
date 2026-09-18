@@ -441,7 +441,7 @@ void ribbon_tabs_status_and_context() {
         std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("grain-scale"));
     (*grain).set_value(1.75);
     require(editor.document.ink.grain_scale == 1.75, "material settings update drawing ink");
-    routed_button(window, "patterns-stamp");
+    editor.choose_tool(paint::Tool::Stamp);
     routed_button(window, "tool-tab");
     require((*window.find("stamp-shape-0")).visible() && !(*window.find("grain-scale")).visible(),
             "stamp context hides unrelated material settings");
@@ -818,6 +818,157 @@ void desktop_transactions_drop_and_handles() {
     std::filesystem::remove(path);
     std::filesystem::remove(services.path);
 }
+class PreviewPainter final : public gf::Painter {
+  public:
+    int pencil_pixels = 0, eraser_discs = 0;
+    void save() override {}
+    void restore() override {}
+    void translate(gf::Point) override {}
+    void clip_rect(gf::Rect) override {}
+    void fill_rect(gf::Rect rectangle, gf::Color color) override {
+        if (color.red == 20 && color.green == 70 && color.blue == 110 && rectangle.width == 8 &&
+            rectangle.height == 8) {
+            ++pencil_pixels;
+        }
+    }
+    void fill_rounded_rect(gf::Rect rectangle, double radius, gf::Color color) override {
+        if (color.red == 245 && color.green == 65 && color.blue == 118 && color.alpha < 255 && radius > 0 &&
+            rectangle.width == rectangle.height) {
+            ++eraser_discs;
+        }
+    }
+    void stroke_rect(gf::Rect, gf::Color, double) override {}
+    void draw_line(gf::Point, gf::Point, gf::Color, double) override {}
+    void draw_text_utf8(gf::Point, std::string_view, gf::FontSpec, gf::Color) override {}
+    void draw_image(gf::ImageId, gf::Rect, double) override {}
+};
+void pencil_and_eraser_hover_are_display_only() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.canvas().set_view(8, {0, 0});
+    editor.document.ink.primary = {20, 70, 110, 255};
+    paint::Image original = editor.document.image;
+    std::size_t undo = editor.document.undo_history.size();
+    fixture.pointer(gf::PointerAction::move, 20, 30, gf::PointerButton::none);
+    PreviewPainter pencil;
+    editor.paint_canvas_overlay(pencil, {});
+    require(pencil.pencil_pixels == 1, "pencil fills exactly the image pixel under its tip at zoom");
+    editor.choose_tool(paint::Tool::Eraser);
+    editor.document.ink.size = 20;
+    PreviewPainter eraser;
+    editor.paint_canvas_overlay(eraser, {});
+    require(eraser.eraser_discs == 1, "hard eraser shows the original translucent pink disc");
+    editor.eraser_soft = true;
+    PreviewPainter soft;
+    editor.paint_canvas_overlay(soft, {});
+    require(soft.eraser_discs == 32, "soft eraser preview follows the original spherical shells");
+    require(editor.document.undo_history.size() == undo &&
+                std::memcmp(editor.document.image.pixels.data(), original.pixels.data(),
+                            original.pixels.size() * sizeof(paint::Color)) == 0,
+            "hover previews never modify artwork or undo history");
+}
+void zoom_out_clamps_each_axis() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.new_image(1000, 100);
+    editor.refresh();
+    window.resize({500, 500});
+    window.perform_layout();
+    gf::Rect viewport = editor.canvas().client_rectangle();
+    require(viewport.width == 500, "zoom fixture has the specified 500-pixel viewport");
+    editor.canvas().set_view(1, {500, 20});
+    std::shared_ptr<gf::TrackBar> slider =
+        std::dynamic_pointer_cast<gf::TrackBar>(window.find("zoom-slider"));
+    (*slider).set_value(std::log2(0.75));
+    gui_drawing::PointF origin = editor.canvas().view_origin();
+    require(std::abs(-origin.x * 0.75 + 250) < 1e-9, "zoom-out exposes the right edge without empty space");
+    require(std::abs(-origin.y * 0.75 - (viewport.height - 75) / 2) < 1e-9,
+            "short axis centers while wide axis still exceeds viewport");
+    double previous = -origin.x * 0.75;
+    for (int step = 1; step <= 30; ++step) {
+        double scale = 0.75 - step * 0.01;
+        (*slider).set_value(std::log2(scale));
+        double translation = -editor.canvas().view_origin().x * scale;
+        require(translation >= previous && translation - previous <= 10.000001,
+                "continuous zoom-out approaches and crosses fit without a final snap");
+        previous = translation;
+    }
+    (*slider).set_value(std::log2(0.25));
+    require(std::abs(-editor.canvas().view_origin().x * 0.25 - 125) < 1e-9,
+            "further shrinking remains centered");
+    editor.execute("fit");
+    double scale = editor.canvas().zoom();
+    require(std::abs(-editor.canvas().view_origin().x * scale - (500 - 1000 * scale) / 2) < 1e-9 &&
+                std::abs(-editor.canvas().view_origin().y * scale - (viewport.height - 100 * scale) / 2) <
+                    1e-9,
+            "explicit Fit uses balanced margins on both axes");
+}
+void restored_help_and_selection_workflows() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    require(!window.find("patterns-stamp") && !window.find("patterns-path") && !window.find("reshape"),
+            "patterns page does not duplicate tools or expose mesh");
+    routed_button(window, "tool-0");
+    routed_button(window, "tool-tab");
+    require(!(*window.find("context-reshape")).visible(), "mesh hidden before a selection exists");
+    editor.choose_tool(paint::Tool::Lasso);
+    fixture.pointer(gf::PointerAction::down, 10, 10);
+    fixture.pointer(gf::PointerAction::move, 45, 10);
+    fixture.pointer(gf::PointerAction::move, 45, 45);
+    fixture.pointer(gf::PointerAction::up, 10, 45);
+    window.perform_layout();
+    require((*require_button(window, "tool-0")).selected(), "lasso retains Select tool highlight");
+    require((*window.find("context-reshape")).visible() && (*window.find("rotation-degrees")).visible(),
+            "completed lasso reveals selection mesh and rotation controls");
+    std::shared_ptr<gf::NumericUpDown> angle =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("rotation-degrees"));
+    (*angle).set_value(30);
+    routed_button(window, "rotate-custom");
+    await_background(fixture);
+    require(editor.document.selection.active, "rotation applies through the Selection ribbon");
+    editor.execute("release");
+    double width = editor.canvas().client_rectangle().width;
+    gf::KeyEvent help{gf::KeyAction::down, gf::PhysicalKey::f1};
+    static_cast<void>(window.dispatch_key(help));
+    window.perform_layout();
+    require(editor.show_help && editor.canvas().client_rectangle().width == width - 370,
+            "F1 opens the original docked book and reduces canvas viewport");
+    require((*window.find("help-body-1")).visible() && !(*window.find("help-body-2")).visible(),
+            "first chapter is open and remaining topics are folded");
+    routed_button(window, "help-topic-2");
+    require((*window.find("help-body-2")).visible(), "help chapters expand through normal routed buttons");
+    static_cast<void>(window.dispatch_key(help));
+    window.perform_layout();
+    require(!editor.show_help && editor.canvas().client_rectangle().width == width, "F1 closes book");
+}
+void stamp_scrubs_one_undo_gesture() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.image.reset(128, 96, {255, 255, 255, 255});
+    for (int y = 4; y < 12; ++y) {
+        for (int x = 4; x < 12; ++x) {
+            editor.document.image.set(x, y, {200, 30, 60, 255});
+        }
+    }
+    editor.choose_tool(paint::Tool::Stamp);
+    editor.document.stamp_shape = paint::StampShape::Square;
+    editor.stamp_width = 8;
+    fixture.click(8, 8);
+    await_background(fixture);
+    std::size_t checkpoints = editor.document.undo_history.size();
+    fixture.drag(25, 40, 100, 40);
+    require(editor.document.undo_history.size() == checkpoints + 1, "stamp scrub has one undo checkpoint");
+    for (int x = 25; x <= 100; ++x) {
+        require(!white(editor.document.image.get(x, 40)), "stamp deposits continuously across sparse motion");
+    }
+    editor.execute("undo");
+    for (int x = 25; x <= 100; ++x) {
+        require(white(editor.document.image.get(x, 40)), "one undo removes the entire scrub");
+    }
+    require(!white(editor.document.image.get(8, 8)), "stamp scrub and undo preserve original sample");
+}
 void zoom_anchors_the_point() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -841,6 +992,10 @@ int main() {
         retained_curve_save_undo_and_release();
         selection_move_path_and_stamp();
         zoom_anchors_the_point();
+        zoom_out_clamps_each_axis();
+        pencil_and_eraser_hover_are_display_only();
+        restored_help_and_selection_workflows();
+        stamp_scrubs_one_undo_gesture();
         atlas_grid_frames_and_cursor_save();
         desktop_transactions_drop_and_handles();
         atlas_large_sheet_uses_visible_thumbnail_resources();

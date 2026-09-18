@@ -17,13 +17,7 @@ static bool launch_desktop_program(const char* const* arguments, bool wait) {
     SDL_DestroyProcess(process);
     return success;
 }
-void compose_email(SDL_Window*, const std::string& path) {
-    const char* arguments[] = {"xdg-email", "--attach", path.c_str(), nullptr};
-    if (!launch_desktop_program(arguments, false)) {
-        throw std::runtime_error(
-            "Install xdg-utils and configure a desktop mail application to attach this picture.");
-    }
-}
+
 bool acquire_picture(std::string&) {
     const char* simple_scan[] = {"simple-scan", nullptr};
     const char* xsane[] = {"xsane", nullptr};

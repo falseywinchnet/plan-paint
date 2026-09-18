@@ -384,7 +384,7 @@ void Editor::regenerate_stamp() {
     stamp_pending_ = true;
     poll_warp();
 }
-void Editor::stamp_at(Point point) {
+void Editor::stamp_at(Point point, bool checkpoint) {
     if (document.stamp.pixels.empty()) {
         int height = document.stamp_shape == StampShape::Circle || document.stamp_shape == StampShape::Square
                          ? stamp_width
@@ -399,7 +399,9 @@ void Editor::stamp_at(Point point) {
         ++stamp_source_generation_;
         regenerate_stamp();
     } else if (!stamp_pending_ && !warp_worker_.busy() && !stamp_preview_.pixels.empty()) {
-        document.checkpoint();
+        if (checkpoint) {
+            document.checkpoint();
+        }
         composite(document.image, stamp_preview_, static_cast<int>(point.x - stamp_preview_.width / 2.0),
                   static_cast<int>(point.y - stamp_preview_.height / 2.0));
     }

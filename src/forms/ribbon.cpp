@@ -46,11 +46,14 @@ gf::SurfaceMaterial ribbon_material(bool selected, bool hot, bool pressed) {
             top = gf::Color::rgba(246, 193, 91);
             bottom = gf::Color::rgba(255, 226, 151);
         }
-        material.fills.push_back(gf::MaterialFillLayer::linear({0, 0}, {0, 1}, {{0, top}, {1, bottom}}));
+        material.fills.push_back(gf::MaterialFillLayer::linear(
+            {0, 0}, {0, 1}, {{0, top}, {0.46, top}, {0.49, bottom}, {1, bottom}}));
         material.border =
             gf::MaterialBorder{selected ? gf::Color::rgba(196, 147, 50) : gf::Color::rgba(219, 182, 109), 1};
         material.corner_radius = 2;
         material.keylines.push_back({gf::MaterialEdge::top, gf::Color::rgba(255, 255, 240), 1, 1});
+        material.keylines.push_back({gf::MaterialEdge::left, gf::Color::rgba(255, 255, 240, 180), 1, 1});
+        material.keylines.push_back({gf::MaterialEdge::bottom, gf::Color::rgba(160, 109, 28, 35), 1, 1});
     }
     return material;
 }
@@ -61,6 +64,8 @@ Color ribbon_color(int index) {
 std::shared_ptr<const gf::Theme> ribbon_theme() {
     gf::ThemeDefinition definition = gf::windows_professional_theme_definition();
     definition.id = "rainstar-classic-ribbon";
+    definition.structure.typography.control = {gf::FontRole::control, 14, 400, false, 0};
+    definition.structure.typography.field = {gf::FontRole::content, 14, 400, false};
     for (gf::ControlVisualRole role :
          {gf::ControlVisualRole::button, gf::ControlVisualRole::command_button}) {
         gf::ControlRoleRecipes& recipes = definition.roles[static_cast<std::size_t>(role)];
@@ -87,7 +92,12 @@ void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
     gf::Rect swatch = text().empty() ? gf::Rect{3, 3, bounds.width - 6, bounds.height - 6}
                                      : gf::Rect{9, 7, bounds.width - 18, 30};
     painter.fill_rect(swatch, gf::Color::rgba(color_.r, color_.g, color_.b, color_.a));
-    painter.stroke_rect(swatch, gf::Color::rgba(127, 145, 163), 1);
+    painter.stroke_rect(swatch, gf::Color::rgba(112, 132, 152), 1);
+    painter.draw_line({swatch.x + 1, swatch.y + 1}, {swatch.x + swatch.width - 1, swatch.y + 1},
+                      gf::Color::rgba(255, 255, 255, 120), 1);
+    painter.draw_line({swatch.x + swatch.width - 1, swatch.y + 1},
+                      {swatch.x + swatch.width - 1, swatch.y + swatch.height - 1},
+                      gf::Color::rgba(25, 40, 55, 50), 1);
 }
 Ribbon::Ribbon(gf::StableId id, std::weak_ptr<Editor> editor)
     : Control(std::move(id)), editor_(std::move(editor)) {
@@ -126,7 +136,7 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
     (*result).set_requested_bounds(bounds);
     (*result).set_accessible_name(text.empty() ? id : text);
     (*result).set_use_mnemonic(false);
-    (*result).set_font({gf::FontRole::control, 13, 400, false, 0.05});
+    (*result).set_font({gf::FontRole::control, 14, 400, false, 0.05});
     (*result).set_content_padding(tall ? gf::Insets{3, 4, 3, disclosure ? 16.0 : 4.0}
                                        : gf::Insets{4, 2, disclosure ? 18.0 : 4.0, 2});
     (*result).set_text_image_relation(tall ? gf::TextImageRelation::image_above_text
@@ -151,9 +161,9 @@ void Ribbon::initialize_control_tree() {
     building_page_ = 0;
     button("home-tab", "Home", -1, {57, 0, 61, 27});
     button("view-tab", "View", -1, {118, 0, 63, 27});
-    button("patterns-tab", "Patterns & tools", -1, {184, 0, 144, 27});
-    button("tool-tab", "Pencil", -1, {330, 0, 142, 27});
-    button("atlas-tab", "Atlas", -1, {475, 0, 72, 27});
+    button("patterns-tab", "Patterns", -1, {184, 0, 100, 27});
+    button("tool-tab", "Pencil", -1, {286, 0, 142, 27});
+    button("atlas-tab", "Atlas", -1, {431, 0, 72, 27});
     atlas_ = gf::make_control<AtlasPanel>(gf::StableId("atlas-panel"), editor_);
     add_child(atlas_);
     button("help", "?", -1, {1240, 0, 32, 27});
@@ -191,7 +201,7 @@ void Ribbon::initialize_control_tree() {
     for (int i = 0; i < 2; ++i) {
         std::shared_ptr<SwatchButton> swatch = i == 0 ? primary_ : secondary_;
         (*swatch).set_requested_bounds({885 + i * 58.0, 36, 54, 80});
-        (*swatch).set_font({gf::FontRole::control, 13, 400, false});
+        (*swatch).set_font({gf::FontRole::control, 14, 400, false});
         (*swatch).set_content_padding({0, 40, 0, 0});
         subscriptions_.push_back((*swatch).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<Ribbon, &Ribbon::clicked>(*this)));
@@ -245,7 +255,7 @@ void Ribbon::option(std::shared_ptr<gf::Control> control, gf::Rect bounds) {
 void Ribbon::check(const std::string& id, const std::string& text, gf::Rect bounds) {
     std::shared_ptr<gf::CheckBox> control = gf::make_control<gf::CheckBox>(gf::StableId(id), text);
     (*control).set_auto_check(false);
-    (*control).set_font({gf::FontRole::control, 13, 400, false});
+    (*control).set_font({gf::FontRole::control, 14, 400, false});
     subscriptions_.push_back((*control).clicked().subscribe(
         *this, gf::Delegate<gf::ButtonBase&>::bind<Ribbon, &Ribbon::clicked>(*this)));
     checks_.push_back(control);
@@ -255,7 +265,7 @@ std::shared_ptr<gf::NumericUpDown> Ribbon::number(const std::string& id, const s
                                                   gf::Rect bounds, double minimum, double maximum,
                                                   double value, int decimals) {
     std::shared_ptr<gf::Label> label = gf::make_control<gf::Label>(gf::StableId(id + "-label"), text);
-    (*label).set_font({gf::FontRole::control, 13, 400, false});
+    (*label).set_font({gf::FontRole::control, 14, 400, false});
     option(label, {bounds.x, bounds.y, 113, bounds.height});
     std::shared_ptr<gf::NumericUpDown> control = gf::make_control<gf::NumericUpDown>(gf::StableId(id));
     (*control).set_range(minimum, maximum);
@@ -278,10 +288,6 @@ void Ribbon::add_options() {
     check("show-status", "Status bar", {234, 92, 144, 25});
     button("full-screen", "Full screen", 5, {400, 35, 98, 81}, true);
     button("fit", "Fit window", 5, {507, 35, 98, 81}, true);
-    building_page_ = 4;
-    button("patterns-stamp", "Stamp", 20, {8, 35, 66, 81}, true);
-    button("reshape", "Mesh", 21, {82, 35, 66, 81}, true);
-    button("patterns-path", "Path", 21, {156, 35, 66, 81}, true);
     building_page_ = 12;
     for (int i = 0; i < 18; ++i) {
         std::shared_ptr<gf::Button> swatch =
@@ -304,6 +310,7 @@ void Ribbon::add_options() {
     button("new-grain", "New grain", -1, {1110, 65, 130, 25});
     building_page_ = 8;
     tool_size_ = number("tool-size", "Size (px)", {12, 36, 204, 25}, 1, 64, 3);
+    check("soft-eraser", "Soft eraser", {12, 65, 210, 25});
     check("continuous-path", "Continuous path", {12, 65, 210, 25});
     check("outline", "Edge", {12, 94, 90, 25});
     check("fill", "Fill", {116, 94, 100, 25});
@@ -328,17 +335,17 @@ void Ribbon::add_options() {
     stamp_height_ = number("stamp-height", "Height (px)", {398, 79, 235, 27}, 1, 1024, 80);
     stamp_scale_ = number("stamp-scale", "Scale", {660, 36, 235, 27}, 0.1, 8, 1, 2);
     stamp_angle_ = number("stamp-angle", "Angle", {660, 79, 235, 27}, -360, 360, 0, 1);
-    building_page_ = 32;
-    rotation_ = number("rotation-degrees", "Angle (°)", {12, 36, 240, 28}, -360, 360, 15, 1);
-    button("rotate-custom", "Apply rotation", 6, {12, 79, 240, 30});
-    mesh_spacing_ = number("mesh-spacing", "Spacing (px)", {280, 36, 240, 28}, 8, 256, 60);
-    button("context-reshape", "Start mesh", 21, {280, 79, 240, 30});
-    button("warp-place", "Place", -1, {550, 36, 120, 30});
-    button("warp-cancel", "Cancel", -1, {550, 79, 120, 30});
+    building_page_ = 40;
+    rotation_ = number("rotation-degrees", "Angle (°)", {242, 36, 240, 28}, -360, 360, 15, 1);
+    button("rotate-custom", "Apply rotation", 6, {242, 79, 240, 30});
+    mesh_spacing_ = number("mesh-spacing", "Spacing (px)", {510, 36, 240, 28}, 8, 256, 60);
+    button("context-reshape", "Start mesh", 21, {510, 79, 240, 30});
+    button("warp-place", "Place", -1, {778, 36, 120, 30});
+    button("warp-cancel", "Cancel", -1, {778, 79, 120, 30});
     std::shared_ptr<gf::Label> warp_hint = gf::make_control<gf::Label>(
         gf::StableId("warp-hint"), "Drag blue mesh nodes or the rotation handle.\nShift snaps rotation to "
                                    "15°. Escape places; Undo cancels.");
-    option(warp_hint, {702, 36, 530, 75});
+    option(warp_hint, {920, 36, 320, 75});
     building_page_ = 16;
     font_paths_ = installed_fonts();
     std::vector<std::string> fonts{"Portsmouth", "Portsmouth Mono"};
@@ -375,13 +382,13 @@ void Ribbon::show_atlas() {
     invalidate(gf::Dirty::paint);
 }
 void Ribbon::show_transforms() {
-    page_ = 32;
+    page_ = 8;
     close_popup();
     synchronize();
 }
 void Ribbon::show_tool_context() {
     std::shared_ptr<Editor> editor = editor_.lock();
-    page_ = editor && (*editor).warp_active() ? 32 : editor && (*editor).document.tool == Tool::Text ? 16 : 8;
+    page_ = editor && (*editor).document.tool == Tool::Text ? 16 : 8;
     close_popup();
     synchronize();
 }
@@ -435,6 +442,11 @@ void Ribbon::show_page() {
                 visible = tool == Tool::Stamp;
             }
         }
+        if (button_pages_[i] == 40) {
+            visible = page_ == 8 && selection && (*editor).document.selection.active;
+            control.set_enabled(id == "warp-place" || id == "warp-cancel" ? (*editor).warp_active()
+                                                                          : !(*editor).warp_active());
+        }
         control.set_visible(visible);
     }
     for (std::size_t i = 0; i < option_controls_.size(); ++i) {
@@ -450,6 +462,9 @@ void Ribbon::show_page() {
             }
             if (id.starts_with("tool-size")) {
                 visible = tool == Tool::Pencil || tool == Tool::Eraser || material;
+            }
+            if (id == "soft-eraser") {
+                visible = tool == Tool::Eraser;
             }
             if (id == "continuous-path") {
                 visible = tool == Tool::Path;
@@ -467,9 +482,12 @@ void Ribbon::show_page() {
                 visible = tool == Tool::Picker;
             }
         }
+        if (option_pages_[i] == 40) {
+            visible = page_ == 8 && selection && (*editor).document.selection.active;
+        }
         control.set_visible(visible);
     }
-    invalidate(gf::Dirty::paint);
+    invalidate(gf::Dirty::layout | gf::Dirty::paint);
 }
 void Ribbon::options_changed(double) {
     if (synchronizing_) {
@@ -513,14 +531,8 @@ void Ribbon::apply_choice(const std::string& id) {
         document.stamp_transparent = !document.stamp_transparent;
     } else if (id == "new-grain") {
         ++document.ink.noise;
-    } else if (id == "patterns-stamp") {
-        (*editor).choose_tool(Tool::Stamp);
-    } else if (id == "patterns-path") {
-        if (!document.continuous_path) {
-            document.commit_path();
-        }
-        (*editor).choose_tool(Tool::Path);
-        document.continuous_path = true;
+    } else if (id == "soft-eraser") {
+        (*editor).eraser_soft = !(*editor).eraser_soft;
     } else if (id == "context-stamp-clear") {
         (*editor).reset_stamp();
     } else if (id == "text-bold") {
@@ -533,8 +545,6 @@ void Ribbon::apply_choice(const std::string& id) {
         (*editor).text.style.strikeout = !(*editor).text.style.strikeout;
     } else if (id == "text-opaque") {
         (*editor).text.style.opaque = !(*editor).text.style.opaque;
-    } else if (id == "free-rotate") {
-        show_transforms();
     } else if (id == "rotate-custom") {
         (*editor).request_rotation((*rotation_).value());
     } else if (id == "text-wrap") {
@@ -623,18 +633,27 @@ void Ribbon::arrange(gf::Rect bounds) {
     arrange_self(bounds);
     set_child_layout(atlas_, {0, 27, bounds.width, 116});
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
-        set_child_layout(buttons_[i], (*buttons_[i]).requested_bounds());
+        gf::Rect rectangle = (*buttons_[i]).requested_bounds();
+        if (page_ == 4 && button_pages_[i] == 12) {
+            rectangle.x -= rectangle.x < 548 ? 230 : 218;
+        }
+        set_child_layout(buttons_[i], rectangle);
     }
     for (const std::shared_ptr<gf::Control>& control : option_controls_) {
-        set_child_layout(control, (*control).requested_bounds());
+        gf::Rect rectangle = (*control).requested_bounds();
+        if (page_ == 4) {
+            rectangle.x -= rectangle.x < 548 ? 230 : 218;
+        }
+        set_child_layout(control, rectangle);
     }
 }
 void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     double width = committed_arranged_bounds().width;
     painter.fill_rect({0, 0, width, 27}, gf::Color::rgba(235, 242, 250));
     const gf::GradientStop stops[] = {{0, gf::Color::rgba(253, 254, 255)},
-                                      {0.48, gf::Color::rgba(241, 246, 251)},
-                                      {1, gf::Color::rgba(222, 234, 247)}};
+                                      {0.44, gf::Color::rgba(245, 249, 253)},
+                                      {0.46, gf::Color::rgba(232, 239, 248)},
+                                      {1, gf::Color::rgba(218, 232, 247)}};
     painter.fill_linear_gradient({0, 27, width, 116}, {0, 27}, {0, 143}, stops);
     painter.draw_line({0, 27}, {width, 27}, gf::Color::rgba(182, 199, 218), 1);
     painter.draw_line({0, 142}, {width, 142}, gf::Color::rgba(160, 182, 207), 1);
@@ -643,20 +662,25 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     }
     if (page_ != 1) {
         const gf::FontSpec font{gf::FontRole::control, 12, 400, false, 0.08};
-        const std::vector<std::string> labels =
-            page_ == 32   ? std::vector<std::string>{"Rotation", "Mesh", "Finish", "Controls"}
-            : page_ == 16 ? std::vector<std::string>{"Font", "Text box", "Finish text"}
-            : page_ == 2  ? std::vector<std::string>{"Zoom", "Show or hide", "Display"}
-                          : std::vector<std::string>{page_ == 4 ? "Tools" : "Tool settings", "Patterns",
-                                                     "Material", "Media"};
-        const std::vector<double> edges = page_ == 32   ? std::vector<double>{0, 266, 534, 687, width}
-                                          : page_ == 16 ? std::vector<double>{0, 455, 692, 1134}
-                                          : page_ == 2  ? std::vector<double>{0, 220, 390, 620}
-                                                        : std::vector<double>{0, 232, 548, 846, width};
         std::shared_ptr<Editor> editor = editor_.lock();
         Tool tool = editor ? (*editor).document.tool : Tool::Pencil;
+        bool selection = page_ == 8 && (tool == Tool::Select || tool == Tool::Lasso);
+        const std::vector<std::string> labels =
+            selection     ? std::vector<std::string>{"Selection", "Rotation", "Mesh", "Finish", "Controls"}
+            : page_ == 16 ? std::vector<std::string>{"Font", "Text box", "Finish text"}
+            : page_ == 2  ? std::vector<std::string>{"Zoom", "Show or hide", "Display"}
+            : page_ == 4  ? std::vector<std::string>{"Patterns", "Material", "Media"}
+                          : std::vector<std::string>{"Tool settings", "Patterns", "Material", "Media"};
+        const std::vector<double> edges = selection     ? std::vector<double>{0, 230, 496, 764, 906, width}
+                                          : page_ == 16 ? std::vector<double>{0, 455, 692, 1134}
+                                          : page_ == 2  ? std::vector<double>{0, 220, 390, 620}
+                                          : page_ == 4  ? std::vector<double>{0, 326, 628, width}
+                                                        : std::vector<double>{0, 232, 548, 846, width};
         for (std::size_t i = 0; i < labels.size(); ++i) {
-            if (page_ == 8 && i > 0) {
+            if (selection && i > 0 && !(*editor).document.selection.active) {
+                continue;
+            }
+            if (page_ == 8 && i > 0 && !selection) {
                 bool ink = tool == Tool::Pencil || tool == Tool::Fill || tool == Tool::Brush ||
                            tool == Tool::Shape || tool == Tool::Path;
                 bool material = tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
@@ -700,7 +724,8 @@ void Ribbon::synchronize() {
         std::string id(control.stable_id().value());
         bool selected = false;
         if (id.starts_with("tool-") && id != "tool-tab") {
-            selected = document.tool == ribbon_tools[std::stoi(id.substr(5))];
+            selected = document.tool == ribbon_tools[std::stoi(id.substr(5))] ||
+                       (id == "tool-0" && document.tool == Tool::Lasso);
         }
         if (id.starts_with("shape-")) {
             selected =
@@ -783,7 +808,8 @@ void Ribbon::synchronize() {
                                                           : style.word_wrap);
             continue;
         }
-        (*check).set_checked(id == "show-rulers"             ? (*editor).show_rulers
+        (*check).set_checked(id == "soft-eraser"             ? (*editor).eraser_soft
+                             : id == "show-rulers"           ? (*editor).show_rulers
                              : id == "show-grid"             ? (*editor).show_grid
                              : id == "show-status"           ? (*editor).show_status
                              : id == "transparent-pattern"   ? document.ink.transparent_pattern
@@ -850,7 +876,7 @@ std::shared_ptr<gf::Button> Ribbon::add_popup_button(gf::Panel& panel, const std
         item = gf::make_control<gf::Button>(gf::StableId("popup-" + id), text);
     }
     (*item).set_requested_bounds(bounds);
-    (*item).set_font({gf::FontRole::control, 13, 400, false, 0.05});
+    (*item).set_font({gf::FontRole::control, 14, 400, false, 0.05});
     (*item).set_text_image_relation(gf::TextImageRelation::image_before_text);
     (*item).set_text_alignment(gf::ContentAlignment::middle_left);
     (*item).set_image_alignment(gf::ContentAlignment::middle_left);
@@ -998,10 +1024,9 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             texts = {"Paste", "Open image…"};
         }
         if (id == "rotate-menu") {
-            ids = {"rotate-right", "rotate-left",     "rotate-180",
-                   "free-rotate",  "flip-horizontal", "flip-vertical"};
-            texts = {"Rotate right 90°", "Rotate left 90°", "Rotate 180°",
-                     "Free rotation…",   "Flip horizontal", "Flip vertical"};
+            ids = {"rotate-right", "rotate-left", "rotate-180", "flip-horizontal", "flip-vertical"};
+            texts = {"Rotate right 90°", "Rotate left 90°", "Rotate 180°", "Flip horizontal",
+                     "Flip vertical"};
         }
         if (id == "outline-menu") {
             ids = {"outline-on", "outline-off"};

@@ -4,15 +4,7 @@
 #import <Cocoa/Cocoa.h>
 #include <stdexcept>
 namespace paint {
-void compose_email(SDL_Window*, const std::string& path) {
-    NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path.c_str()]];
-    NSSharingService* service = [NSSharingService sharingServiceNamed:NSSharingServiceNameComposeEmail];
-    NSArray* items = @[ url ];
-    if (!service || ![service canPerformWithItems:items]) {
-        throw std::runtime_error("Set up a mail application to compose a message with this picture.");
-    }
-    [service performWithItems:items];
-}
+
 void set_wallpaper(const std::string& path) {
     NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path.c_str()]];
     NSDictionary* options = @{NSWorkspaceDesktopImageScalingKey : @(NSImageScaleAxesIndependently)};

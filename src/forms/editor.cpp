@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <gui_forms/host.hpp>
 #include <iomanip>
 #include <numbers>
@@ -85,11 +86,14 @@ void Editor::initialize_control_tree() {
     (*canvas_).set_view(1.0, {-16, -16});
     (*canvas_).set_transparency_colors(gf::Color::rgba(255, 255, 255), gf::Color::rgba(240, 240, 240));
     (*canvas_).set_transparency_cell_size(12);
-    (*canvas_).set_canvas_background(gf::Color::rgba(211, 221, 232));
+    (*canvas_).set_canvas_background(gf::Color::rgba(0, 0, 0, 0));
     add_child(canvas_);
     ribbon_ = gf::make_control<Ribbon>(gf::StableId("ribbon"),
                                        std::static_pointer_cast<Editor>(shared_from_this()));
     add_child(ribbon_);
+    help_ = gf::make_control<HelpBook>(gf::StableId("help-book"));
+    (*help_).set_visible(false);
+    add_child(help_);
     menu_ = gf::make_control<gf::MenuStrip>(gf::StableId("menus"));
     gf::ThemeDefinition file_theme = gf::windows_professional_theme_definition();
     file_theme.id = "rainstar-file-tab";
@@ -177,7 +181,6 @@ void Editor::rebuild_file_menu() {
     items.push_back(menu_item("print-preview", "Print preview…"));
     items.push_back(menu_item("page-setup", "Page setup…"));
     items.push_back(menu_item("acquire", "From scanner or camera…"));
-    items.push_back(menu_item("email", "Send in email…"));
     gf::MenuItemSpec wallpaper;
     wallpaper.stable_id = "wallpaper";
     wallpaper.kind = gf::MenuItemKind::submenu;
@@ -197,7 +200,10 @@ void Editor::arrange(gf::Rect bounds) {
     set_child_layout(menu_, {0, 0, 56, 27});
     double ruler = show_rulers ? 20 : 0;
     double footer = show_status ? 30 : 0;
-    set_child_layout(canvas_, {ruler, 143 + ruler, bounds.width - ruler,
+    double sidebar = show_help ? std::min(370.0, bounds.width * 0.38) : 0;
+    (*help_).set_visible(show_help);
+    set_child_layout(help_, {bounds.width - sidebar, 143, sidebar, bounds.height - 143 - footer});
+    set_child_layout(canvas_, {ruler, 143 + ruler, bounds.width - ruler - sidebar,
                                std::max(1.0, bounds.height - 143 - ruler - footer)});
     for (const std::shared_ptr<gf::Control>& control : std::vector<std::shared_ptr<gf::Control>>{
              status_, cursor_status_, selection_status_, dimensions_status_, zoom_reset_, zoom_out_,
@@ -304,8 +310,7 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
                               screen({static_cast<double>(right), static_cast<double>(y)}), color, 1);
         }
     }
-    if (document.selection.active ||
-        (dragging_ && (document.tool == Tool::Select || document.tool == Tool::Lasso))) {
+    if (document.selection.active || (dragging_ && document.tool == Tool::Select)) {
         Rect bounds = document.selection.active
                           ? Rect{document.selection.x, document.selection.y, document.selection.image.width,
                                  document.selection.image.height}
@@ -313,6 +318,8 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         gf::Point top = screen({static_cast<double>(bounds.x), static_cast<double>(bounds.y)});
         painter.stroke_rect({top.x, top.y, bounds.w * (*canvas_).zoom(), bounds.h * (*canvas_).zoom()},
                             gf::Color::rgba(30, 100, 190), 1);
+    }
+    if (dragging_ && document.tool == Tool::Lasso && !moving_selection_) {
         for (std::size_t index = 1; index < lasso_.size(); ++index) {
             painter.draw_line(screen(lasso_[index - 1]), screen(lasso_[index]), gf::Color::rgba(30, 100, 190),
                               1);
@@ -337,7 +344,24 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     paint_resize_overlay(painter);
     paint_warp_overlay(painter);
     paint_text_overlay(painter);
+    paint_tool_preview(painter);
     painter.restore();
+}
+bool Editor::help_shortcut() {
+    if ((*menu_).is_open() || editor_dialog_) {
+        return false;
+    }
+    execute("help");
+    return true;
+}
+void Editor::on_attached_to_window() {
+    help_accelerator_ = (*attached_window())
+                            .register_accelerator(*this, {gf::PhysicalKey::f1, gf::Modifier::none},
+                                                  std::bind(&Editor::help_shortcut, this));
+}
+void Editor::on_detaching_from_window(gf::Window& former_window) noexcept {
+    help_accelerator_.disconnect();
+    Control::on_detaching_from_window(former_window);
 }
 void Editor::ready(gf::Window&, gf::ApplicationWindowHandle handle) {
     handle_ = handle;
@@ -485,7 +509,7 @@ void Editor::pointer(const gf::PointerEvent& event) {
             cursor_client_ = client;
         }
         update_cursor_status();
-        if (document.tool == Tool::Stamp) {
+        if (document.tool == Tool::Stamp || document.tool == Tool::Pencil || document.tool == Tool::Eraser) {
             (*canvas_).invalidate(gf::Dirty::paint);
         }
         if (event.action == gf::PointerAction::wheel) {
@@ -638,7 +662,13 @@ void Editor::begin(Point point, bool secondary) {
     }
     if (document.tool == Tool::Stamp) {
         document.commit_selection();
+        bool loaded = !document.stamp.pixels.empty() && !stamp_pending_ && !warp_worker_.busy() &&
+                      !stamp_preview_.pixels.empty();
         stamp_at(point);
+        if (loaded) {
+            dragging_ = true;
+            (*canvas_).set_pointer_capture(true);
+        }
         refresh();
         return;
     }
@@ -717,6 +747,15 @@ void Editor::move(Point point) {
                        document.shape_fill, document.shape_fill_brush);
         }
         preview_active_ = true;
+    } else if (document.tool == Tool::Stamp) {
+        // Deposit at each pixel along the gesture, even between sparse pointer events.
+        double distance = std::max(std::abs(point.x - last_.x), std::abs(point.y - last_.y));
+        int steps = static_cast<int>(std::ceil(distance));
+        for (int step = 1; step <= steps; ++step) {
+            double fraction = static_cast<double>(step) / steps;
+            stamp_at({last_.x + (point.x - last_.x) * fraction, last_.y + (point.y - last_.y) * fraction},
+                     false);
+        }
     } else if (document.tool == Tool::Pencil) {
         pixel_line(document.image, last_, point, gesture_ink_);
     } else if (document.tool == Tool::Brush) {
@@ -726,7 +765,7 @@ void Editor::move(Point point) {
             stroke(document.image, last_, point, gesture_ink_);
         }
     } else if (document.tool == Tool::Eraser) {
-        eraser_.segment(document.image, last_, point, gesture_ink_.size, false);
+        eraser_.segment(document.image, last_, point, gesture_ink_.size, eraser_soft);
     } else if (document.tool == Tool::Fill) {
         flood(document.image, static_cast<int>(start_.x), static_cast<int>(start_.y), gesture_ink_);
         dragging_ = false;
@@ -776,6 +815,9 @@ void Editor::end(Point point) {
             }
         }
     }
+    if ((document.tool == Tool::Select || document.tool == Tool::Lasso) && document.selection.active) {
+        (*ribbon_).show_tool_context();
+    }
     bool stroke_tool =
         document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Eraser;
     release_gesture();
@@ -788,11 +830,29 @@ void Editor::end(Point point) {
 void Editor::zoom(double factor, gf::Point anchor) {
     gui_drawing::PointF before = (*canvas_).client_to_bitmap(anchor);
     double value = std::clamp((*canvas_).zoom() * factor, 0.0625, 32.0);
-    (*canvas_).set_view(value, {before.x - anchor.x / value, before.y - anchor.y / value});
+    gf::Point translation{anchor.x - before.x * value, anchor.y - before.y * value};
+    if (factor < 1) {
+        // Focal zoom followed by the recovered viewer's independent edge clamp:
+        // t' = (V - Wz') / 2 when Wz' <= V, otherwise clamp(t~, V - Wz', 0).
+        // There is no additional centerward interpolation.
+        gf::Rect viewport = (*canvas_).client_rectangle();
+        double width = document.image.width * value;
+        double height = document.image.height * value;
+        translation.x = width <= viewport.width ? (viewport.width - width) / 2
+                                                : std::clamp(translation.x, viewport.width - width, 0.0);
+        translation.y = height <= viewport.height ? (viewport.height - height) / 2
+                                                  : std::clamp(translation.y, viewport.height - height, 0.0);
+    }
+    (*canvas_).set_view(value, {-translation.x / value, -translation.y / value});
     refresh();
 }
 void Editor::on_key_preview(gf::KeyEvent& event) {
     if (event.action != gf::KeyAction::down || (*menu_).is_open() || editor_dialog_) {
+        return;
+    }
+    if (event.physical_key == gf::PhysicalKey::f1) {
+        execute("help");
+        event.handled = true;
         return;
     }
     if (window() && (*window()).focused_control() == canvas_ && text.active && text_key(event)) {
@@ -1258,9 +1318,6 @@ void Editor::execute(const std::string& command) {
             } else if (!pending_save_path.empty()) {
                 deferred_command = "acquire";
             }
-        } else if (command == "email") {
-            finish_controls();
-            compose_email(nullptr, desktop_export(document.output_image(), "Email"));
         } else if (command.starts_with("wallpaper-")) {
             finish_controls();
             gf::HostMonitorResult monitors = services().query_monitors();
@@ -1375,16 +1432,23 @@ void Editor::execute(const std::string& command) {
         } else if (command == "primary" || command == "secondary") {
             edit_color(command == "secondary");
         } else if (command == "zoom-in" || command == "zoom-out") {
-            zoom(command == "zoom-in" ? 2 : 0.5, {0, 0});
+            gf::Rect bounds = (*canvas_).client_rectangle();
+            zoom(command == "zoom-in" ? 2 : 0.5,
+                 cursor_client_.value_or(gf::Point{bounds.width / 2, bounds.height / 2}));
         } else if (command == "actual-size") {
-            (*canvas_).set_view(1, {-16, -16});
+            gf::Rect bounds = (*canvas_).client_rectangle();
+            zoom(1 / (*canvas_).zoom(), {bounds.width / 2, bounds.height / 2});
         } else if (command == "fit") {
             gf::Rect bounds = (*canvas_).committed_arranged_bounds();
             double scale = std::clamp(std::min((bounds.width - 32) / document.image.width,
                                                (bounds.height - 32) / document.image.height),
                                       0.0625, 32.0);
-            (*canvas_).set_view(scale, {-16 / scale, -16 / scale});
-        } else if (command == "help" || command == "about") {
+            (*canvas_).set_view(scale, {(document.image.width - bounds.width / scale) / 2,
+                                        (document.image.height - bounds.height / scale) / 2});
+        } else if (command == "help") {
+            show_help = !show_help;
+            invalidate(gf::Dirty::layout | gf::Dirty::paint);
+        } else if (command == "about") {
             gf::HostMessageDialogRequest request;
             request.title = "Rainstar Paint";
             request.message =
