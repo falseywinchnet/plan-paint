@@ -1,7 +1,7 @@
 {
   "repository": "falseywinchnet/rainstar-paint",
-  "release": "v0.2.0",
-  "asset": "gui-forms-native-source-57bb8e9fe0be.tar.gz",
-  "commit": "57bb8e9fe0be",
-  "sha256": "49416a7ff706271bb644d87e4655d85b1a3e6e80608bc363d1d5f17785e71f49"
+  "release": "v0.2.1",
+  "asset": "gui-forms-native-source-5500b7c4f0f2.tar.gz",
+  "commit": "5500b7c4f0f2",
+  "sha256": "76c4c500f8214c0b73d73cf7dda23adf867853ac97e037585ac6c48a90d80f4e"
 }

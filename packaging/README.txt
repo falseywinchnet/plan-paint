@@ -9,7 +9,8 @@ startup does not download or install packages. Keep the complete folder together
 Printer/scanner actions use the desktop's configured CUPS or acquisition service.
 macOS: run the installer, then open Rainstar Paint from Applications.
 
-Press F1 for the drawing guide and keyboard shortcuts.
+Click ? or press F1 for the drawing guide and keyboard shortcuts.
+Close Help with its upper-left × or the yellow ? button.
 
 Downloads, release notes and source:
 https://github.com/falseywinchnet/rainstar-paint

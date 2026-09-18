@@ -1,10 +1,10 @@
 # Package, startup and memory measurements
 
-These measurements compare the macOS ARM64 0.2.0 package with the local
-refinement build on macOS 26.5. They describe this configuration, not Windows or
+These measurements compare the macOS ARM64 0.2.0 package with the 0.2.1
+build on macOS 26.5. They describe this configuration, not Windows or
 Linux, and do not establish a minimum system requirement.
 
-| Measurement | 0.2.0 package | Refinement build |
+| Measurement | 0.2.0 package | 0.2.1 build |
 | --- | ---: | ---: |
 | Main executable, decimal MB | 8.10 | 2.81 |
 | Bundled fonts and their notices, decimal MB | 21.20 | 3.46 |
@@ -93,5 +93,5 @@ minimize/restore and hide/show without mouse input. The shared-font ownership
 tests also pass AddressSanitizer and UndefinedBehaviorSanitizer with the changed
 font engine and test source instrumented; the linked vendor libraries are not
 instrumented. Native visual checks cover Path anchors, the magnifier, stamp
-masks and Help controls. This refinement has not yet been packaged or measured
-on Windows or Linux.
+masks and Help controls. The timing and memory measurements above cover macOS only. Per-platform
+release checks are recorded in the release asset `verification.json`.

@@ -1,6 +1,6 @@
 # Native GUI.Forms application
 
-Rainstar Paint 0.2.0 uses GUI.Forms by default. The executable links the installed
+Rainstar Paint 0.2.1 uses GUI.Forms by default. The executable links the installed
 `GUIForms::Application` target and Paint's document, raster, material, CONV and
 format libraries. It does not link SDL, ImGui or GTK. The optional comparison
 frontend remains available with `RAINSTAR_LEGACY_UI=ON`.
@@ -109,15 +109,14 @@ and accept actual open/save dialogs. Native app screenshots and interactive
 checks complement these tests; a headless test result alone is not a claim that
 every desktop service or window-manager configuration was exercised.
 
-## Refinement build
+## Source layout and toolkit snapshot
 
 Application UI code lives in `src/forms/`. The shared document, raster tools,
 CONV transforms and codecs live in `src/`; the optional earlier frontend remains
 available for comparison and is excluded from the default build.
 
-The local refinement requires the matching GUI.Forms changes for optional font
-packs, shared font storage and macOS exposure handling. Its dependency update
-has not yet been published as a replacement for the pinned 0.2.0 SDK archive.
-Build that toolkit checkout and install it into a separate SDK prefix, then
-configure Paint with `CMAKE_PREFIX_PATH` pointing to that prefix. The packaged
-local preview contains its matching toolkit library.
+The pinned GUI.Forms snapshot includes optional font packs, shared font storage
+and macOS exposure handling. Fetch it with `scripts/fetch-gui-forms.py` before
+building the SDK. Install that SDK into a separate prefix and configure Paint
+with `CMAKE_PREFIX_PATH` pointing to it. Every packaged release includes its
+matching toolkit library.

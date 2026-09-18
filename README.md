@@ -16,12 +16,12 @@ Actual GUI.Forms application on Linux with dwm; the pictured shapes and editable
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/rainstar-paint-0.2.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/rainstar-paint-0.2.0-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/rainstar-paint-0.2.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/rainstar-paint-0.2.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.1/rainstar-paint-0.2.1-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.1/rainstar-paint-0.2.1-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.1/rainstar-paint-0.2.1-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.1/rainstar-paint-0.2.1-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.2.1/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
