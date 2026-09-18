@@ -1,4 +1,5 @@
 #include "codecs.hpp"
+#include "conv.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
 #include <chrono>
@@ -74,6 +75,7 @@ class TestServices final : public gf::HostServices {
     bool fail_dialogs = false;
     std::vector<std::uint64_t> dialog_ids;
     gf::HostImage clipboard;
+    std::vector<std::string> clipboard_files;
 
   protected:
     gf::HostMonitorResult query_monitors_impl() override {
@@ -90,6 +92,9 @@ class TestServices final : public gf::HostServices {
     }
     gf::HostServiceStatus write_clipboard_text_impl(std::string_view) override {
         return {};
+    }
+    gf::HostClipboardFilesResult read_clipboard_files_impl() override {
+        return {{}, clipboard_files, 1};
     }
     gf::HostClipboardImageResult read_clipboard_image_impl() override {
         return {{}, clipboard, 1, !clipboard.pixels.empty()};
@@ -819,17 +824,51 @@ void desktop_transactions_drop_and_handles() {
     require(window.dispatch_drag(drag).accepted_effect == gf::DragEffect::copy,
             "file drop advertises copy acceptance");
     drag.action = gf::DragAction::drop;
-    require(window.dispatch_drag(drag).accepted_effect == gf::DragEffect::none &&
-                editor.document.image.width == 128,
-            "unsaved-work cancellation rejects dropped file");
-    services.choice = gf::HostDialogChoice::no;
-    drag.action = gf::DragAction::enter;
-    ++drag.session_id;
-    static_cast<void>(window.dispatch_drag(drag));
-    drag.action = gf::DragAction::drop;
+    std::string filename = editor.document.filename;
+    std::size_t undo_count = editor.document.undo_history.size();
+    paint::Image before_drop = editor.document.image;
     require(window.dispatch_drag(drag).accepted_effect == gf::DragEffect::copy &&
-                editor.document.image.width == 37 && editor.recent.paths.front() == path,
-            "accepted drop loads image and remembers path");
+                editor.document.image.width == 128 && editor.document.filename == filename &&
+                editor.document.selection.active && editor.document.selection.image.width == 37 &&
+                editor.document.selection.x == 20 && editor.document.selection.y == 20,
+            "drop pastes floating artwork at the pointer and preserves the current document");
+    require(editor.document.undo_history.size() == undo_count + 1 &&
+                std::memcmp(before_drop.pixels.data(), editor.document.image.pixels.data(),
+                            before_drop.pixels.size() * sizeof(paint::Color)) == 0,
+            "drop keeps existing pixels intact and creates one paste transaction");
+    fixture.drag(30, 30, 40, 40);
+    require(editor.document.selection.x == 30 && editor.document.selection.y == 30,
+            "dropped artwork moves before placement");
+    require(window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape}),
+            "drop focuses the canvas so Escape places the image");
+    require(!editor.document.selection.active &&
+                paint::equal(editor.document.image.get(35, 35), drop_image.get(5, 5)),
+            "Escape commits the dropped image at its moved position");
+    editor.execute("undo");
+    require(std::memcmp(before_drop.pixels.data(), editor.document.image.pixels.data(),
+                        before_drop.pixels.size() * sizeof(paint::Color)) == 0,
+            "undo restores the document before the drop");
+    services.clipboard = {1, 1, 4, std::vector<std::byte>(4, std::byte{255})};
+    services.clipboard_files = {path};
+    editor.execute("paste");
+    require(editor.document.selection.active && editor.document.selection.image.width == 37 &&
+                editor.document.selection.image.height == 29 &&
+                paint::equal(editor.document.selection.image.get(5, 5), drop_image.get(5, 5)),
+            "copied image files take priority over their clipboard icon bitmap");
+    editor.execute("release");
+    services.clipboard_files = {std::string("bad\0path", 8)};
+    gf::HostClipboardFilesResult invalid = services.read_clipboard_files();
+    require(!invalid.status.accepted() && invalid.paths_utf8.empty(),
+            "host rejects embedded NUL in a clipboard file path");
+    services.clipboard_files.assign(65, path);
+    invalid = services.read_clipboard_files();
+    require(invalid.status.error == gf::HostServiceError::too_large && invalid.paths_utf8.empty(),
+            "host bounds the number of clipboard file references");
+    services.clipboard_files.clear();
+    editor.execute("paste");
+    require(editor.document.selection.image.width == 1,
+            "ordinary bitmap paste remains available without file references");
+    editor.execute("release");
     editor.document.new_image(33, 25);
     editor.document.checkpoint();
     editor.refresh();
@@ -851,6 +890,8 @@ class PreviewPainter final : public gf::Painter {
   public:
     int pencil_pixels = 0, eraser_discs = 0, lens_samples = 0;
     bool lens_caption = false;
+    gf::ImageId image;
+    gf::Rect image_bounds;
     void save() override {}
     void restore() override {}
     void translate(gf::Point) override {}
@@ -874,8 +915,93 @@ class PreviewPainter final : public gf::Painter {
     void draw_text_utf8(gf::Point, std::string_view text, gf::FontSpec, gf::Color) override {
         if (text == "4×") lens_caption = true;
     }
-    void draw_image(gf::ImageId, gf::Rect, double) override {}
+    void draw_image(gf::ImageId id, gf::Rect bounds, double) override {
+        image = id;
+        image_bounds = bounds;
+    }
 };
+void transforms_preview_before_release() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.image.reset(128, 96, {40, 110, 170, 255});
+    editor.document.select({20, 20, 40, 30});
+    editor.refresh();
+    paint::Image original = editor.document.selection.image;
+    std::size_t undo = editor.document.undo_history.size();
+    fixture.pointer(gf::PointerAction::down, 60, 50);
+    fixture.pointer(gf::PointerAction::move, 80, 65);
+    PreviewPainter stretch;
+    editor.paint_canvas_overlay(stretch, {});
+    require(stretch.image.value && stretch.image_bounds.width == 60 && stretch.image_bounds.height == 45,
+            "selection stretching publishes visible pixels before pointer release");
+    require(editor.document.selection.image.width == 40 && editor.document.undo_history.size() == undo,
+            "stretch preview leaves original samples and history untouched");
+    fixture.pointer(gf::PointerAction::move, 45, 40);
+    PreviewPainter contract;
+    editor.paint_canvas_overlay(contract, {});
+    require(contract.image.value && contract.image_bounds.width == 25 && contract.image_bounds.height == 20,
+            "selection contraction updates visible pixels while dragging");
+    fixture.pointer(gf::PointerAction::up, 45, 40);
+    paint::Image expected;
+    paint::conv_resize(original, 25, 20, expected);
+    require(editor.document.selection.image.pixels.size() == expected.pixels.size() &&
+                std::memcmp(expected.pixels.data(), editor.document.selection.image.pixels.data(),
+                            expected.pixels.size() * sizeof(paint::Color)) == 0,
+            "release commits authoritative CONV resize pixels");
+    // Rotation handle is 18 screen pixels beyond the upper-right corner.
+    double cx = 32.5, cy = 30, hx = 63, hy = 2;
+    fixture.pointer(gf::PointerAction::down, hx, hy);
+    double angle = 2 * std::acos(-1.0) / 180;
+    double rx = cx + std::cos(angle) * (hx - cx) - std::sin(angle) * (hy - cy);
+    double ry = cy + std::sin(angle) * (hx - cx) + std::cos(angle) * (hy - cy);
+    fixture.pointer(gf::PointerAction::move, rx, ry);
+    PreviewPainter rotation;
+    editor.paint_canvas_overlay(rotation, {});
+    require(rotation.image.value && std::abs(editor.rotation_angle - 2) < 0.01 &&
+                rotation.image_bounds.width > 25 && rotation.image_bounds.height > 20,
+            "first two degrees of rotation publish pixels without waiting for the worker");
+    std::optional<gf::ImageResourceView> pixels = (*fixture.window).image_resources().find(rotation.image);
+    require(pixels.has_value(), "rotation preview owns a live image resource");
+    int visible = 0;
+    for (std::size_t i = 0; i + 3 < (*pixels).encoded.size(); i += 4) {
+        if ((*pixels).encoded[i] == std::byte{170} && (*pixels).encoded[i + 1] == std::byte{110} &&
+            (*pixels).encoded[i + 2] == std::byte{40} && (*pixels).encoded[i + 3] == std::byte{255}) ++visible;
+    }
+    require(visible > 100, "the immediate rotation contains the selection's visible colored pixels");
+    editor.cancel_warp();
+    await_background(fixture);
+    PreviewPainter canceled;
+    editor.paint_canvas_overlay(canceled, {});
+    require(!canceled.image.value && editor.document.selection.image.width == 25,
+            "cancel removes display preview and retains original selection");
+}
+void large_selection_preview_workload() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.image.reset(1024, 768, {40, 110, 170, 255});
+    editor.document.select({0, 0, 900, 550});
+    editor.refresh();
+    std::size_t undo = editor.document.undo_history.size();
+    fixture.pointer(gf::PointerAction::down, 900, 550);
+    std::vector<double> milliseconds;
+    for (int step = 1; step <= 12; ++step) {
+        std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+        fixture.pointer(gf::PointerAction::move, 900 + step * 3, 550 - step * 2);
+        milliseconds.push_back(std::chrono::duration<double, std::milli>(
+            std::chrono::steady_clock::now() - start).count());
+    }
+    PreviewPainter painter;
+    editor.paint_canvas_overlay(painter, {});
+    std::optional<gf::ImageResourceView> resource = (*fixture.window).image_resources().find(painter.image);
+    require(resource && (*resource).encoded.size() <= 4 * 1051000,
+            "large selection live preview stays bounded to approximately one megapixel");
+    require(editor.document.selection.image.width == 900 && editor.document.undo_history.size() == undo,
+            "continuous large preview does not resample the source or add history");
+    std::sort(milliseconds.begin(), milliseconds.end());
+    std::cout << "900x550 selection, 12 live resize updates: median " << milliseconds[6]
+              << " ms, maximum " << milliseconds.back() << " ms (preview generation only)\n";
+    editor.execute("release");
+}
 void pencil_and_eraser_hover_are_display_only() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -1179,6 +1305,8 @@ int main() {
         stamp_reset_and_recapture();
         atlas_grid_frames_and_cursor_save();
         desktop_transactions_drop_and_handles();
+        transforms_preview_before_release();
+        large_selection_preview_workload();
         atlas_large_sheet_uses_visible_thumbnail_resources();
         background_rotation_mesh_and_stamp();
         skew_transaction_and_undo();

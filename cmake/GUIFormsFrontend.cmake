@@ -1,4 +1,8 @@
+# Keep the explicitly selected SDK ahead of ambient /usr/local headers. Mixing
+# installed GUI.Forms headers from another SDK with these libraries breaks ABI.
+set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
 find_package(GUIForms 0.1 CONFIG REQUIRED COMPONENTS Application)
+set_property(TARGET GUIForms::Application PROPERTY IMPORTED_NO_SYSTEM TRUE)
 include(CheckCXXSourceCompiles)
 set(CMAKE_REQUIRED_LIBRARIES GUIForms::Application)
 check_cxx_source_compiles("#include <gui_forms/canvas.hpp>
@@ -26,7 +30,16 @@ int main() {
   probe.set_cursor(gui_forms::CursorKind::resize_diagonal_down);
   return gui_forms::PhysicalKey::f12 == 0x45U ? 0 : 1;
 }" RAINSTAR_SCROLLING_LAYOUT)
+check_cxx_source_compiles("#include <gui_forms/host.hpp>
+#include <type_traits>
+#include <utility>
+static_assert(std::is_same_v<decltype(std::declval<gui_forms::HostServices&>().read_clipboard_files()),
+                             gui_forms::HostClipboardFilesResult>);
+int main() { return 0; }" RAINSTAR_CLIPBOARD_FILES)
 unset(CMAKE_REQUIRED_LIBRARIES)
+if(NOT RAINSTAR_CLIPBOARD_FILES)
+  message(FATAL_ERROR "Rainstar Paint requires the GUI.Forms file-reference clipboard service. Fetch the pinned SDK from third_party/gui-forms.lock.json.")
+endif()
 if(NOT RAINSTAR_EXTENSIBLE_CANVAS)
   message(FATAL_ERROR "Rainstar Paint requires GUI.Forms with the RasterCanvas extension (7444815 or later). See docs/GUI_FORMS_PORT.md.")
 endif()

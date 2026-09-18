@@ -1,6 +1,6 @@
 # Native GUI.Forms application
 
-Rainstar Paint 0.2.1 uses GUI.Forms by default. The executable links the installed
+Rainstar Paint 0.2.2 uses GUI.Forms by default. The executable links the installed
 `GUIForms::Application` target and Paint's document, raster, material, CONV and
 format libraries. It does not link SDL, ImGui or GTK. The optional comparison
 frontend remains available with `RAINSTAR_LEGACY_UI=ON`.
@@ -74,7 +74,10 @@ Paint retains straight-alpha RGBA pixels, meaningful RGB under zero alpha,
 selection state, tool transactions, undo history and format metadata. Only its
 display cache is premultiplied BGRA. The GUI.Forms `RasterCanvas` owns tiled
 presentation and clipping; small strokes publish bounded bitmap edits.
-Selections and shape previews currently publish the composed image.
+Selections and shape previews publish the composed image. While a selection is
+rotating or resizing, a separate viewport-bounded overlay shows the transformed
+pixels immediately. Its temporary bilinear display samples never enter document
+history; release commits the CONV result from the unchanged original samples.
 
 The derived canvas uses normal routed pointer input, focus, capture, and clipped
 paint overlays. Compound controls establish children in `initialize_control_tree`.

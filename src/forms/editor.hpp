@@ -170,6 +170,10 @@ class Editor final : public gui_forms::Control {
     bool resize_selection_ = false;
     Point resize_start_;
     Rect resize_original_, resize_preview_;
+    gui_forms::ImageId transform_image_;
+    gui_forms::Rect transform_destination_;
+    void update_transform_preview();
+    void clear_transform_preview();
     bool resize_pointer(const gui_forms::PointerEvent& event, Point point);
     void paint_resize_overlay(gui_forms::Painter& painter);
     void update_status();

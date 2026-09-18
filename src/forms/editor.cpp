@@ -282,6 +282,9 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     painter.save();
     painter.clip_rect(
         {0, 0, (*canvas_).committed_arranged_bounds().width, (*canvas_).committed_arranged_bounds().height});
+    if (transform_image_.value) {
+        painter.draw_image(transform_image_, transform_destination_);
+    }
     paint_atlas_overlay(painter);
     if ((show_hotspot || pick_hotspot) && document.atlas.kind == AtlasKind::Cursor &&
         document.atlas.active >= 0) {
@@ -312,7 +315,8 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
                               screen({static_cast<double>(right), static_cast<double>(y)}), color, 1);
         }
     }
-    if (document.selection.active || (dragging_ && document.tool == Tool::Select)) {
+    if ((document.selection.active && resize_handle_ < 0 && warp_mode_ != WarpMode::rotation) ||
+        (dragging_ && document.tool == Tool::Select)) {
         Rect bounds = document.selection.active
                           ? Rect{document.selection.x, document.selection.y, document.selection.image.width,
                                  document.selection.image.height}
@@ -363,6 +367,7 @@ void Editor::on_attached_to_window() {
                                                   std::bind(&Editor::help_shortcut, this));
 }
 void Editor::on_detaching_from_window(gf::Window& former_window) noexcept {
+    clear_transform_preview();
     help_accelerator_.disconnect();
     Control::on_detaching_from_window(former_window);
 }
@@ -426,10 +431,15 @@ void Editor::refresh() {
         publish_path_preview();
     } else if (preview_active_) {
         publish_image(preview_, *canvas_);
+    } else if ((resize_handle_ >= 0 && resize_selection_) || warp_mode_ == WarpMode::rotation) {
+        publish_image(document.image, *canvas_);
     } else if (document.selection.active) {
         publish_image(document.visible_image(), *canvas_);
     } else {
         publish_image(document.image, *canvas_);
+    }
+    if (warp_mode_ == WarpMode::rotation || (resize_handle_ >= 0 && resize_selection_)) {
+        update_transform_preview();
     }
     if (ribbon_) {
         (*ribbon_).synchronize();
@@ -506,6 +516,7 @@ void Editor::command_invoked(const gf::CommandInvocation& invocation) {
     execute(invocation.command_id);
 }
 void Editor::release_gesture() {
+    clear_transform_preview();
     dragging_ = false;
     panning_ = false;
     moving_selection_ = false;
@@ -567,6 +578,9 @@ void Editor::pointer(const gf::PointerEvent& event) {
                 origin.x -= event.wheel_delta.x * 30 / (*canvas_).zoom();
                 origin.y -= event.wheel_delta.y * 30 / (*canvas_).zoom();
                 (*canvas_).set_view_origin(origin);
+                if (warp_mode_ == WarpMode::rotation || (resize_handle_ >= 0 && resize_selection_)) {
+                    update_transform_preview();
+                }
                 update_cursor_status();
                 invalidate(gf::Dirty::paint);
             }
@@ -1142,6 +1156,18 @@ void Editor::copy() {
     }
 }
 void Editor::paste() {
+    gf::HostClipboardFilesResult files = services().read_clipboard_files();
+    if (!files.status.accepted() && files.status.error != gf::HostServiceError::unsupported) {
+        throw std::runtime_error("Could not read files from the clipboard");
+    }
+    if (!files.paths_utf8.empty()) {
+        Image image = load_image(files.paths_utf8.front());
+        finish_controls();
+        document.paste(image);
+        if (window()) static_cast<void>((*window()).request_focus(canvas_));
+        refresh();
+        return;
+    }
     gf::HostClipboardImageResult result = services().read_clipboard_image();
     if (!result.status.accepted()) {
         throw std::runtime_error("Could not read the image clipboard");
@@ -1156,8 +1182,9 @@ void Editor::paste() {
                     result.image.pixels.data() + static_cast<std::size_t>(y) * result.image.row_bytes,
                     static_cast<std::size_t>(image.width) * 4);
     }
-    release_gesture();
+    finish_controls();
     document.paste(image);
+    if (window()) static_cast<void>((*window()).request_focus(canvas_));
     refresh();
 }
 void Editor::open_editor_dialog(EditorDialogKind kind, bool secondary) {
@@ -1211,14 +1238,16 @@ void Editor::on_drag(gf::DragEvent& event) {
         event.handled = true;
         if (event.action == gf::DragAction::drop) {
             try {
-                std::string path = (*files).paths_utf8.front();
-                if (can_replace()) {
-                    open_file(path);
-                } else if (!pending_save_path.empty()) {
-                    deferred_open_path = path;
-                } else {
-                    event.accepted_effect = gf::DragEffect::none;
-                }
+                Image image = load_image((*files).paths_utf8.front());
+                gui_drawing::PointF point = canvas().client_to_bitmap(canvas().point_from_window(event.position));
+                int x = std::clamp(static_cast<int>(std::floor(point.x)), 0,
+                                   std::max(0, document.image.width - image.width));
+                int y = std::clamp(static_cast<int>(std::floor(point.y)), 0,
+                                   std::max(0, document.image.height - image.height));
+                finish_controls();
+                document.paste(image, x, y);
+                if (window()) static_cast<void>((*window()).request_focus(canvas_));
+                refresh();
             } catch (const std::exception& exception) {
                 error(exception.what());
                 event.accepted_effect = gf::DragEffect::none;

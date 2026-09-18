@@ -148,6 +148,7 @@ void Editor::start_rotation() {
     warp_pending_ = warp_commit_ = warp_whole_image_ = false;
     ++warp_generation_;
     warp_worker_.compile(WarpTask::CompileRotation, warp_original_.image, warp_generation_);
+    refresh();
 }
 void Editor::request_rotation(double degrees) {
     if (!std::isfinite(degrees)) {
@@ -228,6 +229,7 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
 }
 void Editor::commit_warp() {
     if (warp_active()) {
+        if (warp_mode_ == WarpMode::rotation) update_transform_preview();
         warp_commit_ = warp_pending_ = true;
         mesh_node_ = -1;
         rotation_dragging_ = false;
@@ -296,6 +298,7 @@ void Editor::poll_warp() {
                         document.selection.outline.clear();
                     }
                     if (committed) {
+                        clear_transform_preview();
                         if (warp_mode_ == WarpMode::mesh) {
                             document.commit_selection();
                         }
@@ -511,7 +514,7 @@ bool Editor::warp_pointer(const gf::PointerEvent& event, Point point) {
             rotation_angle = std::round(rotation_angle / 15) * 15;
         }
         ++warp_generation_;
-        warp_pending_ = true;
+        update_transform_preview();
         if (event.action == gf::PointerAction::up) {
             (*canvas_).set_pointer_capture(false);
             commit_warp();
