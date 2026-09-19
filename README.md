@@ -8,9 +8,9 @@ To the Holy One, blessed be He, from whom all good things come. We dedicate this
 
 A free drawing application with the familiar Windows 7/10 Paint ribbon, built on native GUI.Forms for Mac, Windows and Linux. Draw, paint, add text and edit pictures, with snapping paths, patterned brushes, reusable stamps and CONV image transforms.
 
-![Native Rainstar Paint on Linux with dwm](assets/screenshots/linux-home.png)
+![Rainstar Paint 0.3.2 with its cobalt ribbon and moss cloth surround](assets/screenshots/macos-home-0.3.2.jpg)
 
-Actual GUI.Forms application on Linux with dwm; the pictured shapes and editable Bézier are drawn by the native interaction fixture.
+Actual packaged Rainstar Paint 0.3.2 on Apple Silicon Mac. The specimen was painted by the native brush and lettering tools and reopened as a flattened PNG. [Explore the illustrated guide and screenshots](https://paymenottowork.com/rainstar-paint/).
 
 ## Download
 
