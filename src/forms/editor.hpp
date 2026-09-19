@@ -94,6 +94,7 @@ class Editor final : public gui_forms::Control {
     void finish_text(bool place);
     void text_focus(bool focused);
     void text_frame();
+    void selection_frame();
     bool show_help = false, eraser_soft = false;
     SampleMode picker_mode = SampleMode::Exact;
     bool picker_magnifier = false;
@@ -172,7 +173,12 @@ class Editor final : public gui_forms::Control {
     void rebuild_file_menu();
     gui_forms::ApplicationWindowHandle handle_;
     std::uint64_t next_dialog_id_ = 1;
-    gui_forms::FrameRequestToken text_caret_frame_;
+    gui_forms::FrameRequestToken text_caret_frame_, selection_frame_;
+    std::vector<std::vector<Point>> selection_contours_;
+    std::vector<std::uint8_t> selection_contour_mask_;
+    int selection_contour_width_ = 0, selection_contour_height_ = 0;
+    void update_selection_contours();
+    void paint_selection_contours(gui_forms::Painter& painter);
     bool text_caret_visible_ = true;
     int text_drag_ = -3;
     Rect text_drag_bounds_;
@@ -187,7 +193,7 @@ class Editor final : public gui_forms::Control {
     bool path_swap_pointer(const gui_forms::PointerEvent& event, Point point);
     void paint_path_swap(gui_forms::Painter& painter);
     int guide_node_ = -1;
-    bool guide_moving_ = false;
+    bool guide_moving_ = false, guide_connecting_ = false;
     Point guide_last_;
     Image paint_base_;
     void paint_segment(Point start, Point end);
@@ -206,7 +212,8 @@ class Editor final : public gui_forms::Control {
     TransformStroke transform_brush_;
     HealingBrush healing_brush_;
     StrokeStabilizer stabilizer_;
-    bool shift_ = false, control_ = false;
+    bool shift_ = false, control_ = false, alt_ = false;
+    int selection_edit_ = 0;
     int path_node_ = -1;
     Ink gesture_ink_, gesture_fill_ink_;
     bool dragging_ = false, moving_selection_ = false, preview_active_ = false, panning_ = false;

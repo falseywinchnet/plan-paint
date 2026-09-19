@@ -364,14 +364,37 @@ void routed_button(gf::Window& window, const std::string& id,
                                  " bounds=" + std::to_string(bounds.x) + "," + std::to_string(bounds.y) +
                                  "," + std::to_string(bounds.width) + "," + std::to_string(bounds.height));
     }
-    require(window.dispatch_pointer({gf::PointerAction::up, mouse, point}),
-            "button consumes routed pointer up");
+    if (!window.dispatch_pointer({gf::PointerAction::up, mouse, point})) {
+        throw std::runtime_error("button consumes routed pointer up: " + id);
+    }
 }
 void open_tab(gf::Window& window, const std::string& id) {
     if (!(*require_button(window, id)).selected() ||
         (*window.find("ribbon")).committed_arranged_bounds().height < 40) {
         routed_button(window, id);
     }
+}
+void pencil_is_independent_of_brush_material() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.ink.primary = {23, 68, 115, 255};
+    editor.document.ink.brush = paint::Brush::Marker;
+    editor.document.ink.pattern = paint::Pattern::Diagonal;
+    editor.document.ink.transparent_pattern = true;
+    editor.document.ink.pigment_load = 0;
+    editor.choose_tool(paint::Tool::Brush);
+    open_tab(*fixture.window, "home-tab");
+    routed_button(*fixture.window, "tool-2");
+    fixture.drag(12.25, 22.75, 105.25, 22.75);
+    for (int x = 12; x <= 105; ++x) {
+        require(paint::equal(editor.document.image.get(x, 22), editor.document.ink.primary),
+                "Home Pencil must draw every pixel after a patterned Marker brush");
+        require(white(editor.document.image.get(x, 21)) && white(editor.document.image.get(x, 23)),
+                "Home Pencil stays exactly one pixel wide");
+    }
+    require(editor.document.ink.pattern == paint::Pattern::Diagonal &&
+                editor.document.ink.brush == paint::Brush::Marker,
+            "Pencil leaves the stored brush material available for returning to Brushes");
 }
 void ribbon_galleries_and_modal_transactions() {
     Fixture fixture;
@@ -423,16 +446,11 @@ void ribbon_galleries_and_modal_transactions() {
                 (*modal).absolute_bounds().height == window.client_size().height,
             "modal has real full-client geometry");
     require(!window.request_focus(window.find("canvas")), "modal focus scope rejects the background canvas");
-    const std::shared_ptr<gf::ComboBox> color_space =
-        std::dynamic_pointer_cast<gf::ComboBox>(window.find("color-space"));
-    (*color_space).set_dropped_down(true);
-    window.perform_layout();
-    require(window.focus_scope_depth() == 2, "color-space dropdown nests inside the modal dialog");
-    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::down});
-    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::enter});
-    require((*color_space).selected_index() == 1 && !(*color_space).dropped_down() &&
-                window.focus_scope_depth() == 1,
-            "OKHSL can be selected through the modal dropdown and returns focus safely");
+    routed_button(window, "color-space-okhsl");
+    const std::shared_ptr<paint::forms::EditorDialog> color_dialog =
+        std::dynamic_pointer_cast<paint::forms::EditorDialog>(window.find("editor-dialog"));
+    require((*color_dialog).picker_space == paint::PickerSpace::OKHSL && window.focus_scope_depth() == 1,
+            "side-by-side OKHSL button switches space without another popup");
     routed_button(window, "color-mosaic");
     require(window.find("editor-dialog") != nullptr, "Mosaic remains in the live color dialog");
     std::size_t undo_count = editor.document.undo_history.size();
@@ -492,6 +510,7 @@ void ribbon_tabs_status_and_context() {
     require((*cursor).text() == "X: 31   Y: 22 px", "coordinates reflect image location after pan and zoom");
     routed_button(window, "status-zoom-reset");
     require(editor.canvas().zoom() == 1, "percentage button resets actual size");
+    editor.choose_tool(paint::Tool::Brush);
     open_tab(window, "patterns-tab");
     require((*window.find("grain-scale")).visible() && !window.find("ribbon-popup"),
             "patterns live on a ribbon page");
@@ -1300,12 +1319,11 @@ void path_node_drag_and_overlap() {
     fixture.click(95, 20);
     fixture.click(95, 75);
     paint::Image old = editor.document.image;
-    // Clicking a retained junction starts a new run without reinterpreting the old run.
     fixture.click(15, 20);
-    require(editor.document.path.start == 3 && editor.document.path.runs.size() == 1 &&
-                std::equal(old.pixels.begin(), old.pixels.end(), editor.document.image.pixels.begin(),
-                           paint::equal),
-            "branching at a retained node preserves every old pixel");
+    require(!editor.document.path.extending && editor.document.path.runs.size() == 1 &&
+                editor.document.path.nodes.size() == 4 && !white(editor.document.image.get(55, 47)),
+            "clicking an earlier junction commits the closing segment before ending the run");
+    fixture.click(15, 20);
     fixture.click(15, 75);
     editor.execute("finish-path");
     editor.document.ink.primary = {160, 30, 60, 255};
@@ -1386,6 +1404,7 @@ void independent_color_materials_and_no_color() {
     require(paint::equal(editor.document.ink.primary, paint::forms::ribbon_color(5)) &&
                 paint::equal(editor.document.ink.secondary, paint::forms::ribbon_color(2)),
             "left and right palette clicks independently assign Primary and Alt");
+    editor.choose_tool(paint::Tool::Brush);
     open_tab(window, "patterns-tab");
     routed_button(window, "material-edge");
     routed_button(window, "material-brush-4");
@@ -1623,12 +1642,25 @@ void scroll_distance_bounds_and_settings() {
     window.perform_layout();
     distance = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("settings-scroll"));
     (*distance).set_value(2.5);
+    const paint::Image unchanged = editor.document.image;
+    const std::shared_ptr<gf::ComboBox> alpha_background =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-alpha-background"));
+    const std::shared_ptr<gf::TextBox> alpha_color =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("settings-alpha-color"));
+    (*alpha_background).set_selected_index(1);
+    (*alpha_color).set_text("#ED82C1");
     routed_button(window, "dialog-ok");
     paint::EditorSettings reloaded;
     reloaded.storage_path = editor.settings.storage_path;
     reloaded.load();
     require(reloaded.scroll_distance == 2.5 && editor.settings.scroll_distance == 2.5,
             "accepted scroll distance persists between launches");
+    require(reloaded.solid_transparency && paint::equal(reloaded.transparency_color, {237, 130, 193, 255}) &&
+                editor.settings.solid_transparency,
+            "solid transparency color persists between launches");
+    require(std::equal(unchanged.pixels.begin(), unchanged.pixels.end(), editor.document.image.pixels.begin(),
+                       paint::equal),
+            "transparency display settings never change document RGBA");
     std::filesystem::remove(editor.settings.storage_path);
 }
 void stamp_material_keeps_one_hardness_mask() {
@@ -1767,6 +1799,134 @@ void guide_atlas_and_text_effect_interactions() {
                         painted.pixels.size() * sizeof(paint::Color)) == 0,
             "transformed contour text places exactly its preview");
 }
+void draw_lasso(Fixture& fixture, const std::vector<paint::Point>& points, gf::Modifier modifier) {
+    fixture.pointer(gf::PointerAction::down, points[0].x, points[0].y, gf::PointerButton::primary, modifier);
+    for (std::size_t index = 1; index < points.size(); ++index) {
+        fixture.pointer(gf::PointerAction::move, points[index].x, points[index].y, gf::PointerButton::primary,
+                        modifier);
+    }
+    fixture.pointer(gf::PointerAction::up, points[0].x, points[0].y, gf::PointerButton::primary, modifier);
+}
+bool selected_pixel(const paint::Document& document, int x, int y) {
+    const paint::FloatingSelection& selection = document.selection;
+    x -= selection.x;
+    y -= selection.y;
+    return selection.active && selection.image.contains(x, y) &&
+           (selection.coverage.empty() ||
+            selection.coverage[static_cast<std::size_t>(y) * selection.image.width + x]);
+}
+void lasso_add_subtract_and_void_expansion() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.image.reset(128, 96, {249, 249, 249, 255});
+    for (int y = 20; y < 60; ++y) {
+        for (int x = 20; x < 60; ++x) {
+            editor.document.image.set(x, y, {40, 90, 120, 255});
+        }
+    }
+    const paint::Image original = editor.document.image;
+    editor.choose_tool(paint::Tool::Lasso);
+    editor.lasso_mode = paint::LassoMode::Tighten;
+    draw_lasso(fixture, {{10, 10}, {70, 10}, {70, 70}, {10, 70}}, gf::Modifier::none);
+    require(selected_pixel(editor.document, 30, 30) && !selected_pixel(editor.document, 15, 15),
+            "tight lasso creates the object silhouette");
+    draw_lasso(fixture, {{85, 25}, {110, 25}, {110, 50}, {85, 50}}, gf::Modifier::control);
+    require(selected_pixel(editor.document, 30, 30) && selected_pixel(editor.document, 95, 35),
+            "Ctrl adds a freeform island even when tightening mode would reject its uniform background");
+    draw_lasso(fixture, {{30, 30}, {48, 30}, {48, 48}, {30, 48}}, gf::Modifier::alt);
+    require(!selected_pixel(editor.document, 38, 38) && selected_pixel(editor.document, 25, 25) &&
+                selected_pixel(editor.document, 95, 35),
+            "Alt removes an interior freeform hole without moving or replacing the other islands");
+    const paint::Image visible = editor.document.visible_image();
+    require(std::equal(original.pixels.begin(), original.pixels.end(), visible.pixels.begin(), paint::equal),
+            "editing the selection mask leaves every source RGBA pixel unchanged");
+    const std::vector<std::vector<paint::Point>> contours =
+        paint::mask_contours(editor.document.selection.coverage, editor.document.selection.image.width,
+                             editor.document.selection.image.height);
+    require(contours.size() == 3, "marching boundary data retains two islands and their interior hole");
+    editor.document.commit_selection();
+    editor.document.image.reset(128, 96, {40, 90, 120, 255});
+    for (int y = 12; y < 80; ++y) {
+        for (int x = 12; x < 115; ++x) {
+            editor.document.image.set(x, y, {249, 249, 249, 255});
+        }
+    }
+    editor.lasso_mode = paint::LassoMode::InnerVoid;
+    draw_lasso(fixture, {{45, 30}, {70, 30}, {70, 50}, {45, 50}}, gf::Modifier::none);
+    require(editor.document.selection.x == 12 && editor.document.selection.y == 12 &&
+                editor.document.selection.image.width == 103 && editor.document.selection.image.height == 68,
+            "inner-void lasso expands to the enclosing object beyond every edge of the drawn loop");
+}
+void backward_path_and_guide_connections() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.choose_tool(paint::Tool::Path);
+    fixture.click(20, 20);
+    fixture.click(100, 20);
+    fixture.click(100, 80);
+    fixture.pointer(gf::PointerAction::move, 21, 21, gf::PointerButton::none);
+    require(!display_white(editor, 60, 50) && white(editor.document.image.get(60, 50)),
+            "backward closing segment is visible before clicking and still uncommitted");
+    fixture.click(21, 21);
+    require(!white(editor.document.image.get(60, 50)) && !editor.document.path.extending,
+            "returning to an earlier node actually paints the backward connection");
+    fixture.click(20, 80);
+    fixture.click(102, 22);
+    require(!white(editor.document.image.get(60, 50)) && editor.document.path.nodes.back().x == 100 &&
+                editor.document.path.nodes.back().y == 20 && !editor.document.path.extending,
+            "a later run connects back to a retained earlier junction");
+    editor.execute("release");
+    editor.choose_tool(paint::Tool::Guide);
+    fixture.click(20, 20);
+    fixture.click(100, 20);
+    fixture.click(100, 70);
+    fixture.click(101, 21);
+    require(editor.guide.nodes.size() == 4 && editor.guide.nodes.back().x == 100 &&
+                editor.guide.nodes.back().y == 20 && !editor.guide.closed,
+            "guide click joins an earlier noninitial vertex without moving it");
+    fixture.drag(100, 20, 90, 25);
+    require(editor.guide.nodes[1].x == 90 && editor.guide.nodes[3].x == 90,
+            "dragging a shared guide junction moves every attached segment");
+    fixture.click(20, 70);
+    fixture.click(21, 21);
+    require(editor.guide.closed && editor.guide.nodes[0].x == 20 && editor.guide.nodes[0].y == 20,
+            "clicking the first guide node closes it with exact snapping");
+}
+void stamp_material_union_and_menu_toggle() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.image.set(20, 20, {220, 40, 50, 255});
+    editor.document.image.set(66, 20, {40, 160, 90, 255});
+    editor.choose_tool(paint::Tool::Stamp);
+    editor.document.stamp_shape = paint::StampShape::Square;
+    editor.stamp_width = editor.stamp_height = 20;
+    fixture.click(25, 20);
+    const paint::Image source = editor.document.image;
+    editor.choose_tool(paint::Tool::Pencil);
+    editor.add_stamp_material();
+    require(editor.document.tool == paint::Tool::Stamp, "Add material activates Stamp from another tool");
+    fixture.pointer(gf::PointerAction::move, 65, 20, gf::PointerButton::none);
+    fixture.click(65, 20);
+    require(editor.document.stamp.get(5, 10).a == 255 && editor.document.stamp.get(11, 10).a == 255,
+            "new material extends the retained stamp into its formerly transparent region");
+    require(std::equal(source.pixels.begin(), source.pixels.end(), editor.document.image.pixels.begin(),
+                       paint::equal),
+            "moving and capturing added material never paints into the source picture");
+    open_tab(window, "home-tab");
+    const std::shared_ptr<gf::DropDownButton> stamp =
+        std::dynamic_pointer_cast<gf::DropDownButton>(window.find("tool-10"));
+    const gf::Rect button = (*stamp).absolute_bounds();
+    const gf::Point arrow{button.x + button.width / 2, button.bottom() - 5};
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, arrow});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, arrow});
+    window.perform_layout();
+    require(window.find("ribbon-popup") != nullptr, "Stamp disclosure opens its menu");
+    const gf::Point main{button.x + button.width / 2, button.y + button.height / 3};
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, main});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, main});
+    require(!window.find("ribbon-popup"), "clicking the main Stamp button closes its open menu");
+}
 void zoom_anchors_the_point() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -1783,6 +1943,10 @@ void zoom_anchors_the_point() {
 } // namespace
 int main() {
     try {
+        pencil_is_independent_of_brush_material();
+        backward_path_and_guide_connections();
+        lasso_add_subtract_and_void_expansion();
+        stamp_material_union_and_menu_toggle();
         dialog_clipboard_and_close_contracts();
         display_preserves_document_and_hidden_rgb();
         startup_file_opens_after_window_attachment();

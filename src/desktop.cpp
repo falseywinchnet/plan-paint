@@ -52,12 +52,20 @@ void EditorSettings::load() {
     std::istringstream input(encoded);
     std::string magic;
     double distance = 0;
-    if (input >> magic >> distance && (magic == "RSPS1" || magic == "RSPS2") && std::isfinite(distance) &&
-        distance >= 0.1 && distance <= 100) {
+    if (input >> magic >> distance && (magic == "RSPS1" || magic == "RSPS2" || magic == "RSPS3") &&
+        std::isfinite(distance) && distance >= 0.1 && distance <= 100) {
         scroll_distance = distance;
         int background = 0;
-        if (magic == "RSPS2" && input >> background) {
+        if (magic != "RSPS1" && input >> background) {
             green_felt = background == 1;
+        }
+        int solid = 0;
+        std::string color;
+        Color parsed;
+        if (magic == "RSPS3" && input >> solid >> color && from_hex(color, parsed)) {
+            solid_transparency = solid == 1;
+            parsed.a = 255;
+            transparency_color = parsed;
         }
     }
 }
@@ -66,7 +74,11 @@ void EditorSettings::save() const {
         return;
     }
     std::ostringstream output;
-    output << "RSPS2\n" << scroll_distance << '\n' << (green_felt ? 1 : 0) << '\n';
+    output << "RSPS3\n"
+           << scroll_distance << '\n'
+           << (green_felt ? 1 : 0) << '\n'
+           << (solid_transparency ? 1 : 0) << '\n'
+           << to_hex(transparency_color) << '\n';
     const std::string encoded = output.str();
     const std::vector<std::uint8_t> bytes(encoded.begin(), encoded.end());
     write_file_atomic(bytes, storage_path, "Paint could not save its settings file.");
@@ -78,8 +90,8 @@ void RecentFiles::load() {
     }
     std::vector<std::uint8_t> bytes;
     try {
-        bytes = read_regular_file_bounded(storage_path, 1000000,
-                                          "Paint could not read its recent-files list.");
+        bytes =
+            read_regular_file_bounded(storage_path, 1000000, "Paint could not read its recent-files list.");
     } catch (const std::exception&) {
         return;
     }

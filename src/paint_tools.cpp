@@ -265,6 +265,7 @@ Color sample_bilinear(const Image& image, double x, double y, bool wrap) {
                      : Color{0, 0, 0, 0};
 }
 void DynamicBrushStroke::clear() {
+    dry_pixels_.clear();
     pending_ = 0;
     dab_ = 0;
     started_ = false;
@@ -295,6 +296,22 @@ void DynamicBrushStroke::dab(Image& image, Point center, Point direction, const 
     center.y = std::round(center.y * 4096) / 4096;
     const double radius = std::max(0.5, ink.size * 0.5);
     Ink moving = ink;
+    const bool dry = ink.brush == Brush::Pencil || ink.brush == Brush::Crayon || ink.brush == Brush::Pastel ||
+                     ink.brush == Brush::Charcoal;
+    if (ink.brush == Brush::Pencil) {
+        moving.grain_scale *= 0.45;
+        moving.paper_roughness *= 0.35;
+        moving.pigment_load = std::sqrt(std::clamp(ink.pigment_load, 0.0, 1.0));
+    } else if (ink.brush == Brush::Crayon) {
+        moving.grain_scale *= 1.7;
+        moving.paper_roughness = std::min(1.0, ink.paper_roughness * 1.5);
+    } else if (ink.brush == Brush::Pastel) {
+        moving.grain_scale *= 0.6;
+        moving.paper_roughness *= 0.6;
+    } else if (ink.brush == Brush::Charcoal) {
+        moving.grain_scale *= 2.1;
+        moving.paper_roughness = std::min(1.0, ink.paper_roughness * 1.35);
+    }
     moving.material_angle += std::atan2(direction.y, direction.x) * 180 / std::numbers::pi;
     const MaterialSurface material(moving, ink.brush);
     const std::uint32_t seed = ink.noise + ++dab_ * 7919;
@@ -349,15 +366,47 @@ void DynamicBrushStroke::dab(Image& image, Point center, Point direction, const 
                 opacity *= ink.brush == Brush::Bristle ? (hair > 0.46 ? 0.48 : 0.025) : 0.42 + 0.32 * hair;
             } else if (ink.brush == Brush::Marker) {
                 opacity *= 0.20;
-            } else if (ink.brush == Brush::Pastel || ink.brush == Brush::Charcoal) {
-                opacity *= std::pow(std::max(0.0, 1 - distance / (radius + 0.5)),
-                                    ink.brush == Brush::Pastel ? 0.4 : 0.8) *
-                           0.45;
-            } else if (ink.brush == Brush::Crayon || ink.brush == Brush::Pencil) {
-                opacity *= 0.30 + 0.3 * random_unit(x, y, seed);
+            } else if (ink.brush == Brush::Pencil) {
+                // A firm graphite core with fine, stable tooth. It does not
+                // acquire a new random opacity with each overlapping dab.
+                opacity *= 0.85 + 0.15 * random_unit(x, y, ink.noise + 101);
+            } else if (ink.brush == Brush::Crayon) {
+                // Broad wax contact leaves coarse broken paper texture and a
+                // crisp rim, rather than the powder falloff of dry chalk.
+                opacity *= 0.88 + 0.12 * random_unit(x / 2, y / 2, ink.noise + 103);
+            } else if (ink.brush == Brush::Pastel) {
+                const double depth = std::clamp((radius - distance) / std::max(1.0, radius * 0.35), 0.0, 1.0);
+                opacity *=
+                    (0.4 + 0.6 * std::sqrt(depth)) * (0.82 + 0.18 * random_unit(x, y, ink.noise + 107));
+                const double chalk = 0.14 * ink.paper_roughness;
+                color.r = byte(color.r + (255 - color.r) * chalk);
+                color.g = byte(color.g + (255 - color.g) * chalk);
+                color.b = byte(color.b + (255 - color.b) * chalk);
+            } else if (ink.brush == Brush::Charcoal) {
+                const double core = std::clamp(1 - distance / (radius + 0.5), 0.0, 1.0);
+                const double dust = random_unit(x / 2, y / 2, ink.noise + 109);
+                opacity *= std::sqrt(core) * (0.32 + 0.68 * dust);
             }
             color.a = byte(color.a * opacity);
-            image.blend(wrap ? wrap_index(x, image.width) : x, wrap ? wrap_index(y, image.height) : y, color);
+            const int px = wrap ? wrap_index(x, image.width) : x, py = wrap ? wrap_index(y, image.height) : y;
+            if (dry) {
+                if (!color.a) {
+                    continue;
+                }
+                const double coverage = color.a / 255.0;
+                const int index = py * image.width + px;
+                std::unordered_map<int, DryDeposit>::iterator found = dry_pixels_.find(index);
+                if (found == dry_pixels_.end()) {
+                    found = dry_pixels_.emplace(index, DryDeposit{image.get(px, py), 0}).first;
+                }
+                DryDeposit& deposited = (*found).second;
+                if (coverage <= deposited.coverage) {
+                    continue;
+                }
+                deposited.coverage = coverage;
+                image.set(px, py, deposited.original);
+            }
+            image.blend(px, py, color);
         }
     }
 }
@@ -481,6 +530,12 @@ Image heal_stamp_material(const Image& basis, const Image& material) {
             if (!color.a) {
                 continue;
             }
+            const Color original = basis.get(x, y);
+            if (!original.a) {
+                result.set(x, y, color);
+                continue;
+            }
+            const std::uint8_t incoming_alpha = color.a;
             const Lab old_mean = local_mean(basis, x, y, radius, false);
             const Lab new_mean =
                 local_mean(material, static_cast<int>(sx), static_cast<int>(sy), radius, false);
@@ -490,8 +545,11 @@ Image heal_stamp_material(const Image& basis, const Image& material) {
             lab.b += old_mean.b - new_mean.b;
             const double contribution = color.a / 255.0 * 0.65;
             color = from_oklab(lab);
-            color.a = basis.get(x, y).a;
-            result.set(x, y, interpolate_pixel(basis.get(x, y), color, contribution));
+            color.a = original.a;
+            Color combined = interpolate_pixel(original, color, contribution);
+            combined.a =
+                static_cast<std::uint8_t>(incoming_alpha + (original.a * (255 - incoming_alpha) + 127) / 255);
+            result.set(x, y, combined);
         }
     }
     return result;

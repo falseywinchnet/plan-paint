@@ -1,6 +1,7 @@
 #include "conv.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <numbers>
 #include <stdexcept>
@@ -95,8 +96,9 @@ void Editor::update_transform_preview() {
     canvas().invalidate(gf::Dirty::paint);
 }
 bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
-    if (document.tool == Tool::Guide || text.active || document.curve.base || warp_active() || panning_ ||
-        dragging_ || (!document.selection.active && document.fixed_canvas())) {
+    if ((document.tool == Tool::Lasso && (control_ || alt_)) || document.tool == Tool::Guide || text.active ||
+        document.curve.base || warp_active() || panning_ || dragging_ ||
+        (!document.selection.active && document.fixed_canvas())) {
         return false;
     }
     Rect bounds = document.selection.active
@@ -209,6 +211,101 @@ void Editor::paint_resize_overlay(gf::Painter& painter) {
         painter.draw_text_utf8({point.x + width + 8, point.y + height + 16},
                                std::to_string(bounds.w) + " × " + std::to_string(bounds.h) + " px",
                                {gf::FontRole::control, 12, 400, false}, gf::Color::rgba(30, 65, 95));
+    }
+}
+} // namespace paint::forms
+
+namespace paint::forms {
+void Editor::update_selection_contours() {
+    const FloatingSelection& selection = document.selection;
+    if (!selection.active) {
+        selection_contours_.clear();
+        selection_contour_mask_.clear();
+        selection_frame_.disconnect();
+        return;
+    }
+    std::vector<std::uint8_t> mask = selection.coverage;
+    if (mask.empty()) {
+        mask.resize(selection.image.pixels.size());
+        for (std::size_t index = 0; index < mask.size(); ++index) {
+            mask[index] = selection.image.pixels[index].a >= 128 ? 1 : 0;
+        }
+    } else if (selection.source && (*selection.source).feathered) {
+        for (std::size_t index = 0; index < mask.size(); ++index) {
+            mask[index] = mask[index] >= 128 ? 1 : 0;
+        }
+    }
+    if (selection_contour_width_ != selection.image.width ||
+        selection_contour_height_ != selection.image.height || selection_contour_mask_ != mask) {
+        selection_contour_width_ = selection.image.width;
+        selection_contour_height_ = selection.image.height;
+        selection_contour_mask_ = std::move(mask);
+        selection_contours_ =
+            mask_contours(selection_contour_mask_, selection_contour_width_, selection_contour_height_);
+    }
+    selection_frame();
+}
+void Editor::selection_frame() {
+    selection_frame_.disconnect();
+    if (document.selection.active && window()) {
+        canvas().invalidate(gf::Dirty::paint);
+        selection_frame_ =
+            (*window()).schedule_paint(canvas_, gf::FrameClock::now() + std::chrono::milliseconds(100));
+    }
+}
+void Editor::paint_selection_contours(gf::Painter& painter) {
+    if (!document.selection.active || resize_handle_ >= 0 || warp_active()) {
+        return;
+    }
+    const double phase = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                 std::chrono::steady_clock::now().time_since_epoch())
+                                                 .count() /
+                                             100 % 8);
+    const gf::Rect viewport = canvas().client_rectangle();
+    for (std::size_t contour = 0; contour < selection_contours_.size(); ++contour) {
+        const std::vector<Point>& loop = selection_contours_[contour];
+        double travelled = 0;
+        for (std::size_t index = 0; index < loop.size(); ++index) {
+            const Point first = loop[index], last = loop[(index + 1) % loop.size()];
+            const gf::Point a = screen({first.x + document.selection.x, first.y + document.selection.y}),
+                            b = screen({last.x + document.selection.x, last.y + document.selection.y});
+            const double dx = b.x - a.x, dy = b.y - a.y, length = std::hypot(dx, dy);
+            if (length == 0) {
+                continue;
+            }
+            // Clip before subdividing dashes, so zooming a long edge does not
+            // create work proportional to off-screen pixels.
+            double low = 0, high = 1;
+            const double p[] = {-dx, dx, -dy, dy};
+            const double q[] = {a.x + 2, viewport.width + 2 - a.x, a.y + 2, viewport.height + 2 - a.y};
+            for (int edge = 0; edge < 4; ++edge) {
+                if (p[edge] == 0) {
+                    if (q[edge] < 0) {
+                        high = -1;
+                    }
+                } else if (p[edge] < 0) {
+                    low = std::max(low, q[edge] / p[edge]);
+                } else {
+                    high = std::min(high, q[edge] / p[edge]);
+                }
+            }
+            if (low <= high) {
+                painter.draw_line({a.x + dx * low, a.y + dy * low}, {a.x + dx * high, a.y + dy * high},
+                                  gf::Color::rgba(255, 255, 255), 2);
+                const double offset = std::fmod(travelled - phase + 8, 8.0);
+                double start = std::floor((low * length + offset) / 8) * 8 - offset;
+                for (; start < high * length; start += 8) {
+                    const double from = std::max(start, low * length),
+                                 to = std::min(start + 4, high * length);
+                    if (to > from) {
+                        painter.draw_line({a.x + dx * from / length, a.y + dy * from / length},
+                                          {a.x + dx * to / length, a.y + dy * to / length},
+                                          gf::Color::rgba(20, 25, 30), 1);
+                    }
+                }
+            }
+            travelled += length;
+        }
     }
 }
 } // namespace paint::forms

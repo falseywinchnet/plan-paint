@@ -35,7 +35,8 @@ inline constexpr HelpTopic help_topics[] = {
      "Click the selected ribbon tab to collapse it; click again or choose another tab to reopen. "
      "Wheel and trackpad scrolling stop when the viewport center reaches a canvas edge. "
      "File > Settings saves a scroll-distance multiplier in screen pixels, adjusted for zoom, and "
-     "offers green felt behind the canvas alongside the default surface.",
+     "offers green felt behind the canvas alongside the default surface. Transparency display can use a "
+     "checkerboard or a chosen solid color without changing exported pixels.",
      true},
     {"2. Colors, brushes and patterns",
      "Primary and Alt each have their own color, brush and pattern. Select either box, then choose a "
@@ -45,7 +46,8 @@ inline constexpr HelpTopic help_topics[] = {
      "No Color is the white pattern tile crossed by a red slash. It makes the selected material "
      "transparent; use it for Alt to leave the second color of a two-color pattern untouched. "
      "Enabled turns an outline or fill on or off. Smooth lines switches between antialiased and "
-     "crisp pixel edges. Size sets stroke width.\n\n"
+     "crisp pixel edges. Size sets brush stroke width. The small Home Pencil always uses a solid one-pixel "
+     "tip, independent of brush material.\n\n"
      "The twelve brushes include round, calligraphy nibs, spray can, oil, crayon, marker, natural pencil, "
      "watercolor, bristles, soft pastel and charcoal. Materials also offers dots, stripes, checks, "
      "bricks, woven cloth, houndstooth and seven dither densities, plus grain, paper tooth and load.\n\n"
@@ -54,9 +56,11 @@ inline constexpr HelpTopic help_topics[] = {
      "then paints from it with an aligned offset. Hardness 1 copies it; softer settings blend its "
      "detail with local OKLab color correction. Set source chooses another origin. Additive spray "
      "offers Fine glitter. Pencil and Brushes have a configurable Stabilizer to smooth the stroke.\n\n"
-     "The palette button cycles Basic, Custom and Themed, each with 30 colors. Themed columns contain "
+     "The palette button cycles Basic, Custom and Themed. Custom has 29 saved colors and a red-slash "
+     "Transparency swatch. Themed columns contain "
      "Primary, Alt and accent. Edit colors offers RGB or OKHSL picking, numeric RGB, hex and OKLab. "
-     "Mosaic reduces the picker to 96 repeatable colors. Its custom pane remembers 30 saved colors "
+     "Mosaic offers 96 outlined color cells per hue, with smaller cells toward saturation. Its custom pane "
+     "remembers 29 saved colors "
      "between launches. Choose a slot, set its color and click Add to custom colors. OK applies the "
      "choice; Cancel keeps the original."},
     {"3. Fill, erase, pick and magnify",
@@ -91,7 +95,8 @@ inline constexpr HelpTopic help_topics[] = {
      "Choose Path at the right of Home. Click to place each corner; the next segment follows the "
      "pointer until you click. Blue dots mark editable junctions. Right-drag a dot to move it, "
      "including every branch sharing that junction.\n\n"
-     "Click an existing junction to start another branch there. Right-click empty canvas to finish "
+     "While extending a run, click any earlier junction to connect back and end the run. Click again to "
+     "start another branch there. Right-click empty canvas to finish "
      "the current run, then click elsewhere to start a separate run. Earlier runs remain visible "
      "when new ones overlap them. Undo and Redo preserve the editable geometry. Escape or changing "
      "tools finishes the paths and releases every node while leaving the drawing in place.\n\n"
@@ -112,8 +117,11 @@ inline constexpr HelpTopic help_topics[] = {
      "Without a selection, Delete clears the canvas to Color 2.\n\nTightening lasso follows the nearest "
      "connected object around the lasso center using perceptual color differences, with feathered "
      "edges and tolerance for small JPEG variations. Inner-void lasso selects a connected background "
-     "region enclosed inside a shape.\n\nGuide, the drafting triangle beside Path, protects artwork "
-     "without entering the picture. Click its corners and right-click to set it; drag its nodes or "
+     "region inside a shape, expanding beyond the drawn loop. Ctrl adds a freeform lasso region; Alt "
+     "subtracts one, regardless of lasso mode. Marching contours show every island and hole.\n\nGuide, the "
+     "drafting triangle beside Path, protects artwork "
+     "without entering the picture. Click its corners; click an earlier corner to connect back, or the first "
+     "corner to close it. Right-click also closes it. Drag its nodes or "
      "body to move it. Protect body, also controlled by the filled square, blocks the inside. "
      "Otherwise only its lines block Pencil, Brush, Fill and Stamp. Choose Guide with a selection "
      "to protect its silhouette directly. Clear guide removes it. Selection, Path, shapes, text, "
@@ -132,7 +140,8 @@ inline constexpr HelpTopic help_topics[] = {
      "it is preparing. The next canvas click picks another. Stamp > Lift a new stamp does the same; "
      "the Stamp ribbon holds its size and angle controls. Hardness 1 keeps the exact mask; lower values "
      "feather its edge. Stamp > Add material retains the old stamp at half opacity while you capture "
-     "new content, then heals that detail into the retained silhouette."},
+     "new content, then heals that detail into the stamp. New material can fill previously transparent areas "
+     "and extend its silhouette within the capture bounds. Clicking Stamp again closes its open menu."},
     {"8. Resize, rotate and the canvas",
      "Resize accepts percentages or pixel dimensions. Keep Maintain aspect ratio checked to avoid "
      "stretching. Scale artwork uses CONV* to reconstruct the image; turn it off to change only "

@@ -231,7 +231,7 @@ void Editor::paint_tool_preview(gf::Painter& painter) {
     painter.save();
     painter.clip_rect((*canvas_).bitmap_to_client({0, 0, document.image.width, document.image.height}));
     if (document.tool == Tool::Pencil && !dragging_) {
-        Color color = patterned(document.ink, x, y);
+        Color color = patterned(pencil_ink(document.primary_ink()), x, y);
         gf::Rect pixel = (*canvas_).bitmap_to_client({x, y, 1, 1});
         painter.fill_rect(pixel, gf::Color::rgba(color.r, color.g, color.b, color.a));
         if (scale >= 4) {

@@ -21,6 +21,7 @@ void PaintCanvas::on_frame(gf::FrameTime) {
     std::shared_ptr<Editor> editor = editor_.lock();
     if (editor) {
         (*editor).text_frame();
+        (*editor).selection_frame();
     }
 }
 gf::SemanticDescriptor PaintCanvas::semantic_descriptor() const {

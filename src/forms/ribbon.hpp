@@ -47,7 +47,7 @@ class Ribbon final : public gui_forms::Control {
     std::weak_ptr<Editor> editor_;
     std::shared_ptr<AtlasPanel> atlas_;
     std::shared_ptr<gui_forms::ImageList> tiny_icons_, small_icons_, medium_icons_, large_icons_,
-        brush_previews_, pattern_previews_, fill_previews_;
+        brush_previews_, dynamic_previews_, pattern_previews_, fill_previews_;
     std::shared_ptr<gui_forms::ToolTip> tooltips_;
     std::vector<std::shared_ptr<gui_forms::Button>> buttons_;
     std::vector<gui_forms::SubscriptionToken> subscriptions_, popup_subscriptions_;

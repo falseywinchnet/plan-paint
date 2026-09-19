@@ -33,9 +33,12 @@ Lab median_lab(std::vector<Lab> samples) {
     return {l[middle], a[middle], b[middle]};
 }
 } // namespace
-std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width, int height) {
-    // Trace directed boundary edges with foreground on the right. Keep the
-    // largest loop as the editable outer polygon; the mask retains inner holes.
+std::vector<std::vector<Point>> mask_contours(const std::vector<std::uint8_t>& mask, int width, int height) {
+    if (width < 1 || height < 1 || mask.size() != static_cast<std::size_t>(width) * height) {
+        return {};
+    }
+    // Trace every boundary, including holes and disconnected selected islands.
+    // Directed edges keep foreground on the right.
     std::unordered_multimap<int, int> edges;
     const int stride = width + 1;
     for (int y = 0; y < height; ++y) {
@@ -59,8 +62,7 @@ std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width
             }
         }
     }
-    std::vector<Point> largest;
-    double largest_area = 0;
+    std::vector<std::vector<Point>> contours;
     while (!edges.empty()) {
         const int first = (*edges.begin()).first;
         int current = first;
@@ -74,6 +76,26 @@ std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width
             current = (*found).second;
             edges.erase(found);
         } while (current != first);
+        std::vector<Point> simplified;
+        for (std::size_t index = 0; index < loop.size(); ++index) {
+            const Point a = loop[(index + loop.size() - 1) % loop.size()], b = loop[index],
+                        c = loop[(index + 1) % loop.size()];
+            if ((b.x - a.x) * (c.y - b.y) != (b.y - a.y) * (c.x - b.x)) {
+                simplified.push_back(b);
+            }
+        }
+        if (!simplified.empty()) {
+            contours.push_back(std::move(simplified));
+        }
+    }
+    return contours;
+}
+std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width, int height) {
+    const std::vector<std::vector<Point>> contours = mask_contours(mask, width, height);
+    std::vector<Point> largest;
+    double largest_area = 0;
+    for (std::size_t contour = 0; contour < contours.size(); ++contour) {
+        const std::vector<Point>& loop = contours[contour];
         double area = 0;
         for (std::size_t index = 0; index < loop.size(); ++index) {
             const Point a = loop[index], b = loop[(index + 1) % loop.size()];
@@ -81,25 +103,118 @@ std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width
         }
         if (std::abs(area) > largest_area) {
             largest_area = std::abs(area);
-            largest = std::move(loop);
+            largest = loop;
         }
     }
-    // Remove collinear grid vertices without shifting the silhouette.
-    std::vector<Point> simplified;
-    for (std::size_t index = 0; index < largest.size(); ++index) {
-        const Point a = largest[(index + largest.size() - 1) % largest.size()], b = largest[index],
-                    c = largest[(index + 1) % largest.size()];
-        if ((b.x - a.x) * (c.y - b.y) != (b.y - a.y) * (c.x - b.x)) {
-            simplified.push_back(b);
+    return largest;
+}
+void trim_selection_mask(SelectionMask& mask) {
+    if (mask.bounds.w < 1 || mask.bounds.h < 1 ||
+        mask.coverage.size() != static_cast<std::size_t>(mask.bounds.w) * mask.bounds.h) {
+        mask = {};
+        return;
+    }
+    int left = mask.bounds.w, top = mask.bounds.h, right = 0, bottom = 0;
+    for (int y = 0; y < mask.bounds.h; ++y) {
+        for (int x = 0; x < mask.bounds.w; ++x) {
+            if (mask.coverage[static_cast<std::size_t>(y) * mask.bounds.w + x]) {
+                left = std::min(left, x);
+                top = std::min(top, y);
+                right = std::max(right, x + 1);
+                bottom = std::max(bottom, y + 1);
+            }
         }
     }
-    return simplified;
+    if (left >= right || top >= bottom) {
+        mask = {};
+        return;
+    }
+    const int width = right - left, height = bottom - top;
+    std::vector<std::uint8_t> trimmed(static_cast<std::size_t>(width) * height);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            trimmed[static_cast<std::size_t>(y) * width + x] =
+                mask.coverage[static_cast<std::size_t>(y + top) * mask.bounds.w + left + x];
+        }
+    }
+    mask.bounds = {mask.bounds.x + left, mask.bounds.y + top, width, height};
+    mask.coverage = std::move(trimmed);
+    mask.outline = mask_outline(mask.coverage, width, height);
+}
+
+static SelectionMask expand_lasso_void(const Image& image, const std::vector<Point>& polygon,
+                                       double tolerance) {
+    double left = image.width, top = image.height, right = 0, bottom = 0;
+    for (std::size_t index = 0; index < polygon.size(); ++index) {
+        left = std::min(left, polygon[index].x);
+        top = std::min(top, polygon[index].y);
+        right = std::max(right, polygon[index].x);
+        bottom = std::max(bottom, polygon[index].y);
+    }
+    const Point center{(left + right) * 0.5, (top + bottom) * 0.5};
+    int seed = -1;
+    double nearest = std::numeric_limits<double>::max();
+    for (int y = std::max(0, static_cast<int>(std::floor(top)));
+         y < std::min(image.height, static_cast<int>(std::ceil(bottom))); ++y) {
+        for (int x = std::max(0, static_cast<int>(std::floor(left)));
+             x < std::min(image.width, static_cast<int>(std::ceil(right))); ++x) {
+            const double distance = std::hypot(x + 0.5 - center.x, y + 0.5 - center.y);
+            if (distance < nearest && inside_polygon(polygon, x + 0.5, y + 0.5)) {
+                nearest = distance;
+                seed = y * image.width + x;
+            }
+        }
+    }
+    if (seed < 0) {
+        return {};
+    }
+    SelectionMask result;
+    result.bounds = {0, 0, image.width, image.height};
+    result.coverage.assign(image.pixels.size(), 0);
+    std::vector<std::uint8_t> visited(image.pixels.size(), 0);
+    const Color background = image.pixels[seed];
+    const Lab reference = to_oklab(background);
+    tolerance = std::clamp(tolerance, 0.002, 0.25);
+    std::queue<int> pending;
+    pending.push(seed);
+    visited[seed] = 1;
+    while (!pending.empty()) {
+        const int index = pending.front();
+        pending.pop();
+        const Color color = image.pixels[index];
+        const double alpha_delta = (static_cast<int>(color.a) - background.a) / 255.0;
+        const double delta =
+            std::sqrt((color.a || background.a ? distance_squared(to_oklab(color), reference) : 0) +
+                      0.25 * alpha_delta * alpha_delta);
+        if (delta >= tolerance * 1.5) {
+            continue;
+        }
+        const double coverage = std::clamp((tolerance * 1.5 - delta) / (tolerance * 0.5), 0.0, 1.0);
+        result.coverage[index] =
+            static_cast<std::uint8_t>(std::lround(coverage * coverage * (3 - 2 * coverage) * 255));
+        const int x = index % image.width, y = index / image.width;
+        const int neighbors[] = {x > 0 ? index - 1 : -1, x + 1 < image.width ? index + 1 : -1,
+                                 y > 0 ? index - image.width : -1,
+                                 y + 1 < image.height ? index + image.width : -1};
+        for (int direction = 0; direction < 4; ++direction) {
+            const int next = neighbors[direction];
+            if (next >= 0 && !visited[next]) {
+                visited[next] = 1;
+                pending.push(next);
+            }
+        }
+    }
+    trim_selection_mask(result);
+    return result;
 }
 SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygon, bool inner_void,
                             double tolerance) {
     SelectionMask result;
     if (polygon.size() < 3 || image.width < 1 || image.height < 1) {
         return result;
+    }
+    if (inner_void) {
+        return expand_lasso_void(image, polygon, tolerance);
     }
     double left = image.width, top = image.height, right = 0, bottom = 0;
     for (std::size_t index = 0; index < polygon.size(); ++index) {
@@ -115,11 +230,11 @@ SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygo
     if (result.bounds.w <= 0 || result.bounds.h <= 0) {
         return {};
     }
+    const Point center{(left + right) * 0.5, (top + bottom) * 0.5};
     const int width = result.bounds.w, height = result.bounds.h;
     const std::size_t size = static_cast<std::size_t>(width) * height;
     std::vector<std::uint8_t> inside(size, 0), connected(size, 0);
     std::vector<Lab> labs(size), boundary;
-    Point center{result.bounds.x + width * 0.5, result.bounds.y + height * 0.5};
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             const std::size_t index = static_cast<std::size_t>(y) * width + x;
@@ -139,9 +254,7 @@ SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygo
             }
         }
     }
-    const Lab background = inner_void
-                               ? to_oklab(image.get(static_cast<int>(center.x), static_cast<int>(center.y)))
-                               : median_lab(boundary);
+    const Lab background = median_lab(boundary);
     tolerance = std::clamp(tolerance, 0.002, 0.25);
     const double threshold = tolerance * tolerance;
     // Select the relevant connected component nearest the lasso center.
@@ -152,10 +265,10 @@ SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygo
         for (int x = 0; x < width; ++x) {
             const std::size_t index = static_cast<std::size_t>(y) * width + x;
             const double delta = distance_squared(labs[index], background);
-            if (!inside[index] || (inner_void ? delta > threshold : delta <= threshold)) {
+            if (!inside[index] || delta <= threshold) {
                 continue;
             }
-            const double dx = x + 0.5 - width * 0.5, dy = y + 0.5 - height * 0.5;
+            const double dx = result.bounds.x + x + 0.5 - center.x, dy = result.bounds.y + y + 0.5 - center.y;
             if (dx * dx + dy * dy < nearest) {
                 seed = static_cast<int>(index);
                 nearest = dx * dx + dy * dy;
@@ -180,7 +293,7 @@ SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygo
                 continue;
             }
             const double delta = distance_squared(labs[next], background);
-            if (inner_void ? delta > threshold * 2.25 : delta <= threshold) {
+            if (delta <= threshold) {
                 continue;
             }
             connected[next] = 1;
@@ -193,13 +306,11 @@ SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygo
             continue;
         }
         const double delta = std::sqrt(distance_squared(labs[index], background));
-        const double alpha = inner_void
-                                 ? std::clamp((tolerance * 1.5 - delta) / (tolerance * 0.5), 0.0, 1.0)
-                                 : std::clamp((delta - tolerance) / std::max(0.008, tolerance), 0.0, 1.0);
+        const double alpha = std::clamp((delta - tolerance) / std::max(0.008, tolerance), 0.0, 1.0);
         result.coverage[index] =
             static_cast<std::uint8_t>(std::lround(alpha * alpha * (3 - 2 * alpha) * 255));
     }
-    result.outline = mask_outline(result.coverage, width, height);
+    trim_selection_mask(result);
     return result;
 }
 void Guide::clear() {

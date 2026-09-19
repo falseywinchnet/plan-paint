@@ -12,7 +12,7 @@ namespace {
 namespace gf = gui_forms;
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
-    bool keep_open = false, resize_preview = false, features = false, compact = false;
+    bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
     gf::SubscriptionToken resize_tick;
@@ -108,6 +108,51 @@ struct NativeExercise {
         window.perform_layout();
         entered = true;
     }
+    void bug_gallery(gf::Window& window) {
+        paint::Document& document = (*editor).document;
+        document.new_image(960, 540);
+        document.image.reset(960, 540, {248, 246, 241, 255});
+        paint::TextStyle label;
+        label.size = 18;
+        const paint::Brush brushes[] = {paint::Brush::Pencil, paint::Brush::Crayon, paint::Brush::Pastel,
+                                        paint::Brush::Charcoal};
+        for (int index = 0; index < 4; ++index) {
+            paint::Ink ink;
+            ink.size = 48;
+            ink.primary = {38, 119, 164, 255};
+            ink.brush = brushes[index];
+            paint::DynamicBrushStroke brush;
+            brush.segment(document.image, {35.0 + index * 230, 60}, {200.0 + index * 230, 70}, ink, false);
+            paint::draw_text(document.image, {20.0 + index * 230, 102},
+                             paint::brush_names[static_cast<int>(brushes[index])], label, {45, 45, 55, 255},
+                             {}, "");
+        }
+        document.ink.brush = paint::Brush::Marker;
+        document.ink.pattern = paint::Pattern::Diagonal;
+        (*editor).choose_tool(paint::Tool::Pencil);
+        (*editor).refresh();
+        window.perform_layout();
+        stroke(window, {30, 170}, {910, 184});
+        paint::draw_text(document.image, {20, 195}, "Home Pencil after Marker + Diagonal material", label,
+                         {45, 45, 55, 255}, {}, "");
+        paint::draw_text(document.image, {20, 245}, "Selection: two islands and a subtracted hole", label,
+                         {45, 45, 55, 255}, {}, "");
+        for (int y = 290; y < 490; ++y) {
+            for (int x = 745; x < 925; ++x) {
+                document.image.set(x, y, {255, 0, 255, 0});
+            }
+        }
+        paint::draw_text(document.image, {740, 500}, "Transparent RGBA", label, {45, 45, 55, 255}, {}, "");
+        (*editor).choose_tool(paint::Tool::Lasso);
+        document.select({25, 290, 330, 180}, {{25, 310}, {150, 290}, {355, 360}, {295, 470}, {40, 445}});
+        document.edit_selection({{460, 305}, {640, 305}, {660, 450}, {470, 465}}, false);
+        document.edit_selection({{130, 350}, {240, 345}, {270, 415}, {130, 420}}, true);
+        (*editor).refresh();
+        window.perform_layout();
+        const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+        paint::save_image(document.visible_image(), (root / "astra/bugfix-review.png").string());
+        entered = true;
+    }
     bool entered = false;
     void stroke(gf::Window& window, paint::Point first, paint::Point last) {
         gf::RasterCanvas& canvas = (*editor).canvas();
@@ -135,6 +180,10 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (bugs) {
+            bug_gallery(window);
+            return;
+        }
         if (features) {
             feature_gallery(window);
             return;
@@ -213,6 +262,7 @@ int main(int argc, char** argv) {
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
                                          std::string(argv[1]) == "--features-compact");
         exercise.compact = argc > 1 && std::string(argv[1]) == "--features-compact";
+        exercise.bugs = argc > 1 && std::string(argv[1]) == "--bugs";
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));
         gf::ApplicationWindowOptions options;

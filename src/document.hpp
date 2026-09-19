@@ -130,6 +130,7 @@ struct Document {
     void paste(const Image& pasted, int x = 0, int y = 0);
     void select(Rect bounds, const std::vector<Point>& lasso = {});
     void select_mask(const SelectionMask& mask);
+    void edit_selection(const std::vector<Point>& polygon, bool subtract);
     void commit_selection();
     void delete_selection();
     void select_all();

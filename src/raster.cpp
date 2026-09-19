@@ -48,6 +48,17 @@ const char* shape_names[shape_count] = {"Line",
                                         "Eight-point star",
                                         "Burst",
                                         "Arc"};
+Ink pencil_ink(Ink ink) {
+    ink.size = 1;
+    ink.brush = Brush::Round;
+    // The pixel pencil uses the selected color, independently of the retained
+    // brush/shape pattern. Explicit No color remains an empty material.
+    if (ink.pattern != Pattern::None) {
+        ink.pattern = Pattern::Solid;
+    }
+    ink.transparent_pattern = false;
+    return ink;
+}
 Color patterned(const Ink& ink, int x, int y) {
     if (ink.pattern == Pattern::None) {
         return {0, 0, 0, 0};

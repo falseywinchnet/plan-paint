@@ -47,10 +47,10 @@ void CustomColors::load() {
     }
     const std::string magic(stored.begin(), stored.begin() + 5);
     const bool legacy = magic == "RSPC1";
-    if (!legacy && magic != "RSPC2") {
+    if (!legacy && magic != "RSPC2" && magic != "RSPC3") {
         return;
     }
-    const int count = legacy ? 16 : 30;
+    const int count = legacy ? 16 : magic == "RSPC2" ? 30 : 29;
     const int mask_size = legacy ? 2 : 4;
     if (stored.size() != static_cast<std::size_t>(5 + mask_size + count * 4)) {
         return;
@@ -59,8 +59,8 @@ void CustomColors::load() {
     for (int index = 0; index < mask_size; ++index) {
         mask |= static_cast<std::uint32_t>(stored[5 + index]) << (index * 8);
     }
-    occupied = mask & 0x3fffffffU;
-    for (int slot = 0; slot < count; ++slot) {
+    occupied = mask & 0x1fffffffU;
+    for (int slot = 0; slot < std::min(count, 29); ++slot) {
         const std::size_t offset = static_cast<std::size_t>(5 + mask_size + slot * 4);
         colors[slot] = {stored[offset], stored[offset + 1], stored[offset + 2], stored[offset + 3]};
     }
@@ -74,8 +74,8 @@ void CustomColors::store(int slot, Color color) {
     if (storage_path.empty()) {
         return;
     }
-    std::array<unsigned char, 129> bytes{};
-    const std::string magic = "RSPC2";
+    std::array<unsigned char, 125> bytes{};
+    const std::string magic = "RSPC3";
     std::copy(magic.begin(), magic.end(), bytes.begin());
     bytes[5] = static_cast<unsigned char>(occupied);
     bytes[6] = static_cast<unsigned char>(occupied >> 8);

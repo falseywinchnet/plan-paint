@@ -9,6 +9,8 @@ struct SelectionMask {
 };
 SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygon, bool inner_void,
                             double tolerance = 0.025);
+void trim_selection_mask(SelectionMask& mask);
+std::vector<std::vector<Point>> mask_contours(const std::vector<std::uint8_t>& mask, int width, int height);
 std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width, int height);
 struct Guide {
     std::vector<Point> nodes;

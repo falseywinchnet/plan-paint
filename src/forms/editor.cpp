@@ -358,6 +358,7 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         painter.stroke_rect({top.x, top.y, bounds.w * (*canvas_).zoom(), bounds.h * (*canvas_).zoom()},
                             gf::Color::rgba(30, 100, 190), 1);
     }
+    paint_selection_contours(painter);
     if (dragging_ && document.tool == Tool::Lasso && !moving_selection_) {
         for (std::size_t index = 1; index < lasso_.size(); ++index) {
             painter.draw_line(screen(lasso_[index - 1]), screen(lasso_[index]), gf::Color::rgba(30, 100, 190),
@@ -403,6 +404,8 @@ void Editor::on_attached_to_window() {
 void Editor::on_detaching_from_window(gf::Window& former_window) noexcept {
     clear_transform_preview();
     help_accelerator_.disconnect();
+    selection_frame_.disconnect();
+    text_caret_frame_.disconnect();
     Control::on_detaching_from_window(former_window);
 }
 void Editor::ready(gf::Window&, gf::ApplicationWindowHandle handle, const std::string& initial_path) {
@@ -455,12 +458,6 @@ bool Editor::path_preview_point(Point& point) const {
         return false;
     }
     point = {mapped.x, mapped.y};
-    // Clicking a retained junction starts a new run there; it must not preview
-    // a closing segment that will never be committed.
-    if (document.continuous_path && hit_path_node(point) >= 0 &&
-        document.path.nodes.size() - document.path.start > 1) {
-        return false;
-    }
     point = snap_path_point(point);
     return true;
 }
@@ -470,6 +467,12 @@ void Editor::publish_path_preview() {
 }
 void Editor::refresh() {
     ++canvas_revision;
+    update_selection_contours();
+    const Color alpha = settings.transparency_color;
+    canvas().set_transparency_colors(settings.solid_transparency ? gf::Color::rgba(alpha.r, alpha.g, alpha.b)
+                                                                 : gf::Color::rgba(246, 247, 249),
+                                     settings.solid_transparency ? gf::Color::rgba(alpha.r, alpha.g, alpha.b)
+                                                                 : gf::Color::rgba(211, 215, 220));
     if (text.active) {
         text.refresh(document.ink.primary, document.ink.secondary);
         Image composed = document.visible_image();
@@ -578,6 +581,7 @@ void Editor::release_gesture() {
     lasso_.clear();
     eraser_.clear();
     material_.clear();
+    dynamic_brush_.clear();
     (*canvas_).set_pointer_capture(false);
 }
 void Editor::finish_controls() {
@@ -630,6 +634,7 @@ void Editor::pointer(const gf::PointerEvent& event) {
     try {
         shift_ = gf::has_modifier(event.modifiers, gf::Modifier::shift);
         control_ = gf::has_modifier(event.modifiers, gf::Modifier::control);
+        alt_ = gf::has_modifier(event.modifiers, gf::Modifier::alt);
         gf::Point client = (*canvas_).point_from_window(event.position);
         gui_drawing::PointF mapped = (*canvas_).client_to_bitmap(client);
         Point point{mapped.x, mapped.y};
@@ -817,14 +822,15 @@ void Editor::begin(Point point, bool secondary) {
     if (document.tool == Tool::Path) {
         int node = hit_path_node(point);
         point = snap_path_point(point);
-        if (node >= 0 && document.path.extending && document.continuous_path &&
-            document.path.nodes.size() - document.path.start > 1) {
-            document.end_path_geometry();
+        const bool joining = node >= 0 && document.path.extending;
+        const bool same_tip =
+            joining && point.x == document.path.nodes.back().x && point.y == document.path.nodes.back().y;
+        if (!same_tip) {
+            document.add_path_node(point);
         }
-        document.add_path_node(point);
-        if (!document.continuous_path && document.path.nodes.size() - document.path.start > 2 &&
-            point.x == document.path.nodes[document.path.start].x &&
-            point.y == document.path.nodes[document.path.start].y) {
+        // Retained anchors are destinations as well as starting points. Finish
+        // only after committing the segment shown by the snapped preview.
+        if (joining) {
             document.end_path_geometry();
         }
         refresh();
@@ -845,11 +851,18 @@ void Editor::begin(Point point, bool secondary) {
     if (document.tool == Tool::Select || document.tool == Tool::Lasso) {
         Rect bounds{document.selection.x, document.selection.y, document.selection.image.width,
                     document.selection.image.height};
-        moving_selection_ = document.selection.active && point_inside(bounds, point);
+        selection_edit_ = document.tool == Tool::Lasso ? (alt_ ? -1 : control_ ? 1 : 0) : 0;
+        moving_selection_ = !selection_edit_ && document.selection.active && point_inside(bounds, point);
+        if (moving_selection_ && !document.selection.coverage.empty()) {
+            const int x = static_cast<int>(point.x) - bounds.x, y = static_cast<int>(point.y) - bounds.y;
+            moving_selection_ = document.selection.coverage[static_cast<std::size_t>(y) * bounds.w + x] != 0;
+        }
         if (moving_selection_) {
             selection_offset_ = {point.x - bounds.x, point.y - bounds.y};
         } else {
-            document.commit_selection();
+            if (!selection_edit_) {
+                document.commit_selection();
+            }
             lasso_ = {point};
         }
     } else if (document.tool == Tool::Shape &&
@@ -878,8 +891,7 @@ void Editor::begin(Point point, bool secondary) {
             healing_brush_.begin(document.image, point);
         }
         if (document.tool == Tool::Pencil) {
-            gesture_ink_.size = 1;
-            gesture_ink_.brush = Brush::Round;
+            gesture_ink_ = pencil_ink(gesture_ink_);
         }
     }
     dragging_ = true;
@@ -1007,7 +1019,9 @@ void Editor::end(Point point) {
                 bounds = rectangle(low, high);
             }
             if (std::hypot(point.x - start_.x, point.y - start_.y) > 0.5 || lasso_.size() > 3) {
-                if (document.tool == Tool::Lasso && lasso_mode != LassoMode::Free) {
+                if (document.tool == Tool::Lasso && selection_edit_) {
+                    document.edit_selection(lasso_, selection_edit_ < 0);
+                } else if (document.tool == Tool::Lasso && lasso_mode != LassoMode::Free) {
                     document.select_mask(tighten_lasso(document.image, lasso_,
                                                        lasso_mode == LassoMode::InnerVoid, lasso_tolerance));
                 } else {

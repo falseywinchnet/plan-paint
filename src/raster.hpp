@@ -153,6 +153,7 @@ struct Ink {
     double pigment_load = 0.65;
     double material_angle = -20.0;
 };
+Ink pencil_ink(Ink ink);
 Color patterned(const Ink& ink, int x, int y);
 void dab(Image& image, Point point, const Ink& ink);
 void stroke(Image& image, Point start, Point end, const Ink& ink);

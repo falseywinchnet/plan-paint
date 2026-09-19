@@ -681,8 +681,7 @@ void Application::begin_gesture(Point point, bool right) {
     case Tool::Eraser:
         document.checkpoint();
         if (document.tool == Tool::Pencil) {
-            ink.size = 1;
-            ink.brush = Brush::Round;
+            ink = pencil_ink(ink);
         }
         if (document.tool == Tool::Eraser) {
             ink = document.ink;
@@ -843,8 +842,7 @@ void Application::update_gesture(Point point) {
     }
     if (document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Eraser) {
         if (document.tool == Tool::Pencil) {
-            ink.size = 1;
-            ink.brush = Brush::Round;
+            ink = pencil_ink(ink);
         }
         if (document.tool == Tool::Eraser) {
             ink = document.ink;

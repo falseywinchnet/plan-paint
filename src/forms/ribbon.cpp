@@ -171,7 +171,7 @@ void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
         text().empty() ? std::min(3.0, bounds.width * 0.12) : std::min(9.0, bounds.width * 0.16);
     gf::Rect swatch = text().empty() ? gf::Rect{inset, 3, bounds.width - inset * 2, bounds.height - 6}
                                      : gf::Rect{inset, 7, bounds.width - inset * 2, 30};
-    if (material_ink_ && (*material_ink_).pattern == Pattern::None) {
+    if (color_.a == 0 || (material_ink_ && (*material_ink_).pattern == Pattern::None)) {
         painter.fill_rect(swatch, gf::Color::rgba(255, 255, 255));
         painter.draw_line({swatch.x + 2, swatch.y + swatch.height - 2},
                           {swatch.x + swatch.width - 2, swatch.y + 2}, gf::Color::rgba(210, 35, 40), 3);
@@ -188,6 +188,30 @@ void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
                       gf::Color::rgba(25, 40, 55, 50), 1);
 }
 namespace {
+class ShapeSwitchButton final : public gf::Button {
+  public:
+    ShapeSwitchButton(gf::StableId id, bool fill) : Button(std::move(id), ""), fill_(fill) {}
+    void on_paint(gf::Painter& painter, gf::Rect damage) override {
+        Button::on_paint(painter, damage);
+        const gf::Rect bounds = client_rectangle();
+        const double side = std::min(13.0, bounds.width * 0.28);
+        const gf::Rect sample{3, (bounds.height - side) / 2, side, side};
+        const gf::Color blue = gf::Color::rgba(30, 91, 145);
+        if (fill_) {
+            painter.fill_rect(sample, blue);
+        } else {
+            painter.fill_rect(sample, gf::Color::rgba(255, 255, 255));
+            painter.stroke_rect(sample, blue, 2);
+        }
+        painter.draw_text_utf8(
+            {side + 6, bounds.height / 2 + 3.5}, fill_ ? "Fill" : "Edge",
+            {gf::FontRole::control, std::clamp(bounds.width * 0.23, 8.5, 11.0), 500, false},
+            gf::Color::rgba(34, 52, 72));
+    }
+
+  private:
+    bool fill_;
+};
 class GuideButton final : public gf::Button {
   public:
     GuideButton(gf::StableId id, std::string text) : Button(std::move(id), std::move(text)) {}
@@ -231,6 +255,8 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
         subscriptions_.push_back((*dropdown).drop_down_close_requested().subscribe(
             *this, gf::Delegate<gf::DropDownButton&>::bind<Ribbon, &Ribbon::dropdown>(*this)));
         result = dropdown;
+    } else if (id == "edge-switch" || id == "fill-switch") {
+        result = gf::make_control<ShapeSwitchButton>(gf::StableId(id), id == "fill-switch");
     } else if (id == "tool-11") {
         result = gf::make_control<GuideButton>(gf::StableId(id), text);
     } else {
@@ -301,9 +327,9 @@ void Ribbon::initialize_control_tree() {
                100 + static_cast<int>(home_shapes[i]), {546 + 25.0 * (i % 7), 36 + 25.0 * (i / 7), 25, 25});
     }
     button("shapes-menu", "", -1, {722, 36, 18, 75}, false, true);
-    button("edge-switch", "□", -1, {751, 36, 25, 25});
-    button("fill-switch", "■", -1, {779, 36, 25, 25});
-    button("size-menu", "", 23, {766, 72, 24, 41}, true, true);
+    button("edge-switch", "", -1, {751, 34, 54, 25});
+    button("fill-switch", "", -1, {751, 60, 54, 25});
+    button("size-menu", "", 23, {751, 88, 54, 27}, false, true);
     primary_ = gf::make_control<SwatchButton>(gf::StableId("primary"), "Primary", Color{0, 0, 0, 255});
     secondary_ = gf::make_control<SwatchButton>(gf::StableId("secondary"), "Alt", Color{255, 255, 255, 255});
     for (int i = 0; i < 2; ++i) {
@@ -654,8 +680,7 @@ void Ribbon::show_page() {
         page_ = tool == Tool::Text ? 16 : 8;
     }
     bool selection = tool == Tool::Select || tool == Tool::Lasso;
-    bool ink = tool == Tool::Pencil || tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape ||
-               tool == Tool::Path;
+    bool ink = tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
     if (page_ == 4 && !ink) {
         page_ = 8;
     }
@@ -961,22 +986,28 @@ void Ribbon::prepare_material_previews() {
     }
     brush_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{28, 20});
     fill_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{28, 20});
+    dynamic_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{28, 20});
     for (int i = 0; i < brush_count; ++i) {
         Ink ink;
         ink.primary = {48, 83, 123, 255};
         ink.secondary = ink.primary;
         ink.brush = static_cast<Brush>(i);
         ink.size = 11;
-        for (int fill = 0; fill < 2; ++fill) {
+        for (int fill = 0; fill < 3; ++fill) {
             Image sample;
             sample.reset(56, 40, {255, 255, 255, 255});
-            if (fill) {
+            if (fill == 2) {
+                DynamicBrushStroke brush;
+                brush.segment(sample, {5, 29}, {50, 10}, ink, false);
+            } else if (fill == 1) {
                 draw_shape(sample, Shape::Rectangle, {4, 4}, {51, 35}, ink, false, true, ink.brush);
             } else {
                 stroke(sample, {5, 29}, {50, 10}, ink);
             }
             std::vector<std::uint8_t> png = encode_png(sample);
-            std::shared_ptr<gf::ImageList> images = fill ? fill_previews_ : brush_previews_;
+            std::shared_ptr<gf::ImageList> images = fill == 2   ? dynamic_previews_
+                                                    : fill == 1 ? fill_previews_
+                                                                : brush_previews_;
             static_cast<void>((*images).add_png(std::to_string(i), std::as_bytes(std::span(png)), 2));
         }
     }
@@ -1134,8 +1165,8 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
                 continue;
             }
             if (page_ == 8 && i > 0 && !selection) {
-                bool ink = tool == Tool::Pencil || tool == Tool::Fill || tool == Tool::Brush ||
-                           tool == Tool::Shape || tool == Tool::Path;
+                bool ink =
+                    tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
                 bool material = tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
                 if ((i == 1 && !ink) || (i > 1 && !material)) {
                     continue;
@@ -1182,8 +1213,11 @@ void Ribbon::synchronize() {
     if (attached_window()) {
         prepare_material_previews();
     }
-    (*primary_).set_material(document.primary_ink());
-    (*secondary_).set_material(document.alternate_ink());
+    (*primary_).set_material(document.tool == Tool::Pencil ? pencil_ink(document.primary_ink())
+                                                           : document.primary_ink());
+    (*secondary_)
+        .set_material(document.tool == Tool::Pencil ? pencil_ink(document.alternate_ink())
+                                                    : document.alternate_ink());
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());
@@ -1195,7 +1229,8 @@ void Ribbon::synchronize() {
             const std::shared_ptr<SwatchButton> swatch = std::dynamic_pointer_cast<SwatchButton>(buttons_[i]);
             if (swatch) {
                 (*swatch).set_color(palette_color(index));
-                control.set_accessible_name(palette_page_ == 2
+                control.set_accessible_name(palette_page_ == 1 && index == 29 ? "Transparency"
+                                            : palette_page_ == 2
                                                 ? std::string(theme_name(index % 10)) + " color " +
                                                       std::to_string(index / 10 + 1)
                                                 : std::string(palette_page_ == 1 ? "Custom" : "Basic") +
@@ -1222,18 +1257,20 @@ void Ribbon::synchronize() {
         if (id.starts_with("material-brush-")) {
             selected = std::stoi(id.substr(15)) ==
                        static_cast<int>(secondary_color_ ? document.shape_fill_brush : document.ink.brush);
-            control.set_image_list(secondary_color_ ? fill_previews_ : brush_previews_);
+            control.set_image_list(secondary_color_               ? fill_previews_
+                                   : document.tool == Tool::Brush ? dynamic_previews_
+                                                                  : brush_previews_);
         }
         if (id == "material-edge" || id == "material-fill") {
             selected = secondary_color_ == (id == "material-fill");
         }
         if (id == "edge-switch") {
             selected = document.shape_outline;
-            control.set_accessible_name("Edge enabled");
+            control.set_accessible_name(document.shape_outline ? "Edge on" : "Edge off");
         }
         if (id == "fill-switch") {
             selected = document.tool == Tool::Guide ? (*editor).guide.fill : document.shape_fill;
-            control.set_accessible_name("Fill enabled");
+            control.set_accessible_name(selected ? "Fill on" : "Fill off");
         }
         if (id == "brush-menu") {
             selected = document.tool == Tool::Brush;
@@ -1386,7 +1423,8 @@ void Ribbon::on_pointer_preview(gf::PointerEvent& event) {
 Color Ribbon::palette_color(int index) const {
     const std::shared_ptr<Editor> editor = editor_.lock();
     if (palette_page_ == 1 && editor) {
-        return (*editor).custom_colors.colors.at(static_cast<std::size_t>(index));
+        return index == 29 ? Color{255, 255, 255, 0}
+                           : (*editor).custom_colors.colors.at(static_cast<std::size_t>(index));
     }
     return palette_page_ == 2 ? themed_color(index) : ribbon_color(index);
 }
@@ -1396,6 +1434,10 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         return;
     }
     std::string id(button.stable_id().value());
+    if (popup_owner_.get() == &button) {
+        close_popup();
+        return;
+    }
     if (id == "edge-switch" || id == "fill-switch") {
         (*editor).execute(id == "edge-switch" ? "outline" : "fill");
         return;
@@ -1691,7 +1733,12 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             (*tooltips_).set_tool_tip(shape, shape_names[i]);
         }
     }
-    focus_scope_ = (*attached_window()).begin_focus_scope(popup_layer_);
+    gf::FocusScopeOptions focus_options;
+    // The anchored layer deliberately passes clicks on its owner through.
+    // A contained keyboard scope would reject that owner's pointer focus,
+    // preventing the click from ever reaching its toggle action.
+    focus_options.contain_focus = false;
+    focus_scope_ = (*attached_window()).begin_focus_scope(popup_layer_, {}, focus_options);
     (*popup_owner_).set_drop_down_open(true);
 }
 void Ribbon::dismissed(gf::PopupDismissReason) {

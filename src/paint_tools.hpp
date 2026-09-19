@@ -1,5 +1,6 @@
 #pragma once
 #include "material.hpp"
+#include <unordered_map>
 namespace paint {
 enum class BrushFamily { Additive, Mix, Heal };
 enum class MixEffect {
@@ -28,6 +29,11 @@ class StrokeStabilizer {
 Color interpolate_pixel(Color base, Color replacement, double amount);
 Color sample_bilinear(const Image& image, double x, double y, bool wrap = false);
 class DynamicBrushStroke {
+    struct DryDeposit {
+        Color original;
+        double coverage = 0;
+    };
+    std::unordered_map<int, DryDeposit> dry_pixels_;
     double pending_ = 0;
     std::uint32_t dab_ = 0;
     bool started_ = false;

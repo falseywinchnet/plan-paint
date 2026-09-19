@@ -415,6 +415,7 @@ void Editor::add_stamp_material() {
     if (document.stamp.pixels.empty()) {
         return;
     }
+    choose_tool(Tool::Stamp);
     stamp_basis_ = hard_stamp_.pixels.empty() ? document.stamp : hard_stamp_;
     adding_stamp_material_ = true;
     document.stamp = {};
@@ -522,7 +523,8 @@ gf::Point Editor::rotation_handle() const {
             center.y + std::sin(angle) * x + std::cos(angle) * y};
 }
 bool Editor::warp_pointer(const gf::PointerEvent& event, Point point) {
-    if (event.button == gf::PointerButton::middle || panning_) {
+    if (event.button == gf::PointerButton::middle || panning_ ||
+        (document.tool == Tool::Lasso && (control_ || alt_))) {
         return false;
     }
     if (warp_commit_) {

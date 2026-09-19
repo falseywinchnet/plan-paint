@@ -23,6 +23,7 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
                     break;
                 }
             }
+            guide_connecting_ = guide_node_ >= 0 && !guide.closed;
             guide_moving_ = guide_node_ < 0 && guide.closed && inside_polygon(guide.nodes, point.x, point.y);
             if (guide_node_ < 0 && !guide_moving_) {
                 if (guide.closed) {
@@ -35,17 +36,36 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
             canvas().set_pointer_capture(true);
         }
     } else if ((event.action == gf::PointerAction::move || event.action == gf::PointerAction::up) &&
-               canvas().has_pointer_capture()) {
+               (guide_node_ >= 0 || guide_moving_)) {
         if (guide_moving_) {
             const Point delta{std::round(point.x - guide_last_.x), std::round(point.y - guide_last_.y)};
             guide.translate(delta);
             guide_last_.x += delta.x;
             guide_last_.y += delta.y;
         } else if (guide_node_ >= 0) {
-            guide.nodes[guide_node_] = point;
-            guide.selection = {};
+            if (guide_connecting_ &&
+                std::hypot(point.x - guide_last_.x, point.y - guide_last_.y) * canvas().zoom() > 3) {
+                guide_connecting_ = false;
+            }
+            if (!guide_connecting_) {
+                const Point previous = guide.nodes[guide_node_];
+                for (std::size_t index = 0; index < guide.nodes.size(); ++index) {
+                    if (guide.nodes[index].x == previous.x && guide.nodes[index].y == previous.y) {
+                        guide.nodes[index] = point;
+                    }
+                }
+                guide.selection = {};
+            }
         }
         if (event.action == gf::PointerAction::up) {
+            if (guide_connecting_) {
+                if (guide_node_ == 0 && guide.nodes.size() >= 3) {
+                    guide.closed = true;
+                } else if (static_cast<std::size_t>(guide_node_) + 1 < guide.nodes.size()) {
+                    guide.nodes.push_back(guide.nodes[guide_node_]);
+                }
+            }
+            guide_connecting_ = false;
             guide_node_ = -1;
             guide_moving_ = false;
             canvas().set_pointer_capture(false);

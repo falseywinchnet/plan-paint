@@ -192,6 +192,42 @@ void Document::select_mask(const SelectionMask& mask) {
     }
     selection = {std::move(lifted), mask.bounds.x, mask.bounds.y, true, mask.coverage, mask.outline, source};
 }
+void Document::edit_selection(const std::vector<Point>& polygon, bool subtract) {
+    if (polygon.size() < 3) {
+        return;
+    }
+    SelectionMask mask;
+    mask.bounds = {0, 0, image.width, image.height};
+    mask.coverage.assign(image.pixels.size(), 0);
+    const bool feathered = selection.source && (*selection.source).feathered;
+    if (selection.active) {
+        for (int y = 0; y < selection.image.height; ++y) {
+            for (int x = 0; x < selection.image.width; ++x) {
+                const int px = selection.x + x, py = selection.y + y;
+                if (!image.contains(px, py)) {
+                    continue;
+                }
+                const std::size_t index = static_cast<std::size_t>(y) * selection.image.width + x;
+                const std::uint8_t coverage = selection.coverage.empty() ? 255 : selection.coverage[index];
+                mask.coverage[static_cast<std::size_t>(py) * image.width + px] = feathered  ? coverage
+                                                                                 : coverage ? 255
+                                                                                            : 0;
+            }
+        }
+    }
+    for (int y = 0; y < image.height; ++y) {
+        for (int x = 0; x < image.width; ++x) {
+            if (inside_polygon(polygon, x + 0.5, y + 0.5)) {
+                mask.coverage[static_cast<std::size_t>(y) * image.width + x] = subtract ? 0 : 255;
+            }
+        }
+    }
+    // Reunite untouched lifted RGBA first, then lift the edited union. This also
+    // keeps subtraction from erasing pixels or darkening a feathered boundary.
+    commit_selection();
+    trim_selection_mask(mask);
+    select_mask(mask);
+}
 void Document::commit_selection() {
     if (!selection.active) {
         return;

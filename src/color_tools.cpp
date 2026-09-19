@@ -115,55 +115,159 @@ Color sample_color(const Image& image, Point point, SampleMode mode, int radius)
     result.a = static_cast<std::uint8_t>(std::lround(alpha / count));
     return result;
 }
-ColorMosaic::ColorMosaic(PickerSpace space) {
-    for (std::size_t index = 0; index < centers_.size(); ++index) {
-        const Color color =
-            picker_color(space, {static_cast<double>(index % 12) / 12, (index / 12) % 2 ? 0.9 : 0.25,
-                                 0.12 + static_cast<double>(index / 24) * 0.25});
-        centers_[index] = to_oklab(color);
-    }
-    std::vector<Lab> samples;
-    for (int h = 0; h < 36; ++h) {
-        for (int s = 0; s < 7; ++s) {
-            for (int l = 0; l < 11; ++l) {
-                samples.push_back(to_oklab(picker_color(space, {h / 36.0, s / 6.0, l / 10.0})));
-            }
+ColorMosaic::ColorMosaic(PickerSpace space, double hue) {
+    hue -= std::floor(hue);
+    struct Sample {
+        Color color;
+        Lab lab;
+        ColorCoordinates coordinates;
+        double weight = 0;
+    };
+    constexpr int columns = 64, rows = 64;
+    std::vector<Sample> samples;
+    samples.reserve((columns + 1) * (rows + 1));
+    for (int row = 0; row <= rows; ++row) {
+        for (int column = 0; column <= columns; ++column) {
+            const ColorCoordinates coordinates{hue, column / static_cast<double>(columns),
+                                               row / static_cast<double>(rows)};
+            const Color color = picker_color(space, coordinates);
+            samples.push_back({color, to_oklab(color), coordinates, 0});
         }
     }
-    for (int iteration = 0; iteration < 8; ++iteration) {
-        std::array<Lab, 96> sums{};
-        std::array<int, 96> counts{};
-        for (std::size_t index = 0; index < samples.size(); ++index) {
-            const Lab lab = samples[index];
-            const std::size_t cell = nearest_center(lab, centers_);
-            sums[cell].l += lab.l;
-            sums[cell].a += lab.a;
-            sums[cell].b += lab.b;
-            ++counts[cell];
-        }
-        for (std::size_t index = 0; index < centers_.size(); ++index) {
-            if (counts[index]) {
-                centers_[index] = {sums[index].l / counts[index], sums[index].a / counts[index],
-                                   sums[index].b / counts[index]};
-            }
+    for (int row = 0; row <= rows; ++row) {
+        for (int column = 0; column <= columns; ++column) {
+            Sample& sample = samples[row * (columns + 1) + column];
+            const Lab left = samples[row * (columns + 1) + std::max(0, column - 1)].lab,
+                      right = samples[row * (columns + 1) + std::min(columns, column + 1)].lab,
+                      down = samples[std::max(0, row - 1) * (columns + 1) + column].lab,
+                      up = samples[std::min(rows, row + 1) * (columns + 1) + column].lab;
+            const Lab ds{right.l - left.l, right.a - left.a, right.b - left.b},
+                dl{up.l - down.l, up.a - down.a, up.b - down.b};
+            const Lab cross{ds.a * dl.b - ds.b * dl.a, ds.b * dl.l - ds.l * dl.b, ds.l * dl.a - ds.a * dl.l};
+            const double area = std::sqrt(cross.l * cross.l + cross.a * cross.a + cross.b * cross.b);
+            // Perceptual area supplies the local color variation. The smooth
+            // saturation preference is explicit; the screen-space objective
+            // below keeps the resulting cells practical to click.
+            const double saturation = sample.coordinates.saturation;
+            sample.weight = area * (1 + 2 * saturation * saturation);
         }
     }
-    for (std::size_t index = 0; index < centers_.size(); ++index) {
-        colors_[index] = from_oklab(centers_[index]);
+    constexpr std::size_t neutrals = 7;
+    for (std::size_t index = 0; index < neutrals; ++index) {
+        colors_[index] = from_oklab({index / static_cast<double>(neutrals - 1), 0, 0});
         centers_[index] = to_oklab(colors_[index]);
+        coordinates_[index] = picker_coordinates(space, colors_[index]);
+        coordinates_[index].hue = hue;
     }
-    // Keep the two exact endpoints useful for line art and transparent assets.
-    colors_[0] = {0, 0, 0, 255};
-    colors_[95] = {255, 255, 255, 255};
-    centers_[0] = to_oklab(colors_[0]);
-    centers_[95] = to_oklab(colors_[95]);
+    // Use Euclidean distance in the displayed rectangle so the cells remain
+    // compact click targets. Perceptual surface area supplies the density,
+    // instead of stretching cells along the much smaller chroma axis.
+    double maximum_weight = 0;
+    for (std::size_t index = 0; index < samples.size(); ++index) {
+        maximum_weight = std::max(maximum_weight, samples[index].weight);
+    }
+    for (std::size_t index = 0; index < samples.size(); ++index) {
+        Sample& sample = samples[index];
+        const double saturation = sample.coordinates.saturation;
+        sample.weight =
+            (0.08 + sample.weight / std::max(maximum_weight, 1e-12)) * (0.25 + 3 * saturation * saturation);
+    }
+    std::vector<double> distances(samples.size(), std::numeric_limits<double>::max());
+    for (std::size_t site = 0; site < centers_.size(); ++site) {
+        if (site >= neutrals) {
+            std::size_t chosen = 0;
+            double farthest = -1;
+            for (std::size_t index = 0; index < samples.size(); ++index) {
+                const double score = distances[index] * std::sqrt(samples[index].weight);
+                if (score > farthest && samples[index].coordinates.saturation > 0 &&
+                    samples[index].coordinates.level > 0 && samples[index].coordinates.level < 1) {
+                    chosen = index;
+                    farthest = score;
+                }
+            }
+            colors_[site] = samples[chosen].color;
+            centers_[site] = samples[chosen].lab;
+            coordinates_[site] = samples[chosen].coordinates;
+        }
+        for (std::size_t index = 0; index < samples.size(); ++index) {
+            const double ds =
+                             (samples[index].coordinates.saturation - coordinates_[site].saturation) * aspect,
+                         dl = samples[index].coordinates.level - coordinates_[site].level;
+            distances[index] = std::min(distances[index], ds * ds + dl * dl);
+        }
+    }
+    std::vector<std::size_t> assignments(samples.size());
+    for (int iteration = 0; iteration < 32; ++iteration) {
+        std::array<Point, 96> sums{};
+        std::array<double, 96> weights{};
+        for (std::size_t index = 0; index < samples.size(); ++index) {
+            const Sample& sample = samples[index];
+            const std::size_t cell = cell_at(sample.coordinates.saturation, sample.coordinates.level);
+            assignments[index] = cell;
+            sums[cell].x += sample.coordinates.saturation * sample.weight;
+            sums[cell].y += sample.coordinates.level * sample.weight;
+            weights[cell] += sample.weight;
+        }
+        for (std::size_t site = neutrals; site < centers_.size(); ++site) {
+            if (weights[site] > 0) {
+                sums[site] = {sums[site].x / weights[site], sums[site].y / weights[site]};
+            }
+        }
+        std::array<double, 96> closest;
+        closest.fill(std::numeric_limits<double>::max());
+        for (std::size_t index = 0; index < samples.size(); ++index) {
+            const std::size_t site = assignments[index];
+            if (site < neutrals || weights[site] == 0) {
+                continue;
+            }
+            const double ds = (samples[index].coordinates.saturation - sums[site].x) * aspect,
+                         dl = samples[index].coordinates.level - sums[site].y;
+            const double distance = ds * ds + dl * dl;
+            if (distance < closest[site]) {
+                bool duplicate = false;
+                for (std::size_t other = 0; other < colors_.size(); ++other) {
+                    if (other != site && equal(colors_[other], samples[index].color)) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (duplicate) {
+                    continue;
+                }
+                closest[site] = distance;
+                colors_[site] = samples[index].color;
+                centers_[site] = samples[index].lab;
+                coordinates_[site] = samples[index].coordinates;
+            }
+        }
+    }
+}
+std::size_t ColorMosaic::cell_at(double saturation, double level) const {
+    std::size_t best = 0;
+    double distance = std::numeric_limits<double>::max();
+    for (std::size_t index = 0; index < coordinates_.size(); ++index) {
+        const double ds = (saturation - coordinates_[index].saturation) * aspect,
+                     dl = level - coordinates_[index].level;
+        if (ds * ds + dl * dl < distance) {
+            best = index;
+            distance = ds * ds + dl * dl;
+        }
+    }
+    return best;
+}
+
+std::size_t ColorMosaic::nearest_index(Color color) const {
+    return nearest_center(to_oklab(color), centers_);
 }
 Color ColorMosaic::nearest(Color color) const {
-    Color result = colors_[nearest_center(to_oklab(color), centers_)];
+    Color result = colors_[nearest_index(color)];
     result.a = color.a;
     return result;
 }
 const std::array<Color, 96>& ColorMosaic::colors() const {
     return colors_;
+}
+ColorCoordinates ColorMosaic::coordinates(std::size_t index) const {
+    return coordinates_.at(index);
 }
 } // namespace paint

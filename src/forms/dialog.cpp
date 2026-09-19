@@ -27,13 +27,19 @@ void ColorPlane::on_paint(gf::Painter& painter, gf::Rect) {
         return;
     }
     gf::Rect bounds = {0, 0, committed_arranged_bounds().width, committed_arranged_bounds().height};
+    if ((*dialog).mosaic && !hue_strip_) {
+        paint_mosaic(painter, *dialog, bounds);
+        return;
+    }
     // Paint and hit testing use the same conversion and centroid lookup.
-    const double step = (*dialog).mosaic ? 4 : 3;
+    const double step = 2;
     for (double y = 0; y < bounds.height; y += step) {
         for (double x = 0; x < bounds.width; x += step) {
             const Color color =
-                hue_strip_ ? (*dialog).plane_color(y / bounds.height, 1,
-                                                   (*dialog).picker_space == PickerSpace::OKHSL ? 0.65 : 1)
+                hue_strip_ ? picker_color((*dialog).picker_space,
+                                          {(*dialog).mosaic ? std::round(y / bounds.height * 24) / 24
+                                                            : y / bounds.height,
+                                           1, (*dialog).picker_space == PickerSpace::OKHSL ? 0.65 : 1})
                            : (*dialog).plane_color((*dialog).hue, x / bounds.width, 1 - y / bounds.height);
             painter.fill_rect({x, y, std::min(step, bounds.width - x), std::min(step, bounds.height - y)},
                               ui_color(color));
@@ -48,6 +54,86 @@ void ColorPlane::on_paint(gf::Painter& painter, gf::Rect) {
                      y = (1 - (*dialog).value) * bounds.height;
         painter.stroke_rect({x - 4, y - 4, 8, 8}, gf::Color::rgba(255, 255, 255), 2);
         painter.stroke_rect({x - 5, y - 5, 10, 10}, gf::Color::rgba(40, 50, 60), 1);
+    }
+    painter.stroke_rect({0.5, 0.5, bounds.width - 1, bounds.height - 1}, gf::Color::rgba(132, 153, 176), 1);
+}
+void ColorPlane::on_detaching_from_window(gf::Window& owner) noexcept {
+    if (mosaic_image_.value) {
+        static_cast<void>(owner.remove_image(mosaic_image_));
+    }
+    mosaic_image_ = {};
+    cached_mosaic_ = nullptr;
+    Control::on_detaching_from_window(owner);
+}
+void ColorPlane::paint_mosaic(gf::Painter& painter, EditorDialog& dialog, gf::Rect bounds) {
+    if (!window() || bounds.width <= 0 || bounds.height <= 0) {
+        return;
+    }
+    const ColorMosaic& palette = dialog.color_mosaic(dialog.hue);
+    const int width = std::clamp(static_cast<int>(std::ceil(bounds.width * 2)), 1, 1200),
+              height = std::clamp(static_cast<int>(std::ceil(bounds.height * 2)), 1, 1200);
+    if (cached_mosaic_ != &palette || mosaic_width_ != width || mosaic_height_ != height ||
+        !mosaic_image_.value) {
+        mosaic_cells_.resize(static_cast<std::size_t>(width) * height);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                mosaic_cells_[static_cast<std::size_t>(y) * width + x] =
+                    static_cast<std::uint8_t>(palette.cell_at((x + 0.5) / width, 1 - (y + 0.5) / height));
+            }
+        }
+        std::vector<std::byte> pixels(static_cast<std::size_t>(width) * height * 4);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const std::size_t index = static_cast<std::size_t>(y) * width + x;
+                const std::uint8_t cell = mosaic_cells_[index];
+                Color color = palette.colors()[cell];
+                const bool boundary = (x > 0 && mosaic_cells_[index - 1] != cell) ||
+                                      (y > 0 && mosaic_cells_[index - width] != cell);
+                if (boundary) {
+                    const int line = to_oklab(color).l < 0.48 ? 255 : 0;
+                    color.r = static_cast<std::uint8_t>((color.r * 4 + line) / 5);
+                    color.g = static_cast<std::uint8_t>((color.g * 4 + line) / 5);
+                    color.b = static_cast<std::uint8_t>((color.b * 4 + line) / 5);
+                }
+                pixels[index * 4] = static_cast<std::byte>(color.b);
+                pixels[index * 4 + 1] = static_cast<std::byte>(color.g);
+                pixels[index * 4 + 2] = static_cast<std::byte>(color.r);
+                pixels[index * 4 + 3] = std::byte{255};
+            }
+        }
+        const gf::ImageLoadResult result =
+            mosaic_image_.value ? (*window()).replace_bgra32_premultiplied(mosaic_image_, width, height,
+                                                                           width * 4, pixels, *this)
+                                : (*window()).load_bgra32_premultiplied(width, height, width * 4, pixels);
+        if (!result) {
+            return;
+        }
+        mosaic_image_ = result.image;
+        cached_mosaic_ = &palette;
+        mosaic_width_ = width;
+        mosaic_height_ = height;
+        invalidate(gf::Dirty::paint);
+        selected_cell_ = 96;
+    }
+    painter.draw_image(mosaic_image_, bounds);
+    const std::size_t selected = palette.cell_at(dialog.saturation, dialog.value);
+    if (selected_cell_ != selected) {
+        std::vector<std::uint8_t> mask(mosaic_cells_.size());
+        for (std::size_t index = 0; index < mask.size(); ++index) {
+            mask[index] = mosaic_cells_[index] == selected ? 1 : 0;
+        }
+        selected_contours_ = mask_contours(mask, width, height);
+        selected_cell_ = selected;
+    }
+    const double scale_x = bounds.width / width, scale_y = bounds.height / height;
+    for (std::size_t contour = 0; contour < selected_contours_.size(); ++contour) {
+        const std::vector<Point>& loop = selected_contours_[contour];
+        for (std::size_t index = 0; index < loop.size(); ++index) {
+            const Point a = loop[index], b = loop[(index + 1) % loop.size()];
+            const gf::Point first{a.x * scale_x, a.y * scale_y}, last{b.x * scale_x, b.y * scale_y};
+            painter.draw_line(first, last, gf::Color::rgba(255, 255, 255), 2.5);
+            painter.draw_line(first, last, gf::Color::rgba(30, 45, 60), 1);
+        }
     }
     painter.stroke_rect({0.5, 0.5, bounds.width - 1, bounds.height - 1}, gf::Color::rgba(132, 153, 176), 1);
 }
@@ -125,11 +211,12 @@ void EditorDialog::initialize_control_tree() {
         (*secondary_tab_).set_theme_override(ribbon_theme());
         label("custom-colors-label", "Custom colors", {20, 91, 245, 22}, true);
         for (int i = 0; i < 30; ++i) {
-            std::shared_ptr<SwatchButton> swatch =
-                gf::make_control<SwatchButton>(gf::StableId("dialog-custom-" + std::to_string(i)), "",
-                                               (*editor).custom_colors.colors[static_cast<std::size_t>(i)]);
+            std::shared_ptr<SwatchButton> swatch = gf::make_control<SwatchButton>(
+                gf::StableId("dialog-custom-" + std::to_string(i)), "",
+                i == 29 ? Color{255, 255, 255, 0}
+                        : (*editor).custom_colors.colors[static_cast<std::size_t>(i)]);
             (*swatch).set_theme_override(ribbon_theme());
-            (*swatch).set_accessible_name("Custom color " + std::to_string(i + 1));
+            (*swatch).set_accessible_name(i == 29 ? "Transparency" : "Custom color " + std::to_string(i + 1));
             subscriptions_.push_back((*swatch).clicked().subscribe(
                 *this, gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::clicked>(*this)));
             put(swatch, {18 + (i % 10) * 25.0, 120 + (i / 10) * 31.0, 24, 29});
@@ -144,18 +231,10 @@ void EditorDialog::initialize_control_tree() {
         put(preview_, {150, 397, 115, 50});
         subscriptions_.push_back((*old_).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::clicked>(*this)));
-        color_space_ = gf::make_control<gf::ComboBox>(gf::StableId("color-space"));
-        (*color_space_).add_item("RGB");
-        (*color_space_).add_item("OKHSL");
-        (*color_space_).set_selected_index(0);
-        (*color_space_).set_accessible_name("Color space");
-        put(color_space_, {296, 48, 170, 28});
-        subscriptions_.push_back(
-            (*color_space_)
-                .selected_index_changed()
-                .subscribe(*this, gf::Delegate<std::optional<std::size_t>>::bind<
-                                      EditorDialog, &EditorDialog::color_space_changed>(*this)));
-        mosaic_ = gf::make_control<gf::CheckBox>(gf::StableId("color-mosaic"), "Mosaic (96 colors)");
+        rgb_tab_ = button("color-space-rgb", "RGB", {296, 48, 84, 28});
+        okhsl_tab_ = button("color-space-okhsl", "OKHSL", {382, 48, 84, 28});
+        (*rgb_tab_).set_selected(true);
+        mosaic_ = gf::make_control<gf::CheckBox>(gf::StableId("color-mosaic"), "Mosaic (96 colors per hue)");
         put(mosaic_, {296, 457, 300, 26});
         subscriptions_.push_back((*mosaic_).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::clicked>(*this)));
@@ -191,7 +270,7 @@ void EditorDialog::initialize_control_tree() {
         }
         set_color(original_);
     } else if (kind_ == EditorDialogKind::settings) {
-        panel_ = {0, 0, 490, 330};
+        panel_ = {0, 0, 490, 410};
         label("settings-scroll-label", "Scroll distance", {24, 58, 220, 28});
         atlas_numbers_.push_back(
             number("settings-scroll", {280, 57, 180, 30}, 0.1, 100, (*editor).settings.scroll_distance, 1));
@@ -203,6 +282,17 @@ void EditorDialog::initialize_control_tree() {
         (*background_).add_item("Soft pool-table green felt");
         (*background_).set_selected_index((*editor).settings.green_felt ? 1 : 0);
         put(background_, {230, 178, 230, 30});
+        label("settings-alpha-label", "Transparency display", {24, 226, 200, 28});
+        alpha_background_ = gf::make_control<gf::ComboBox>(gf::StableId("settings-alpha-background"));
+        (*alpha_background_).add_item("Checkerboard");
+        (*alpha_background_).add_item("Solid color");
+        (*alpha_background_).set_selected_index((*editor).settings.solid_transparency ? 1 : 0);
+        put(alpha_background_, {230, 226, 230, 30});
+        label("settings-alpha-color-label", "Solid color (hex)", {24, 271, 200, 28});
+        alpha_background_color_ = gf::make_control<gf::TextBox>(gf::StableId("settings-alpha-color"));
+        (*alpha_background_color_).set_text(to_hex((*editor).settings.transparency_color));
+        (*alpha_background_color_).set_accessible_name("Transparency background color, hex RGB");
+        put(alpha_background_color_, {230, 271, 230, 30});
     } else if (kind_ == EditorDialogKind::properties) {
         panel_ = {0, 0, 460, 345};
         Document& document = (*editor).document;
@@ -502,30 +592,43 @@ void EditorDialog::atlas_changed(double) {
         (*error_).set_foreground(gf::Color::rgba(161, 49, 39));
     }
 }
-static const ColorMosaic& shared_mosaic(PickerSpace space) {
-    if (space == PickerSpace::RGB) {
-        static const ColorMosaic rgb(PickerSpace::RGB);
-        return rgb;
+const ColorMosaic& EditorDialog::color_mosaic(double hue) const {
+    const int band = (static_cast<int>(std::lround(hue * 24)) % 24 + 24) % 24;
+    const std::size_t index = static_cast<std::size_t>(band + (picker_space == PickerSpace::OKHSL ? 24 : 0));
+    if (!mosaics_[index]) {
+        mosaics_[index] = std::make_unique<ColorMosaic>(picker_space, band / 24.0);
     }
-    static const ColorMosaic okhsl(PickerSpace::OKHSL);
-    return okhsl;
+    return *mosaics_[index];
 }
 Color EditorDialog::plane_color(double h, double s, double level) const {
     if (mosaic) {
-        h = std::floor(h * 12) / 12;
+        h = std::round(h * 24) / 24;
     }
     const Color color = picker_color(picker_space, {h, s, level});
-    return mosaic ? shared_mosaic(picker_space).nearest(color) : color;
+    if (mosaic) {
+        const ColorMosaic& palette = color_mosaic(h);
+        return palette.colors()[palette.cell_at(s, level)];
+    }
+    return color;
 }
-void EditorDialog::color_space_changed(std::optional<std::size_t> index) {
-    picker_space = index.value_or(0) == 0 ? PickerSpace::RGB : PickerSpace::OKHSL;
+void EditorDialog::color_space_changed(PickerSpace space) {
+    picker_space = space;
+    (*rgb_tab_).set_selected(space == PickerSpace::RGB);
+    (*okhsl_tab_).set_selected(space == PickerSpace::OKHSL);
     set_color(color_);
 }
 void EditorDialog::choose_hsv(double h, double s, double v) {
-    hue = h;
+    hue = mosaic ? std::round(h * 24) / 24 : h;
+    hue -= std::floor(hue);
     saturation = s;
     value = v;
-    Color color = plane_color(h, s, v);
+    Color color = plane_color(hue, s, v);
+    if (mosaic) {
+        const ColorMosaic& palette = color_mosaic(hue);
+        const ColorCoordinates chosen = palette.coordinates(palette.cell_at(s, v));
+        saturation = chosen.saturation;
+        value = chosen.level;
+    }
     color.a = color_.a;
     set_color(color, false);
 }
@@ -635,6 +738,10 @@ void EditorDialog::clicked(gf::ButtonBase& control) {
         return;
     }
     try {
+        if (id == "color-space-rgb" || id == "color-space-okhsl") {
+            color_space_changed(id == "color-space-rgb" ? PickerSpace::RGB : PickerSpace::OKHSL);
+            return;
+        }
         if (id == "color-mosaic") {
             mosaic = (*mosaic_).checked();
             choose_hsv(hue, saturation, value);
@@ -657,8 +764,13 @@ void EditorDialog::clicked(gf::ButtonBase& control) {
             set_color(ribbon_color(std::stoi(id.substr(13))));
         }
         if (id.starts_with("dialog-custom-")) {
-            custom_slot_ = std::stoi(id.substr(14));
-            set_color((*editor).custom_colors.colors[static_cast<std::size_t>(custom_slot_)]);
+            const int slot = std::stoi(id.substr(14));
+            if (slot == 29) {
+                set_color({255, 255, 255, 0});
+            } else {
+                custom_slot_ = slot;
+                set_color((*editor).custom_colors.colors[static_cast<std::size_t>(custom_slot_)]);
+            }
         }
         if (id == "dialog-original") {
             set_color(original_);
@@ -666,7 +778,7 @@ void EditorDialog::clicked(gf::ButtonBase& control) {
         if (id == "dialog-add-custom") {
             (*editor).custom_colors.store(custom_slot_, color_);
             (*custom_[static_cast<std::size_t>(custom_slot_)]).set_color(color_);
-            custom_slot_ = (custom_slot_ + 1) % 30;
+            custom_slot_ = (custom_slot_ + 1) % 29;
         }
         if (id == "resize-percent" || id == "resize-pixels") {
             percent_ = id == "resize-percent";
@@ -704,6 +816,11 @@ void EditorDialog::accept() {
             EditorSettings settings = (*editor).settings;
             settings.scroll_distance = (*atlas_numbers_[0]).value();
             settings.green_felt = (*background_).selected_index().value_or(0) == 1;
+            settings.solid_transparency = (*alpha_background_).selected_index().value_or(0) == 1;
+            if (!from_hex(std::string((*alpha_background_color_).text()), settings.transparency_color)) {
+                throw std::runtime_error("Enter the transparency color as hex, such as #FF80C0.");
+            }
+            settings.transparency_color.a = 255;
             settings.save();
             (*editor).settings = settings;
             (*editor).close_editor_dialog();

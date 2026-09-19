@@ -13,13 +13,14 @@ struct RecentFiles {
 struct EditorSettings {
     std::string storage_path;
     double scroll_distance = 6;
-    bool green_felt = false;
+    bool green_felt = false, solid_transparency = false;
+    Color transparency_color{255, 128, 192, 255};
     void load();
     void save() const;
 };
 struct CustomColors {
     std::string storage_path;
-    std::array<Color, 30> colors;
+    std::array<Color, 29> colors;
     std::uint32_t occupied = 0;
     CustomColors();
     void load();

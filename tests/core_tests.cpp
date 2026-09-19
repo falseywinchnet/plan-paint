@@ -71,18 +71,32 @@ void test_perceptual_tools() {
             }
         }
     }
-    const paint::ColorMosaic first(paint::PickerSpace::OKHSL), second(paint::PickerSpace::OKHSL);
-    std::set<std::string> unique;
-    for (int h = 0; h < 61; ++h) {
-        for (int s = 0; s < 13; ++s) {
-            const paint::Color sample =
-                paint::picker_color(paint::PickerSpace::OKHSL, {h / 61.0, s / 12.0, 0.63});
-            const paint::Color result = first.nearest(sample);
-            require(paint::equal(result, second.nearest(sample)), "mosaic differs between instances");
-            unique.insert(paint::to_hex(result));
+    for (int space = 0; space < 2; ++space) {
+        const paint::PickerSpace mode = static_cast<paint::PickerSpace>(space);
+        for (int band = 0; band < 24; ++band) {
+            const double hue = band / 24.0;
+            const paint::ColorMosaic first(mode, hue), second(mode, hue);
+            std::set<std::string> unique;
+            int saturated = 0, neutral_side = 0;
+            for (std::size_t cell = 0; cell < first.colors().size(); ++cell) {
+                const paint::Color color = first.colors()[cell];
+                const paint::ColorCoordinates coordinates = first.coordinates(cell);
+                unique.insert(paint::to_hex(color));
+                require(paint::equal(color, second.colors()[cell]), "mosaic nucleation is deterministic");
+                require(paint::equal(color, paint::picker_color(mode, coordinates)),
+                        "mosaic cell must stay in its own hue slice");
+                require(first.cell_at(coordinates.saturation, coordinates.level) == cell,
+                        "every mosaic cell is independently pickable");
+                saturated += coordinates.saturation >= 0.6;
+                neutral_side += coordinates.saturation <= 0.2;
+            }
+            require(unique.size() == 96, "each hue must provide 96 distinct colors");
+            require(saturated > neutral_side, "mosaic offers more saturated cells than near-neutral cells");
+            require(paint::equal(first.nearest({0, 0, 0, 37}), {0, 0, 0, 37}) &&
+                        paint::equal(first.nearest({255, 255, 255, 193}), {255, 255, 255, 193}),
+                    "mosaic preserves black, white and alpha");
         }
     }
-    require(unique.size() <= 96 && unique.size() > 12, "mosaic does not expose bounded useful palette");
     paint::Image image;
     image.reset(5, 5, {160, 100, 90, 255});
     image.set(2, 2, {255, 255, 255, 255});
@@ -109,13 +123,21 @@ void test_perceptual_tools() {
     palette.load();
     require(palette.occupied == 0x8001 && palette.colors[15].r == 150 && palette.colors[16].r == 255,
             "legacy custom palette migration failed");
-    palette.store(29, {7, 8, 9, 10});
+    palette.store(28, {7, 8, 9, 10});
     paint::CustomColors reloaded;
     reloaded.storage_path = path.string();
     reloaded.load();
-    require((reloaded.occupied & (1U << 29)) && paint::equal(reloaded.colors[29], {7, 8, 9, 10}) &&
+    require((reloaded.occupied & (1U << 28)) && paint::equal(reloaded.colors[28], {7, 8, 9, 10}) &&
                 reloaded.colors[15].r == 150,
-            "30-slot custom palette persistence lost colors or occupancy");
+            "29-slot custom palette persistence lost colors or occupancy");
+    const std::uint32_t occupied = reloaded.occupied;
+    bool rejected = false;
+    try {
+        reloaded.store(29, {1, 2, 3, 4});
+    } catch (const std::out_of_range&) {
+        rejected = true;
+    }
+    require(rejected && reloaded.occupied == occupied, "transparency slot cannot consume a custom color");
     std::filesystem::remove(path);
 }
 void test_transformative_brushes() {
@@ -198,6 +220,24 @@ void test_transformative_brushes() {
     second.segment(b, {60, 30}, {80, 30}, ink, true);
     require(std::memcmp(a.pixels.data(), b.pixels.data(), a.pixels.size() * 4) == 0,
             "spray depends on pointer event segmentation");
+    const paint::Brush dry_media[] = {paint::Brush::Pencil, paint::Brush::Crayon, paint::Brush::Pastel,
+                                      paint::Brush::Charcoal};
+    for (std::size_t index = 0; index < std::size(dry_media); ++index) {
+        paint::Image single, divided;
+        single.reset(100, 60, {0, 0, 0, 0});
+        divided = single;
+        ink.brush = dry_media[index];
+        paint::DynamicBrushStroke full, split;
+        full.segment(single, {20, 30}, {80, 30}, ink, false);
+        split.segment(divided, {20, 30}, {40, 30}, ink, false);
+        split.segment(divided, {40, 30}, {60, 30}, ink, false);
+        split.segment(divided, {60, 30}, {80, 30}, ink, false);
+        require(std::equal(single.pixels.begin(), single.pixels.end(), divided.pixels.begin(), paint::equal),
+                "dry brush coverage depends on pointer event segmentation");
+        split.segment(divided, {80, 30}, {80, 30}, ink, false);
+        require(std::equal(single.pixels.begin(), single.pixels.end(), divided.pixels.begin(), paint::equal),
+                "stationary dry brush events accumulate extra pigment");
+    }
     std::set<std::string> colors;
     for (std::size_t pixel = 0; pixel < a.pixels.size(); ++pixel) {
         if (a.pixels[pixel].a) {
@@ -816,12 +856,12 @@ void test_guides_masks_and_path_swap() {
     source.set(6, 7, {246, 248, 249, 255});
     const std::vector<paint::Point> loop{{4, 4}, {36, 4}, {36, 36}, {4, 36}};
     paint::SelectionMask mask = paint::tighten_lasso(source, loop, false);
-    require(mask.coverage.size() == 32 * 32 && mask.coverage[8 * 32 + 8] == 255 &&
-                mask.coverage[16 * 32 + 16] == 0 && mask.coverage[3 * 32 + 2] == 0,
+    require(mask.bounds.x == 10 && mask.bounds.y == 10 && mask.bounds.w == 20 && mask.bounds.h == 20 &&
+                mask.coverage[2 * 20 + 2] == 255 && mask.coverage[10 * 20 + 10] == 0,
             "tight lasso retains the ring, excludes its hole, and rejects near-white JPEG flecks");
     paint::SelectionMask hole = paint::tighten_lasso(source, loop, true);
-    require(hole.coverage[16 * 32 + 16] == 255 && hole.coverage[8 * 32 + 8] == 0 &&
-                hole.coverage[2 * 32 + 2] == 0,
+    require(hole.bounds.x == 16 && hole.bounds.y == 16 && hole.bounds.w == 8 && hole.bounds.h == 8 &&
+                hole.coverage[4 * 8 + 4] == 255,
             "inner-void lasso selects only the enclosed center background");
     paint::Document lifted;
     lifted.new_image(4, 1);

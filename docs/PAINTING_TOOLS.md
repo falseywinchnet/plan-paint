@@ -4,7 +4,9 @@
 
 Open the Brushes arrow to choose **Additive**, **Mix**, or **Heal**. The tool tab exposes settings for the selected family. Primary and Alt retain their separate colors and materials.
 
-Additive brushes deposit paint. Calligraphy changes the tip, oil and bristle produce directional strands, and crayon, pencil, watercolor, pastel and charcoal use different grain and deposition profiles. Spray can uses a dense center and a soft falloff, with small lightness variations and smaller color variations in OKLab. Its **Glitter** checkbox adds fine facets and sparse bright glints. Brush-only dynamics do not change the materials used to fill shapes or paths.
+Additive brushes deposit paint. Calligraphy changes the tip, oil and bristle produce directional strands, and crayon, pencil, watercolor, pastel and charcoal use different grain and deposition profiles. Spray can uses a dense center and a soft falloff, with small lightness variations and smaller color variations in OKLab. Its **Glitter** checkbox adds fine facets and sparse bright glints. Natural pencil has fine, firm tooth; crayon has coarse wax contact and a crisp edge; soft pastel has a chalky body and feathered rim; charcoal has broken powder and a softer falloff. Their coverage is retained per stroke so overlapping dabs do not flatten all four into the same opaque mark. The small Home **Pencil** always uses a solid one-pixel tip, independent of the last brush and pattern.
+
+Brush-only dynamics do not change the materials used to fill shapes or paths.
 
 Mix brushes transform existing pixels. Choose Ripples, Glass tile, Wigner counterflow, Support braid, Support lens, Moving rooms, Holonomy, or Flux knots. Strength controls the blend with the original image; Scale controls the spatial period and Phase shifts the pattern. Each gesture samples an immutable starting image, so repeated pointer events over the same position do not repeatedly degrade the result.
 
@@ -18,19 +20,23 @@ Eraser offers Hard, Soft, Blur, Sharpen and Smudge. Blur and Sharpen use a local
 
 Capture a region with Stamp, then click or drag to place it. **Hardness** 1 retains the capture mask; lower settings feather inward from the chosen shape's boundary. The width, height, scale and angle controls remain available.
 
-**Add material** retains the current stamp and returns to capture mode. The retained stamp appears at half opacity while a new region is chosen. The new content is aligned to the retained stamp's size and contributes detail after local OKLab color correction; the retained silhouette remains. **Clear stamp** discards both the current stamp and a retained basis.
+**Add material** retains the current stamp and returns to capture mode. The retained stamp appears at half opacity while a new region is chosen. The new content is aligned to the retained stamp's size and contributes detail after local OKLab color correction. New opaque material can fill transparent parts of the captured stamp, extending its silhouette within the capture bounds. Moving this preview does not paint onto the source picture. **Clear stamp** discards both the current stamp and a retained basis.
 
 ## Guides and selection
 
-Guide is the drafting triangle beside Path. Click to add vertices; right-click or **Set guide** closes it. Drag a vertex to reshape it or drag inside a closed guide to move it. **Protect body** or the filled-square ribbon switch blocks the inside; when off, the boundary acts as a line stencil. **Clear guide** removes it.
+Guide is the drafting triangle beside Path. Click to add vertices. Clicking an earlier vertex connects back to it; clicking the first vertex closes the guide. Right-click or **Set guide** also closes it. Drag a vertex to reshape it or drag inside a closed guide to move it. **Protect body** or the filled-square ribbon switch blocks the inside; when off, the boundary acts as a line stencil. **Clear guide** removes it.
 
 A guide constrains Pencil, Brush, Fill and Stamp. It is display and editing state and never becomes exported artwork. Selection, Path, shapes, text, crop, cut, paste, resize, reshape and document resizing clear it. Changing atlas frames also clears it.
 
-Choose **Tightening lasso** or **Inner-void lasso** from the selection menu. Tightening compares the lasso boundary's background in OKLab, ignores small perceptual variations such as JPEG flecks, and retains the connected object nearest its center with a feathered edge. Inner-void starts from the center background and keeps its connected enclosed region. The lasso must surround the intended subject or void; it is a perceptual color selection, not semantic object recognition.
+Choose **Tightening lasso** or **Inner-void lasso** from the selection menu. Tightening compares the lasso boundary's background in OKLab, ignores small perceptual variations such as JPEG flecks, and retains the connected object nearest its center with a feathered edge. Inner-void starts inside the drawn loop and expands through similar connected pixels, beyond the loop, until it reaches the enclosing boundary. Draw around the intended subject for Tightening, or inside the intended void for Inner-void. These are perceptual color selections, not semantic object recognition.
+
+Selections retain animated dashed contours around every selected island and interior hole. Hold **Ctrl** while drawing another lasso to add that freeform region; hold **Alt** to subtract it. Both modifier operations use the exact drawn region regardless of the active lasso mode.
 
 With a selection active, choose Guide to protect its silhouette immediately. Selection-derived guides retain holes and feathered coverage until their vertices are edited.
 
 ## Paths
+
+An extending Path can snap back to any retained node. The preview shows the connecting segment; clicking commits it and ends that run. Click again to begin another run at an existing junction or a new point.
 
 In the Path arrow menu, choose **Swap segment**, then Bézier or Arc. Click an existing segment between active blue endpoints. Drag the controls to reshape it, then right-click to return to ordinary Path editing. The endpoints remain part of the path; Undo and Redo retain the active geometry.
 
@@ -50,15 +56,15 @@ The WordArt selector offers 3D extrusion, embossed edges and an OKLab gradient b
 
 ## Color and view
 
-The ribbon palette button cycles Basic, Custom and Themed, with 30 slots in each set. The color dialog contains the 30 custom slots; existing 16-color preferences migrate automatically.
+The ribbon palette button cycles Basic, Custom and Themed. Custom contains 29 saved colors plus a permanent **Transparency** swatch, shown as a red slash on white. Existing 16-color and 30-color preferences migrate automatically; the first 29 saved colors are retained. Basic and Themed keep their 30 colors.
 
-Choose RGB or OKHSL above the color plane. The RGB view uses hue, saturation and value to choose sRGB colors; OKHSL uses the perceptual picker conversion by Björn Ottosson. Numeric RGB, alpha, hexadecimal and OKLab controls remain available. **Mosaic** maps the plane to 96 deterministic colors through a perceptual Voronoi palette and coarsens hue selection. Each color space has its own fixed palette.
+Choose the side-by-side **RGB** or **OKHSL** button above the color plane. The RGB view uses hue, saturation and value to choose sRGB colors; OKHSL uses the perceptual picker conversion by Björn Ottosson. Numeric RGB, alpha, hexadecimal and OKLab controls remain available. **Mosaic** divides the existing rectangle into 96 deterministic, outlined cells for each of 24 hue positions in each color space. The compact lattice devotes more cells to saturation and larger cells to near-neutrals; click a cell to choose its color. Seven neutral anchors include black and white. The [mosaic design](COLOR_MOSAIC.md) explains the objective and its limits.
 
 Themed colors form ten columns of Primary, Alt and accent: Glue, Phosphor, Camo, Royal, Afterglow, Arcade, Lagoon, Porcelain, Bordeaux and Ochre. Hover a themed swatch for its theme and position.
 
 Eyedropper defaults to Exact pixel. Small average samples 5×5 pixels; Representative rejects isolated light and dark flecks in that neighborhood. Its optional local lens and the Magnifier use a round, cursor-centered 8× view.
 
-Settings retain the default canvas surround and add green felt. The ribbon and status bar resize with the window, down to an 800-pixel client width.
+Settings offer the default canvas surround or green felt. **Transparency display** chooses Checkerboard or a configurable solid color, with pink as the initial solid choice. This changes only the view; exported RGBA pixels remain unchanged. The ribbon and status bar resize with the window, down to an 800-pixel client width.
 
 ## Sources and implementation scope
 
