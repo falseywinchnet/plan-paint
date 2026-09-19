@@ -260,13 +260,14 @@ std::string svg_local_name(const char* name) {
     const char* colon = std::strchr(name, ':');
     return colon ? colon + 1 : name;
 }
+bool svg_css_space(char value) {
+    return value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == '\f';
+}
 bool svg_css_has_filter(std::string_view text) {
-    const auto space = [](char value) {
-        return value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == '\f';
-    };
     constexpr std::string_view property = "filter";
     for (std::size_t offset = 0; offset + property.size() <= text.size(); ++offset) {
-        if (offset != 0 && text[offset - 1] != ';' && text[offset - 1] != '{' && !space(text[offset - 1])) {
+        if (offset != 0 && text[offset - 1] != ';' && text[offset - 1] != '{' &&
+            !svg_css_space(text[offset - 1])) {
             continue;
         }
         bool matches = true;
@@ -281,7 +282,7 @@ bool svg_css_has_filter(std::string_view text) {
             continue;
         }
         std::size_t colon = offset + property.size();
-        while (colon < text.size() && space(text[colon])) {
+        while (colon < text.size() && svg_css_space(text[colon])) {
             ++colon;
         }
         if (colon < text.size() && text[colon] == ':') {

@@ -60,6 +60,7 @@ std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width
         }
     }
     std::vector<Point> largest;
+    double largest_area = 0;
     while (!edges.empty()) {
         const int first = (*edges.begin()).first;
         int current = first;
@@ -73,7 +74,13 @@ std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width
             current = (*found).second;
             edges.erase(found);
         } while (current != first);
-        if (loop.size() > largest.size()) {
+        double area = 0;
+        for (std::size_t index = 0; index < loop.size(); ++index) {
+            const Point a = loop[index], b = loop[(index + 1) % loop.size()];
+            area += a.x * b.y - b.x * a.y;
+        }
+        if (std::abs(area) > largest_area) {
+            largest_area = std::abs(area);
             largest = std::move(loop);
         }
     }

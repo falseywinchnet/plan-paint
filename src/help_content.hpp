@@ -23,7 +23,10 @@ inline constexpr HelpTopic help_topics[] = {
      "standard sizes. Save to PNG or another ordinary image format exports the current icon "
      "image.\n\nSVG is rasterized on import. AVIF and macOS HEIC/HEIF also import to the canvas; "
      "Save chooses PNG, JPEG, BMP, TIFF, TGA, ICO or CUR. WebP and AVIF are import-only; GIF is not "
-     "supported. Animated WebP and APNG are also rejected."},
+     "supported. Animated WebP and APNG are also rejected.\n\nWarp edges wraps brush strokes across "
+     "opposite edges and repeats neighboring copies for seam inspection. Preserve transparency keeps "
+     "every alpha value while repainting. Right-click another frame to overlay it at 50% without "
+     "changing the current frame or exported image; Dismiss reference removes it."},
     {"1. Make your first picture",
      "Click Pencil in Home, then hold the mouse button and move it on the white paper. Let go to "
      "stop. Try Brushes for wider marks. Pick a little colored square to change your "
@@ -31,7 +34,8 @@ inline constexpr HelpTopic help_topics[] = {
      "press Z. On a Mac, Command+Z works too. Redo brings a change back.\n\n"
      "Click the selected ribbon tab to collapse it; click again or choose another tab to reopen. "
      "Wheel and trackpad scrolling stop when the viewport center reaches a canvas edge. "
-     "File > Settings saves a scroll-distance multiplier in screen pixels, adjusted for zoom.",
+     "File > Settings saves a scroll-distance multiplier in screen pixels, adjusted for zoom, and "
+     "offers green felt behind the canvas alongside the default surface.",
      true},
     {"2. Colors, brushes and patterns",
      "Primary and Alt each have their own color, brush and pattern. Select either box, then choose a "
@@ -42,10 +46,17 @@ inline constexpr HelpTopic help_topics[] = {
      "transparent; use it for Alt to leave the second color of a two-color pattern untouched. "
      "Enabled turns an outline or fill on or off. Smooth lines switches between antialiased and "
      "crisp pixel edges. Size sets stroke width.\n\n"
-     "The twelve brushes include round, calligraphy nibs, airbrush, oil, crayon, marker, natural pencil, "
+     "The twelve brushes include round, calligraphy nibs, spray can, oil, crayon, marker, natural pencil, "
      "watercolor, bristles, soft pastel and charcoal. Materials also offers dots, stripes, checks, "
      "bricks, woven cloth, houndstooth and seven dither densities, plus grain, paper tooth and load.\n\n"
-     "Edit colors opens RGB, hex and OKLab controls. Custom colors remembers sixteen saved colors "
+     "The Brushes arrow selects Additive, Mix or Heal. Mix paints local distortions onto existing "
+     "pixels; its Tool tab offers effects, strength, scale and phase. Heal first captures a source, "
+     "then paints from it with an aligned offset. Hardness 1 copies it; softer settings blend its "
+     "detail with local OKLab color correction. Set source chooses another origin. Additive spray "
+     "offers Fine glitter. Pencil and Brushes have a configurable Stabilizer to smooth the stroke.\n\n"
+     "The palette button cycles Basic, Custom and Themed, each with 30 colors. Themed columns contain "
+     "Primary, Alt and accent. Edit colors offers RGB or OKHSL picking, numeric RGB, hex and OKLab. "
+     "Mosaic reduces the picker to 96 repeatable colors. Its custom pane remembers 30 saved colors "
      "between launches. Choose a slot, set its color and click Add to custom colors. OK applies the "
      "choice; Cancel keeps the original."},
     {"3. Fill, erase, pick and magnify",
@@ -55,8 +66,11 @@ inline constexpr HelpTopic help_topics[] = {
      "and set its diameter. Its round pink preview shows the area it will touch. Hard clears every "
      "touched pixel to transparency. Soft erases most strongly under the center and tapers toward the "
      "edge. "
-     "Undo restores erased marks. The eyedropper picks a color from the picture.\n\nThe magnifying glass "
-     "shows a floating 4× pixel preview beside the pointer. Click to zoom in around that point; right-click "
+     "Blur, Sharpen and Smudge work on existing pixels instead of clearing them. Undo restores changes. "
+     "The eyedropper defaults to Exact pixel; Small average and Representative sample a 5×5 region. "
+     "Representative rejects isolated light and dark flecks. Its optional lens previews the sample.\n\n"
+     "The magnifying glass shows a round 8× pixel preview centered on the pointer. Click to zoom in "
+     "around that point; right-click "
      "zooms "
      "out. "
      "The bottom slider goes up to 1600%. The pencil previews the exact pixel under its tip before you "
@@ -82,7 +96,9 @@ inline constexpr HelpTopic help_topics[] = {
      "when new ones overlap them. Undo and Redo preserve the editable geometry. Escape or changing "
      "tools finishes the paths and releases every node while leaving the drawing in place.\n\n"
      "Continuous path keeps each run open. Uncheck it to add a closing edge. An ordinary polygon "
-     "closes when you click its first corner."},
+     "closes when you click its first corner.\n\nPath > Swap segment offers Bézier and Arc. Choose one, "
+     "click an active segment between blue junctions, and drag its controls. Right-click to return to "
+     "ordinary Path editing."},
     {"6. Select, move, copy and paste",
      "Select draws a rectangle around part of the picture. The little arrow beneath Select also offers "
      "Free-form selection: draw a lasso around an object. Drag inside the selected area to move it. Arrow "
@@ -93,7 +109,15 @@ inline constexpr HelpTopic help_topics[] = {
      "exactly equal to Color 2. Crop keeps only the selected rectangle. With nothing selected, Crop first "
      "switches to Select so you can mark the area. Delete removes selected content. Ctrl+A followed by "
      "Delete clears the whole picture without a drag. "
-     "Without a selection, Delete clears the canvas to Color 2."},
+     "Without a selection, Delete clears the canvas to Color 2.\n\nTightening lasso follows the nearest "
+     "connected object around the lasso center using perceptual color differences, with feathered "
+     "edges and tolerance for small JPEG variations. Inner-void lasso selects a connected background "
+     "region enclosed inside a shape.\n\nGuide, the drafting triangle beside Path, protects artwork "
+     "without entering the picture. Click its corners and right-click to set it; drag its nodes or "
+     "body to move it. Protect body, also controlled by the filled square, blocks the inside. "
+     "Otherwise only its lines block Pencil, Brush, Fill and Stamp. Choose Guide with a selection "
+     "to protect its silhouette directly. Clear guide removes it. Selection, Path, shapes, text, "
+     "cut, paste, crop, resize, reshape and changing atlas frames clear the guide."},
     {"7. The rubber stamp",
      "Choose Stamp at the right of Home. Open Stamp tools and pick one of 39 masks, including stars, arrows, "
      "hearts, callouts, curves and the original circle, pill, square and rectangle. "
@@ -106,7 +130,9 @@ inline constexpr HelpTopic help_topics[] = {
      "it off to include that background color. The area outside the chosen mask is always transparent. "
      "Right-click or press Escape to clear the old sample and reset its rotation and scale, even while "
      "it is preparing. The next canvas click picks another. Stamp > Lift a new stamp does the same; "
-     "the Stamp ribbon holds its size and angle controls."},
+     "the Stamp ribbon holds its size and angle controls. Hardness 1 keeps the exact mask; lower values "
+     "feather its edge. Stamp > Add material retains the old stamp at half opacity while you capture "
+     "new content, then heals that detail into the retained silhouette."},
     {"8. Resize, rotate and the canvas",
      "Resize accepts percentages or pixel dimensions. Keep Maintain aspect ratio checked to avoid "
      "stretching. Scale artwork uses CONV* to reconstruct the image; turn it off to change only "
@@ -141,7 +167,11 @@ inline constexpr HelpTopic help_topics[] = {
      "Word wrap moves whole words onto the next line; switch it off for explicit line breaks only. "
      "Color 1 colors the letters; Color 2 colors an opaque background. Place text "
      "stamps the words into the picture. Cancel text discards them. Undo removes placed text if "
-     "you change your mind. Ctrl+Enter places text; Escape cancels it."},
+     "you change your mind. Ctrl+Enter places text; Escape cancels it.\n\nDynaPuff, Bubble Sans, Anton and "
+     "Titan One are bundled poster fonts. Outline letters draws Primary around the contours and "
+     "counter edges, with Alt filling the letter body. Adjust the outline width. WordArt offers "
+     "extrusion, embossing and a Primary-to-Alt gradient. Skew, Perspective and Bend transform the "
+     "editable text preview; Reset restores plain geometry and treatment."},
     {"11. Open, save and print",
      "File > Open replaces the picture with an image from disk. Save writes your picture. Save as lets "
      "you choose a new name or format. PNG, TIFF and TGA can preserve transparency. JPEG is smaller for "

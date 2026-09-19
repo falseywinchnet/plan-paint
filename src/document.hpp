@@ -22,12 +22,20 @@ enum class Tool {
     Reshape,
     Guide
 };
+struct SelectionSource {
+    Image image;
+    int x = 0, y = 0;
+    bool feathered = false, transparent = false;
+    Color secondary;
+};
 struct FloatingSelection {
     Image image;
     int x = 0, y = 0;
     bool active = false;
     std::vector<std::uint8_t> coverage;
     std::vector<Point> outline;
+    std::shared_ptr<const SelectionSource> source;
+    void composite_onto(Image& target) const;
 };
 // Every run shares an immutable session background. Retained node edits replay
 // the runs in order, preserving their styles and the artwork underneath.

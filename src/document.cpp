@@ -3,6 +3,34 @@
 #include <algorithm>
 #include <stdexcept>
 namespace paint {
+void FloatingSelection::composite_onto(Image& target) const {
+    // Putting an untouched lifted selection back must preserve its original
+    // RGBA bytes, including feathered edges and invisible RGB under alpha zero.
+    bool original = source && x == (*source).x && y == (*source).y && image.width == (*source).image.width &&
+                    image.height == (*source).image.height && coverage.size() == image.pixels.size();
+    for (std::size_t index = 0; original && index < image.pixels.size(); ++index) {
+        Color expected = (*source).image.pixels[index];
+        if ((*source).feathered) {
+            expected.a = static_cast<std::uint8_t>((expected.a * coverage[index] + 127) / 255);
+        }
+        if (!coverage[index] || ((*source).transparent && equal(expected, (*source).secondary))) {
+            expected = {0, 0, 0, 0};
+        }
+        original = equal(expected, image.pixels[index]);
+    }
+    if (!original) {
+        composite(target, image, x, y);
+        return;
+    }
+    for (int row = 0; row < image.height; ++row) {
+        for (int column = 0; column < image.width; ++column) {
+            const std::size_t index = static_cast<std::size_t>(row) * image.width + column;
+            if (coverage[index]) {
+                target.set(x + column, y + row, (*source).image.pixels[index]);
+            }
+        }
+    }
+}
 Document::Document() {
     image.reset(960, 640);
 }
@@ -91,7 +119,7 @@ void Document::paste(const Image& pasted, int x, int y) {
         composite(larger, image, 0, 0);
         image = std::move(larger);
     }
-    selection = {pasted, x, y, true, std::vector<std::uint8_t>(pasted.pixels.size(), 1), {}};
+    selection = {pasted, x, y, true, std::vector<std::uint8_t>(pasted.pixels.size(), 1), {}, {}};
     tool = Tool::Select;
 }
 void Document::select(Rect bounds, const std::vector<Point>& lasso) {
@@ -109,6 +137,8 @@ void Document::select(Rect bounds, const std::vector<Point>& lasso) {
         return;
     }
     Image lifted = cropped(image, bounds);
+    const std::shared_ptr<const SelectionSource> source = std::make_shared<SelectionSource>(
+        SelectionSource{lifted, bounds.x, bounds.y, false, transparent_selection, ink.secondary});
     std::vector<std::uint8_t> coverage(lifted.pixels.size(), 0);
     checkpoint();
     for (int y = 0; y < bounds.h; ++y) {
@@ -125,7 +155,7 @@ void Document::select(Rect bounds, const std::vector<Point>& lasso) {
             }
         }
     }
-    selection = {std::move(lifted), bounds.x, bounds.y, true, std::move(coverage), {}};
+    selection = {std::move(lifted), bounds.x, bounds.y, true, std::move(coverage), {}, source};
     selection.outline = lasso;
     for (Point& point : selection.outline) {
         point.x -= bounds.x;
@@ -142,6 +172,8 @@ void Document::select_mask(const SelectionMask& mask) {
     commit_curve();
     commit_selection();
     Image lifted = cropped(image, mask.bounds);
+    const std::shared_ptr<const SelectionSource> source = std::make_shared<SelectionSource>(
+        SelectionSource{lifted, mask.bounds.x, mask.bounds.y, true, false, ink.secondary});
     checkpoint();
     for (int y = 0; y < mask.bounds.h; ++y) {
         for (int x = 0; x < mask.bounds.w; ++x) {
@@ -158,13 +190,13 @@ void Document::select_mask(const SelectionMask& mask) {
             }
         }
     }
-    selection = {std::move(lifted), mask.bounds.x, mask.bounds.y, true, mask.coverage, mask.outline};
+    selection = {std::move(lifted), mask.bounds.x, mask.bounds.y, true, mask.coverage, mask.outline, source};
 }
 void Document::commit_selection() {
     if (!selection.active) {
         return;
     }
-    composite(image, selection.image, selection.x, selection.y);
+    selection.composite_onto(image);
     selection = {};
 }
 void Document::delete_selection() {
@@ -205,7 +237,7 @@ void Document::invert_selection() {
             lifted.pixels[index] = {0, 0, 0, 0};
         }
     }
-    selection = {std::move(lifted), 0, 0, true, std::move(coverage), {}};
+    selection = {std::move(lifted), 0, 0, true, std::move(coverage), {}, {}};
 }
 void Document::crop() {
     if (atlas.kind == AtlasKind::Sheet) {
@@ -469,7 +501,7 @@ void Document::sync_path() {
 Image Document::visible_image() const {
     Image result = image;
     if (selection.active) {
-        composite(result, selection.image, selection.x, selection.y);
+        selection.composite_onto(result);
     }
     return result;
 }

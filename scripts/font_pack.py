@@ -10,6 +10,7 @@ def copy_fonts(sdk, destination):
     destination.mkdir(parents=True)
     for name in (ROOT / "packaging/fonts.txt").read_text().splitlines():
         shutil.copy2(sdk / "share/GUIForms/fonts" / name, destination / name)
-    for source in (ROOT / "assets/fonts/cairo-unicode").iterdir():
-        if source.is_file():
-            shutil.copy2(source, destination / source.name)
+    for directory in ("cairo-unicode", "poster"):
+        for source in sorted((ROOT / "assets/fonts" / directory).iterdir()):
+            if source.is_file():
+                shutil.copy2(source, destination / source.name)

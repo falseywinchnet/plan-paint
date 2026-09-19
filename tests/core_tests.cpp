@@ -785,6 +785,22 @@ void test_path_history() {
             "transform undo lost the source drawing or restored obsolete path controls");
 }
 void test_guides_masks_and_path_swap() {
+    // A narrow comb has more perimeter than the main square but less area.
+    std::vector<std::uint8_t> islands(80 * 40, 0);
+    for (int y = 5; y < 25; ++y) {
+        for (int x = 5; x < 25; ++x) {
+            islands[y * 80 + x] = 255;
+        }
+    }
+    for (int x = 35; x < 75; ++x) {
+        islands[5 * 80 + x] = 255;
+        for (int y = 6; y < (x % 2 == 0 ? 15 : 6); ++y) {
+            islands[y * 80 + x] = 255;
+        }
+    }
+    const std::vector<paint::Point> outer = paint::mask_outline(islands, 80, 40);
+    require(outer.size() == 4 && paint::inside_polygon(outer, 15, 15),
+            "guide outline chooses the largest area rather than a smaller jagged island");
     paint::Image source;
     source.reset(40, 40, {248, 248, 248, 255});
     for (int y = 10; y < 30; ++y) {
@@ -807,6 +823,31 @@ void test_guides_masks_and_path_swap() {
     require(hole.coverage[16 * 32 + 16] == 255 && hole.coverage[8 * 32 + 8] == 0 &&
                 hole.coverage[2 * 32 + 2] == 0,
             "inner-void lasso selects only the enclosed center background");
+    paint::Document lifted;
+    lifted.new_image(4, 1);
+    lifted.image.pixels = {{19, 35, 97, 121}, {70, 90, 110, 255}, {13, 22, 33, 0}, {7, 8, 9, 255}};
+    const paint::Image original = lifted.image;
+    paint::SelectionMask feather;
+    feather.bounds = {0, 0, 4, 1};
+    feather.coverage = {255, 87, 255, 0};
+    lifted.select_mask(feather);
+    paint::Image visible = lifted.visible_image();
+    require(std::equal(visible.pixels.begin(), visible.pixels.end(), original.pixels.begin(), paint::equal),
+            "untouched feathered selection previews original RGBA bytes");
+    lifted.commit_selection();
+    require(std::equal(lifted.image.pixels.begin(), lifted.image.pixels.end(), original.pixels.begin(),
+                       paint::equal),
+            "placing a feathered selection preserves partial alpha and hidden RGB");
+    lifted.select_mask(feather);
+    lifted.selection.image.set(1, 0, {255, 0, 0, 255});
+    lifted.commit_selection();
+    require(lifted.image.get(1, 0).r == 255, "editing selected pixels prevents original-pixel restoration");
+    lifted.replace(original, "");
+    lifted.select_mask(feather);
+    lifted.selection.x = 1;
+    lifted.commit_selection();
+    require(paint::equal(lifted.image.get(0, 0), lifted.ink.secondary),
+            "moving a feathered selection leaves its cut source behind");
     paint::Guide guide;
     guide.nodes = {{9, 9}, {31, 9}, {31, 31}, {9, 31}};
     guide.closed = true;

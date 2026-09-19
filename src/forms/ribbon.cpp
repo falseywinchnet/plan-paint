@@ -1014,6 +1014,10 @@ void Ribbon::arrange(gf::Rect bounds) {
         rectangle.width *= button_scale;
         gf::Button& control = *buttons_[i];
         const std::string id(control.stable_id().value());
+        if (id == "help") {
+            rectangle.width = std::max(24.0, rectangle.width);
+            rectangle.x = bounds.width - rectangle.width - 4;
+        }
         if (!control.image_key().empty() && !id.starts_with("material-brush-") &&
             !id.starts_with("r-pattern-")) {
             const int icon = std::stoi(control.image_key());

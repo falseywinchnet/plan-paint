@@ -1674,6 +1674,9 @@ void compact_ribbon_keeps_icons_and_fields() {
     }
     require((*window.find("home-tab")).committed_arranged_bounds().x >= 56,
             "compact Home tab remains clear of the File menu");
+    require((*window.find("help")).committed_arranged_bounds().right() <= 800 &&
+                (*window.find("help")).committed_arranged_bounds().width >= 24,
+            "compact Help button remains fully visible and usable");
     require((*window.find("dimensions-status")).committed_arranged_bounds().right() <=
                 (*window.find("status-zoom-reset")).committed_arranged_bounds().x,
             "compact status dimensions do not overlap the zoom controls");
@@ -1704,6 +1707,17 @@ void guide_atlas_and_text_effect_interactions() {
     editor.choose_tool(paint::Tool::Guide);
     require(editor.guide.closed && !editor.document.selection.active,
             "selection converts directly to guide polygon");
+    editor.choose_tool(paint::Tool::Lasso);
+    editor.document.image.set(11, 11, {73, 92, 121, 111});
+    const paint::Image guide_source = editor.document.image;
+    paint::SelectionMask feather;
+    feather.bounds = {10, 10, 3, 3};
+    feather.coverage = {0, 64, 0, 64, 255, 64, 0, 64, 0};
+    editor.document.select_mask(feather);
+    editor.choose_tool(paint::Tool::Guide);
+    require(std::equal(editor.document.image.pixels.begin(), editor.document.image.pixels.end(),
+                       guide_source.pixels.begin(), paint::equal),
+            "selection-to-guide leaves feathered source pixels byte-identical");
     editor.execute("atlas-grid");
     window.perform_layout();
     (*std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("atlas-0"))).set_value(2);
