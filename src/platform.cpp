@@ -52,7 +52,7 @@ void MouseCursorState::update(int requested) {
 }
 static const SDL_DialogFileFilter image_filters[] = {
     {"All supported images",
-     "png;jpg;jpeg;bmp;gif;tif;tiff;tga;webp;psd;pnm;ppm;pgm;hdr;pic;avif;svg;ico;cur;heic;heif"}};
+     "png;jpg;jpeg;bmp;tif;tiff;tga;webp;avif;svg;ico;cur;heic;heif"}};
 static const SDL_DialogFileFilter save_filters[] = {{"PNG image", "png"},
                                                     {"JPEG picture", "jpg;jpeg"},
                                                     {"Bitmap picture", "bmp"},

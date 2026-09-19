@@ -4,16 +4,22 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 #include "renderer.hpp"
+#include "safe_file.hpp"
 #include <SDL3/SDL_main.h>
 #include <cmath>
 #include <cstring>
 #include <exception>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <numbers>
+#include <sstream>
 
 int main(int argc, char** argv) {
+    if (paint::elevated_process()) {
+        std::cerr << "Rainstar Paint refuses to run with administrator, root or sudo privileges. Open it as "
+                     "your normal user so an untrusted image cannot obtain administrator access.\n";
+        return 1;
+    }
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::cerr << SDL_GetError() << '\n';
         return 1;
@@ -235,7 +241,7 @@ int main(int argc, char** argv) {
                     measured_focused += flags & SDL_WINDOW_INPUT_FOCUS ? 1 : 0;
                     double elapsed = (SDL_GetTicks() - measurement_start) / 1000.0;
                     if (elapsed >= idle_report_seconds) {
-                        std::ofstream report(idle_report_path);
+                        std::ostringstream report;
                         report << "{\n  \"wall_seconds\": " << elapsed
                                << ",\n  \"gui_frames\": " << measured_frames
                                << ",\n  \"gpu_presentations\": " << measured_presents
@@ -243,9 +249,10 @@ int main(int argc, char** argv) {
                                << ",\n  \"focused_frames\": " << measured_focused
                                << ",\n  \"framebuffer_scale_x\": " << draw_data.FramebufferScale.x
                                << ",\n  \"framebuffer_scale_y\": " << draw_data.FramebufferScale.y << "\n}\n";
-                        if (!report) {
-                            throw std::runtime_error("Could not write the idle measurement report.");
-                        }
+                        const std::string encoded = report.str();
+                        const std::vector<std::uint8_t> bytes(encoded.begin(), encoded.end());
+                        paint::write_file_atomic(bytes, idle_report_path,
+                                                 "Could not write the idle measurement report.");
                         app.running = false;
                     }
                 }

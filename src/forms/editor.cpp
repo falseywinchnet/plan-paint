@@ -10,6 +10,7 @@
 #include <functional>
 #include <gui_forms/host.hpp>
 #include <iomanip>
+#include <limits>
 #include <numbers>
 #include <sstream>
 #include <stdexcept>
@@ -56,6 +57,24 @@ Rect rectangle(Point start, Point end) {
 bool point_inside(Rect rectangle, Point point) {
     return point.x >= rectangle.x && point.y >= rectangle.y && point.x < rectangle.x + rectangle.w &&
            point.y < rectangle.y + rectangle.h;
+}
+Image validated_clipboard_image(const gf::HostImage& source) {
+    const std::uint64_t pixels = static_cast<std::uint64_t>(source.width) * source.height;
+    const std::uint64_t row_bytes = static_cast<std::uint64_t>(source.width) * sizeof(Color);
+    if (source.width == 0 || source.height == 0 || source.width > 16384 || source.height > 16384 ||
+        pixels > 64000000 || source.row_bytes < row_bytes ||
+        source.row_bytes > std::numeric_limits<std::size_t>::max() ||
+        (source.height > 0 && source.row_bytes > source.pixels.size() / source.height)) {
+        throw std::runtime_error("The clipboard image has invalid or unsafe pixel geometry.");
+    }
+    Image image;
+    image.reset(static_cast<int>(source.width), static_cast<int>(source.height));
+    for (int y = 0; y < image.height; ++y) {
+        std::memcpy(image.pixels.data() + static_cast<std::size_t>(y) * image.width,
+                    source.pixels.data() + static_cast<std::size_t>(y) * source.row_bytes,
+                    static_cast<std::size_t>(image.width) * sizeof(Color));
+    }
+    return image;
 }
 } // namespace
 PaintCanvas::PaintCanvas(gf::StableId id, std::weak_ptr<Editor> editor)
@@ -1316,13 +1335,7 @@ void Editor::paste() {
     if (!result.has_image) {
         return;
     }
-    Image image;
-    image.reset(result.image.width, result.image.height);
-    for (int y = 0; y < image.height; ++y) {
-        std::memcpy(image.pixels.data() + static_cast<std::size_t>(y) * image.width,
-                    result.image.pixels.data() + static_cast<std::size_t>(y) * result.image.row_bytes,
-                    static_cast<std::size_t>(image.width) * 4);
-    }
+    Image image = validated_clipboard_image(result.image);
     finish_controls();
     document.paste(image);
     if (window()) {

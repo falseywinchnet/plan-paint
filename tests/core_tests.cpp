@@ -7,6 +7,7 @@
 #include "guide.hpp"
 #include "material.hpp"
 #include "paint_tools.hpp"
+#include "safe_file.hpp"
 #include "text_session.hpp"
 #include <algorithm>
 #include <cmath>
@@ -17,6 +18,10 @@
 #include <numbers>
 #include <set>
 #include <stdexcept>
+#include <vector>
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 namespace {
 void require(bool value, const char* message) {
     if (!value) {
@@ -885,7 +890,7 @@ void test_codecs() {
     paint::Image image;
     image.reset(17, 13, {62, 147, 219, 255});
     image.set(4, 7, {197, 27, 55, 255});
-    const char* formats[] = {"png", "bmp", "tga", "tiff", "webp", "gif", "jpg"};
+    const char* formats[] = {"png", "bmp", "tga", "tiff", "webp", "jpg"};
     for (const char* format : formats) {
         std::filesystem::path file =
             std::filesystem::temp_directory_path() / (std::string("rainstar-codec-test.") + format);
@@ -893,7 +898,7 @@ void test_codecs() {
         paint::save_image(image, file.string()); // Replacing an existing picture must work too.
         paint::Image loaded = paint::load_image(file.string());
         require(loaded.width == 17 && loaded.height == 13, "codec dimensions failed");
-        if (std::string(format) != "jpg" && std::string(format) != "gif") {
+        if (std::string(format) != "jpg") {
             require(paint::equal(loaded.get(4, 7), image.get(4, 7)), "lossless codec failed");
         }
         std::filesystem::remove(file);
@@ -909,6 +914,103 @@ void test_codecs() {
                 "Unicode filename roundtrip failed");
         std::filesystem::remove(unicode);
     }
+    const std::filesystem::path gif = std::filesystem::temp_directory_path() / "rainstar-codec-test.gif";
+    paint::save_image(image, gif.string());
+    require(std::filesystem::file_size(gif) > 20, "GIF export failed");
+    bool gif_rejected = false;
+    try {
+        paint::load_image(gif.string());
+    } catch (const std::exception& exception) {
+        gif_rejected = std::string(exception.what()).find("not safe") != std::string::npos;
+    }
+    require(gif_rejected, "unsafe GIF decoder remained reachable");
+    std::filesystem::remove(gif);
+}
+void test_file_security() {
+    const std::filesystem::path directory =
+        std::filesystem::temp_directory_path() / "rainstar-file-security-tests";
+    std::filesystem::remove_all(directory);
+    std::filesystem::create_directories(directory);
+    const std::filesystem::path sentinel = directory / "sentinel.txt";
+    const std::filesystem::path destination = directory / "picture.bin";
+    {
+        std::ofstream output(sentinel);
+        output << "sentinel";
+    }
+#ifndef _WIN32
+    std::filesystem::create_symlink(sentinel, destination);
+    const std::vector<std::uint8_t> linked =
+        paint::read_regular_file_bounded(destination.string(), 64, "bounded symlink read failed");
+    require(std::string(linked.begin(), linked.end()) == "sentinel",
+            "bounded read did not follow a regular-file symlink");
+    const std::vector<std::uint8_t> replacement = {'p', 'a', 'i', 'n', 't'};
+    paint::write_file_atomic(replacement, destination.string(), "atomic write test failed");
+    require(!std::filesystem::is_symlink(destination), "atomic save retained a destination symlink");
+    std::ifstream sentinel_input(sentinel);
+    std::string sentinel_text;
+    sentinel_input >> sentinel_text;
+    require(sentinel_text == "sentinel", "atomic save followed a destination symlink");
+    const std::filesystem::path pipe = directory / "untrusted-pipe";
+    require(mkfifo(pipe.c_str(), 0600) == 0, "could not create file-type test pipe");
+    bool special_rejected = false;
+    try {
+        static_cast<void>(paint::read_regular_file_bounded(pipe.string(), 64, "special file rejected"));
+    } catch (const std::exception&) {
+        special_rejected = true;
+    }
+    require(special_rejected, "bounded read accepted a named pipe");
+#endif
+    const std::uint8_t gif[] = {'G', 'I', 'F', '8', '9', 'a'};
+    bool rejected = false;
+    try {
+        paint::decode_image(gif, sizeof(gif));
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected, "GIF signature reached stb_image");
+
+    std::vector<std::uint8_t> bmp(30, 0);
+    bmp[0] = 'B';
+    bmp[1] = 'M';
+    bmp[14] = 40;
+    bmp[28] = 8;
+    rejected = false;
+    try {
+        paint::decode_image(bmp.data(), bmp.size());
+    } catch (const std::exception& exception) {
+        rejected = std::string(exception.what()).find("24-bit or 32-bit") != std::string::npos;
+    }
+    require(rejected, "paletted BMP reached its unsafe decoder path");
+
+    const std::string image_svg =
+        "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'><image href='/etc/passwd' "
+        "width='10' height='10'/></svg>";
+    const std::vector<std::uint8_t> svg_bytes(image_svg.begin(), image_svg.end());
+    const std::filesystem::path svg_path = directory / "external.svg";
+    paint::write_file_atomic(svg_bytes, svg_path.string(), "SVG test write failed");
+    rejected = false;
+    try {
+        paint::load_image(svg_path.string());
+    } catch (const std::exception& exception) {
+        rejected = std::string(exception.what()).find("raster image elements") != std::string::npos;
+    }
+    require(rejected, "SVG external image resource remained reachable");
+
+    const std::filesystem::path ordinary_png = directory / "ordinary.png";
+    const std::filesystem::path disguised_heif = directory / "disguised.heic";
+    paint::Image ordinary;
+    ordinary.reset(4, 4, {31, 71, 191, 255});
+    paint::save_image(ordinary, ordinary_png.string());
+    const std::vector<std::uint8_t> png = paint::read_image_bytes(ordinary_png.string());
+    paint::write_file_atomic(png, disguised_heif.string(), "HEIF signature test write failed");
+    rejected = false;
+    try {
+        static_cast<void>(paint::load_image(disguised_heif.string()));
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected, "a non-HEIF file reached the native HEIF decoder");
+    std::filesystem::remove_all(directory);
 }
 } // namespace
 int main() {
@@ -929,7 +1031,8 @@ int main() {
         test_guides_masks_and_path_swap();
         test_text_treatments();
         test_codecs();
-        std::cout << "Color, CONV, editing and seven-format codec tests passed.\n";
+        test_file_security();
+        std::cout << "Color, CONV, editing, codecs and file-security tests passed.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

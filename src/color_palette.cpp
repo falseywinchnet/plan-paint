@@ -1,5 +1,6 @@
 #include "desktop.hpp"
 #include "paths.hpp"
+#include "safe_file.hpp"
 #include <algorithm>
 #include <fstream>
 #include <stdexcept>
@@ -84,12 +85,8 @@ void CustomColors::store(int slot, Color color) {
         bytes[offset + 2] = colors[index].b;
         bytes[offset + 3] = colors[index].a;
     }
-    std::ofstream output(path_from_utf8(storage_path), std::ios::binary | std::ios::trunc);
-    output.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-    output.close();
-    if (!output) {
-        throw std::runtime_error(
-            "The custom color is available now, but its preferences file could not be saved.");
-    }
+    const std::vector<std::uint8_t> encoded(bytes.begin(), bytes.end());
+    write_file_atomic(encoded, storage_path,
+                      "The custom color is available now, but its preferences file could not be saved.");
 }
 } // namespace paint

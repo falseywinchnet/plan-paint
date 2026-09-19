@@ -7,7 +7,6 @@
 #include <avif/avif.h>
 #include <cmath>
 #include <cstring>
-#include <filesystem>
 #include <lunasvg.h>
 #include <memory>
 #include <mutex>
@@ -26,6 +25,35 @@ const char* animation_error =
 std::uint32_t big32(const std::uint8_t* data) {
     return (std::uint32_t(data[0]) << 24) | (std::uint32_t(data[1]) << 16) | (std::uint32_t(data[2]) << 8) |
            data[3];
+}
+bool heif_brand(const std::uint8_t* brand) {
+    static const char accepted[][5] = {"heic", "heix", "hevc", "hevx",
+                                        "heim", "heis", "hevm", "hevs"};
+    for (std::size_t index = 0; index < std::size(accepted); ++index) {
+        if (std::memcmp(brand, accepted[index], 4) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+bool heif_signature(const void* data, std::size_t size) {
+    if (size < 16) {
+        return false;
+    }
+    const std::uint8_t* bytes = static_cast<const std::uint8_t*>(data);
+    const std::uint32_t box_size = big32(bytes);
+    if (box_size < 16 || box_size > size || std::memcmp(bytes + 4, "ftyp", 4) != 0) {
+        return false;
+    }
+    if (heif_brand(bytes + 8)) {
+        return true;
+    }
+    for (std::size_t offset = 16; offset + 4 <= box_size; offset += 4) {
+        if (heif_brand(bytes + offset)) {
+            return true;
+        }
+    }
+    return false;
 }
 void unpremultiply(Image& image) {
     for (std::size_t i = 0; i < image.pixels.size(); ++i) {
@@ -54,54 +82,6 @@ void reject_animation(const std::uint8_t* data, std::size_t size) {
             }
             offset += length + 12;
         }
-    } else if (size >= 13 && (std::memcmp(data, "GIF87a", 6) == 0 || std::memcmp(data, "GIF89a", 6) == 0)) {
-        std::size_t offset = 13 + ((data[10] & 128) ? 3u * (2u << (data[10] & 7)) : 0);
-        int frames = 0;
-        while (offset < size) {
-            unsigned marker = data[offset++];
-            if (marker == 0x3b) {
-                break;
-            }
-            if (marker == 0x2c) {
-                if (++frames > 1) {
-                    throw std::runtime_error(animation_error);
-                }
-                if (size - offset < 9) {
-                    throw std::runtime_error("GIF image descriptor is truncated.");
-                }
-                unsigned flags = data[offset + 8];
-                offset += 9;
-                if (flags & 128) {
-                    offset += 3u * (2u << (flags & 7));
-                }
-                if (offset >= size) {
-                    throw std::runtime_error("GIF image data is truncated.");
-                }
-                ++offset;
-            } else if (marker == 0x21) {
-                if (offset >= size) {
-                    throw std::runtime_error("GIF extension is truncated.");
-                }
-                ++offset;
-            } else {
-                throw std::runtime_error("GIF contains an invalid block.");
-            }
-            bool terminated = false;
-            while (offset < size) {
-                std::size_t length = data[offset++];
-                if (length > size - offset) {
-                    throw std::runtime_error("GIF data block is truncated.");
-                }
-                offset += length;
-                if (!length) {
-                    terminated = true;
-                    break;
-                }
-            }
-            if (!terminated) {
-                throw std::runtime_error("GIF data block is incomplete.");
-            }
-        }
     }
 }
 bool is_avif(const void* data, std::size_t size) {
@@ -115,7 +95,11 @@ Image decode_avif(const void* data, std::size_t size) {
     }
     (*decoder).maxThreads = 4;
     (*decoder).imageSizeLimit = 64000000;
+    (*decoder).imageDimensionLimit = 16384;
+    (*decoder).imageCountLimit = 1;
     (*decoder).allowProgressive = AVIF_FALSE;
+    (*decoder).ignoreExif = AVIF_TRUE;
+    (*decoder).ignoreXMP = AVIF_TRUE;
     avifResult result = avifDecoderSetIOMemory(decoder.get(), static_cast<const std::uint8_t*>(data), size);
     if (result == AVIF_RESULT_OK) {
         result = avifDecoderParse(decoder.get());
@@ -131,6 +115,10 @@ Image decode_avif(const void* data, std::size_t size) {
         throw std::runtime_error(std::string("AVIF: ") + avifResultToString(result));
     }
     const avifImage& source = *(*decoder).image;
+    if (source.width > 16384 || source.height > 16384 || source.width == 0 || source.height == 0 ||
+        static_cast<std::uint64_t>(source.width) * source.height > 64000000) {
+        throw std::runtime_error("AVIF dimensions are invalid or exceed the canvas limit.");
+    }
     Image image;
     image.reset(static_cast<int>(source.width), static_cast<int>(source.height), {0, 0, 0, 0});
     avifRGBImage rgb{};
@@ -188,28 +176,19 @@ std::string svg_local_name(const char* name) {
     const char* colon = std::strchr(name, ':');
     return colon ? colon + 1 : name;
 }
-std::string svg_base64(const std::vector<std::uint8_t>& bytes) {
-    const char* alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    std::string result = "data:application/octet-stream;base64,";
-    for (std::size_t i = 0; i < bytes.size(); i += 3) {
-        std::uint32_t value = std::uint32_t(bytes[i]) << 16;
-        if (i + 1 < bytes.size()) {
-            value |= std::uint32_t(bytes[i + 1]) << 8;
-        }
-        if (i + 2 < bytes.size()) {
-            value |= bytes[i + 2];
-        }
-        result += alphabet[(value >> 18) & 63];
-        result += alphabet[(value >> 12) & 63];
-        result += i + 1 < bytes.size() ? alphabet[(value >> 6) & 63] : '=';
-        result += i + 2 < bytes.size() ? alphabet[value & 63] : '=';
+void prepare_svg_element(tinyxml2::XMLElement& element, int depth, std::size_t& element_count,
+                         std::size_t& attribute_count) {
+    if (depth > 128 || ++element_count > 100000) {
+        throw std::runtime_error("SVG structure exceeds the safe element or nesting limit.");
     }
-    return result;
-}
-void prepare_svg_element(tinyxml2::XMLElement& element, const std::filesystem::path& directory) {
     const char* filter_error = "This SVG uses filters, which LunaSVG does not render. Export it as PNG in "
                                "its source application to preserve those effects.";
     std::string name = svg_local_name(element.Name());
+    if (name == "image") {
+        throw std::runtime_error(
+            "SVG raster image elements are disabled because LunaSVG's embedded image decoder is not safe "
+            "for untrusted files. Replace the image element with vector artwork.");
+    }
     if (name == "filter") {
         throw std::runtime_error(filter_error);
     }
@@ -217,48 +196,34 @@ void prepare_svg_element(tinyxml2::XMLElement& element, const std::filesystem::p
     if (name == "style" && element.GetText() && std::regex_search(element.GetText(), css_filter)) {
         throw std::runtime_error(filter_error);
     }
-    std::string image_attribute, image_source;
     for (const tinyxml2::XMLAttribute* attribute = element.FirstAttribute(); attribute;
          attribute = (*attribute).Next()) {
+        if (++attribute_count > 200000) {
+            throw std::runtime_error("SVG structure exceeds the safe attribute limit.");
+        }
         std::string key = svg_local_name((*attribute).Name()), value = (*attribute).Value();
         if ((key == "filter" && value != "none" && !value.empty()) ||
             (key == "style" && std::regex_search(value, css_filter))) {
             throw std::runtime_error(filter_error);
         }
-        if (name == "image" && key == "href" && value.compare(0, 5, "data:") != 0) {
-            image_attribute = (*attribute).Name();
-            image_source = value;
-        }
-    }
-    if (!image_source.empty()) {
-        if (image_source.find("://") != std::string::npos || image_source.compare(0, 2, "//") == 0) {
-            throw std::runtime_error("SVG images must be embedded or stored locally beside the SVG.");
-        }
-        std::filesystem::path file =
-            directory / std::filesystem::path(std::u8string(image_source.begin(), image_source.end()));
-        std::u8string encoded = file.u8string();
-        std::string resource(encoded.begin(), encoded.end());
-        std::string embedded = svg_base64(read_image_bytes(resource));
-        element.SetAttribute(image_attribute.c_str(), embedded.c_str());
     }
     for (tinyxml2::XMLElement* child = element.FirstChildElement(); child;
          child = (*child).NextSiblingElement()) {
-        prepare_svg_element(*child, directory);
+        prepare_svg_element(*child, depth + 1, element_count, attribute_count);
     }
 }
 } // namespace
 Image rasterize_svg(const std::string& path, int width, int height) {
     static std::once_flag fonts_ready;
     std::call_once(fonts_ready, register_svg_fallback_fonts);
-    std::vector<std::uint8_t> bytes = read_image_bytes(path);
+    std::vector<std::uint8_t> bytes = read_image_bytes(path, 16000000);
     tinyxml2::XMLDocument xml;
     if (xml.Parse(reinterpret_cast<const char*>(bytes.data()), bytes.size()) != tinyxml2::XML_SUCCESS ||
         !xml.RootElement()) {
         throw std::runtime_error("SVG could not be parsed.");
     }
-    std::filesystem::path directory =
-        std::filesystem::path(std::u8string(path.begin(), path.end())).parent_path();
-    prepare_svg_element(*xml.RootElement(), directory);
+    std::size_t element_count = 0, attribute_count = 0;
+    prepare_svg_element(*xml.RootElement(), 1, element_count, attribute_count);
     tinyxml2::XMLPrinter prepared;
     xml.Print(&prepared);
     std::unique_ptr<lunasvg::Document> tree = lunasvg::Document::loadFromData(prepared.CStr());
@@ -288,6 +253,9 @@ Image rasterize_svg(const std::string& path, int width, int height) {
 }
 Image decode_native_heif(const void* data, std::size_t size) {
 #ifdef __APPLE__
+    if (!heif_signature(data, size)) {
+        throw std::runtime_error("The selected HEIC/HEIF file does not contain a recognized HEVC image.");
+    }
     CFDataRef encoded =
         CFDataCreate(kCFAllocatorDefault, static_cast<const UInt8*>(data), static_cast<CFIndex>(size));
     if (!encoded) {

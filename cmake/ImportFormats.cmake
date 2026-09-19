@@ -8,8 +8,8 @@ foreach(option AVIF_BUILD_APPS AVIF_BUILD_TESTS AVIF_BUILD_EXAMPLES AVIF_ENABLE_
   set(${option} OFF CACHE STRING "" FORCE)
 endforeach()
 FetchContent_Declare(avif
-  URL https://codeload.github.com/AOMediaCodec/libavif/tar.gz/bcfcd821dab042c83dbb83ef72121f59b3c00661
-  URL_HASH SHA256=5f169f5e416786d7ab2d36fb533b118c34f48668b5ae455abe2c7701f494982b
+  URL https://codeload.github.com/AOMediaCodec/libavif/tar.gz/refs/tags/v1.4.2
+  URL_HASH SHA256=2b645287340ba5a631d268b551dc2d72bd73ac33335962dd36dcdb6d8366921d
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
 FetchContent_MakeAvailable(avif)
 

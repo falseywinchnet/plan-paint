@@ -2,12 +2,14 @@
 #include "codecs.hpp"
 #include "conv.hpp"
 #include "paths.hpp"
+#include "safe_file.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <stdexcept>
 namespace paint {
 std::string preference_directory() {
@@ -57,12 +59,11 @@ void EditorSettings::save() const {
     if (storage_path.empty()) {
         return;
     }
-    std::ofstream output(path_from_utf8(storage_path), std::ios::trunc);
+    std::ostringstream output;
     output << "RSPS2\n" << scroll_distance << '\n' << (green_felt ? 1 : 0) << '\n';
-    output.close();
-    if (!output) {
-        throw std::runtime_error("Paint could not save its settings file.");
-    }
+    const std::string encoded = output.str();
+    const std::vector<std::uint8_t> bytes(encoded.begin(), encoded.end());
+    write_file_atomic(bytes, storage_path, "Paint could not save its settings file.");
 }
 void RecentFiles::load() {
     paths.clear();
@@ -99,12 +100,14 @@ void RecentFiles::remember(const std::string& path) {
     if (storage_path.empty()) {
         return;
     }
-    std::ofstream output(path_from_utf8(storage_path), std::ios::binary | std::ios::trunc);
+    std::vector<std::uint8_t> bytes;
     for (const std::string& item : paths) {
         const std::uint32_t length = static_cast<std::uint32_t>(item.size());
-        output.write(reinterpret_cast<const char*>(&length), sizeof(length));
-        output.write(item.data(), length);
+        const std::uint8_t* encoded_length = reinterpret_cast<const std::uint8_t*>(&length);
+        bytes.insert(bytes.end(), encoded_length, encoded_length + sizeof(length));
+        bytes.insert(bytes.end(), item.begin(), item.end());
     }
+    write_file_atomic(bytes, storage_path, "Paint could not save its recent-files list.");
 }
 std::string desktop_export(const Image& image, const char* purpose) {
     const std::int64_t tick = std::chrono::duration_cast<std::chrono::nanoseconds>(

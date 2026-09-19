@@ -1190,10 +1190,12 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
 static stbi_uc *stbi__convert_16_to_8(stbi__uint16 *orig, int w, int h, int channels)
 {
    int i;
-   int img_len = w * h * channels;
+   int img_len;
    stbi_uc *reduced;
 
-   reduced = (stbi_uc *) stbi__malloc(img_len);
+   if (!stbi__mad3sizes_valid(w, h, channels, 0)) { STBI_FREE(orig); return stbi__errpuc("too large", "Image too large to decode"); }
+   img_len = w * h * channels;
+   reduced = (stbi_uc *) stbi__malloc_mad3(w, h, channels, 0);
    if (reduced == NULL) return stbi__errpuc("outofmem", "Out of memory");
 
    for (i = 0; i < img_len; ++i)
@@ -1206,10 +1208,12 @@ static stbi_uc *stbi__convert_16_to_8(stbi__uint16 *orig, int w, int h, int chan
 static stbi__uint16 *stbi__convert_8_to_16(stbi_uc *orig, int w, int h, int channels)
 {
    int i;
-   int img_len = w * h * channels;
+   int img_len;
    stbi__uint16 *enlarged;
 
-   enlarged = (stbi__uint16 *) stbi__malloc(img_len*2);
+   if (!stbi__mad4sizes_valid(w, h, channels, (int) sizeof(stbi__uint16), 0)) { STBI_FREE(orig); return (stbi__uint16 *) stbi__errpuc("too large", "Image too large to decode"); }
+   img_len = w * h * channels;
+   enlarged = (stbi__uint16 *) stbi__malloc_mad4(w, h, channels, (int) sizeof(stbi__uint16), 0);
    if (enlarged == NULL) return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory");
 
    for (i = 0; i < img_len; ++i)
@@ -1817,7 +1821,7 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
    if (req_comp == img_n) return data;
    STBI_ASSERT(req_comp >= 1 && req_comp <= 4);
 
-   good = (stbi__uint16 *) stbi__malloc(req_comp * x * y * 2);
+   good = (stbi__uint16 *) stbi__malloc_mad4(req_comp, x, y, (int) sizeof(stbi__uint16), 0);
    if (good == NULL) {
       STBI_FREE(data);
       return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory");
@@ -3347,6 +3351,8 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
          if (z->img_comp[i].raw_coeff == NULL)
             return stbi__free_jpeg_components(z, i+1, stbi__err("outofmem", "Out of memory"));
          z->img_comp[i].coeff = (short*) (((size_t) z->img_comp[i].raw_coeff + 15) & ~15);
+         memset(z->img_comp[i].coeff, 0,
+                (size_t) z->img_comp[i].w2 * z->img_comp[i].h2 * sizeof(short));
       }
    }
 
@@ -3437,7 +3443,7 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
          if (NL != j->s->img_y) return stbi__err("bad DNL height", "Corrupt JPEG");
          m = stbi__get_marker(j);
       } else {
-         if (!stbi__process_marker(j, m)) return 1;
+         if (!stbi__process_marker(j, m)) return 0;
          m = stbi__get_marker(j);
       }
    }
@@ -4966,6 +4972,7 @@ static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int
 
    if (pal_img_n == 3) {
       for (i=0; i < pixel_count; ++i) {
+         if (orig[i] >= len) { STBI_FREE(temp_out); return stbi__err("bad palette index", "Corrupt PNG"); }
          int n = orig[i]*4;
          p[0] = palette[n  ];
          p[1] = palette[n+1];
@@ -4974,6 +4981,7 @@ static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int
       }
    } else {
       for (i=0; i < pixel_count; ++i) {
+         if (orig[i] >= len) { STBI_FREE(temp_out); return stbi__err("bad palette index", "Corrupt PNG"); }
          int n = orig[i]*4;
          p[0] = palette[n  ];
          p[1] = palette[n+1];
@@ -4984,8 +4992,6 @@ static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int
    }
    STBI_FREE(a->out);
    a->out = temp_out;
-
-   STBI_NOTUSED(len);
 
    return 1;
 }
@@ -5111,6 +5117,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             z->depth = stbi__get8(s);  if (z->depth != 1 && z->depth != 2 && z->depth != 4 && z->depth != 8 && z->depth != 16)  return stbi__err("1/2/4/8/16-bit only","PNG not supported: 1/2/4/8/16-bit only");
             color = stbi__get8(s);  if (color > 6)         return stbi__err("bad ctype","Corrupt PNG");
             if (color == 3 && z->depth == 16)                  return stbi__err("bad ctype","Corrupt PNG");
+            if ((color == 2 || color == 4 || color == 6) && z->depth < 8) return stbi__err("bad depth", "Corrupt PNG");
             if (color == 3) pal_img_n = 3; else if (color & 1) return stbi__err("bad ctype","Corrupt PNG");
             comp  = stbi__get8(s);  if (comp) return stbi__err("bad comp method","Corrupt PNG");
             filter= stbi__get8(s);  if (filter) return stbi__err("bad filter method","Corrupt PNG");
@@ -5180,13 +5187,16 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                return 1;
             }
             if (c.length > (1u << 30)) return stbi__err("IDAT size limit", "IDAT section larger than 2^30 bytes");
-            if ((int)(ioff + c.length) < (int)ioff) return 0;
+            if (c.length > 0xffffffffu - ioff) return stbi__err("IDAT size overflow", "Corrupt PNG");
             if (ioff + c.length > idata_limit) {
                stbi__uint32 idata_limit_old = idata_limit;
+               stbi__uint32 needed = ioff + c.length;
                stbi_uc *p;
                if (idata_limit == 0) idata_limit = c.length > 4096 ? c.length : 4096;
-               while (ioff + c.length > idata_limit)
+               while (needed > idata_limit) {
+                  if (idata_limit > 0xffffffffu / 2) { idata_limit = needed; break; }
                   idata_limit *= 2;
+               }
                STBI_NOTUSED(idata_limit_old);
                p = (stbi_uc *) STBI_REALLOC_SIZED(z->idata, idata_limit_old, idata_limit); if (p == NULL) return stbi__err("outofmem", "Out of memory");
                z->idata = p;

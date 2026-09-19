@@ -22,7 +22,7 @@ inline constexpr HelpTopic help_topics[] = {
      "Pick on canvas. Save preserves all entries. Save As from a picture to ICO or CUR offers "
      "standard sizes. Save to PNG or another ordinary image format exports the current icon "
      "image.\n\nSVG is rasterized on import. AVIF and macOS HEIC/HEIF also import to the canvas; "
-     "Save chooses a supported raster output. Animated GIF and APNG are not supported."},
+     "Save chooses a supported raster output. GIF is export-only; animated GIF and APNG are not supported."},
     {"1. Make your first picture",
      "Click Pencil in Home, then hold the mouse button and move it on the white paper. Let go to "
      "stop. Try Brushes for wider marks. Pick a little colored square to change your "
@@ -145,9 +145,11 @@ inline constexpr HelpTopic help_topics[] = {
      "File > Open replaces the picture with an image from disk. Save writes your picture. Save as lets "
      "you choose a new name or format. PNG, TIFF, TGA and lossless WebP can preserve transparency. JPEG "
      "is smaller for photographs but loses detail each time it is re-encoded. BMP, JPEG and GIF use a "
-     "white background for transparent areas. GIF uses a limited palette.\n\nYou can open PNG, JPEG, BMP, "
-     "static GIF, TIFF, TGA, WebP, PSD composite images, PNM, HDR, PIC, SVG, AVIF, ICO and CUR, plus "
-     "HEIC/HEIF on macOS. Animated GIF and APNG are not supported. "
+     "white background for transparent areas. GIF uses a limited palette and is export-only.\n\nYou can "
+     "open PNG, JPEG, direct-color BMP, uncompressed RGB/RGBA TIFF, TGA, WebP, SVG, AVIF, ICO and CUR, "
+     "plus HEIC/HEIF on macOS. GIF and paletted BMP import are disabled because their available decoder "
+     "paths are unsafe for untrusted files. SVG raster image elements are likewise disabled. Animated "
+     "WebP and APNG are not supported. "
      "Saving exports flat raster artwork; ICO and CUR retain their multiple images.\n\nThe application "
      "asks before replacing "
      "unsaved work. Cancel keeps you here. Printing uses the system's print dialog where available. Keep "

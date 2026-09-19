@@ -143,6 +143,13 @@ void dialog_clipboard_and_close_contracts() {
                 paint::equal(editor.document.selection.image.get(1, 1), {240, 60, 80, 0}),
             "clipboard transfers straight-alpha hidden RGB");
     editor.execute("release");
+    const std::uint64_t revision_before_invalid_clipboard = editor.document.revision;
+    services.clipboard = {2, 2, 4, std::vector<std::byte>(4)};
+    editor.execute("paste");
+    require(editor.document.revision == revision_before_invalid_clipboard &&
+                !editor.document.selection.active,
+            "inconsistent toolkit clipboard geometry is rejected before copying pixels");
+    services.clipboard = {};
     editor.execute("primary");
     (*fixture.window).perform_layout();
     std::shared_ptr<gf::NumericUpDown> red =

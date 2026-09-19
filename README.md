@@ -51,9 +51,9 @@ Print and page setup use native system dialogs on Mac and Windows. Linux provide
 
 | Open, paste or drop | Save |
 | --- | --- |
-| PNG, JPEG, BMP, static GIF, TIFF, TGA, WebP, PSD composite, PNM, HDR, PIC, AVIF, SVG, ICO, CUR; HEIC/HEIF on macOS | PNG, JPEG, BMP, static GIF, TIFF, TGA, lossless WebP, multi-size ICO and CUR |
+| PNG, JPEG, direct-color BMP, uncompressed RGB/RGBA TIFF, TGA, WebP, AVIF, SVG, ICO, CUR; HEIC/HEIF on macOS | PNG, JPEG, BMP, static GIF, TIFF, TGA, lossless WebP, multi-size ICO and CUR |
 
-PNG, TIFF, TGA and WebP preserve transparency. JPEG, BMP and GIF flatten onto white; GIF also reduces the palette. Animated GIF and APNG are rejected. SVG is rasterized on import, using LunaSVG, including text, clipping, masks and gradients. SVG filters are rejected with an explanation; export those pictures as PNG from their source application to preserve the effects. AVIF and HEIC/HEIF import to an 8-bit canvas and save to an existing raster format; HEIC/HEIF uses the codecs available through macOS ImageIO. HDR is converted to 8-bit RGBA.
+PNG, TIFF, TGA and WebP preserve transparency. JPEG, BMP and GIF flatten onto white; GIF also reduces the palette. GIF is export-only because the available decoder is unsafe for untrusted files. Paletted BMP and compressed, tiled, grayscale or multi-page TIFF imports are also rejected; convert them to PNG first. SVG is rasterized on import with LunaSVG, including text, clipping, masks and gradients. Filters and raster `<image>` elements are rejected so SVG cannot read local files or reach LunaSVG's older embedded image decoder. AVIF and HEIC/HEIF import to an 8-bit canvas and save to an existing raster format; HEIC/HEIF uses the codecs available through macOS ImageIO. Animated WebP and APNG are rejected.
 
 ICO and CUR open every stored size in Atlas. CUR retains per-image hotspots, editable numerically or by clicking the canvas. Save As from a picture offers standard icon sizes. Legacy AND/XOR cursor pixels are retained; these background-dependent pixels cannot be combined with partial-alpha pixels in one legacy bitmap. Erase or paint over XOR pixels before lifting selections or resampling; exact flips and quarter-turns retain them. Exporting an ICO/CUR entry to a regular raster format exports the current image; saving the container retains every entry.
 

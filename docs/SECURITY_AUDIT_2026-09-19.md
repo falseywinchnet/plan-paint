@@ -1,0 +1,84 @@
+# Rainstar Paint file and codec security audit
+
+**Audit date:** 2026-09-19  
+**Audited baseline:** Rainstar Paint 0.2.3 (`d0a4dab`) and its GUI.Forms host  
+**Threat model:** an attacker can persuade a user to open, paste, drop or save a crafted image. Some users may mistakenly launch Paint through `sudo`, as root, set-id, with Linux capabilities or from an elevated Windows token. A second local process may race predictable files in a directory that both processes can write.
+
+This review covered the two Rainstar Paint frontends, file reads and writes, every advertised image and container format, clipboard transfer, settings and recent-file persistence, the GUI.Forms file/clipboard boundary, and the decoder libraries reachable from those paths. It combined manual source review, dependency and linked-symbol inventories, focused regression tests, malformed-input mutation tests, and AddressSanitizer plus UndefinedBehaviorSanitizer runs. It is a bounded review of this revision, not a proof that every third-party decoder is free of undiscovered defects.
+
+## Result
+
+The patch closes the identified privilege, file-race, format-confusion, resource-exhaustion and known reachable memory-safety paths. It deliberately narrows import compatibility where the available decoder cannot safely accept untrusted input. GIF remains available for export, while GIF import is disabled. BMP import accepts direct 24- and 32-bit pixels. TIFF import accepts one uncompressed, contiguous 8-bit RGB or RGBA image. SVG raster image elements and filters are disabled. The other retained formats receive bounded memory input, decoded-dimension limits, animation rejection where applicable, and stricter profile checks.
+
+Both application entry points now refuse to start with root, `sudo`, set-id, Linux effective capabilities, or an elevated Windows token. This is the strongest practical mitigation for the stated accidental-elevation case: a future decoder defect cannot inherit administrator authority because the decoder never starts in that process.
+
+## Findings and disposition
+
+| Severity | Finding | Reachability before the patch | Disposition |
+| --- | --- | --- | --- |
+| Critical under elevation | The complete native decoder closure ran with inherited administrator authority. | Opening, pasting or dropping any supported image after launching Paint elevated. | Both frontends stop before GUI or decoder initialization. Unix real/effective IDs, Linux effective capabilities and Windows token elevation are checked. |
+| High under elevation; medium otherwise | Saves and preference writes used truncating path opens or predictable temporary names. A writable-directory adversary could substitute a symlink, clobber another file, or leave a partial destination after interruption. | Image/container saves, settings, recent files, custom colors and the legacy idle report. | One same-directory atomic writer now uses exclusive, non-following temporary creation, complete-write loops, `fsync`/`FlushFileBuffers`, and atomic replacement. A regression proves that a destination symlink is replaced without modifying its referent. |
+| High | Broad `stb_image` reachability exposed reported integer overflows, out-of-bounds/uninitialized reads, a progressive-JPEG error-path bug and multiple GIF defects. The upstream report documents the reachable 16-bit conversion, PNG palette/IDAT, progressive JPEG, BMP palette and animated GIF faults. | PNG, JPEG, BMP, GIF, PSD, PNM, HDR, PIC and TGA were accepted through one dispatcher. | Compile only PNG, JPEG, BMP and TGA; disable stdio; reject GIF before dispatch; reject paletted BMP; remove PSD, PNM, HDR and PIC from the UI; patch the reachable PNG, JPEG and 16-bit allocation faults; enforce 16,384 pixels per axis and 64 megapixels. See [upstream stb issue 1928](https://github.com/nothings/stb/issues/1928) and the independently reported [GIF out-of-bounds read](https://github.com/nothings/stb/issues/1915). |
+| High | TIFF used `TIFFReadRGBAImageOriented`, which enters a large conversion surface and accepted compressed, tiled, multi-page and unusual sample layouts. Current libtiff reports include allocation and overflow faults in those broad paths. | Every `.tif` or `.tiff` file. | Pin bundled/release builds to libtiff 4.7.2; decode only one uncompressed, scanline, contiguous 8-bit RGB/RGBA image; validate alpha declaration, orientation, scanline geometry and dimensions; read through bounded memory callbacks. The removed RGBA conversion path includes the families named in [issue 781](https://gitlab.com/libtiff/libtiff/-/issues/781), [issue 786](https://gitlab.com/libtiff/libtiff/-/issues/786) and [issue 808](https://gitlab.com/libtiff/libtiff/-/issues/808). The [libtiff tag list](https://gitlab.com/libtiff/libtiff/-/tags) identifies 4.7.2 as the current release at audit time. |
+| High | SVG `<image>` could read a local path and feed embedded content to LunaSVG's older private image decoder. Complex unbounded XML also increased denial-of-service exposure. | Any SVG opened from disk. | Reject every raster `<image>` and filter, cap the source at 16 MB, cap element count at 100,000, attributes at 200,000 and nesting at 128, then serialize the inspected tree before LunaSVG sees it. The retained LunaSVG 3.5.0 renderer has prior public crash reports, including [issue 209](https://github.com/sammycage/lunasvg/issues/209), so SVG remains a larger parser surface than ordinary PNG. |
+| High | GUI.Forms clipboard geometry was trusted immediately before row `memcpy`. An inconsistent width, height, stride and vector length could read out of bounds. | Paste from a compromised or defective host service implementation. | Revalidate nonzero dimensions, 16,384-axis and 64-megapixel limits, row width, multiplication bounds and backing-vector length at the application boundary. A hostile-geometry regression verifies rejection before document mutation. |
+| Medium | Ordinary file input accepted non-regular files. A FIFO could block, while devices and changing pseudo-files have semantics the decoders do not expect. | All file-backed imports. | Open once with close-on-exec and nonblocking flags where available, validate the opened handle as a regular nonempty file, cap bytes before allocation, and read exactly the validated size. A FIFO regression verifies immediate rejection. Regular-file symlinks remain usable for normal desktop workflows. |
+| Medium | Decompression bombs and header/decode disagreement could allocate excessive memory or make the destination smaller than the decoded copy. | stb, WebP, AVIF, TIFF, SVG and native HEIF paths had uneven limits. | Apply a 256 MB encoded-file ceiling, format-specific 16 MB SVG ceiling, 16,384-axis and 64-megapixel decoded ceiling, checked arithmetic, post-decode dimension consistency, a 512 MB encoded-output ceiling, and bounded codec thread/count settings. |
+| Medium | Animated WebP and multi-image AVIF could enter work and allocation paths outside Paint's single-canvas contract. | WebP and AVIF import. | Reject animated WebP, set AVIF image count to one, disable progressive decode, cap dimensions and pixels, ignore EXIF/XMP, and update the pinned libavif archive from 1.4.0 to the current signed 1.4.2 release with SHA-256 verification. See the [libavif 1.4.2 release](https://github.com/AOMediaCodec/libavif/releases). |
+| Medium | A non-HEIF file renamed `.heic` was handed to the broad macOS ImageIO type dispatcher. | macOS HEIC/HEIF import. | Require an ISO BMFF `ftyp` box containing a recognized HEVC still-image brand before ImageIO receives the bytes. Dimensions remain bounded before raster allocation. |
+| Low to medium | GIF export used a path-based helper and therefore required a writable temporary file. | Every GIF save. | Keep the export-only encoder, but use a private exclusive temporary file, read it through the bounded regular-file helper, remove it on every exit path, and atomically install the final encoded bytes. |
+
+## Dependency reachability after the patch
+
+| Input | Decoder path | Accepted profile |
+| --- | --- | --- |
+| PNG | patched `stb_image` from memory | Still image; APNG rejected; 64 MP maximum |
+| JPEG | patched `stb_image` from memory | Baseline/progressive still image; 64 MP maximum |
+| BMP | patched `stb_image` from memory | Direct 24/32-bit only |
+| TGA | patched `stb_image` from memory | 64 MP maximum |
+| GIF | none on import | Export only |
+| WebP | libwebp from memory | Static only; 64 MP maximum |
+| AVIF | libavif 1.4.2 plus system dav1d | One image, no progressive decode or metadata, 64 MP maximum |
+| TIFF | libtiff 4.7.2 in release builds, through memory callbacks | One uncompressed contiguous 8-bit RGB/RGBA scanline image |
+| SVG | TinyXML-2 inspection, then LunaSVG 3.5.0 | Vector elements only; no `<image>` or filters; bounded bytes/tree/depth |
+| ICO/CUR | Rainstar Paint's checked container parser; PNG entries use the PNG path above | Existing entry/count/dimension bounds plus the global canvas limits |
+| HEIC/HEIF on macOS | ImageIO after Rainstar signature/profile gate | Recognized HEVC still-image brands; 64 MP maximum |
+
+The local audit build intentionally used the installed libtiff 4.7.1 because the ordinary developer configuration uses `find_package(TIFF)`. Linux and Windows release scripts explicitly set `RAINSTAR_BUNDLED_TIFF=ON`; that build path is now pinned to 4.7.2. Release evidence must therefore include a bundled-dependency build rather than treating the local system-linked test as proof of the packaged TIFF version.
+
+## Networking review
+
+No direct networking implementation was found in Rainstar Paint, the linked GUI.Forms host, or the directly linked codec closure. The review searched first-party and reachable dependency source for socket creation, address resolution, HTTP client APIs, WinHTTP/WinINet, libcurl, CFNetwork, URL-session clients, WebSockets and equivalent entry points. Undefined-symbol scans of the built `paint-forms-tests` and `paint-codec-security-tests` executables found no socket, connect, DNS, send/receive, WinHTTP, WinINet or curl imports. The linked-image inventory contains libtiff, libwebp, dav1d, ImageIO/CoreGraphics/CoreFoundation, GUI.Forms and normal platform GUI/runtime libraries; it contains no network client library.
+
+There are explicit operating-system service boundaries that can use a network because the user configured them to do so:
+
+- Native file dialogs can show mounted network volumes and cloud-backed filesystem providers. Paint still receives an ordinary path and performs no network protocol itself.
+- Linux printing uses GTK/CUPS or invokes `lp`/`lpstat` in the GUI.Forms integration. CUPS may send a selected job to a configured network printer.
+- Linux acquisition launches `simple-scan` or `xsane`; those applications may talk to a configured network scanner.
+- macOS acquisition opens the local Image Capture application by bundle identifier. The `NSURL` symbols in that path and GUI.Forms are file/application URLs, not HTTP clients.
+
+Those actions are visible user commands delegated to the operating system or another application. They are not background telemetry, update checks, remote-control logic or decoder-initiated networking. This audit therefore supports the narrower, testable statement: **Rainstar Paint and GUI.Forms contain no direct network client code or direct network API imports in the reviewed build.** It cannot prove that arbitrary platform services, filesystem providers, printer/scanner drivers or future versions of system frameworks never communicate.
+
+## Verification performed
+
+- Debug build with warnings enabled.
+- Core file-security and codec tests, including destination-symlink replacement, regular-file symlink reading, FIFO rejection, GIF dispatcher exclusion, paletted-BMP rejection, SVG external-resource rejection and HEIF format-confusion rejection.
+- GUI.Forms clipboard test with malicious dimensions/stride/backing storage.
+- Deterministic malformed-input mutations for PNG, JPEG, BMP, TGA, WebP, GIF, AVIF, TIFF, SVG, HEIF, ICO and CUR-relevant container code.
+- AddressSanitizer and UndefinedBehaviorSanitizer runs over core, warp and malformed codec tests.
+- Source and linked-symbol networking scans.
+- Repository style check and `git diff --check`.
+
+The complete Debug CTest suite has two pre-existing platform failures on this macOS beta environment: the HEIF fixture is decoded by ImageIO as transparent pixels, and the native GUI host exercise aborts during platform startup. Both failures reproduce on an untouched 0.2.3 build. The security-focused tests, GUI.Forms unit tests and sanitizer corpus pass. These baseline failures must not be reported as security regressions or silently described as a fully passing suite.
+
+## Residual risk and release requirements
+
+Image and font parsing cannot be made memory-safe by validation wrappers alone. LunaSVG, ImageIO, libtiff, libwebp, dav1d, libavif, stb and operating-system clipboard decoders remain native-code components. The elevated-process refusal limits the consequence of a future defect; the format/profile restrictions reduce reachability; sanitizer mutation tests add evidence; none is a formal proof of parser correctness.
+
+Before shipping this patch:
+
+1. Build the release configuration with bundled libtiff 4.7.2 and the pinned libavif 1.4.2 archive on each supported platform.
+2. Run the normal CTest suite, the malformed codec corpus and platform-native open/save/clipboard exercises under the release candidate.
+3. Verify the actual packaged dynamic-library inventory. A development binary linked to a package-manager library is not evidence for a statically bundled release.
+4. Keep the reduced format list in release help and file-dialog filters. Restoring GIF, paletted BMP, broad TIFF, SVG raster images, PSD, PNM, HDR or PIC requires a new decoder review rather than removing the gate.
+5. Treat new image or clipboard parsers as hostile-input boundaries and preserve the same byte, pixel, frame and arithmetic limits.
