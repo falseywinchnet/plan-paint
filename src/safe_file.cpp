@@ -2,8 +2,6 @@
 #include "paths.hpp"
 #include <algorithm>
 #include <cerrno>
-#include <cstdlib>
-#include <cstring>
 #include <filesystem>
 #include <limits>
 #include <random>
@@ -72,50 +70,6 @@ bool write_all(int file, const std::vector<std::uint8_t>& bytes) {
 }
 #endif
 } // namespace
-
-bool elevated_process() {
-#ifdef _WIN32
-    HANDLE token = nullptr;
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
-        return true;
-    }
-    TOKEN_ELEVATION elevation{};
-    DWORD bytes = 0;
-    const bool success = GetTokenInformation(token, TokenElevation, &elevation, sizeof(elevation), &bytes) != 0;
-    CloseHandle(token);
-    return !success || elevation.TokenIsElevated != 0;
-#else
-    if (geteuid() == 0 || geteuid() != getuid() || getegid() != getgid()) {
-        return true;
-    }
-#ifdef __linux__
-    // A non-root executable can still carry effective file capabilities. Treat
-    // every effective capability as elevated rather than trying to maintain a
-    // fragile allowlist of privileges that image decoders may safely inherit.
-    const int status = open("/proc/self/status", O_RDONLY | O_CLOEXEC | O_NONBLOCK);
-    if (status >= 0) {
-        char bytes[16384] = {};
-        const ssize_t count = read(status, bytes, sizeof(bytes) - 1);
-        close(status);
-        if (count > 0) {
-            const char* capability = std::strstr(bytes, "CapEff:");
-            if (capability != nullptr) {
-                capability += 7;
-                while (*capability == ' ' || *capability == '\t') {
-                    ++capability;
-                }
-                char* end = nullptr;
-                const unsigned long long effective = std::strtoull(capability, &end, 16);
-                if (end != capability && effective != 0) {
-                    return true;
-                }
-            }
-        }
-    }
-#endif
-    return false;
-#endif
-}
 
 std::vector<std::uint8_t> read_regular_file_bounded(const std::string& path, std::size_t maximum,
                                                     const char* failure_message) {

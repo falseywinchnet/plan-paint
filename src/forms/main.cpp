@@ -1,17 +1,11 @@
 #include "forms/editor.hpp"
 #include "paths.hpp"
-#include "safe_file.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <iostream>
 int main(int argc, char** argv) {
     try {
-        if (paint::elevated_process()) {
-            throw std::runtime_error(
-                "Rainstar Paint refuses to run with administrator, root or sudo privileges. Open it as your "
-                "normal user so an untrusted image cannot obtain administrator access.");
-        }
         const std::shared_ptr<paint::forms::Editor> editor =
             gui_forms::make_control<paint::forms::Editor>(gui_forms::StableId("paint.editor"));
         try {

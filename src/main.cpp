@@ -15,11 +15,6 @@
 #include <sstream>
 
 int main(int argc, char** argv) {
-    if (paint::elevated_process()) {
-        std::cerr << "Rainstar Paint refuses to run with administrator, root or sudo privileges. Open it as "
-                     "your normal user so an untrusted image cannot obtain administrator access.\n";
-        return 1;
-    }
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::cerr << SDL_GetError() << '\n';
         return 1;
