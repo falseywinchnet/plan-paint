@@ -33,6 +33,11 @@ bool textured_brush(Brush brush) {
            brush == Brush::Charcoal || brush == Brush::Marker;
 }
 MaterialSurface::MaterialSurface(const Ink& ink, Brush brush) : ink_(ink), brush_(brush) {
+    if (ink_.alternate) {
+        alternate_ = std::make_unique<MaterialSurface>(*ink_.alternate, (*ink_.alternate).brush);
+        ink_.alternate.reset();
+        ink_.transparent_pattern = true;
+    }
     ink_.grain_scale = std::clamp(ink_.grain_scale, 0.3, 4.0);
     ink_.paper_roughness = std::clamp(ink_.paper_roughness, 0.0, 1.0);
     ink_.pigment_load = std::clamp(ink_.pigment_load, 0.0, 1.0);
@@ -41,6 +46,18 @@ MaterialSurface::MaterialSurface(const Ink& ink, Brush brush) : ink_(ink), brush
     sine_ = std::sin(angle);
 }
 Color MaterialSurface::sample(int x, int y, double edge_distance) const {
+    const Color front = sample_primary(x, y, edge_distance);
+    if (!alternate_ || front.a == 255) {
+        return front;
+    }
+    const Color back = (*alternate_).sample(x, y, edge_distance);
+    const double a = front.a / 255.0, b = back.a / 255.0 * (1 - a), sum = a + b;
+    return sum > 0
+               ? Color{channel((front.r * a + back.r * b) / sum), channel((front.g * a + back.g * b) / sum),
+                       channel((front.b * a + back.b * b) / sum), channel(sum * 255)}
+               : Color{0, 0, 0, 0};
+}
+Color MaterialSurface::sample_primary(int x, int y, double edge_distance) const {
     Color color = patterned(ink_, x, y);
     if (!textured_brush(brush_) || color.a == 0) {
         return color;
@@ -72,19 +89,30 @@ Color MaterialSurface::sample(int x, int y, double edge_distance) const {
         highlight = brush_ == Brush::Oil ? std::max(0.0, relief) * 0.16 : 0;
     } else if (brush_ == Brush::Crayon || brush_ == Brush::Pastel || brush_ == Brush::Charcoal ||
                brush_ == Brush::Pencil) {
-        double pressure = 0.70 - load * 0.43;
+        // Contact pressure is strongest in the core. Wax fills paper valleys;
+        // charcoal compacts there, leaving exposed tooth and crumbs at the rim.
+        // This is a bounded deposition approximation, not a particle simulation.
+        const bool shaped_dry = brush_ == Brush::Crayon || brush_ == Brush::Charcoal;
+        const double rim_width = std::max(1.0, ink_.size * (brush_ == Brush::Crayon ? 0.22 : 0.32));
+        const double core = shaped_dry ? smooth(std::max(0.0, edge_distance) / rim_width) : 0;
+        double pressure = 0.70 - load * 0.43 - core * load * 0.32 + (shaped_dry ? 0.13 * (1 - core) : 0);
         double contact = smooth((paper - pressure) * 7.0 + 0.35);
         contact = 1 - rough + rough * contact;
         double scratch = 0.65 + 0.35 * fiber;
         if (brush_ == Brush::Pencil) {
             opacity = load * contact * scratch * 0.82;
         } else if (brush_ == Brush::Charcoal) {
-            opacity = (0.35 + 0.65 * load) * std::pow(contact, 0.7);
+            const double crumbs = 0.25 + 0.75 * hash(x, y, ink_.noise + 109);
+            const double rim = (0.25 + 0.75 * smooth(edge_distance / 2.0)) * crumbs;
+            opacity = (0.35 + 0.65 * load) *
+                      ((1 - core) * std::pow(contact, 1.3) * rim + core * (0.92 + 0.08 * paper));
         } else if (brush_ == Brush::Pastel) {
             opacity = (0.3 + 0.6 * load) * std::sqrt(contact) * (0.85 + 0.15 * fiber);
             highlight = 0.035 * rough;
         } else {
-            opacity = (0.45 + 0.55 * load) * contact * scratch;
+            const double wax = smooth((paper - 0.47) * 8 + edge_distance / (1.4 * scale));
+            opacity =
+                (0.45 + 0.55 * load) * ((1 - core) * contact * scratch * wax + core * (0.94 + 0.06 * fiber));
         }
         tone = 1 - 0.08 * rough * (1 - paper);
     } else if (brush_ == Brush::Marker) {

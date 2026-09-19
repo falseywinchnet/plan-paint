@@ -127,10 +127,15 @@ static bool same_material(const Ink& left, const Ink& right) {
            left.transparent_pattern == right.transparent_pattern && left.noise == right.noise &&
            left.grain_scale == right.grain_scale && left.paper_roughness == right.paper_roughness &&
            left.pigment_load == right.pigment_load && left.material_angle == right.material_angle &&
-           left.smooth == right.smooth;
+           left.smooth == right.smooth && left.size == right.size &&
+           static_cast<bool>(left.alternate) == static_cast<bool>(right.alternate) &&
+           (!left.alternate || same_material(*left.alternate, *right.alternate));
 }
 void SwatchButton::set_material(const Ink& ink) {
     color_ = ink.primary;
+    set_accessible_name(text() + ": " +
+                        (ink.brush == Brush::Round ? pattern_names[static_cast<int>(ink.pattern)]
+                                                   : brush_names[static_cast<int>(ink.brush)]));
     if (!attached_window() || (material_ink_ && same_material(*material_ink_, ink))) {
         return;
     }
@@ -160,8 +165,6 @@ void SwatchButton::set_material(const Ink& ink) {
             (*material_preview_)
                 .set_variant_png("material", gf::ImageVisualState::normal, 1, std::as_bytes(std::span(png))));
     }
-    set_accessible_name(text() + ": " + brush_names[static_cast<int>(ink.brush)] + ", " +
-                        pattern_names[static_cast<int>(ink.pattern)]);
     invalidate(gf::Dirty::paint);
 }
 void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
@@ -171,7 +174,8 @@ void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
         text().empty() ? std::min(3.0, bounds.width * 0.12) : std::min(9.0, bounds.width * 0.16);
     gf::Rect swatch = text().empty() ? gf::Rect{inset, 3, bounds.width - inset * 2, bounds.height - 6}
                                      : gf::Rect{inset, 7, bounds.width - inset * 2, 30};
-    if (color_.a == 0 || (material_ink_ && (*material_ink_).pattern == Pattern::None)) {
+    if (color_.a == 0 ||
+        (material_ink_ && (*material_ink_).pattern == Pattern::None && !(*material_ink_).alternate)) {
         painter.fill_rect(swatch, gf::Color::rgba(255, 255, 255));
         painter.draw_line({swatch.x + 2, swatch.y + swatch.height - 2},
                           {swatch.x + swatch.width - 2, swatch.y + 2}, gf::Color::rgba(210, 35, 40), 3);
@@ -431,14 +435,14 @@ void Ribbon::add_options() {
     building_page_ = 4;
     button("material-edge", "Primary", -1, {10, 34, 114, 22});
     button("material-fill", "Alt", -1, {10, 59, 114, 22});
-    check("material-enabled", "Enabled", {10, 84, 114, 22});
+    check("alt-carries-body", "Alt carries body", {340, 111, 225, 22});
     const char* material_names[] = {"Brush",      "Calligraphy 1", "Calligraphy 2", "Spray can",
                                     "Oil",        "Crayon",        "Marker",        "Pencil",
                                     "Watercolor", "Bristle",       "Pastel",        "Charcoal"};
-    for (int i = 0; i < brush_count; ++i) {
+    for (int i = 1; i < brush_count; ++i) {
         std::shared_ptr<gf::Button> choice =
             button("material-brush-" + std::to_string(i), material_names[i], -1,
-                   {140.0 + (i % 4) * 128, 35.0 + (i / 4) * 27, 126, 25});
+                   {140.0 + ((i - 1) % 4) * 128, 35.0 + ((i - 1) / 4) * 27, 126, 25});
         (*choice).set_accessible_name(brush_names[i]);
         (*choice).set_font({gf::FontRole::control, 11, 400, false});
         (*choice).set_content_padding({2, 1, 2, 1});
@@ -448,9 +452,9 @@ void Ribbon::add_options() {
         std::shared_ptr<gf::Button> swatch =
             gf::make_control<PatternButton>(gf::StableId("r-pattern-" + std::to_string(i)), i);
         (*swatch).set_requested_bounds({670.0 + (i % 9) * 33, 36.0 + (i / 9) * 32, 29, 28});
-        if (i == static_cast<int>(Pattern::None)) {
-            (*swatch).set_requested_bounds({670, 100, 108, 25});
-            (*swatch).set_text("No color");
+        if (i == 0 || i == static_cast<int>(Pattern::None)) {
+            (*swatch).set_requested_bounds({10, i == 0 ? 84.0 : 109.0, 114, 22});
+            (*swatch).set_text(i == 0 ? "Solid" : "No color");
             (*swatch).set_content_padding({32, 1, 1, 1});
         }
         (*swatch).set_accessible_name(pattern_names[i]);
@@ -862,7 +866,7 @@ void Ribbon::apply_choice(const std::string& id) {
     }
     Document& document = (*editor).document;
     if (id.starts_with("r-pattern-")) {
-        document.ink.pattern = static_cast<Pattern>(std::stoi(id.substr(10)));
+        select_pattern(document.ink, static_cast<Pattern>(std::stoi(id.substr(10))));
     } else if (id.starts_with("stamp-shape-")) {
         document.stamp_shape = static_cast<StampShape>(std::stoi(id.substr(12)));
     } else if (id == "stamp-transparent") {
@@ -1143,6 +1147,11 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     if (page_ == 64) {
         return;
     }
+    if (page_ == 4) {
+        paint_separator(painter, 132 * width / 1280);
+        paint_separator(painter, 974 * width / 1280);
+        return;
+    }
     if (page_ != 1) {
         const gf::FontSpec font{gf::FontRole::control, 12, 400, false, 0.08};
         std::shared_ptr<Editor> editor = editor_.lock();
@@ -1215,9 +1224,14 @@ void Ribbon::synchronize() {
     }
     (*primary_).set_material(document.tool == Tool::Pencil ? pencil_ink(document.primary_ink())
                                                            : document.primary_ink());
-    (*secondary_)
-        .set_material(document.tool == Tool::Pencil ? pencil_ink(document.alternate_ink())
-                                                    : document.alternate_ink());
+    Ink stored_alt = document.alt_ink;
+    stored_alt.primary = document.ink.secondary;
+    stored_alt.secondary.a = 0;
+    stored_alt.transparent_pattern = true;
+    (*secondary_).set_material(document.tool == Tool::Pencil ? pencil_ink(stored_alt) : stored_alt);
+    if (!document.alt_enabled()) {
+        (*secondary_).set_accessible_name((*secondary_).accessible_name() + " (disabled by Primary Solid)");
+    }
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());
@@ -1255,8 +1269,9 @@ void Ribbon::synchronize() {
             selected = document.tool == Tool::Text;
         }
         if (id.starts_with("material-brush-")) {
-            selected = std::stoi(id.substr(15)) ==
-                       static_cast<int>(secondary_color_ ? document.shape_fill_brush : document.ink.brush);
+            const Ink& choice = secondary_color_ ? document.alt_ink : document.ink;
+            selected = choice.pattern == Pattern::Solid &&
+                       std::stoi(id.substr(15)) == static_cast<int>(choice.brush);
             control.set_image_list(secondary_color_               ? fill_previews_
                                    : document.tool == Tool::Brush ? dynamic_previews_
                                                                   : brush_previews_);
@@ -1292,8 +1307,9 @@ void Ribbon::synchronize() {
                                             : "tool-tab");
         }
         if (id.starts_with("r-pattern-")) {
-            selected = static_cast<int>(secondary_color_ ? document.alt_ink.pattern : document.ink.pattern) ==
-                       std::stoi(id.substr(10));
+            const Ink& choice = secondary_color_ ? document.alt_ink : document.ink;
+            selected =
+                choice.brush == Brush::Round && static_cast<int>(choice.pattern) == std::stoi(id.substr(10));
         }
         if (id.starts_with("stamp-shape-")) {
             selected = static_cast<int>(document.stamp_shape) == std::stoi(id.substr(12));
@@ -1313,10 +1329,20 @@ void Ribbon::synchronize() {
                                             ? "Transform tools"
                                             : std::string(names[static_cast<int>(document.tool)]) + " tools");
         }
+        if (id == "secondary" || id == "material-fill") {
+            control.set_enabled(document.alt_enabled());
+        }
+        if (id.starts_with("material-brush-") || id.starts_with("r-pattern-") || id == "new-grain") {
+            control.set_enabled(!secondary_color_ || document.alt_enabled());
+        }
         control.set_selected(selected);
     }
     synchronizing_ = true;
     const Ink& material = secondary_color_ ? document.alt_ink : document.ink;
+    (*grain_).set_enabled(!secondary_color_ || document.alt_enabled());
+    (*tooth_).set_enabled(!secondary_color_ || document.alt_enabled());
+    (*load_).set_enabled(!secondary_color_ || document.alt_enabled());
+    (*angle_).set_enabled(!secondary_color_ || document.alt_enabled());
     (*grain_).set_value(material.grain_scale);
     (*tooth_).set_value(material.paper_roughness);
     (*load_).set_value(material.pigment_load);
@@ -1373,6 +1399,9 @@ void Ribbon::synchronize() {
                                                           : style.word_wrap);
             continue;
         }
+        if (id == "alt-carries-body") {
+            (*check).set_enabled(document.alt_enabled());
+        }
         (*check).set_checked(id == "guide-fill"              ? (*editor).guide.fill
                              : id == "stroke-stabilize"      ? (*editor).stabilize
                              : id == "spray-glitter"         ? (*editor).glitter
@@ -1384,12 +1413,11 @@ void Ribbon::synchronize() {
                              : id == "transparent-pattern"   ? material.transparent_pattern
                              : id == "transparent-selection" ? document.transparent_selection
                              : id == "stamp-transparent"     ? document.stamp_transparent
-                             : id == "material-enabled"
-                                 ? (secondary_color_ ? document.shape_fill : document.shape_outline)
-                             : id == "smooth-lines"    ? document.ink.smooth
-                             : id == "continuous-path" ? document.continuous_path
-                             : id == "outline"         ? document.shape_outline
-                                                       : document.shape_fill);
+                             : id == "alt-carries-body"      ? document.alt_carries_body
+                             : id == "smooth-lines"          ? document.ink.smooth
+                             : id == "continuous-path"       ? document.continuous_path
+                             : id == "outline"               ? document.shape_outline
+                                                             : document.shape_fill);
     }
     synchronizing_ = false;
 }
@@ -1415,6 +1443,11 @@ void Ribbon::on_pointer_preview(gf::PointerEvent& event) {
         set_pointer_capture(false);
         event.handled = true;
         if ((*choice).absolute_bounds().contains(event.position)) {
+            const std::shared_ptr<Editor> editor = editor_.lock();
+            if (editor && !(*editor).document.alt_enabled() &&
+                !(*choice).stable_id().value().starts_with("swatch-")) {
+                return;
+            }
             secondary_color_ = true;
             clicked(*choice);
         }
@@ -1460,19 +1493,17 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         show_materials(id == "fill-menu" || id == "material-fill");
         return;
     }
-    if (id == "material-enabled") {
-        (*editor).execute(secondary_color_ ? "fill" : "outline");
+    if (id == "alt-carries-body") {
+        (*editor).execute("alt-carries-body");
         return;
     }
     if (id.starts_with("material-brush-")) {
         Brush selected = static_cast<Brush>(std::stoi(id.substr(15)));
         (*editor).brush_family = BrushFamily::Additive;
+        Ink& material = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
+        select_brush(material, selected);
         if (secondary_color_) {
             (*editor).document.shape_fill_brush = selected;
-            (*editor).document.shape_fill = true;
-        } else {
-            (*editor).document.ink.brush = selected;
-            (*editor).document.shape_outline = true;
         }
         (*editor).document.sync_curve();
         (*editor).document.sync_path();
@@ -1517,11 +1548,9 @@ void Ribbon::clicked(gf::ButtonBase& button) {
     }
     if (id.starts_with("r-pattern-")) {
         Ink& material = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
-        material.pattern = static_cast<Pattern>(std::stoi(id.substr(10)));
+        select_pattern(material, static_cast<Pattern>(std::stoi(id.substr(10))));
         if (secondary_color_) {
-            (*editor).document.shape_fill = true;
-        } else {
-            (*editor).document.shape_outline = true;
+            (*editor).document.shape_fill_brush = Brush::Round;
         }
         (*editor).document.sync_curve();
         (*editor).document.sync_path();
@@ -1532,8 +1561,9 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         Color& color = secondary_color_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;
         color = palette_color(std::stoi(id.substr(7)));
         Ink& material = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
-        material.pattern = Pattern::Solid;
-        material.transparent_pattern = false;
+        if (material.pattern == Pattern::None) {
+            select_pattern(material, Pattern::Solid);
+        }
         (*editor).document.sync_curve();
         (*editor).document.sync_path();
         (*editor).refresh();
@@ -1780,24 +1810,25 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         (*editor).choose_shape(static_cast<Shape>(std::stoi(id.substr(6))));
     } else if (id.starts_with("fill-brush-") || id.starts_with("edge-brush-")) {
         if (id.starts_with("fill-brush-")) {
-            document.shape_fill_brush = static_cast<Brush>(std::stoi(id.substr(11)));
+            select_brush(document.alt_ink, static_cast<Brush>(std::stoi(id.substr(11))));
+            document.shape_fill_brush = document.alt_ink.brush;
             document.shape_fill = true;
         } else {
-            document.ink.brush = static_cast<Brush>(std::stoi(id.substr(11)));
+            select_brush(document.ink, static_cast<Brush>(std::stoi(id.substr(11))));
             document.shape_outline = true;
         }
     } else if (id.starts_with("brush-")) {
-        document.ink.brush = static_cast<Brush>(std::stoi(id.substr(6)));
+        select_brush(document.ink, static_cast<Brush>(std::stoi(id.substr(6))));
         (*editor).choose_tool(Tool::Brush);
     } else if (id.starts_with("size-")) {
         document.ink.size = std::stoi(id.substr(5));
     } else if (id.starts_with("pattern-")) {
-        document.ink.pattern = static_cast<Pattern>(std::stoi(id.substr(8)));
+        select_pattern(document.ink, static_cast<Pattern>(std::stoi(id.substr(8))));
         document.shape_fill = true;
     } else if (id == "outline-on" || id == "outline-off") {
         document.shape_outline = id == "outline-on";
         if (document.shape_outline) {
-            document.ink.brush = Brush::Round;
+            select_pattern(document.ink, Pattern::Solid);
         }
     } else if (id == "fill-on" || id == "fill-off") {
         document.shape_fill = id == "fill-on";

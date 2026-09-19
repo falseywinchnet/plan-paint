@@ -9,6 +9,8 @@ class MaterialSurface {
     Ink ink_;
     Brush brush_;
     double cosine_ = 1, sine_ = 0;
+    std::unique_ptr<MaterialSurface> alternate_;
+    Color sample_primary(int x, int y, double edge_distance) const;
 
   public:
     MaterialSurface(const Ink& ink, Brush brush);

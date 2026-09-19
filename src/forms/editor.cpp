@@ -717,7 +717,10 @@ void Editor::pointer(const gf::PointerEvent& event) {
             if (event.button == gf::PointerButton::secondary &&
                 (document.tool == Tool::Path || document.tool == Tool::Stamp)) {
                 if (document.tool == Tool::Path) {
-                    int node = hit_path_node(point);
+                    int node =
+                        document.path.extending && document.path.nodes.size() - document.path.start == 1
+                            ? -1
+                            : hit_path_node(point);
                     if (node >= 0) {
                         path_node_ = node;
                         Point anchor = document.path.nodes[static_cast<std::size_t>(node)];
@@ -732,6 +735,14 @@ void Editor::pointer(const gf::PointerEvent& event) {
                 } else {
                     reset_stamp();
                 }
+                release_gesture();
+                refresh();
+                return;
+            }
+            if (event.button == gf::PointerButton::secondary && document.tool == Tool::Shape &&
+                ((document.curve.base && !document.curve.line_set) ||
+                 (dragging_ && document.shape == Shape::Line))) {
+                document.curve = {};
                 release_gesture();
                 refresh();
                 return;
@@ -760,9 +771,14 @@ void Editor::pointer(const gf::PointerEvent& event) {
     }
 }
 void Editor::begin(Point point, bool secondary) {
+    if (secondary && !document.alt_enabled() &&
+        (document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Fill ||
+         document.tool == Tool::Shape)) {
+        return;
+    }
     start_ = last_ = current_ = point;
     gesture_ink_ = secondary ? document.alternate_ink() : document.primary_ink();
-    gesture_fill_ink_ = secondary ? document.primary_ink() : document.alternate_ink();
+    gesture_fill_ink_ = secondary ? document.primary_ink() : document.body_ink();
     stabilizer_.reset(point);
     if (document.tool == Tool::Brush && brush_family == BrushFamily::Heal &&
         (set_heal_source || !healing_brush_.has_source())) {
@@ -810,8 +826,9 @@ void Editor::begin(Point point, bool secondary) {
             document.ink.primary = color;
         }
         Ink& material = secondary ? document.alt_ink : document.ink;
-        material.pattern = Pattern::Solid;
-        material.transparent_pattern = false;
+        if (material.pattern == Pattern::None) {
+            select_pattern(material, Pattern::Solid);
+        }
         refresh();
         return;
     }
@@ -1700,6 +1717,8 @@ void Editor::execute(const std::string& command) {
             }
         } else if (command == "smooth-lines") {
             document.ink.smooth = !document.ink.smooth;
+        } else if (command == "alt-carries-body") {
+            document.alt_carries_body = !document.alt_carries_body;
         } else if (command == "continuous-path") {
             document.continuous_path = !document.continuous_path;
         } else if (command == "transparent-pattern") {

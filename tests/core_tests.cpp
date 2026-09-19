@@ -246,6 +246,74 @@ void test_transformative_brushes() {
     }
     require(colors.size() > 20, "glitter spray lacks varying facets");
 }
+void test_material_collections_and_dry_contact() {
+    paint::Document document;
+    document.ink.primary = {180, 30, 20, 255};
+    document.ink.secondary = {20, 60, 190, 255};
+    paint::select_pattern(document.ink, paint::Pattern::Checker);
+    paint::select_brush(document.alt_ink, paint::Brush::Crayon);
+    document.ink.size = 32;
+    const paint::Ink layered = document.primary_ink();
+    const paint::Ink alternate = document.alternate_ink();
+    const paint::MaterialSurface surface(layered, layered.brush), wax(alternate, alternate.brush);
+    require(paint::equal(surface.sample(20, 20, 3), document.ink.primary),
+            "Primary pattern foreground is a flat color");
+    require(paint::equal(surface.sample(24, 20, 3), wax.sample(24, 20, 3)),
+            "Primary pattern gaps sample the independent Alt brush");
+    paint::select_pattern(document.alt_ink, paint::Pattern::None);
+    const paint::Ink open = document.primary_ink();
+    require(paint::MaterialSurface(open, open.brush).sample(24, 20, 3).a == 0,
+            "Alt None leaves pattern gaps transparent");
+    for (paint::Brush medium : {paint::Brush::Crayon, paint::Brush::Charcoal}) {
+        paint::Ink ink;
+        ink.size = 40;
+        ink.brush = medium;
+        const paint::MaterialSurface dry(ink, medium);
+        double core = 0, rim = 0, core_square = 0, rim_square = 0;
+        for (int x = 0; x < 256; ++x) {
+            const double a = dry.sample(x, 17, 20).a, b = dry.sample(x, 17, 1).a;
+            core += a;
+            rim += b;
+            core_square += a * a;
+            rim_square += b * b;
+        }
+        core /= 256;
+        rim /= 256;
+        std::cout << paint::brush_names[static_cast<int>(medium)] << " core alpha " << core << ", rim alpha "
+                  << rim << '\n';
+        require(core > 180 && core > rim * 1.8, "dry medium must deposit a dense core with a lighter rim");
+        require(rim_square / 256 - rim * rim > (core_square / 256 - core * core) * 3,
+                "granulation must be concentrated at the edge rather than perforating the core");
+        paint::Image stroke;
+        stroke.reset(280, 70, {0, 0, 0, 0});
+        paint::DynamicBrushStroke brush;
+        brush.segment(stroke, {25, 35}, {255, 35}, ink, false);
+        double middle = 0, outer = 0;
+        for (int x = 40; x < 240; ++x) {
+            middle += stroke.get(x, 35).a;
+            outer += stroke.get(x, 17).a;
+        }
+        require(middle > outer * 1.8 && middle / 200 > 180,
+                "freehand deposition retains the dense core and granular edge");
+    }
+    document.new_image(100, 90);
+    document.shape_fill = true;
+    document.continuous_path = false;
+    document.alt_carries_body = true;
+    paint::select_pattern(document.alt_ink, paint::Pattern::Solid);
+    document.add_path_node({10, 10});
+    document.add_path_node({85, 10});
+    document.add_path_node({85, 80});
+    document.end_path_geometry();
+    const paint::Image original = document.image;
+    document.alt_carries_body = false;
+    paint::select_brush(document.alt_ink, paint::Brush::Charcoal);
+    document.add_path_node({15, 85});
+    document.end_path_geometry();
+    require(std::equal(original.pixels.begin(), original.pixels.end(), document.image.pixels.begin(),
+                       paint::equal),
+            "canceling a later run preserves a saved run's body assignment and material");
+}
 void test_conv() {
     paint::Image input, output;
     input.reset(13, 9, {53, 177, 229, 149});
@@ -1119,6 +1187,7 @@ int main() {
         test_color();
         test_perceptual_tools();
         test_transformative_brushes();
+        test_material_collections_and_dry_contact();
         test_conv();
         test_conv_reference();
         test_editing();

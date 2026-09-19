@@ -48,7 +48,21 @@ const char* shape_names[shape_count] = {"Line",
                                         "Eight-point star",
                                         "Burst",
                                         "Arc"};
+bool solid_material(const Ink& ink) {
+    return ink.pattern == Pattern::Solid && ink.brush == Brush::Round;
+}
+void select_brush(Ink& ink, Brush brush) {
+    ink.brush = brush;
+    ink.pattern = Pattern::Solid;
+    ink.transparent_pattern = false;
+}
+void select_pattern(Ink& ink, Pattern pattern) {
+    ink.pattern = pattern;
+    ink.brush = Brush::Round;
+    ink.transparent_pattern = false;
+}
 Ink pencil_ink(Ink ink) {
+    ink.alternate.reset();
     ink.size = 1;
     ink.brush = Brush::Round;
     // The pixel pencil uses the selected color, independently of the retained
@@ -61,7 +75,8 @@ Ink pencil_ink(Ink ink) {
 }
 Color patterned(const Ink& ink, int x, int y) {
     if (ink.pattern == Pattern::None) {
-        return {0, 0, 0, 0};
+        return ink.alternate ? MaterialSurface(*ink.alternate, (*ink.alternate).brush).sample(x, y, 32)
+                             : Color{0, 0, 0, 0};
     }
     const int bayer[8][8] = {{0, 48, 12, 60, 3, 51, 15, 63}, {32, 16, 44, 28, 35, 19, 47, 31},
                              {8, 56, 4, 52, 11, 59, 7, 55},  {40, 24, 36, 20, 43, 27, 39, 23},
@@ -112,6 +127,9 @@ Color patterned(const Ink& ink, int x, int y) {
     }
     if (front) {
         return ink.primary;
+    }
+    if (ink.alternate) {
+        return MaterialSurface(*ink.alternate, (*ink.alternate).brush).sample(x, y, 32);
     }
     if (ink.transparent_pattern) {
         return {0, 0, 0, 0};
@@ -298,9 +316,10 @@ void flood(Image& image, int x, int y, const Ink& ink) {
             }
         }
     }
+    const MaterialSurface material(ink, ink.brush);
     for (int index : queue) {
         image.blend(index % image.width, index / image.width,
-                    patterned(ink, index % image.width, index / image.width));
+                    material.sample(index % image.width, index / image.width, 32));
     }
 }
 bool inside_polygon(const std::vector<Point>& points, double x, double y) {

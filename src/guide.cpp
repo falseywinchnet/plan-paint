@@ -382,6 +382,7 @@ void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide
         return;
     }
     const Color original = image.get(x, y);
+    const MaterialSurface material(ink, ink.brush);
     std::vector<std::uint8_t> visited(image.pixels.size(), 0);
     std::queue<int> queue;
     queue.push(y * image.width + x);
@@ -391,7 +392,7 @@ void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide
         queue.pop();
         x = index % image.width;
         y = index / image.width;
-        image.blend(x, y, patterned(ink, x, y));
+        image.blend(x, y, material.sample(x, y, 32));
         const int nx[] = {x - 1, x + 1, x, x}, ny[] = {y, y, y - 1, y + 1};
         for (int direction = 0; direction < 4; ++direction) {
             int px = nx[direction], py = ny[direction];

@@ -4,9 +4,11 @@
 
 Open the Brushes arrow to choose **Additive**, **Mix**, or **Heal**. The tool tab exposes settings for the selected family. Primary and Alt retain their separate colors and materials.
 
-Additive brushes deposit paint. Calligraphy changes the tip, oil and bristle produce directional strands, and crayon, pencil, watercolor, pastel and charcoal use different grain and deposition profiles. Spray can uses a dense center and a soft falloff, with small lightness variations and smaller color variations in OKLab. Its **Glitter** checkbox adds fine facets and sparse bright glints. Natural pencil has fine, firm tooth; crayon has coarse wax contact and a crisp edge; soft pastel has a chalky body and feathered rim; charcoal has broken powder and a softer falloff. Their coverage is retained per stroke so overlapping dabs do not flatten all four into the same opaque mark. The small Home **Pencil** always uses a solid one-pixel tip, independent of the last brush and pattern.
+Additive brushes deposit paint. Calligraphy changes the tip, oil and bristle produce directional strands, and crayon, pencil, watercolor, pastel and charcoal use different grain and deposition profiles. Spray can uses a dense center and a soft falloff, with small lightness variations and smaller color variations in OKLab. Its **Glitter** checkbox adds fine facets and sparse bright glints. Natural pencil has fine, firm tooth; crayon has a dense waxy core with coarse breaks near its rim; soft pastel has a chalky body and feathered rim; charcoal has a compact center and a wider, finely granular powder edge. Their coverage is retained per stroke so overlapping dabs do not flatten all four into the same opaque mark. The small Home **Pencil** always uses a solid one-pixel tip, independent of the last brush and pattern.
 
-Brush-only dynamics do not change the materials used to fill shapes or paths.
+Each Primary or Alt slot holds **one** material: Solid, No color, a brush, or a pattern. Selecting a brush clears its pattern; selecting a pattern clears its brush. Selecting a color preserves its material. **Solid** deposits a plain color and disables Alt. The material choices apply to strokes, paths and shapes.
+
+With **Alt carries body** off, Alt supplies the gaps in Primary; choose Alt **No color** to leave those gaps transparent. With the switch on, Primary supplies the edge and Alt supplies the body of a shape or path. The switch sits beside **Smooth lines** in Materials and is disabled while Primary is Solid. The Edge and Fill switches independently control which parts are drawn.
 
 Mix brushes transform existing pixels. Choose Ripples, Glass tile, Wigner counterflow, Support braid, Support lens, Moving rooms, Holonomy, or Flux knots. Strength controls the blend with the original image; Scale controls the spatial period and Phase shifts the pattern. Each gesture samples an immutable starting image, so repeated pointer events over the same position do not repeatedly degrade the result.
 
@@ -24,7 +26,7 @@ Capture a region with Stamp, then click or drag to place it. **Hardness** 1 reta
 
 ## Guides and selection
 
-Guide is the drafting triangle beside Path. Click to add vertices. Clicking an earlier vertex connects back to it; clicking the first vertex closes the guide. Right-click or **Set guide** also closes it. Drag a vertex to reshape it or drag inside a closed guide to move it. **Protect body** or the filled-square ribbon switch blocks the inside; when off, the boundary acts as a line stencil. **Clear guide** removes it.
+Guide is the drafting triangle beside Path. Click to add vertices. Clicking an earlier vertex connects back to it; clicking the first vertex closes the guide. The next edge previews beneath the pointer. Right-click cancels that pending edge and removes a lone initial anchor; **Set guide** closes the retained outline. Drag a vertex to reshape it or drag inside a closed guide to move it. **Protect body** or the filled-square ribbon switch blocks the inside; when off, the boundary acts as a line stencil. **Clear guide** removes it.
 
 A guide constrains Pencil, Brush, Fill and Stamp. It is display and editing state and never becomes exported artwork. Selection, Path, shapes, text, crop, cut, paste, resize, reshape and document resizing clear it. Changing atlas frames also clears it.
 
@@ -36,7 +38,7 @@ With a selection active, choose Guide to protect its silhouette immediately. Sel
 
 ## Paths
 
-An extending Path can snap back to any retained node. The preview shows the connecting segment; clicking commits it and ends that run. Click again to begin another run at an existing junction or a new point.
+An extending Path can snap back to any retained node. The preview shows the connecting segment; clicking commits it and ends that run. Click again to begin another run at an existing junction or a new point. Right-click cancels the pending segment; if its initial anchor is the only node in the new run, that anchor is removed too. Committed runs remain editable. Right-click also cancels a Line while dragging it.
 
 In the Path arrow menu, choose **Swap segment**, then Bézier or Arc. Click an existing segment between active blue endpoints. Drag the controls to reshape it, then right-click to return to ordinary Path editing. The endpoints remain part of the path; Undo and Redo retain the active geometry.
 

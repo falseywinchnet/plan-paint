@@ -808,8 +808,9 @@ void EditorDialog::accept() {
             Color& target = secondary_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;
             target = color_;
             Ink& material = secondary_ ? (*editor).document.alt_ink : (*editor).document.ink;
-            material.pattern = Pattern::Solid;
-            material.transparent_pattern = false;
+            if (material.pattern == Pattern::None) {
+                select_pattern(material, Pattern::Solid);
+            }
             (*editor).document.sync_curve();
             (*editor).document.sync_path();
         } else if (kind_ == EditorDialogKind::settings) {

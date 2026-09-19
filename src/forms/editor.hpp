@@ -193,7 +193,7 @@ class Editor final : public gui_forms::Control {
     bool path_swap_pointer(const gui_forms::PointerEvent& event, Point point);
     void paint_path_swap(gui_forms::Painter& painter);
     int guide_node_ = -1;
-    bool guide_moving_ = false, guide_connecting_ = false;
+    bool guide_moving_ = false, guide_connecting_ = false, guide_extending_ = false;
     Point guide_last_;
     Image paint_base_;
     void paint_segment(Point start, Point end);

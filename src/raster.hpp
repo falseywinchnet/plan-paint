@@ -1,5 +1,6 @@
 #pragma once
 #include "image.hpp"
+#include <memory>
 #include <unordered_map>
 namespace paint {
 class EraserStroke {
@@ -140,6 +141,8 @@ extern const char* pattern_names[pattern_count];
 extern const char* brush_names[brush_count];
 extern const char* shape_names[shape_count];
 struct Ink {
+    // Immutable alternate material used only in this material's uncovered areas.
+    std::shared_ptr<const Ink> alternate;
     Color primary{0, 0, 0, 255};
     Color secondary{255, 255, 255, 255};
     Pattern pattern = Pattern::Solid;
@@ -153,6 +156,9 @@ struct Ink {
     double pigment_load = 0.65;
     double material_angle = -20.0;
 };
+bool solid_material(const Ink& ink);
+void select_brush(Ink& ink, Brush brush);
+void select_pattern(Ink& ink, Pattern pattern);
 Ink pencil_ink(Ink ink);
 Color patterned(const Ink& ink, int x, int y);
 void dab(Image& image, Point point, const Ink& ink);

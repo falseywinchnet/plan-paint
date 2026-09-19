@@ -45,6 +45,8 @@ struct PathRun {
     Ink alternate;
     bool outline = true, fill = false, continuous = true;
     Brush fill_brush = Brush::Round;
+    Ink body;
+    bool alt_carries_body = false;
 };
 struct PathSegment {
     std::size_t first = 0, last = 0;
@@ -65,6 +67,8 @@ struct EditablePath {
     Ink alternate;
     bool outline = true, fill = false, continuous = false;
     Brush fill_brush = Brush::Round;
+    Ink body;
+    bool alt_carries_body = false;
 };
 struct EditableCurve {
     CurveGeometry geometry;
@@ -90,6 +94,9 @@ struct Document {
     Ink ink, alt_ink;
     Ink primary_ink() const;
     Ink alternate_ink() const;
+    Ink body_ink() const;
+    bool alt_enabled() const;
+    bool alt_carries_body = false;
     Tool tool = Tool::Pencil;
     Shape shape = Shape::Rectangle;
     StampShape stamp_shape = StampShape::Circle;

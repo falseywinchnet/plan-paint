@@ -12,7 +12,8 @@ namespace {
 namespace gf = gui_forms;
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
-    bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false;
+    bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
+         materials = false;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
     gf::SubscriptionToken resize_tick;
@@ -153,6 +154,59 @@ struct NativeExercise {
         paint::save_image(document.visible_image(), (root / "astra/bugfix-review.png").string());
         entered = true;
     }
+    void material_gallery(gf::Window& window) {
+        paint::Document& document = (*editor).document;
+        document.new_image(960, 600);
+        document.image.reset(960, 600, {248, 246, 241, 255});
+        paint::TextStyle label;
+        label.size = 18;
+        for (int row = 0; row < 2; ++row) {
+            const paint::Brush medium = row == 0 ? paint::Brush::Crayon : paint::Brush::Charcoal;
+            paint::draw_text(document.image, {25, 20.0 + row * 160}, row == 0 ? "Crayon" : "Charcoal", label,
+                             {40, 45, 55, 255}, {}, "");
+            for (int column = 0; column < 3; ++column) {
+                paint::Ink ink;
+                ink.brush = medium;
+                ink.primary = row == 0 ? paint::Color{174, 54, 30, 255} : paint::Color{34, 39, 45, 255};
+                ink.size = 16 + column * 24;
+                paint::DynamicBrushStroke brush;
+                brush.segment(document.image, {35.0 + column * 310, 90.0 + row * 160},
+                              {275.0 + column * 310, 100.0 + row * 160}, ink, false);
+                paint::draw_text(document.image, {25.0 + column * 310, 135.0 + row * 160},
+                                 std::to_string(ink.size) + " px", label, {40, 45, 55, 255}, {}, "");
+            }
+        }
+        const char* captions[] = {"Pattern + Alt charcoal", "Alt carries body", "Solid"};
+        for (int column = 0; column < 3; ++column) {
+            document.ink.primary = {24, 91, 131, 255};
+            document.ink.secondary = {207, 91, 40, 255};
+            document.ink.size = 12;
+            paint::select_pattern(document.ink, paint::Pattern::Checker);
+            paint::select_brush(document.alt_ink, paint::Brush::Charcoal);
+            document.alt_carries_body = column == 1;
+            if (column == 1) {
+                paint::select_brush(document.ink, paint::Brush::Crayon);
+                paint::select_pattern(document.alt_ink, paint::Pattern::Solid);
+            } else if (column == 2) {
+                paint::select_pattern(document.ink, paint::Pattern::Solid);
+            }
+            const paint::Ink edge = document.primary_ink(), body = document.body_ink();
+            paint::draw_shape(document.image, paint::Shape::RoundedRectangle, {35.0 + column * 310, 365},
+                              {275.0 + column * 310, 525}, edge, true, true, body.brush, &body);
+            paint::draw_text(document.image, {25.0 + column * 310, 548}, captions[column], label,
+                             {40, 45, 55, 255}, {}, "");
+        }
+        paint::select_brush(document.ink, paint::Brush::Crayon);
+        paint::select_pattern(document.alt_ink, paint::Pattern::None);
+        document.ink.size = 40;
+        document.alt_carries_body = false;
+        (*editor).choose_tool(paint::Tool::Brush);
+        (*editor).refresh();
+        window.perform_layout();
+        const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+        paint::save_image(document.visible_image(), (root / "astra/material-review.png").string());
+        entered = true;
+    }
     bool entered = false;
     void stroke(gf::Window& window, paint::Point first, paint::Point last) {
         gf::RasterCanvas& canvas = (*editor).canvas();
@@ -180,6 +234,10 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (materials) {
+            material_gallery(window);
+            return;
+        }
         if (bugs) {
             bug_gallery(window);
             return;
@@ -262,6 +320,7 @@ int main(int argc, char** argv) {
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
                                          std::string(argv[1]) == "--features-compact");
         exercise.compact = argc > 1 && std::string(argv[1]) == "--features-compact";
+        exercise.materials = argc > 1 && std::string(argv[1]) == "--materials";
         exercise.bugs = argc > 1 && std::string(argv[1]) == "--bugs";
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));

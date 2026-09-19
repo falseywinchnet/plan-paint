@@ -309,7 +309,7 @@ void DynamicBrushStroke::dab(Image& image, Point center, Point direction, const 
         moving.grain_scale *= 0.6;
         moving.paper_roughness *= 0.6;
     } else if (ink.brush == Brush::Charcoal) {
-        moving.grain_scale *= 2.1;
+        moving.grain_scale *= 0.85;
         moving.paper_roughness = std::min(1.0, ink.paper_roughness * 1.35);
     }
     moving.material_angle += std::atan2(direction.y, direction.x) * 180 / std::numbers::pi;
@@ -371,9 +371,8 @@ void DynamicBrushStroke::dab(Image& image, Point center, Point direction, const 
                 // acquire a new random opacity with each overlapping dab.
                 opacity *= 0.85 + 0.15 * random_unit(x, y, ink.noise + 101);
             } else if (ink.brush == Brush::Crayon) {
-                // Broad wax contact leaves coarse broken paper texture and a
-                // crisp rim, rather than the powder falloff of dry chalk.
-                opacity *= 0.88 + 0.12 * random_unit(x / 2, y / 2, ink.noise + 103);
+                // Core pressure and wax-bitten edges are sampled from the
+                // stable paper surface, including across overlapping dabs.
             } else if (ink.brush == Brush::Pastel) {
                 const double depth = std::clamp((radius - distance) / std::max(1.0, radius * 0.35), 0.0, 1.0);
                 opacity *=
@@ -382,10 +381,6 @@ void DynamicBrushStroke::dab(Image& image, Point center, Point direction, const 
                 color.r = byte(color.r + (255 - color.r) * chalk);
                 color.g = byte(color.g + (255 - color.g) * chalk);
                 color.b = byte(color.b + (255 - color.b) * chalk);
-            } else if (ink.brush == Brush::Charcoal) {
-                const double core = std::clamp(1 - distance / (radius + 0.5), 0.0, 1.0);
-                const double dust = random_unit(x / 2, y / 2, ink.noise + 109);
-                opacity *= std::sqrt(core) * (0.32 + 0.68 * dust);
             }
             color.a = byte(color.a * opacity);
             const int px = wrap ? wrap_index(x, image.width) : x, py = wrap ? wrap_index(y, image.height) : y;
@@ -393,7 +388,7 @@ void DynamicBrushStroke::dab(Image& image, Point center, Point direction, const 
                 if (!color.a) {
                     continue;
                 }
-                const double coverage = color.a / 255.0;
+                const double coverage = ink.alternate ? radius - distance + 2 : color.a / 255.0;
                 const int index = py * image.width + px;
                 std::unordered_map<int, DryDeposit>::iterator found = dry_pixels_.find(index);
                 if (found == dry_pixels_.end()) {

@@ -12,7 +12,13 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
     }
     if (event.action == gf::PointerAction::down) {
         if (event.button == gf::PointerButton::secondary) {
-            guide.closed = guide.nodes.size() >= 3;
+            if (guide.nodes.size() == 1) {
+                guide.clear();
+            }
+            guide_extending_ = false;
+            guide_node_ = -1;
+            guide_connecting_ = guide_moving_ = false;
+            canvas().set_pointer_capture(false);
         } else if (event.button == gf::PointerButton::primary) {
             guide_node_ = -1;
             for (std::size_t index = 0; index < guide.nodes.size(); ++index) {
@@ -30,6 +36,7 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
                     guide.clear();
                 }
                 guide.nodes.push_back(point);
+                guide_extending_ = true;
                 guide_node_ = static_cast<int>(guide.nodes.size()) - 1;
             }
             guide_last_ = point;
@@ -61,6 +68,7 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
             if (guide_connecting_) {
                 if (guide_node_ == 0 && guide.nodes.size() >= 3) {
                     guide.closed = true;
+                    guide_extending_ = false;
                 } else if (static_cast<std::size_t>(guide_node_) + 1 < guide.nodes.size()) {
                     guide.nodes.push_back(guide.nodes[guide_node_]);
                 }
@@ -85,6 +93,20 @@ void Editor::paint_guide_overlay(gf::Painter& painter) {
     for (std::size_t index = 0; index < edges; ++index) {
         const gf::Point a = screen(guide.nodes[index]),
                         b = screen(guide.nodes[(index + 1) % guide.nodes.size()]);
+        painter.draw_line(a, b, white, 3);
+        painter.draw_line(a, b, blue, 1);
+    }
+    if (document.tool == Tool::Guide && guide_extending_ && !guide.closed && guide_node_ < 0 &&
+        !guide.nodes.empty() && cursor_client_) {
+        const gui_drawing::PointF mapped = canvas().client_to_bitmap(*cursor_client_);
+        Point target{mapped.x, mapped.y};
+        for (const Point& node : guide.nodes) {
+            if (std::hypot(node.x - target.x, node.y - target.y) * canvas().zoom() <= 8) {
+                target = node;
+                break;
+            }
+        }
+        const gf::Point a = screen(guide.nodes.back()), b = screen(target);
         painter.draw_line(a, b, white, 3);
         painter.draw_line(a, b, blue, 1);
     }

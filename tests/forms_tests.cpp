@@ -253,8 +253,12 @@ void captured_stroke_undo_and_right_color() {
     editor.document.ink.secondary = {250, 20, 50, 255};
     fixture.pointer(gf::PointerAction::down, 10, 20, gf::PointerButton::secondary);
     fixture.pointer(gf::PointerAction::up, 20, 20, gf::PointerButton::secondary);
+    require(white(editor.document.image.get(15, 20)), "Primary Solid disables right drawing with Alt");
+    paint::select_pattern(editor.document.ink, paint::Pattern::Checker);
+    fixture.pointer(gf::PointerAction::down, 10, 20, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 20, 20, gf::PointerButton::secondary);
     require(paint::equal(editor.document.image.get(15, 20), editor.document.ink.secondary),
-            "right stroke uses color two");
+            "right stroke uses enabled Alt");
 }
 void material_deposition_does_not_depend_on_event_count() {
     Fixture first;
@@ -940,7 +944,7 @@ void desktop_transactions_drop_and_handles() {
 }
 class PreviewPainter final : public gf::Painter {
   public:
-    int pencil_pixels = 0, eraser_discs = 0, lens_samples = 0;
+    int pencil_pixels = 0, eraser_discs = 0, lens_samples = 0, guide_lines = 0;
     bool lens_caption = false;
     gf::ImageId image;
     gf::Rect image_bounds;
@@ -966,7 +970,11 @@ class PreviewPainter final : public gf::Painter {
         }
     }
     void stroke_rect(gf::Rect, gf::Color, double) override {}
-    void draw_line(gf::Point, gf::Point, gf::Color, double) override {}
+    void draw_line(gf::Point, gf::Point, gf::Color color, double) override {
+        if (color.red == 26 && color.green == 112 && color.blue == 174 && color.alpha == 230) {
+            ++guide_lines;
+        }
+    }
     void draw_text_utf8(gf::Point, std::string_view text, gf::FontSpec, gf::Color) override {
         if (text == "8×") {
             lens_caption = true;
@@ -1305,7 +1313,7 @@ void path_hover_snap_and_controls() {
     editor.document.ink.brush = paint::Brush::Airbrush;
     routed_button(window, "primary");
     open_tab(window, "patterns-tab");
-    routed_button(window, "material-brush-0");
+    routed_button(window, "r-pattern-0");
     require(editor.document.ink.brush == paint::Brush::Round,
             "Solid outline cannot retain the airbrush's random deposition");
 }
@@ -1368,14 +1376,16 @@ void centered_circle_and_materials() {
     fixture.pointer(gf::PointerAction::up, 72, 61, gf::PointerButton::primary, gf::Modifier::control);
     require(!white(editor.document.image.get(40, 45)) && !white(editor.document.image.get(80, 45)),
             "Ctrl circle commit matches centered preview");
+    paint::select_brush(editor.document.ink, paint::Brush::Crayon);
+    editor.refresh();
     routed_button(window, "secondary");
     open_tab(window, "patterns-tab");
     require((*window.find("material-brush-4")).visible() && (*window.find("r-pattern-12")).visible() &&
                 (*window.find("grain-scale")).visible(),
             "fill brushes, patterns and material settings share one pane");
     routed_button(window, "material-brush-4");
-    require(editor.document.shape_fill_brush == paint::Brush::Oil && editor.document.shape_fill &&
-                editor.document.ink.brush == paint::Brush::Round,
+    require(editor.document.alt_ink.brush == paint::Brush::Oil && !editor.document.shape_fill &&
+                editor.document.ink.brush == paint::Brush::Crayon,
             "fill brush changes independently from the line");
     routed_button(window, "material-edge");
     routed_button(window, "material-brush-5");
@@ -1399,69 +1409,74 @@ void independent_color_materials_and_no_color() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
     gf::Window& window = *fixture.window;
-    routed_button(window, "swatch-5");
-    routed_button(window, "swatch-2", gf::PointerButton::secondary);
-    require(paint::equal(editor.document.ink.primary, paint::forms::ribbon_color(5)) &&
-                paint::equal(editor.document.ink.secondary, paint::forms::ribbon_color(2)),
-            "left and right palette clicks independently assign Primary and Alt");
     editor.choose_tool(paint::Tool::Brush);
+    routed_button(window, "swatch-5");
     open_tab(window, "patterns-tab");
-    routed_button(window, "material-edge");
+    require(!window.find("material-brush-0") && !window.find("material-enabled"),
+            "Solid is one material choice without a duplicate Brush or Enabled switch");
+    require(!(*window.find("material-fill")).enabled() && !(*window.find("alt-carries-body")).enabled(),
+            "Primary Solid disables Alt and body assignment");
     routed_button(window, "material-brush-4");
     routed_button(window, "r-pattern-12");
-    routed_button(window, "material-brush-5", gf::PointerButton::secondary);
-    routed_button(window, "r-pattern-8", gf::PointerButton::secondary);
     require(editor.document.ink.pattern == paint::Pattern::Checker &&
-                editor.document.alt_ink.pattern == paint::Pattern::Horizontal &&
-                editor.document.ink.brush == paint::Brush::Oil &&
-                editor.document.shape_fill_brush == paint::Brush::Crayon,
-            "right-click material choices retain independent Primary and Alt brushes and patterns");
+                editor.document.ink.brush == paint::Brush::Round &&
+                !(*require_button(window, "material-brush-4")).selected(),
+            "selecting a pattern clears the old brush and its gallery selection");
+    routed_button(window, "material-brush-5", gf::PointerButton::secondary);
+    require(editor.document.alt_ink.brush == paint::Brush::Crayon &&
+                editor.document.alt_ink.pattern == paint::Pattern::Solid &&
+                editor.document.ink.pattern == paint::Pattern::Checker,
+            "Alt can carry a brush while Primary carries a pattern");
+    routed_button(window, "r-pattern-8", gf::PointerButton::secondary);
+    require(editor.document.alt_ink.brush == paint::Brush::Round &&
+                editor.document.alt_ink.pattern == paint::Pattern::Horizontal,
+            "selecting an Alt pattern clears its old brush");
     std::shared_ptr<gf::NumericUpDown> grain =
         std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("grain-scale"));
     (*grain).set_value(2);
     require(editor.document.alt_ink.grain_scale == 2 && editor.document.ink.grain_scale == 1,
-            "material controls edit the currently selected color");
+            "material controls edit the selected slot");
     open_tab(window, "home-tab");
-    require(
-        (*require_button(window, "primary")).accessible_name().find("Checkerboard") != std::string::npos &&
-            (*require_button(window, "secondary")).accessible_name().find("Horizontal") != std::string::npos,
-        "color swatches expose their assigned material and pattern");
-    routed_button(window, "secondary");
+    routed_button(window, "swatch-6");
+    require(editor.document.alt_ink.pattern == paint::Pattern::Horizontal &&
+                paint::equal(editor.document.ink.secondary, paint::forms::ribbon_color(6)),
+            "changing color preserves the chosen material");
     open_tab(window, "patterns-tab");
     routed_button(window, "r-pattern-18");
-    require(editor.document.alt_ink.pattern == paint::Pattern::None &&
-                paint::patterned(editor.document.alternate_ink(), 5, 5).a == 0 &&
-                editor.document.primary_ink().secondary.a == 0,
-            "No color paints nothing and makes the alternate color of Primary patterns transparent");
-    open_tab(window, "home-tab");
-    require((*require_button(window, "secondary")).accessible_name().find("No color") != std::string::npos,
-            "Alt swatch exposes No color explicitly");
-    routed_button(window, "swatch-6");
-    require(editor.document.alt_ink.pattern == paint::Pattern::Solid &&
-                paint::equal(editor.document.ink.secondary, paint::forms::ribbon_color(6)) &&
-                editor.document.primary_ink().secondary.a == 255,
-            "choosing a color resets its pattern to Solid and restores opaque alternate samples");
-    editor.document.shape_fill_brush = paint::Brush::Round;
-    editor.document.ink.brush = paint::Brush::Round;
-    editor.document.ink.pattern = paint::Pattern::Solid;
-    editor.document.alt_ink.pattern = paint::Pattern::None;
-    editor.choose_tool(paint::Tool::Brush);
-    fixture.pointer(gf::PointerAction::down, 20, 30, gf::PointerButton::secondary);
-    fixture.pointer(gf::PointerAction::move, 90, 30, gf::PointerButton::secondary);
-    fixture.pointer(gf::PointerAction::up, 90, 30, gf::PointerButton::secondary);
-    require(white(editor.document.image.get(50, 30)), "right drawing respects Alt No color");
-    editor.document.alt_ink.pattern = paint::Pattern::Solid;
-    fixture.pointer(gf::PointerAction::down, 20, 30, gf::PointerButton::secondary);
-    fixture.pointer(gf::PointerAction::move, 90, 30, gf::PointerButton::secondary);
-    fixture.pointer(gf::PointerAction::up, 90, 30, gf::PointerButton::secondary);
-    require(paint::equal(editor.document.image.get(50, 30), editor.document.ink.secondary),
-            "right drawing uses the Alt material");
+    const paint::Ink primary = editor.document.primary_ink();
+    require(editor.document.alt_ink.pattern == paint::Pattern::None && paint::patterned(primary, 5, 1).a == 0,
+            "Alt No color leaves Primary pattern gaps transparent");
+    routed_button(window, "r-pattern-0");
+    editor.document.ink.primary = {170, 20, 40, 255};
+    editor.document.ink.secondary = {20, 70, 180, 255};
     editor.choose_shape(paint::Shape::Rectangle);
     editor.document.shape_outline = false;
-    fixture.drag(20, 45, 100, 80);
-    require(paint::equal(editor.document.image.get(60, 60), editor.document.ink.secondary),
-            "shape fills use the independent Alt material");
+    editor.document.shape_fill = true;
+    fixture.drag(10, 10, 60, 45);
+    require(paint::equal(editor.document.image.get(20, 20), editor.document.ink.primary) &&
+                paint::equal(editor.document.image.get(24, 20), editor.document.ink.secondary),
+            "body uses Primary pattern and Alt gaps while body assignment is off");
+    open_tab(window, "patterns-tab");
+    routed_button(window, "alt-carries-body");
+    require(editor.document.alt_carries_body, "Alt carries body is a working Materials toggle");
+    fixture.drag(65, 10, 120, 45);
+    require(paint::equal(editor.document.image.get(80, 20), editor.document.ink.secondary),
+            "Alt carries body fills with Alt independently of Primary's pattern");
+    routed_button(window, "material-edge");
+    routed_button(window, "r-pattern-0");
+    require(paint::solid_material(editor.document.ink) && !editor.document.alt_enabled() &&
+                !(*window.find("material-fill")).enabled() && !(*window.find("alt-carries-body")).enabled(),
+            "Solid clears Primary texture and disables Alt even with body assignment selected");
+    fixture.drag(10, 50, 110, 85);
+    require(paint::equal(editor.document.image.get(40, 65), editor.document.ink.primary),
+            "Solid owns the entire enabled shape body");
+    const std::size_t history = editor.document.undo_history.size();
+    fixture.pointer(gf::PointerAction::down, 10, 90, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 110, 90, gf::PointerButton::secondary);
+    require(editor.document.undo_history.size() == history,
+            "disabled Alt does not create an empty painting history entry");
 }
+
 void ribbon_collapse_and_reopen() {
     Fixture fixture;
     gf::Window& window = *fixture.window;
@@ -1725,8 +1740,7 @@ void guide_atlas_and_text_effect_interactions() {
     fixture.click(60, 20);
     fixture.click(60, 60);
     fixture.click(20, 60);
-    fixture.pointer(gf::PointerAction::down, 20, 60, gf::PointerButton::secondary);
-    fixture.pointer(gf::PointerAction::up, 20, 60, gf::PointerButton::secondary);
+    fixture.click(20, 20);
     require(editor.guide.closed && !editor.document.dirty(),
             "guide is closed and never enters document history");
     editor.choose_tool(paint::Tool::Pencil);
@@ -1857,6 +1871,62 @@ void lasso_add_subtract_and_void_expansion() {
                 editor.document.selection.image.width == 103 && editor.document.selection.image.height == 68,
             "inner-void lasso expands to the enclosing object beyond every edge of the drawn loop");
 }
+void cancel_pending_lines_and_guide_preview() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.choose_tool(paint::Tool::Path);
+    fixture.click(20, 20);
+    fixture.pointer(gf::PointerAction::move, 80, 60, gf::PointerButton::none);
+    fixture.pointer(gf::PointerAction::down, 20, 20, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 20, 20, gf::PointerButton::secondary);
+    require(editor.document.path.nodes.empty() && !editor.document.path.extending &&
+                editor.document.undo_history.empty() && !editor.document.dirty() &&
+                display_white(editor, 50, 40),
+            "right-click cancels a pending path and its first anchor, preview and undo entry");
+    fixture.click(20, 20);
+    fixture.click(80, 20);
+    editor.execute("finish-path");
+    const std::size_t history = editor.document.undo_history.size();
+    fixture.click(20, 60);
+    fixture.pointer(gf::PointerAction::down, 100, 70, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 100, 70, gf::PointerButton::secondary);
+    require(editor.document.path.nodes.size() == 2 && editor.document.path.runs.size() == 1 &&
+                editor.document.undo_history.size() == history && !white(editor.document.image.get(50, 20)),
+            "canceling an isolated new line preserves all committed runs and their history");
+    editor.choose_shape(paint::Shape::Line);
+    fixture.pointer(gf::PointerAction::down, 20, 50);
+    fixture.pointer(gf::PointerAction::move, 90, 70);
+    fixture.pointer(gf::PointerAction::down, 90, 70, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 90, 70, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 90, 70);
+    require(white(editor.document.image.get(55, 60)) && !editor.canvas().has_pointer_capture(),
+            "right-click cancels a dragged Line without placing it on either button release");
+    editor.choose_tool(paint::Tool::Guide);
+    fixture.click(20, 40);
+    fixture.pointer(gf::PointerAction::move, 100, 60, gf::PointerButton::none);
+    PreviewPainter pending;
+    editor.paint_canvas_overlay(pending, {});
+    require(pending.guide_lines == 1 && editor.guide.nodes.size() == 1,
+            "Guide draws one floating preview segment without committing a second vertex");
+    fixture.pointer(gf::PointerAction::down, 100, 60, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 100, 60, gf::PointerButton::secondary);
+    PreviewPainter canceled;
+    editor.paint_canvas_overlay(canceled, {});
+    require(editor.guide.nodes.empty() && canceled.guide_lines == 0,
+            "right-click removes an initial Guide anchor and its preview");
+    fixture.click(20, 40);
+    fixture.click(100, 40);
+    fixture.pointer(gf::PointerAction::move, 100, 80, gf::PointerButton::none);
+    PreviewPainter continuing;
+    editor.paint_canvas_overlay(continuing, {});
+    require(continuing.guide_lines == 2, "Guide preview follows the retained last vertex");
+    fixture.pointer(gf::PointerAction::down, 100, 80, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 100, 80, gf::PointerButton::secondary);
+    PreviewPainter finished;
+    editor.paint_canvas_overlay(finished, {});
+    require(finished.guide_lines == 1 && editor.guide.nodes.size() == 2 && !editor.guide.closed,
+            "right-click removes only the pending Guide segment and keeps its committed edge");
+}
 void backward_path_and_guide_connections() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -1945,6 +2015,7 @@ int main() {
     try {
         pencil_is_independent_of_brush_material();
         backward_path_and_guide_connections();
+        cancel_pending_lines_and_guide_preview();
         lasso_add_subtract_and_void_expansion();
         stamp_material_union_and_menu_toggle();
         dialog_clipboard_and_close_contracts();

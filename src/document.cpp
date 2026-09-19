@@ -391,19 +391,30 @@ void Document::invert_colors() {
 }
 Ink Document::primary_ink() const {
     Ink result = ink;
-    if (alt_ink.pattern == Pattern::None) {
-        result.secondary.a = 0;
+    result.alternate.reset();
+    result.transparent_pattern = true;
+    if (alt_enabled() && !alt_carries_body) {
+        result.alternate = std::make_shared<const Ink>(alternate_ink());
     }
     return result;
+}
+bool Document::alt_enabled() const {
+    return !solid_material(ink);
+}
+Ink Document::body_ink() const {
+    return alt_carries_body && alt_enabled() ? alternate_ink() : primary_ink();
 }
 Ink Document::alternate_ink() const {
     Ink result = alt_ink;
     result.primary = ink.secondary;
     result.secondary = ink.primary;
-    if (ink.pattern == Pattern::None) {
-        result.secondary.a = 0;
+    result.alternate.reset();
+    result.secondary.a = 0;
+    result.transparent_pattern = true;
+    if (!alt_enabled()) {
+        result.pattern = Pattern::None;
+        result.brush = Brush::Round;
     }
-    result.brush = shape_fill_brush;
     result.size = ink.size;
     result.smooth = ink.smooth;
     return result;
@@ -424,6 +435,8 @@ void Document::restore_path(const EditablePath& previous) {
     path = previous;
     if (!path.nodes.empty()) {
         ink = path.ink;
+        ink.alternate.reset();
+        alt_carries_body = path.alt_carries_body;
         alt_ink = path.alternate;
         shape_outline = path.outline;
         shape_fill = path.fill;
@@ -452,9 +465,22 @@ void Document::end_path_geometry() {
     if (!path.extending) {
         return;
     }
+    if (path.nodes.size() - path.start == 1) {
+        // An unplaced line owns no geometry: discard its initial anchor as well.
+        path.nodes.resize(path.start);
+        if (!undo_history.empty() && undo_history.back().path.nodes.size() == path.start &&
+            undo_history.back().path.session == path.session) {
+            revision = undo_history.back().revision;
+            history_bytes -= undo_history.back().bytes();
+            undo_history.pop_back();
+        }
+        path.extending = false;
+        image = path_image();
+        return;
+    }
     sync_path();
     path.runs.push_back({path.start, path.nodes.size() - path.start, path.ink, path.alternate, path.outline,
-                         path.fill, path.continuous, path.fill_brush});
+                         path.fill, path.continuous, path.fill_brush, path.body, path.alt_carries_body});
     path.extending = false;
 }
 void Document::move_path_node(std::size_t index, Point point) {
@@ -491,11 +517,8 @@ Image Document::path_image(const Point* next) const {
     for (const PathRun& saved : path.runs) {
         std::vector<Point> run = path_contour(saved.start, saved.count, !saved.continuous);
         Ink material = saved.ink;
-        if (saved.alternate.pattern == Pattern::None) {
-            material.secondary.a = 0;
-        }
-        polygon(result, run, material, saved.outline, saved.fill, !saved.continuous, saved.fill_brush,
-                &saved.alternate);
+        polygon(result, run, material, saved.outline, saved.fill, !saved.continuous, saved.body.brush,
+                &saved.body);
     }
     if (path.extending) {
         std::vector<Point> run =
@@ -504,9 +527,9 @@ Image Document::path_image(const Point* next) const {
             run.push_back(*next);
         }
         if (run.size() > 1) {
-            Ink alternate = alternate_ink();
-            polygon(result, run, primary_ink(), shape_outline, shape_fill, !continuous_path, shape_fill_brush,
-                    &alternate);
+            Ink body = body_ink();
+            polygon(result, run, primary_ink(), shape_outline, shape_fill, !continuous_path, body.brush,
+                    &body);
         }
     }
     return result;
@@ -516,8 +539,10 @@ void Document::sync_path() {
         return;
     }
     if (path.extending) {
-        path.ink = ink;
-        path.alternate = alternate_ink();
+        path.ink = primary_ink();
+        path.alternate = alt_ink;
+        path.body = body_ink();
+        path.alt_carries_body = alt_carries_body;
         path.outline = shape_outline;
         path.fill = shape_fill;
         path.continuous = continuous_path;
