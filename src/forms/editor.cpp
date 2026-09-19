@@ -1513,18 +1513,6 @@ void Editor::execute(const std::string& command) {
             (*ribbon_).show_tool_context();
             return;
         }
-        if (command == "text-font-file") {
-            gf::HostOpenFileDialogRequest request;
-            request.title = "Open a font";
-            request.filters = {{"Fonts", {"ttf", "otf"}}};
-            gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
-            if (result.outcome == gf::HostDialogOutcome::accepted && !result.paths.empty()) {
-                text.style.face_path = result.paths.front();
-                text.style.mono = false;
-                refresh();
-            }
-            return;
-        }
         if (command.starts_with("tool-")) {
             choose_tool(tools[std::stoul(command.substr(5))]);
             return;

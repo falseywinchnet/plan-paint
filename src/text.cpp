@@ -1,10 +1,9 @@
 #include "text.hpp"
+#include "safe_file.hpp"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
-#include <fstream>
 namespace paint {
 EmbeddedFont portsmouth_face(const TextStyle& style) {
     if (style.mono) {
@@ -46,15 +45,12 @@ class RasterFont {
     int ascent = 0, line_height = 0, bold_width = 0;
     bool synthetic_italic = false;
     explicit RasterFont(const TextStyle& style) {
-        std::ifstream file(
-            std::filesystem::path(std::u8string(style.face_path.begin(), style.face_path.end())),
-            std::ios::binary | std::ios::ate);
-        if (file) {
-            std::streamoff length = file.tellg();
-            if (length > 0 && length < 32000000) {
-                bytes.resize(static_cast<std::size_t>(length));
-                file.seekg(0);
-                file.read(reinterpret_cast<char*>(bytes.data()), length);
+        if (!style.face_path.empty()) {
+            try {
+                bytes = read_regular_file_bounded(style.face_path, 32000000,
+                                                  "Paint could not read this font safely.");
+            } catch (const std::exception&) {
+                bytes.clear();
             }
         }
         EmbeddedFont face = portsmouth_face(style);

@@ -572,7 +572,6 @@ void Ribbon::add_options() {
     button("text-cancel", "Cancel", -1, {1166, 35, 92, 25});
     button("text-fit", "Fit height", -1, {1068, 64, 92, 25});
     button("text-reset-effects", "Reset", -1, {1166, 64, 92, 25});
-    button("text-font-file", "Open font…", -1, {1068, 93, 190, 24});
     building_page_ = 1;
 }
 double Ribbon::ribbon_height() const {

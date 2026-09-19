@@ -1,8 +1,6 @@
 #include "desktop.hpp"
-#include "paths.hpp"
 #include "safe_file.hpp"
 #include <algorithm>
-#include <fstream>
 #include <stdexcept>
 namespace paint {
 Color office_color(int index) {
@@ -37,29 +35,34 @@ void CustomColors::load() {
     if (storage_path.empty()) {
         return;
     }
-    std::ifstream input(path_from_utf8(storage_path), std::ios::binary);
-    std::array<char, 5> magic_bytes{};
-    input.read(magic_bytes.data(), 5);
-    const std::string magic(magic_bytes.data(), 5);
+    std::vector<std::uint8_t> stored;
+    try {
+        stored = read_regular_file_bounded(storage_path, 129,
+                                           "Paint could not read its custom-color preferences.");
+    } catch (const std::exception&) {
+        return;
+    }
+    if (stored.size() < 5) {
+        return;
+    }
+    const std::string magic(stored.begin(), stored.begin() + 5);
     const bool legacy = magic == "RSPC1";
-    if (!input || (!legacy && magic != "RSPC2")) {
+    if (!legacy && magic != "RSPC2") {
         return;
     }
     const int count = legacy ? 16 : 30;
     const int mask_size = legacy ? 2 : 4;
-    std::vector<unsigned char> bytes(static_cast<std::size_t>(mask_size + count * 4));
-    input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-    if (!input) {
+    if (stored.size() != static_cast<std::size_t>(5 + mask_size + count * 4)) {
         return;
     }
     std::uint32_t mask = 0;
     for (int index = 0; index < mask_size; ++index) {
-        mask |= static_cast<std::uint32_t>(bytes[index]) << (index * 8);
+        mask |= static_cast<std::uint32_t>(stored[5 + index]) << (index * 8);
     }
     occupied = mask & 0x3fffffffU;
     for (int slot = 0; slot < count; ++slot) {
-        const std::size_t offset = static_cast<std::size_t>(mask_size + slot * 4);
-        colors[slot] = {bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]};
+        const std::size_t offset = static_cast<std::size_t>(5 + mask_size + slot * 4);
+        colors[slot] = {stored[offset], stored[offset + 1], stored[offset + 2], stored[offset + 3]};
     }
 }
 void CustomColors::store(int slot, Color color) {

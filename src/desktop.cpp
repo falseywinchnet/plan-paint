@@ -8,7 +8,6 @@
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <sstream>
 #include <stdexcept>
 namespace paint {
@@ -43,7 +42,14 @@ void EditorSettings::load() {
     if (storage_path.empty()) {
         return;
     }
-    std::ifstream input(path_from_utf8(storage_path));
+    std::vector<std::uint8_t> bytes;
+    try {
+        bytes = read_regular_file_bounded(storage_path, 4096, "Paint could not read its settings file.");
+    } catch (const std::exception&) {
+        return;
+    }
+    const std::string encoded(bytes.begin(), bytes.end());
+    std::istringstream input(encoded);
     std::string magic;
     double distance = 0;
     if (input >> magic >> distance && (magic == "RSPS1" || magic == "RSPS2") && std::isfinite(distance) &&
@@ -70,7 +76,15 @@ void RecentFiles::load() {
     if (storage_path.empty()) {
         return;
     }
-    std::ifstream input(path_from_utf8(storage_path), std::ios::binary);
+    std::vector<std::uint8_t> bytes;
+    try {
+        bytes = read_regular_file_bounded(storage_path, 1000000,
+                                          "Paint could not read its recent-files list.");
+    } catch (const std::exception&) {
+        return;
+    }
+    const std::string encoded(bytes.begin(), bytes.end());
+    std::istringstream input(encoded, std::ios::in | std::ios::binary);
     std::vector<std::string> loaded;
     // Length-prefixed records preserve spaces, backslashes and embedded newlines.
     for (int index = 0; index < 12 && input; ++index) {

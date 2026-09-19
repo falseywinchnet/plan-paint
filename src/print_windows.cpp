@@ -1,6 +1,8 @@
 #include "platform.hpp"
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <algorithm>
 #include <stdexcept>
 // Win32 base types must precede the common-dialog declarations.
@@ -80,7 +82,7 @@ bool print_image(const Image& image) {
         int result = StretchDIBits(context, left + (page_width - width) / 2, top + (page_height - height) / 2,
                                    width, height, 0, 0, image.width, image.height, flat.pixels.data(),
                                    &bitmap, DIB_RGB_COLORS, SRCCOPY);
-        success = result != GDI_ERROR && result > 0 && EndPage(context) > 0;
+        success = result != static_cast<int>(GDI_ERROR) && result > 0 && EndPage(context) > 0;
     }
     if (success) {
         success = EndDoc(context) > 0;

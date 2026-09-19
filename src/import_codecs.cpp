@@ -26,6 +26,7 @@ std::uint32_t big32(const std::uint8_t* data) {
     return (std::uint32_t(data[0]) << 24) | (std::uint32_t(data[1]) << 16) | (std::uint32_t(data[2]) << 8) |
            data[3];
 }
+#ifdef __APPLE__
 bool heif_brand(const std::uint8_t* brand) {
     static const char accepted[][5] = {"heic", "heix", "hevc", "hevx",
                                         "heim", "heis", "hevm", "hevs"};
@@ -67,6 +68,7 @@ void unpremultiply(Image& image) {
         }
     }
 }
+#endif
 } // namespace
 void reject_animation(const std::uint8_t* data, std::size_t size) {
     const unsigned char png[8] = {137, 80, 78, 71, 13, 10, 26, 10};

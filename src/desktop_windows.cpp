@@ -8,7 +8,9 @@
 #include <filesystem>
 #include <stdexcept>
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 // The base SDK must precede COM and mail declarations.
 // clang-format off
 #include <windows.h>

@@ -959,6 +959,21 @@ void test_file_security() {
         special_rejected = true;
     }
     require(special_rejected, "bounded read accepted a named pipe");
+    paint::EditorSettings settings;
+    settings.storage_path = pipe.string();
+    settings.load();
+    paint::RecentFiles recent;
+    recent.storage_path = pipe.string();
+    recent.load();
+    paint::CustomColors colors;
+    colors.storage_path = pipe.string();
+    colors.load();
+    paint::TextSession text;
+    text.begin({0, 0});
+    text.style.face_path = pipe.string();
+    text.edit.content = "safe fallback";
+    text.refresh({0, 0, 0, 255}, {255, 255, 255, 255});
+    require(!text.preview.pixels.empty(), "unsafe font file did not fall back to the embedded face");
 #endif
     const std::uint8_t gif[] = {'G', 'I', 'F', '8', '9', 'a'};
     bool rejected = false;
