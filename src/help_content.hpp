@@ -133,7 +133,11 @@ inline constexpr HelpTopic help_topics[] = {
      "and removes a lone initial anchor; Set guide closes the retained outline. Drag its nodes or "
      "body to move it. Protect body, also controlled by the filled square, blocks the inside. "
      "Otherwise only its lines block Pencil, Brush, Fill and Stamp. Choose Guide with a selection "
-     "to protect its silhouette directly. Clear guide removes it. Selection, Path, shapes, text, "
+     "to protect its silhouette directly. Click Guide again, or choose Unset guide in its arrow menu, "
+     "to remove it. The arrow menu also offers Edit guide and Swap segment: choose Bezier or Arc, "
+     "click a segment, then drag its handles. Right-click returns to ordinary guide editing. "
+     "Cut with a guide and no pixel selection only unsets the guide; the picture stays intact. "
+     "Selection, Path, shapes, text, "
      "cut, paste, crop, resize, reshape and changing atlas frames clear the guide."},
     {"7. The rubber stamp",
      "Choose Stamp at the right of Home. Open Stamp tools and pick one of 39 masks, including stars, arrows, "
