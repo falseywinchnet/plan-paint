@@ -51,19 +51,12 @@ void MouseCursorState::update(int requested) {
     }
 }
 static const SDL_DialogFileFilter image_filters[] = {
-    {"All supported images",
-     "png;jpg;jpeg;bmp;tif;tiff;tga;webp;avif;svg;ico;cur;heic;heif"}};
-static const SDL_DialogFileFilter save_filters[] = {{"PNG image", "png"},
-                                                    {"JPEG picture", "jpg;jpeg"},
-                                                    {"Bitmap picture", "bmp"},
-                                                    {"GIF picture", "gif"},
-                                                    {"TIFF picture", "tiff;tif"},
-                                                    {"Targa image", "tga"},
-                                                    {"WebP lossless image", "webp"},
-                                                    {"Windows icon", "ico"},
+    {"All supported images", "png;jpg;jpeg;bmp;tif;tiff;tga;webp;avif;svg;ico;cur;heic;heif"}};
+static const SDL_DialogFileFilter save_filters[] = {{"PNG image", "png"},      {"JPEG picture", "jpg;jpeg"},
+                                                    {"Bitmap picture", "bmp"}, {"TIFF picture", "tiff;tif"},
+                                                    {"Targa image", "tga"},    {"Windows icon", "ico"},
                                                     {"Windows cursor", "cur"}};
-static const char* save_extensions[] = {".png", ".jpg",  ".bmp", ".gif", ".tiff",
-                                        ".tga", ".webp", ".ico", ".cur"};
+static const char* save_extensions[] = {".png", ".jpg", ".bmp", ".tiff", ".tga", ".ico", ".cur"};
 static void file_dialog_result(void* userdata, const char* const* files, int filter) {
     FileDialog& dialog = *static_cast<FileDialog*>(userdata);
     std::lock_guard<std::mutex> lock(dialog.mutex);
@@ -73,7 +66,7 @@ static void file_dialog_result(void* userdata, const char* const* files, int fil
         } else if (files[0]) {
             std::string path = files[0];
             if (dialog.requested == FileAction::Save && path_from_utf8(path).extension().empty()) {
-                path += save_extensions[filter >= 0 && filter < 9 ? filter : 0];
+                path += save_extensions[filter >= 0 && filter < 7 ? filter : 0];
             }
             dialog.result = {dialog.requested, path, ""};
         }
@@ -94,7 +87,7 @@ void FileDialog::show(SDL_Window* window, FileAction action, const std::string& 
         pending = true;
     }
     if (action == FileAction::Save) {
-        SDL_ShowSaveFileDialog(file_dialog_result, this, window, save_filters, 9, initial.c_str());
+        SDL_ShowSaveFileDialog(file_dialog_result, this, window, save_filters, 7, initial.c_str());
     } else {
         SDL_ShowOpenFileDialog(file_dialog_result, this, window, image_filters, 1,
                                initial.empty() ? nullptr : initial.c_str(), false);

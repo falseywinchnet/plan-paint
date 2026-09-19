@@ -1269,8 +1269,7 @@ bool Editor::save(bool save_as) {
         request.suggested_name =
             path.empty() ? "Untitled.png" : std::filesystem::path(path).filename().string();
         request.default_extension = "png";
-        request.filters = {
-            {"Images", {"png", "bmp", "jpg", "jpeg", "gif", "tif", "tiff", "webp", "ico", "cur"}}};
+        request.filters = {{"Images", {"png", "bmp", "jpg", "jpeg", "tif", "tiff", "tga", "ico", "cur"}}};
         gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
         if (result.outcome != gf::HostDialogOutcome::accepted || result.paths.empty()) {
             return false;

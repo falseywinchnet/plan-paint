@@ -9,7 +9,7 @@ This review covered the two Rainstar Paint frontends, file reads and writes, eve
 
 ## Result
 
-The patch reduces elevated-input exploitability and closes the identified file-race, format-confusion, resource-exhaustion and known reachable memory-safety paths. It deliberately narrows import compatibility where the available decoder cannot safely accept untrusted input. GIF remains available for export, while GIF import is disabled. BMP import accepts direct 24- and 32-bit pixels. TIFF import accepts one uncompressed, contiguous 8-bit RGB or RGBA image. SVG raster image elements and filters are disabled. Arbitrary user-selected font files are no longer accepted by the length-unaware stb_truetype path; text uses the bundled and administrator-installed font inventory. The other retained formats receive bounded memory input, decoded-dimension limits, animation rejection where applicable, and stricter profile checks.
+The patch reduces elevated-input exploitability and closes the identified file-race, format-confusion, resource-exhaustion and known reachable memory-safety paths. It deliberately narrows import and export compatibility where the available decoder or encoder should not remain reachable. GIF is unavailable, while WebP and AVIF are import-only. BMP import accepts direct 24- and 32-bit pixels. TIFF import accepts one uncompressed, contiguous 8-bit RGB or RGBA image. SVG raster image elements and filters are disabled. Arbitrary user-selected font files are no longer accepted by the length-unaware stb_truetype path; text uses the bundled and administrator-installed font inventory. The other retained formats receive bounded memory input, decoded-dimension limits, animation rejection where applicable, and stricter profile checks.
 
 Both application entry points remain usable with root, `sudo`, set-id, Linux capabilities, or an elevated Windows token. The patch reduces the likelihood that hostile input can turn that authority into code execution by removing vulnerable parser profiles, bounding every retained input path, validating decoded geometry and replacing race-prone writes. It does not claim to isolate an already elevated process from a future native-code decoder defect.
 
@@ -28,8 +28,8 @@ Both application entry points remain usable with root, `sudo`, set-id, Linux cap
 | Medium | Settings, recent-file and custom-color reads still used ordinary blocking streams even after their writes became atomic. A same-user process could replace one with a FIFO for a startup denial of service. | Preference loading at startup or first use. | Route all three readers through the bounded regular-file helper with small format-specific limits and fail closed to defaults. The FIFO regression exercises each reader. |
 | Medium | Decompression bombs and header/decode disagreement could allocate excessive memory or make the destination smaller than the decoded copy. | stb, WebP, AVIF, TIFF, SVG and native HEIF paths had uneven limits. | Apply a 256 MB encoded-file ceiling, format-specific 16 MB SVG ceiling, 16,384-axis and 64-megapixel decoded ceiling, checked arithmetic, post-decode dimension consistency, a 512 MB encoded-output ceiling, and bounded codec thread/count settings. |
 | Medium | Animated WebP and multi-image AVIF could enter work and allocation paths outside Paint's single-canvas contract. | WebP and AVIF import. | Reject animated WebP, set AVIF image count to one, disable progressive decode, cap dimensions and pixels, ignore EXIF/XMP, and update the pinned libavif archive from 1.4.0 to the current signed 1.4.2 release with SHA-256 verification. See the [libavif 1.4.2 release](https://github.com/AOMediaCodec/libavif/releases). |
-| Medium | A non-HEIF file renamed `.heic` was handed to the broad macOS ImageIO type dispatcher. | macOS HEIC/HEIF import. | Require an ISO BMFF `ftyp` box containing a recognized HEVC still-image brand before ImageIO receives the bytes. Dimensions remain bounded before raster allocation. |
-| Low to medium | GIF export used a path-based helper and therefore required a writable temporary file. | Every GIF save. | Keep the export-only encoder, but use a private exclusive temporary file, read it through the bounded regular-file helper, remove it on every exit path, and atomically install the final encoded bytes. |
+| Medium | A non-HEIF file renamed `.heic` was handed to the broad macOS ImageIO type dispatcher. | macOS HEIC/HEIF import. | Require an ISO BMFF `ftyp` box containing a recognized HEVC still-image brand, validate the nested box structure and bounded `ispe` extents before ImageIO receives the bytes, then check decoded dimensions again before raster allocation. |
+| Low to medium | GIF and WebP export added native encoder allocation and temporary-file ownership paths that were unnecessary for the required save formats. | Every GIF or WebP save. | Remove both export paths and the bundled GIF encoder. Keep GIF rejected and WebP import-only. |
 
 ## Dependency reachability after the patch
 
@@ -39,7 +39,7 @@ Both application entry points remain usable with root, `sudo`, set-id, Linux cap
 | JPEG | patched `stb_image` from memory | Baseline/progressive still image; 64 MP maximum |
 | BMP | patched `stb_image` from memory | Direct 24/32-bit only |
 | TGA | patched `stb_image` from memory | 64 MP maximum |
-| GIF | none on import | Export only |
+| GIF | none | Rejected on import and export |
 | WebP | libwebp from memory | Static only; 64 MP maximum |
 | AVIF | libavif 1.4.2 plus system dav1d | One image, no progressive decode or metadata, 64 MP maximum |
 | TIFF | libtiff 4.7.2 in release builds, through memory callbacks | One uncompressed contiguous 8-bit RGB/RGBA scanline image |

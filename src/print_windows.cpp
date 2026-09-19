@@ -11,22 +11,46 @@
 #include <commdlg.h>
 // clang-format on
 namespace paint {
-static HGLOBAL print_mode = nullptr;
-static HGLOBAL print_names = nullptr;
+namespace {
+struct PrintState {
+    HGLOBAL mode = nullptr;
+    HGLOBAL names = nullptr;
+    ~PrintState() {
+        if (mode) {
+            GlobalFree(mode);
+        }
+        if (names) {
+            GlobalFree(names);
+        }
+    }
+    static void replace(HGLOBAL& current, HGLOBAL replacement) {
+        if (current != replacement) {
+            if (current) {
+                GlobalFree(current);
+            }
+            current = replacement;
+        }
+    }
+    void update(HGLOBAL replacement_mode, HGLOBAL replacement_names) {
+        replace(mode, replacement_mode);
+        replace(names, replacement_names);
+    }
+};
+PrintState print_state;
+} // namespace
 static RECT print_margins{};
 static double margin_units = 1000.0;
 void page_setup() {
     PAGESETUPDLGW setup{};
     setup.lStructSize = sizeof(setup);
-    setup.hDevMode = print_mode;
-    setup.hDevNames = print_names;
+    setup.hDevMode = print_state.mode;
+    setup.hDevNames = print_state.names;
     setup.Flags = PSD_DEFAULTMINMARGINS;
     if (PageSetupDlgW(&setup)) {
         print_margins = setup.rtMargin;
         margin_units = (setup.Flags & PSD_INHUNDREDTHSOFMILLIMETERS) ? 2540.0 : 1000.0;
     }
-    print_mode = setup.hDevMode;
-    print_names = setup.hDevNames;
+    print_state.update(setup.hDevMode, setup.hDevNames);
 }
 bool print_image(const Image& image) {
     Image flat;
@@ -37,14 +61,14 @@ bool print_image(const Image& image) {
     }
     PRINTDLGW dialog{};
     dialog.lStructSize = sizeof(dialog);
-    dialog.hDevMode = print_mode;
-    dialog.hDevNames = print_names;
+    dialog.hDevMode = print_state.mode;
+    dialog.hDevNames = print_state.names;
     dialog.Flags = PD_RETURNDC | PD_NOPAGENUMS | PD_NOSELECTION | PD_USEDEVMODECOPIESANDCOLLATE;
-    if (!PrintDlgW(&dialog)) {
+    const bool accepted = PrintDlgW(&dialog) != 0;
+    print_state.update(dialog.hDevMode, dialog.hDevNames);
+    if (!accepted) {
         return false;
     }
-    print_mode = dialog.hDevMode;
-    print_names = dialog.hDevNames;
     HDC context = dialog.hDC;
     DOCINFOW document{};
     document.cbSize = sizeof(document);

@@ -22,7 +22,8 @@ inline constexpr HelpTopic help_topics[] = {
      "Pick on canvas. Save preserves all entries. Save As from a picture to ICO or CUR offers "
      "standard sizes. Save to PNG or another ordinary image format exports the current icon "
      "image.\n\nSVG is rasterized on import. AVIF and macOS HEIC/HEIF also import to the canvas; "
-     "Save chooses a supported raster output. GIF is export-only; animated GIF and APNG are not supported."},
+     "Save chooses PNG, JPEG, BMP, TIFF, TGA, ICO or CUR. WebP and AVIF are import-only; GIF is not "
+     "supported. Animated WebP and APNG are also rejected."},
     {"1. Make your first picture",
      "Click Pencil in Home, then hold the mouse button and move it on the white paper. Let go to "
      "stop. Try Brushes for wider marks. Pick a little colored square to change your "
@@ -143,11 +144,12 @@ inline constexpr HelpTopic help_topics[] = {
      "you change your mind. Ctrl+Enter places text; Escape cancels it."},
     {"11. Open, save and print",
      "File > Open replaces the picture with an image from disk. Save writes your picture. Save as lets "
-     "you choose a new name or format. PNG, TIFF, TGA and lossless WebP can preserve transparency. JPEG "
-     "is smaller for photographs but loses detail each time it is re-encoded. BMP, JPEG and GIF use a "
-     "white background for transparent areas. GIF uses a limited palette and is export-only.\n\nYou can "
+     "you choose a new name or format. PNG, TIFF and TGA can preserve transparency. JPEG is smaller for "
+     "photographs but loses detail each time it is re-encoded. BMP and JPEG use a white background for "
+     "transparent areas.\n\nYou can "
      "open PNG, JPEG, direct-color BMP, uncompressed RGB/RGBA TIFF, TGA, WebP, SVG, AVIF, ICO and CUR, "
-     "plus HEIC/HEIF on macOS. GIF and paletted BMP import are disabled because their available decoder "
+     "plus HEIC/HEIF on macOS. WebP, AVIF and HEIC/HEIF are import-only. GIF and paletted BMP import are "
+     "disabled because their available decoder "
      "paths are unsafe for untrusted files. SVG raster image elements are likewise disabled. Animated "
      "WebP and APNG are not supported. "
      "Saving exports flat raster artwork; ICO and CUR retain their multiple images.\n\nThe application "
@@ -186,9 +188,9 @@ inline constexpr HelpTopic help_topics[] = {
      "The compact beta-star "
      "variant supplies the material. Color is constrained to the available opacity before averaging. "
      "A bounded antialiasing filter grows smoothly where a transform compresses the image. Preparation "
-     "runs on a background worker, and dragging reuses the compiled material.\n\nI use stb, gif-h, "
-     "libtiff and libwebp for file encoding and "
-     "decoding. Dear ImGui and the image libraries retain their own permissive license notices. This is "
+     "runs on a background worker, and dragging reuses the compiled material.\n\nI use stb and libtiff "
+     "for file encoding and decoding, and libwebp for decoding. Dear ImGui and the image libraries retain "
+     "their own permissive license notices. This is "
      "an independent implementation; it does not contain Microsoft's Paint code or artwork."},
     {"14. Free for everyone",
      "To the Holy One, blessed be He, from whom all good things come. This work is dedicated in "

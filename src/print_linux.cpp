@@ -2,17 +2,33 @@
 #include <algorithm>
 #include <gtk/gtk.h>
 namespace paint {
-static GtkPageSetup* saved_setup = nullptr;
-static GtkPrintSettings* saved_settings = nullptr;
+namespace {
+struct PrintState {
+    GtkPageSetup* setup = nullptr;
+    GtkPrintSettings* settings = nullptr;
+    ~PrintState() {
+        if (setup) {
+            g_object_unref(setup);
+        }
+        if (settings) {
+            g_object_unref(settings);
+        }
+    }
+};
+PrintState print_state;
+} // namespace
 void page_setup() {
     if (!gtk_init_check(nullptr, nullptr)) {
         return;
     }
-    GtkPageSetup* replacement = gtk_print_run_page_setup_dialog(nullptr, saved_setup, saved_settings);
-    if (saved_setup) {
-        g_object_unref(saved_setup);
+    GtkPageSetup* replacement =
+        gtk_print_run_page_setup_dialog(nullptr, print_state.setup, print_state.settings);
+    if (replacement != print_state.setup) {
+        if (print_state.setup) {
+            g_object_unref(print_state.setup);
+        }
+        print_state.setup = replacement;
     }
-    saved_setup = replacement;
 }
 static void draw_print_page(GtkPrintOperation*, GtkPrintContext* context, gint, gpointer userdata) {
     Image& image = *static_cast<Image*>(userdata);
@@ -46,21 +62,24 @@ bool print_image(const Image& source) {
     gtk_print_operation_set_job_name(operation, "Rainstar Paint picture");
     gtk_print_operation_set_n_pages(operation, 1);
     gtk_print_operation_set_allow_async(operation, FALSE);
-    if (saved_setup) {
-        gtk_print_operation_set_default_page_setup(operation, saved_setup);
+    if (print_state.setup) {
+        gtk_print_operation_set_default_page_setup(operation, print_state.setup);
     }
-    if (saved_settings) {
-        gtk_print_operation_set_print_settings(operation, saved_settings);
+    if (print_state.settings) {
+        gtk_print_operation_set_print_settings(operation, print_state.settings);
     }
     g_signal_connect(operation, "draw-page", G_CALLBACK(draw_print_page), &image);
     GtkPrintOperationResult result =
         gtk_print_operation_run(operation, GTK_PRINT_OPERATION_ACTION_PRINT_DIALOG, nullptr, nullptr);
     if (result == GTK_PRINT_OPERATION_RESULT_APPLY) {
-        if (saved_settings) {
-            g_object_unref(saved_settings);
+        GtkPrintSettings* replacement = gtk_print_operation_get_print_settings(operation);
+        if (replacement) {
+            g_object_ref(replacement);
         }
-        saved_settings = gtk_print_operation_get_print_settings(operation);
-        g_object_ref(saved_settings);
+        if (print_state.settings) {
+            g_object_unref(print_state.settings);
+        }
+        print_state.settings = replacement;
     }
     g_object_unref(operation);
     return result == GTK_PRINT_OPERATION_RESULT_APPLY;

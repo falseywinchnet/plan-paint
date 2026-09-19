@@ -10,8 +10,8 @@
 #include <lunasvg.h>
 #include <memory>
 #include <mutex>
-#include <regex>
 #include <stdexcept>
+#include <string_view>
 #include <tinyxml2.h>
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
@@ -27,9 +27,91 @@ std::uint32_t big32(const std::uint8_t* data) {
            data[3];
 }
 #ifdef __APPLE__
+struct IsoBox {
+    const std::uint8_t* type = nullptr;
+    std::size_t payload = 0;
+    std::size_t end = 0;
+};
+bool next_iso_box(const std::uint8_t* bytes, std::size_t container_end, std::size_t& offset, IsoBox& box) {
+    if (offset > container_end || container_end - offset < 8) {
+        return false;
+    }
+    const std::size_t start = offset;
+    std::uint64_t length = big32(bytes + start);
+    std::size_t header = 8;
+    if (length == 1) {
+        if (container_end - start < 16) {
+            return false;
+        }
+        length = (std::uint64_t(big32(bytes + start + 8)) << 32) | big32(bytes + start + 12);
+        header = 16;
+    } else if (length == 0) {
+        length = container_end - start;
+    }
+    if (length < header || length > container_end - start) {
+        return false;
+    }
+    box = {bytes + start + 4, start + header, start + static_cast<std::size_t>(length)};
+    offset = box.end;
+    return true;
+}
+bool heif_dimensions(const std::uint8_t* bytes, std::size_t size, int& maximum) {
+    bool found_extent = false;
+    std::size_t top_offset = 0;
+    while (top_offset < size) {
+        IsoBox top;
+        if (!next_iso_box(bytes, size, top_offset, top)) {
+            return false;
+        }
+        if (std::memcmp(top.type, "meta", 4) != 0 || top.end - top.payload < 4) {
+            continue;
+        }
+        std::size_t meta_offset = top.payload + 4;
+        while (meta_offset < top.end) {
+            IsoBox meta_child;
+            if (!next_iso_box(bytes, top.end, meta_offset, meta_child)) {
+                return false;
+            }
+            if (std::memcmp(meta_child.type, "iprp", 4) != 0) {
+                continue;
+            }
+            std::size_t iprp_offset = meta_child.payload;
+            while (iprp_offset < meta_child.end) {
+                IsoBox iprp_child;
+                if (!next_iso_box(bytes, meta_child.end, iprp_offset, iprp_child)) {
+                    return false;
+                }
+                if (std::memcmp(iprp_child.type, "ipco", 4) != 0) {
+                    continue;
+                }
+                std::size_t ipco_offset = iprp_child.payload;
+                while (ipco_offset < iprp_child.end) {
+                    IsoBox property;
+                    if (!next_iso_box(bytes, iprp_child.end, ipco_offset, property)) {
+                        return false;
+                    }
+                    if (std::memcmp(property.type, "ispe", 4) != 0) {
+                        continue;
+                    }
+                    if (property.end - property.payload < 12) {
+                        return false;
+                    }
+                    const std::uint32_t width = big32(bytes + property.payload + 4);
+                    const std::uint32_t height = big32(bytes + property.payload + 8);
+                    if (width < 1 || height < 1 || width > 16384 || height > 16384 ||
+                        std::uint64_t(width) * height > 64000000) {
+                        return false;
+                    }
+                    maximum = std::max(maximum, static_cast<int>(std::max(width, height)));
+                    found_extent = true;
+                }
+            }
+        }
+    }
+    return found_extent;
+}
 bool heif_brand(const std::uint8_t* brand) {
-    static const char accepted[][5] = {"heic", "heix", "hevc", "hevx",
-                                        "heim", "heis", "hevm", "hevs"};
+    static const char accepted[][5] = {"heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs"};
     for (std::size_t index = 0; index < std::size(accepted); ++index) {
         if (std::memcmp(brand, accepted[index], 4) == 0) {
             return true;
@@ -178,6 +260,36 @@ std::string svg_local_name(const char* name) {
     const char* colon = std::strchr(name, ':');
     return colon ? colon + 1 : name;
 }
+bool svg_css_has_filter(std::string_view text) {
+    const auto space = [](char value) {
+        return value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == '\f';
+    };
+    constexpr std::string_view property = "filter";
+    for (std::size_t offset = 0; offset + property.size() <= text.size(); ++offset) {
+        if (offset != 0 && text[offset - 1] != ';' && text[offset - 1] != '{' && !space(text[offset - 1])) {
+            continue;
+        }
+        bool matches = true;
+        for (std::size_t index = 0; index < property.size(); ++index) {
+            char value = text[offset + index];
+            if (value >= 'A' && value <= 'Z') {
+                value = static_cast<char>(value - 'A' + 'a');
+            }
+            matches = matches && value == property[index];
+        }
+        if (!matches) {
+            continue;
+        }
+        std::size_t colon = offset + property.size();
+        while (colon < text.size() && space(text[colon])) {
+            ++colon;
+        }
+        if (colon < text.size() && text[colon] == ':') {
+            return true;
+        }
+    }
+    return false;
+}
 void prepare_svg_element(tinyxml2::XMLElement& element, int depth, std::size_t& element_count,
                          std::size_t& attribute_count) {
     if (depth > 128 || ++element_count > 100000) {
@@ -194,8 +306,7 @@ void prepare_svg_element(tinyxml2::XMLElement& element, int depth, std::size_t& 
     if (name == "filter") {
         throw std::runtime_error(filter_error);
     }
-    static const std::regex css_filter(R"((^|[;{\s])filter\s*:)", std::regex::icase);
-    if (name == "style" && element.GetText() && std::regex_search(element.GetText(), css_filter)) {
+    if (name == "style" && element.GetText() && svg_css_has_filter(element.GetText())) {
         throw std::runtime_error(filter_error);
     }
     for (const tinyxml2::XMLAttribute* attribute = element.FirstAttribute(); attribute;
@@ -205,7 +316,7 @@ void prepare_svg_element(tinyxml2::XMLElement& element, int depth, std::size_t& 
         }
         std::string key = svg_local_name((*attribute).Name()), value = (*attribute).Value();
         if ((key == "filter" && value != "none" && !value.empty()) ||
-            (key == "style" && std::regex_search(value, css_filter))) {
+            (key == "style" && svg_css_has_filter(value))) {
             throw std::runtime_error(filter_error);
         }
     }
@@ -258,6 +369,10 @@ Image decode_native_heif(const void* data, std::size_t size) {
     if (!heif_signature(data, size)) {
         throw std::runtime_error("The selected HEIC/HEIF file does not contain a recognized HEVC image.");
     }
+    int maximum = 0;
+    if (!heif_dimensions(static_cast<const std::uint8_t*>(data), size, maximum)) {
+        throw std::runtime_error("HEIF structure or dimensions are invalid or exceed the canvas limit.");
+    }
     CFDataRef encoded =
         CFDataCreate(kCFAllocatorDefault, static_cast<const UInt8*>(data), static_cast<CFIndex>(size));
     if (!encoded) {
@@ -268,47 +383,49 @@ Image decode_native_heif(const void* data, std::size_t size) {
     if (!source) {
         throw std::runtime_error("This macOS installation could not decode the HEIC/HEIF image.");
     }
-    std::size_t index = CGImageSourceGetPrimaryImageIndex(source);
-    CFDictionaryRef properties = CGImageSourceCopyPropertiesAtIndex(source, index, nullptr);
-    int width = 0, height = 0;
-    if (properties) {
-        CFNumberRef w =
-            static_cast<CFNumberRef>(CFDictionaryGetValue(properties, kCGImagePropertyPixelWidth));
-        CFNumberRef h =
-            static_cast<CFNumberRef>(CFDictionaryGetValue(properties, kCGImagePropertyPixelHeight));
-        if (w) {
-            CFNumberGetValue(w, kCFNumberIntType, &width);
-        }
-        if (h) {
-            CFNumberGetValue(h, kCFNumberIntType, &height);
-        }
-        CFRelease(properties);
-    }
-    if (width < 1 || height < 1 || width > 16384 || height > 16384 ||
-        std::int64_t(width) * height > 64000000) {
+    const std::size_t count = CGImageSourceGetCount(source);
+    const std::size_t index = CGImageSourceGetPrimaryImageIndex(source);
+    if (count == 0 || index >= count) {
         CFRelease(source);
-        throw std::runtime_error("HEIF dimensions are invalid or exceed the canvas limit.");
+        throw std::runtime_error("The HEIF container has no decodable primary image.");
     }
-    int maximum = std::max(width, height);
     CFNumberRef max_size = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &maximum);
+    if (!max_size) {
+        CFRelease(source);
+        throw std::runtime_error("Could not allocate HEIF decode limits.");
+    }
     const void* keys[] = {kCGImageSourceCreateThumbnailFromImageAlways,
                           kCGImageSourceCreateThumbnailWithTransform, kCGImageSourceThumbnailMaxPixelSize};
     const void* values[] = {kCFBooleanTrue, kCFBooleanTrue, max_size};
     CFDictionaryRef options =
         CFDictionaryCreate(kCFAllocatorDefault, keys, values, 3, &kCFTypeDictionaryKeyCallBacks,
                            &kCFTypeDictionaryValueCallBacks);
+    if (!options) {
+        CFRelease(max_size);
+        CFRelease(source);
+        throw std::runtime_error("Could not allocate HEIF decode options.");
+    }
     CGImageRef decoded = CGImageSourceCreateThumbnailAtIndex(source, index, options);
     CFRelease(options);
     CFRelease(max_size);
+    CGImageSourceRemoveCacheAtIndex(source, index);
     CFRelease(source);
     if (!decoded) {
         throw std::runtime_error("macOS ImageIO could not rasterize this HEIC/HEIF image.");
     }
     try {
+        const std::size_t width = CGImageGetWidth(decoded);
+        const std::size_t height = CGImageGetHeight(decoded);
+        if (width < 1 || height < 1 || width > 16384 || height > 16384 ||
+            std::uint64_t(width) * height > 64000000) {
+            throw std::runtime_error("Decoded HEIF dimensions exceed the canvas limit.");
+        }
         Image image;
-        image.reset(static_cast<int>(CGImageGetWidth(decoded)), static_cast<int>(CGImageGetHeight(decoded)),
-                    {0, 0, 0, 0});
+        image.reset(static_cast<int>(width), static_cast<int>(height), {0, 0, 0, 0});
         CGColorSpaceRef space = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+        if (!space) {
+            throw std::runtime_error("Could not allocate the HEIF color space.");
+        }
         CGContextRef context = CGBitmapContextCreate(
             image.pixels.data(), image.width, image.height, 8, image.width * 4, space,
             static_cast<CGBitmapInfo>(kCGImageAlphaPremultipliedLast) | kCGBitmapByteOrder32Big);

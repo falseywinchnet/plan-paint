@@ -4,7 +4,6 @@ Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail
 
 - Dear ImGui (optional comparison frontend) v1.91.9b, commit f5befd2d29e66809cd1110a152e375a7f1981f06: MIT, Copyright Omar Cornut. See vendor/imgui/LICENSE.txt.
 - stb, commit 2c980bb59875b0d32144a71867fbdebb2f77cd20: MIT option selected. See vendor/stb/LICENSE.
-- gif-h, commit 70b645280d5e687f5217177c9cfa2889b0a2ad5f: MIT, Charlie Tangora. License is at the top of vendor/gif-h/gif.h.
 - SDL3 (optional comparison frontend): zlib license. https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt
 - libtiff 4.7.2: permissive TIFF license. https://gitlab.com/libtiff/libtiff/-/blob/master/LICENSE.md
 - libavif 1.4.2: BSD-2-Clause. See packaging/licenses/libavif-LICENSE.

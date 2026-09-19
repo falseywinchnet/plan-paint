@@ -24,8 +24,7 @@ void mutate(std::vector<std::uint8_t>& bytes, std::uint32_t& seed, int trial) {
         bytes.resize(1 + random_word(seed) % (bytes.size() - 1));
     }
 }
-void exercise_raster_mutations(const std::vector<std::uint8_t>& original, std::uint32_t seed,
-                               int trials) {
+void exercise_raster_mutations(const std::vector<std::uint8_t>& original, std::uint32_t seed, int trials) {
     for (int trial = 0; trial < trials; ++trial) {
         std::vector<std::uint8_t> bytes = original;
         mutate(bytes, seed, trial);
@@ -35,8 +34,7 @@ void exercise_raster_mutations(const std::vector<std::uint8_t>& original, std::u
         }
     }
 }
-void exercise_icon_mutations(const std::vector<std::uint8_t>& original, std::uint32_t seed,
-                             int trials) {
+void exercise_icon_mutations(const std::vector<std::uint8_t>& original, std::uint32_t seed, int trials) {
     for (int trial = 0; trial < trials; ++trial) {
         std::vector<std::uint8_t> bytes = original;
         mutate(bytes, seed, trial);
@@ -46,8 +44,8 @@ void exercise_icon_mutations(const std::vector<std::uint8_t>& original, std::uin
         }
     }
 }
-void exercise_file_mutations(const std::vector<std::uint8_t>& original,
-                             const std::filesystem::path& path, std::uint32_t seed, int trials) {
+void exercise_file_mutations(const std::vector<std::uint8_t>& original, const std::filesystem::path& path,
+                             std::uint32_t seed, int trials) {
     for (int trial = 0; trial < trials; ++trial) {
         std::vector<std::uint8_t> bytes = original;
         mutate(bytes, seed, trial);
@@ -58,8 +56,7 @@ void exercise_file_mutations(const std::vector<std::uint8_t>& original,
         }
     }
 }
-std::vector<std::uint8_t> save_fixture(const paint::Image& image,
-                                       const std::filesystem::path& directory,
+std::vector<std::uint8_t> save_fixture(const paint::Image& image, const std::filesystem::path& directory,
                                        const std::string& extension) {
     const std::filesystem::path path = directory / ("seed." + extension);
     paint::save_image(image, path.string());
@@ -77,16 +74,18 @@ int main() {
         image.reset(19, 13, {27, 83, 179, 255});
         image.set(3, 5, {241, 37, 91, 113});
 
-        const char* raster_formats[] = {"png", "jpg", "bmp", "tga", "webp", "gif"};
-        const std::uint32_t raster_seeds[] = {0x31415926U, 0x27182818U, 0x16180339U,
-                                              0x14142135U, 0x17320508U, 0x22360679U};
+        const char* raster_formats[] = {"png", "jpg", "bmp", "tga"};
+        const std::uint32_t raster_seeds[] = {0x31415926U, 0x27182818U, 0x16180339U, 0x14142135U};
         for (std::size_t index = 0; index < std::size(raster_formats); ++index) {
-            const std::vector<std::uint8_t> bytes =
-                save_fixture(image, directory, raster_formats[index]);
+            const std::vector<std::uint8_t> bytes = save_fixture(image, directory, raster_formats[index]);
             exercise_raster_mutations(bytes, raster_seeds[index], 48);
         }
 
         const std::string root = FORMAT_FIXTURES;
+        const std::vector<std::uint8_t> webp = paint::read_image_bytes(root + "/quadrants.webp");
+        exercise_raster_mutations(webp, 0x17320508U, 48);
+        const std::vector<std::uint8_t> gif = paint::read_image_bytes(root + "/animated.gif");
+        exercise_raster_mutations(gif, 0x22360679U, 48);
         const std::vector<std::uint8_t> avif = paint::read_image_bytes(root + "/quadrants.avif");
         exercise_raster_mutations(avif, 0x70710678U, 72);
 

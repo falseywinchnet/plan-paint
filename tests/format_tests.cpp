@@ -60,7 +60,8 @@ void imports() {
         }
         require(rejected, "animation container was silently flattened");
     }
-    require(!paint::writable_image_path("drawing.svg") && !paint::writable_image_path("drawing.avif") &&
+    require(!paint::writable_image_path("drawing.svg") && !paint::writable_image_path("drawing.gif") &&
+                !paint::writable_image_path("drawing.webp") && !paint::writable_image_path("drawing.avif") &&
                 !paint::writable_image_path("drawing.heic"),
             "import-only format marked writable");
 }

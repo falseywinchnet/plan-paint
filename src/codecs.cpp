@@ -14,20 +14,17 @@
 #include "stb_image.h"
 #define STBI_WRITE_NO_STDIO
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <cstdio>
-#include "gif.h"
 #include "stb_image_write.h"
 #include <algorithm>
 #include <cctype>
 #include <climits>
 #include <cstring>
-#include <cstdlib>
 #include <filesystem>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <tiffio.h>
 #include <webp/decode.h>
-#include <webp/encode.h>
 
 namespace paint {
 namespace {
@@ -196,17 +193,16 @@ Image decode_image(const void* data, std::size_t size) {
     const int expected_width = width, expected_height = height;
     Image result;
     result.reset(width, height);
-    unsigned char* pixels =
-        stbi_load_from_memory(bytes, static_cast<int>(size), &width, &height, &channels, 4);
+    std::unique_ptr<unsigned char, decltype(&stbi_image_free)> pixels(
+        stbi_load_from_memory(bytes, static_cast<int>(size), &width, &height, &channels, 4),
+        &stbi_image_free);
     if (!pixels) {
         throw std::runtime_error(stbi_failure_reason());
     }
     if (width != expected_width || height != expected_height) {
-        stbi_image_free(pixels);
         throw std::runtime_error("Image dimensions changed during decoding.");
     }
-    std::memcpy(result.pixels.data(), pixels, result.pixels.size() * sizeof(Color));
-    stbi_image_free(pixels);
+    std::memcpy(result.pixels.data(), pixels.get(), result.pixels.size() * sizeof(Color));
     return result;
 }
 Image load_image(const std::string& path) {
@@ -218,73 +214,66 @@ Image load_image(const std::string& path) {
         if (!file) {
             throw std::runtime_error("Could not open TIFF.");
         }
-        try {
-            std::uint32_t width = 0, height = 0;
-            std::uint16_t bits = 0, samples = 0, photometric = 0, planar = 0, compression = 0,
-                          orientation = 0;
-            if (!TIFFGetField(file, TIFFTAG_IMAGEWIDTH, &width) ||
-                !TIFFGetField(file, TIFFTAG_IMAGELENGTH, &height)) {
-                throw std::runtime_error("TIFF is missing its image dimensions.");
-            }
-            validate_decoded_size(static_cast<int>(width), static_cast<int>(height));
-            TIFFGetFieldDefaulted(file, TIFFTAG_BITSPERSAMPLE, &bits);
-            TIFFGetFieldDefaulted(file, TIFFTAG_SAMPLESPERPIXEL, &samples);
-            TIFFGetFieldDefaulted(file, TIFFTAG_PHOTOMETRIC, &photometric);
-            TIFFGetFieldDefaulted(file, TIFFTAG_PLANARCONFIG, &planar);
-            TIFFGetFieldDefaulted(file, TIFFTAG_COMPRESSION, &compression);
-            TIFFGetFieldDefaulted(file, TIFFTAG_ORIENTATION, &orientation);
-            if (bits != 8 || (samples != 3 && samples != 4) || photometric != PHOTOMETRIC_RGB ||
-                planar != PLANARCONFIG_CONTIG || compression != COMPRESSION_NONE || TIFFIsTiled(file) ||
-                (orientation != ORIENTATION_TOPLEFT && orientation != ORIENTATION_BOTLEFT) ||
-                !TIFFLastDirectory(file)) {
-                throw std::runtime_error(
-                    "For safe import, TIFF must be one uncompressed 8-bit RGB or RGBA image. Convert other "
-                    "TIFF variants to PNG first.");
-            }
-            std::uint16_t extra_count = 0;
-            std::uint16_t* extra_types = nullptr;
-            if (samples == 4 &&
-                (!TIFFGetField(file, TIFFTAG_EXTRASAMPLES, &extra_count, &extra_types) || extra_count != 1 ||
-                 (extra_types[0] != EXTRASAMPLE_UNASSALPHA && extra_types[0] != EXTRASAMPLE_ASSOCALPHA))) {
-                throw std::runtime_error("TIFF RGBA input must identify its alpha channel.");
-            }
-            const tmsize_t scanline_size = TIFFScanlineSize(file);
-            const std::size_t expected_scanline = static_cast<std::size_t>(width) * samples;
-            if (scanline_size < 0 || static_cast<std::size_t>(scanline_size) != expected_scanline) {
-                throw std::runtime_error("TIFF scanline geometry is inconsistent.");
-            }
-            Image result;
-            result.reset(static_cast<int>(width), static_cast<int>(height));
-            std::vector<std::uint8_t> scanline(expected_scanline);
-            for (std::uint32_t source_y = 0; source_y < height; ++source_y) {
-                if (TIFFReadScanline(file, scanline.data(), source_y, 0) < 0) {
-                    throw std::runtime_error("TIFF decoding failed.");
-                }
-                const std::uint32_t target_y = orientation == ORIENTATION_TOPLEFT
-                                                   ? source_y
-                                                   : height - source_y - 1;
-                for (std::uint32_t x = 0; x < width; ++x) {
-                    const std::size_t source = static_cast<std::size_t>(x) * samples;
-                    unsigned red = scanline[source], green = scanline[source + 1], blue = scanline[source + 2];
-                    const unsigned alpha = samples == 4 ? scanline[source + 3] : 255;
-                    if (samples == 4 && extra_types[0] == EXTRASAMPLE_ASSOCALPHA && alpha > 0 && alpha < 255) {
-                        red = std::min(255U, (red * 255 + alpha / 2) / alpha);
-                        green = std::min(255U, (green * 255 + alpha / 2) / alpha);
-                        blue = std::min(255U, (blue * 255 + alpha / 2) / alpha);
-                    } else if (alpha == 0) {
-                        red = green = blue = 0;
-                    }
-                    result.set(static_cast<int>(x), static_cast<int>(target_y),
-                               {static_cast<std::uint8_t>(red), static_cast<std::uint8_t>(green),
-                                static_cast<std::uint8_t>(blue), static_cast<std::uint8_t>(alpha)});
-                }
-            }
-            TIFFClose(file);
-            return result;
-        } catch (...) {
-            TIFFClose(file);
-            throw;
+        std::unique_ptr<TIFF, decltype(&TIFFClose)> close_file(file, &TIFFClose);
+        std::uint32_t width = 0, height = 0;
+        std::uint16_t bits = 0, samples = 0, photometric = 0, planar = 0, compression = 0, orientation = 0;
+        if (!TIFFGetField(file, TIFFTAG_IMAGEWIDTH, &width) ||
+            !TIFFGetField(file, TIFFTAG_IMAGELENGTH, &height)) {
+            throw std::runtime_error("TIFF is missing its image dimensions.");
         }
+        validate_decoded_size(static_cast<int>(width), static_cast<int>(height));
+        TIFFGetFieldDefaulted(file, TIFFTAG_BITSPERSAMPLE, &bits);
+        TIFFGetFieldDefaulted(file, TIFFTAG_SAMPLESPERPIXEL, &samples);
+        TIFFGetFieldDefaulted(file, TIFFTAG_PHOTOMETRIC, &photometric);
+        TIFFGetFieldDefaulted(file, TIFFTAG_PLANARCONFIG, &planar);
+        TIFFGetFieldDefaulted(file, TIFFTAG_COMPRESSION, &compression);
+        TIFFGetFieldDefaulted(file, TIFFTAG_ORIENTATION, &orientation);
+        if (bits != 8 || (samples != 3 && samples != 4) || photometric != PHOTOMETRIC_RGB ||
+            planar != PLANARCONFIG_CONTIG || compression != COMPRESSION_NONE || TIFFIsTiled(file) ||
+            (orientation != ORIENTATION_TOPLEFT && orientation != ORIENTATION_BOTLEFT) ||
+            !TIFFLastDirectory(file)) {
+            throw std::runtime_error(
+                "For safe import, TIFF must be one uncompressed 8-bit RGB or RGBA image. Convert other "
+                "TIFF variants to PNG first.");
+        }
+        std::uint16_t extra_count = 0;
+        std::uint16_t* extra_types = nullptr;
+        if (samples == 4 &&
+            (!TIFFGetField(file, TIFFTAG_EXTRASAMPLES, &extra_count, &extra_types) || extra_count != 1 ||
+             (extra_types[0] != EXTRASAMPLE_UNASSALPHA && extra_types[0] != EXTRASAMPLE_ASSOCALPHA))) {
+            throw std::runtime_error("TIFF RGBA input must identify its alpha channel.");
+        }
+        const tmsize_t scanline_size = TIFFScanlineSize(file);
+        const std::size_t expected_scanline = static_cast<std::size_t>(width) * samples;
+        if (scanline_size < 0 || static_cast<std::size_t>(scanline_size) != expected_scanline) {
+            throw std::runtime_error("TIFF scanline geometry is inconsistent.");
+        }
+        Image result;
+        result.reset(static_cast<int>(width), static_cast<int>(height));
+        std::vector<std::uint8_t> scanline(expected_scanline);
+        for (std::uint32_t source_y = 0; source_y < height; ++source_y) {
+            if (TIFFReadScanline(file, scanline.data(), source_y, 0) < 0) {
+                throw std::runtime_error("TIFF decoding failed.");
+            }
+            const std::uint32_t target_y =
+                orientation == ORIENTATION_TOPLEFT ? source_y : height - source_y - 1;
+            for (std::uint32_t x = 0; x < width; ++x) {
+                const std::size_t source = static_cast<std::size_t>(x) * samples;
+                unsigned red = scanline[source], green = scanline[source + 1], blue = scanline[source + 2];
+                const unsigned alpha = samples == 4 ? scanline[source + 3] : 255;
+                if (samples == 4 && extra_types[0] == EXTRASAMPLE_ASSOCALPHA && alpha > 0 && alpha < 255) {
+                    red = std::min(255U, (red * 255 + alpha / 2) / alpha);
+                    green = std::min(255U, (green * 255 + alpha / 2) / alpha);
+                    blue = std::min(255U, (blue * 255 + alpha / 2) / alpha);
+                } else if (alpha == 0) {
+                    red = green = blue = 0;
+                }
+                result.set(static_cast<int>(x), static_cast<int>(target_y),
+                           {static_cast<std::uint8_t>(red), static_cast<std::uint8_t>(green),
+                            static_cast<std::uint8_t>(blue), static_cast<std::uint8_t>(alpha)});
+            }
+        }
+        return result;
     }
     if (ext == ".svg" || ext == ".svgz") {
         return rasterize_svg(path);
@@ -302,9 +291,8 @@ std::vector<std::uint8_t> read_image_bytes(const std::string& path, std::size_t 
 }
 bool writable_image_path(const std::string& path) {
     std::string ext = image_extension(path);
-    return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif" ||
-           ext == ".tif" || ext == ".tiff" || ext == ".tga" || ext == ".webp" || ext == ".ico" ||
-           ext == ".cur";
+    return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".tif" ||
+           ext == ".tiff" || ext == ".tga" || ext == ".ico" || ext == ".cur";
 }
 ImageContainer load_container(const std::string& path) {
     std::string ext = image_extension(path);
@@ -362,51 +350,6 @@ std::vector<std::uint8_t> encode_png(const Image& image) {
     return bytes;
 }
 namespace {
-std::vector<std::uint8_t> encode_gif(const Image& image) {
-    FILE* file = std::tmpfile();
-    if (!file) {
-        throw std::runtime_error("Could not create a private GIF encoding file.");
-    }
-    GifWriter writer{};
-    writer.f = file;
-    writer.firstFrame = true;
-    const std::size_t pixel_bytes = image.pixels.size() * sizeof(Color);
-    writer.oldImage = static_cast<std::uint8_t*>(std::malloc(pixel_bytes));
-    if (!writer.oldImage) {
-        std::fclose(file);
-        throw std::bad_alloc();
-    }
-    std::fputs("GIF89a", file);
-    std::fputc(image.width & 255, file);
-    std::fputc((image.width >> 8) & 255, file);
-    std::fputc(image.height & 255, file);
-    std::fputc((image.height >> 8) & 255, file);
-    std::fputc(0xf0, file);
-    std::fputc(0, file);
-    std::fputc(0, file);
-    for (int index = 0; index < 6; ++index) {
-        std::fputc(0, file);
-    }
-    const bool frame = GifWriteFrame(&writer, reinterpret_cast<const std::uint8_t*>(image.pixels.data()),
-                                     image.width, image.height, 0, 8, true);
-    std::fputc(0x3b, file);
-    const bool flushed = std::fflush(file) == 0 && std::ferror(file) == 0;
-    const long length = std::ftell(file);
-    std::vector<std::uint8_t> bytes;
-    if (frame && flushed && length > 0 && static_cast<unsigned long>(length) <= maximum_encoded_bytes &&
-        std::fseek(file, 0, SEEK_SET) == 0) {
-        bytes.resize(static_cast<std::size_t>(length));
-        if (std::fread(bytes.data(), 1, bytes.size(), file) != bytes.size()) {
-            bytes.clear();
-        }
-    }
-    std::free(writer.oldImage);
-    std::fclose(file);
-    if (bytes.empty()) {
-        throw std::runtime_error("GIF encoding failed.");
-    }
-    return bytes;
-}
 std::vector<std::uint8_t> encode_tiff(const Image& image) {
     std::vector<std::uint8_t> bytes;
     TiffMemory memory{&bytes, 0, true};
@@ -414,6 +357,7 @@ std::vector<std::uint8_t> encode_tiff(const Image& image) {
     if (!file) {
         throw std::runtime_error("Could not create TIFF.");
     }
+    std::unique_ptr<TIFF, decltype(&TIFFClose)> close_file(file, &TIFFClose);
     bool ok = TIFFSetField(file, TIFFTAG_IMAGEWIDTH, image.width) &&
               TIFFSetField(file, TIFFTAG_IMAGELENGTH, image.height) &&
               TIFFSetField(file, TIFFTAG_SAMPLESPERPIXEL, 4) &&
@@ -426,33 +370,20 @@ std::vector<std::uint8_t> encode_tiff(const Image& image) {
     std::uint16_t extra = EXTRASAMPLE_UNASSALPHA;
     ok = ok && TIFFSetField(file, TIFFTAG_EXTRASAMPLES, 1, &extra);
     for (int row = 0; ok && row < image.height; ++row) {
-        void* scanline = const_cast<Color*>(image.pixels.data() + static_cast<std::size_t>(row) * image.width);
+        void* scanline =
+            const_cast<Color*>(image.pixels.data() + static_cast<std::size_t>(row) * image.width);
         ok = TIFFWriteScanline(file, scanline, static_cast<std::uint32_t>(row), 0) >= 0;
     }
     ok = ok && TIFFWriteDirectory(file) != 0;
-    TIFFClose(file);
     if (!ok || bytes.empty()) {
         throw std::runtime_error("TIFF encoding failed.");
     }
     return bytes;
 }
-std::vector<std::uint8_t> encode_webp(const Image& image) {
-    std::uint8_t* encoded = nullptr;
-    const std::size_t size = WebPEncodeLosslessRGBA(
-        reinterpret_cast<const std::uint8_t*>(image.pixels.data()), image.width, image.height,
-        image.width * 4, &encoded);
-    if (size == 0 || size > maximum_encoded_bytes) {
-        WebPFree(encoded);
-        throw std::runtime_error("WebP encoding failed.");
-    }
-    std::vector<std::uint8_t> bytes(encoded, encoded + size);
-    WebPFree(encoded);
-    return bytes;
-}
 std::vector<std::uint8_t> encode_image(const Image& source, const std::string& ext, int quality) {
     Image flattened;
     const Image* input = &source;
-    if (ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif") {
+    if (ext == ".jpg" || ext == ".jpeg" || ext == ".bmp") {
         flattened.reset(source.width, source.height);
         composite(flattened, source, 0, 0);
         input = &flattened;
@@ -470,14 +401,10 @@ std::vector<std::uint8_t> encode_image(const Image& source, const std::string& e
         return encode_bmp(image);
     } else if (ext == ".tga") {
         ok = stbi_write_tga_to_func(append_encoded, &bytes, width, height, 4, pixels);
-    } else if (ext == ".gif") {
-        return encode_gif(image);
-    } else if (ext == ".webp") {
-        return encode_webp(image);
     } else if (ext == ".tif" || ext == ".tiff") {
         return encode_tiff(image);
     } else {
-        throw std::runtime_error("Choose PNG, JPEG, BMP, GIF, TIFF, TGA or WebP.");
+        throw std::runtime_error("Choose PNG, JPEG, BMP, TIFF, TGA, ICO or CUR.");
     }
     if (!ok || bytes.empty()) {
         throw std::runtime_error("Image encoding failed.");

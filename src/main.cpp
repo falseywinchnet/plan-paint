@@ -11,6 +11,7 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 #include <numbers>
 #include <sstream>
 
@@ -204,9 +205,11 @@ int main(int argc, char** argv) {
             if (!app.screenshot_path.empty() && app.rendered_frames >= app.screenshot_frame &&
                 (!demo_reshape || (!app.warp_worker.busy() && !app.reshape_render_pending)) &&
                 (!demo_rotation || (!app.warp_worker.busy() && !app.rotation_active))) {
-                SDL_Surface* surface = SDL_RenderReadPixels(renderer, nullptr);
+                std::unique_ptr<SDL_Surface, decltype(&SDL_DestroySurface)> surface(
+                    SDL_RenderReadPixels(renderer, nullptr), &SDL_DestroySurface);
                 if (surface) {
-                    SDL_Surface* rgba = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+                    std::unique_ptr<SDL_Surface, decltype(&SDL_DestroySurface)> rgba(
+                        SDL_ConvertSurface(surface.get(), SDL_PIXELFORMAT_RGBA32), &SDL_DestroySurface);
                     if (rgba) {
                         paint::Image image;
                         image.reset((*rgba).w, (*rgba).h);
@@ -216,9 +219,7 @@ int main(int argc, char** argv) {
                                         pixels + y * (*rgba).pitch, image.width * 4);
                         }
                         paint::save_image(image, app.screenshot_path);
-                        SDL_DestroySurface(rgba);
                     }
-                    SDL_DestroySurface(surface);
                 }
                 app.running = false;
             }

@@ -890,7 +890,7 @@ void test_codecs() {
     paint::Image image;
     image.reset(17, 13, {62, 147, 219, 255});
     image.set(4, 7, {197, 27, 55, 255});
-    const char* formats[] = {"png", "bmp", "tga", "tiff", "webp", "jpg"};
+    const char* formats[] = {"png", "bmp", "tga", "tiff", "jpg"};
     for (const char* format : formats) {
         std::filesystem::path file =
             std::filesystem::temp_directory_path() / (std::string("rainstar-codec-test.") + format);
@@ -914,17 +914,18 @@ void test_codecs() {
                 "Unicode filename roundtrip failed");
         std::filesystem::remove(unicode);
     }
-    const std::filesystem::path gif = std::filesystem::temp_directory_path() / "rainstar-codec-test.gif";
-    paint::save_image(image, gif.string());
-    require(std::filesystem::file_size(gif) > 20, "GIF export failed");
-    bool gif_rejected = false;
-    try {
-        paint::load_image(gif.string());
-    } catch (const std::exception& exception) {
-        gif_rejected = std::string(exception.what()).find("not safe") != std::string::npos;
+    for (const char* format : {"gif", "webp", "avif"}) {
+        const std::filesystem::path rejected =
+            std::filesystem::temp_directory_path() / (std::string("rainstar-codec-test.") + format);
+        bool refused = false;
+        try {
+            paint::save_image(image, rejected.string());
+        } catch (const std::exception&) {
+            refused = true;
+        }
+        require(refused && !paint::writable_image_path(rejected.string()),
+                "import-only format remained writable");
     }
-    require(gif_rejected, "unsafe GIF decoder remained reachable");
-    std::filesystem::remove(gif);
 }
 void test_file_security() {
     const std::filesystem::path directory =
@@ -1008,6 +1009,10 @@ void test_file_security() {
         paint::load_image(svg_path.string());
     } catch (const std::exception& exception) {
         rejected = std::string(exception.what()).find("raster image elements") != std::string::npos;
+        if (!rejected) {
+            throw std::runtime_error(std::string("SVG rejection used an unexpected path: ") +
+                                     exception.what());
+        }
     }
     require(rejected, "SVG external image resource remained reachable");
 
