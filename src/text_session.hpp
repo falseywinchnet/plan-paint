@@ -20,6 +20,8 @@ class TextSession {
     bool replace(const std::string& inserted);
     void history(bool redo);
     std::size_t caret_at(Point point) const;
+    Point display_point(Point point) const;
+    Point source_point(Point point) const;
     void resize(Rect rectangle);
     void clear();
 

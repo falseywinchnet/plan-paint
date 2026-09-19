@@ -13,6 +13,22 @@ Color office_color(int index) {
     return {static_cast<std::uint8_t>(value >> 16), static_cast<std::uint8_t>(value >> 8),
             static_cast<std::uint8_t>(value), 255};
 }
+const char* theme_name(int column) {
+    static const std::array<const char*, 10> names = {"Glue",      "Phosphor", "Camo",   "Royal",
+                                                      "Afterglow", "Arcade",   "Lagoon", "Porcelain",
+                                                      "Bordeaux",  "Ochre"};
+    return names.at(static_cast<std::size_t>(column));
+}
+Color themed_color(int index) {
+    // Each column is a three-color family; rows are primary, secondary, accent.
+    static const std::array<unsigned, 30> colors = {
+        0x9261b3, 0x000000, 0xeee7cb, 0x3056a1, 0x39205d, 0x191835, 0x153f50, 0xf4eee1, 0x672c40, 0xb87832,
+        0xffffff, 0x82b361, 0x356b62, 0xffd27a, 0xff83c8, 0x52e4e0, 0x6bdbc1, 0x355779, 0xe7d6be, 0x292f3d,
+        0xb3c76c, 0xb36182, 0xb96955, 0xc76073, 0x71e7e0, 0xf0ec89, 0xf6b886, 0xba644e, 0x9ca77b, 0xe6dec4};
+    const unsigned value = colors.at(static_cast<std::size_t>(index));
+    return {static_cast<std::uint8_t>(value >> 16), static_cast<std::uint8_t>(value >> 8),
+            static_cast<std::uint8_t>(value), 255};
+}
 CustomColors::CustomColors() {
     colors.fill({255, 255, 255, 255});
 }
@@ -21,14 +37,27 @@ void CustomColors::load() {
         return;
     }
     std::ifstream input(path_from_utf8(storage_path), std::ios::binary);
-    std::array<unsigned char, 71> bytes{};
-    input.read(reinterpret_cast<char*>(bytes.data()), bytes.size());
-    if (!input || std::string(reinterpret_cast<const char*>(bytes.data()), 5) != "RSPC1") {
+    std::array<char, 5> magic_bytes{};
+    input.read(magic_bytes.data(), 5);
+    const std::string magic(magic_bytes.data(), 5);
+    const bool legacy = magic == "RSPC1";
+    if (!input || (!legacy && magic != "RSPC2")) {
         return;
     }
-    occupied = static_cast<std::uint16_t>(bytes[5] | (bytes[6] << 8));
-    for (std::size_t slot = 0; slot < colors.size(); ++slot) {
-        const std::size_t offset = 7 + slot * 4;
+    const int count = legacy ? 16 : 30;
+    const int mask_size = legacy ? 2 : 4;
+    std::vector<unsigned char> bytes(static_cast<std::size_t>(mask_size + count * 4));
+    input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    if (!input) {
+        return;
+    }
+    std::uint32_t mask = 0;
+    for (int index = 0; index < mask_size; ++index) {
+        mask |= static_cast<std::uint32_t>(bytes[index]) << (index * 8);
+    }
+    occupied = mask & 0x3fffffffU;
+    for (int slot = 0; slot < count; ++slot) {
+        const std::size_t offset = static_cast<std::size_t>(mask_size + slot * 4);
         colors[slot] = {bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]};
     }
 }
@@ -37,17 +66,19 @@ void CustomColors::store(int slot, Color color) {
         throw std::out_of_range("Choose a custom-color slot first.");
     }
     colors[static_cast<std::size_t>(slot)] = color;
-    occupied |= static_cast<std::uint16_t>(1u << slot);
+    occupied |= (1u << slot);
     if (storage_path.empty()) {
         return;
     }
-    std::array<unsigned char, 71> bytes{};
-    const std::string magic = "RSPC1";
+    std::array<unsigned char, 129> bytes{};
+    const std::string magic = "RSPC2";
     std::copy(magic.begin(), magic.end(), bytes.begin());
     bytes[5] = static_cast<unsigned char>(occupied);
     bytes[6] = static_cast<unsigned char>(occupied >> 8);
+    bytes[7] = static_cast<unsigned char>(occupied >> 16);
+    bytes[8] = static_cast<unsigned char>(occupied >> 24);
     for (std::size_t index = 0; index < colors.size(); ++index) {
-        const std::size_t offset = 7 + index * 4;
+        const std::size_t offset = 9 + index * 4;
         bytes[offset] = colors[index].r;
         bytes[offset + 1] = colors[index].g;
         bytes[offset + 2] = colors[index].b;

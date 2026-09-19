@@ -44,9 +44,13 @@ void EditorSettings::load() {
     std::ifstream input(path_from_utf8(storage_path));
     std::string magic;
     double distance = 0;
-    if (input >> magic >> distance && magic == "RSPS1" && std::isfinite(distance) && distance >= 0.1 &&
-        distance <= 100) {
+    if (input >> magic >> distance && (magic == "RSPS1" || magic == "RSPS2") && std::isfinite(distance) &&
+        distance >= 0.1 && distance <= 100) {
         scroll_distance = distance;
+        int background = 0;
+        if (magic == "RSPS2" && input >> background) {
+            green_felt = background == 1;
+        }
     }
 }
 void EditorSettings::save() const {
@@ -54,7 +58,7 @@ void EditorSettings::save() const {
         return;
     }
     std::ofstream output(path_from_utf8(storage_path), std::ios::trunc);
-    output << "RSPS1\n" << scroll_distance << '\n';
+    output << "RSPS2\n" << scroll_distance << '\n' << (green_felt ? 1 : 0) << '\n';
     output.close();
     if (!output) {
         throw std::runtime_error("Paint could not save its settings file.");

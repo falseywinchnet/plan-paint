@@ -123,3 +123,18 @@ and macOS exposure handling. Fetch it with `scripts/fetch-gui-forms.py` before
 building the SDK. Install that SDK into a separate prefix and configure Paint
 with `CMAKE_PREFIX_PATH` pointing to it. Every packaged release includes its
 matching toolkit library.
+
+## Nested dropdown focus correction
+
+The pinned 0.2.3 toolkit source archive is augmented by the hash-verified patch
+listed in `third_party/gui-forms.lock.json`. The fetch script validates both
+the archive and patch, applies the patch in a temporary source directory, and
+records it in `SOURCE_PATCHES.json` before publishing the destination. Git is
+required for this source-preparation step.
+
+The patch recognizes the registered popup owner when a separate window overlay
+enters a containing focus scope. It fixes dropdowns inside Paint's color and
+settings dialogs while continuing to reject unrelated popup roots. The toolkit
+change is maintained independently as commit
+`f47893b` and includes repeated open/close, modal containment, focus restoration,
+and owner-unavailability regressions.

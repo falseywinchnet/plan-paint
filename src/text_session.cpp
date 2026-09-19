@@ -26,13 +26,46 @@ void TextSession::refresh(Color foreground, Color background) {
         (style.italic ? "i" : "-") + (style.underline ? "u" : "-") + (style.strikeout ? "s" : "-") +
         (style.mono ? "m" : "-") + (style.opaque ? "o" : "-") + (style.word_wrap ? "w" : "-") +
         to_hex(foreground) + std::to_string(foreground.a) + ":" + to_hex(background) +
-        std::to_string(background.a);
+        std::to_string(background.a) + ":" + std::to_string(style.contour) + ":" +
+        std::to_string(style.outline_width) + ":" + std::to_string(style.skew) + ":" +
+        std::to_string(style.perspective) + ":" + std::to_string(style.warp) + ":" +
+        std::to_string(static_cast<int>(style.word_art));
     if (signature == signature_) {
         return;
     }
     layout = layout_text(edit.content, style, bounds.w);
     preview.reset(bounds.w, bounds.h, style.opaque ? background : Color{0, 0, 0, 0});
     render_text(preview, {0, 0}, layout, style, foreground, background);
+    if (style.skew != 0 || style.perspective != 0 || style.warp != 0) {
+        Image source = std::move(preview);
+        preview.reset(bounds.w, bounds.h, {0, 0, 0, 0});
+        for (int y = 0; y < bounds.h; ++y) {
+            for (int x = 0; x < bounds.w; ++x) {
+                Point p = source_point({x + 0.5, y + 0.5});
+                double sx = p.x - 0.5, sy = p.y - 0.5;
+                int ix = static_cast<int>(std::floor(sx)), iy = static_cast<int>(std::floor(sy));
+                double alpha = 0, red = 0, green = 0, blue = 0;
+                for (int dy = 0; dy < 2; ++dy) {
+                    for (int dx = 0; dx < 2; ++dx) {
+                        Color c = source.contains(ix + dx, iy + dy) ? source.get(ix + dx, iy + dy)
+                                                                    : Color{0, 0, 0, 0};
+                        double weight = (dx ? sx - ix : 1 - sx + ix) * (dy ? sy - iy : 1 - sy + iy) * c.a;
+                        alpha += weight;
+                        red += weight * c.r;
+                        green += weight * c.g;
+                        blue += weight * c.b;
+                    }
+                }
+                if (alpha > 0) {
+                    preview.set(x, y,
+                                {static_cast<std::uint8_t>(std::round(red / alpha)),
+                                 static_cast<std::uint8_t>(std::round(green / alpha)),
+                                 static_cast<std::uint8_t>(std::round(blue / alpha)),
+                                 static_cast<std::uint8_t>(std::clamp(std::round(alpha), 0.0, 255.0))});
+                }
+            }
+        }
+    }
     signature_ = std::move(signature);
     edit.caret = std::min(edit.caret, edit.content.size());
     edit.anchor = std::min(edit.anchor, edit.content.size());
@@ -89,6 +122,29 @@ std::size_t TextSession::caret_at(Point point) const {
         }
     }
     return result;
+}
+// A bounded trapezoid/shear followed by a sine bend. The analytic inverse is
+// shared by raster sampling and pointer selection so text remains editable.
+Point TextSession::display_point(Point point) const {
+    double u = point.x / bounds.w, v = point.y / bounds.h;
+    double skew = std::clamp(style.skew * bounds.h / bounds.w, -0.7, 0.7);
+    double perspective = std::clamp(style.perspective, -0.8, 0.8);
+    double bend = std::clamp(style.warp, -0.4, 0.4);
+    double width = (1 - std::abs(skew)) * (1 - std::abs(perspective) * (perspective >= 0 ? 1 - v : v));
+    double x = 0.5 + (u - 0.5) * width + skew * (v - 0.5);
+    double y = v * (1 - std::abs(bend)) + std::max(0.0, -bend) + bend * std::sin(3.14159265358979323846 * x);
+    return {x * bounds.w, y * bounds.h};
+}
+Point TextSession::source_point(Point point) const {
+    double x = point.x / bounds.w, y = point.y / bounds.h;
+    double skew = std::clamp(style.skew * bounds.h / bounds.w, -0.7, 0.7);
+    double perspective = std::clamp(style.perspective, -0.8, 0.8);
+    double bend = std::clamp(style.warp, -0.4, 0.4);
+    double v =
+        (y - std::max(0.0, -bend) - bend * std::sin(3.14159265358979323846 * x)) / (1 - std::abs(bend));
+    double width = (1 - std::abs(skew)) * (1 - std::abs(perspective) * (perspective >= 0 ? 1 - v : v));
+    double u = 0.5 + (x - 0.5 - skew * (v - 0.5)) / std::max(0.02, width);
+    return {u * bounds.w, v * bounds.h};
 }
 void TextSession::resize(Rect rectangle) {
     bounds = rectangle;

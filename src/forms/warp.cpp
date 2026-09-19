@@ -229,7 +229,9 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
 }
 void Editor::commit_warp() {
     if (warp_active()) {
-        if (warp_mode_ == WarpMode::rotation) update_transform_preview();
+        if (warp_mode_ == WarpMode::rotation) {
+            update_transform_preview();
+        }
         warp_commit_ = warp_pending_ = true;
         mesh_node_ = -1;
         rotation_dragging_ = false;
@@ -397,6 +399,9 @@ void Editor::reset_stamp() {
     stamp_image_ = {};
 
     document.stamp = {};
+    hard_stamp_ = {};
+    stamp_basis_ = {};
+    adding_stamp_material_ = false;
     stamp_preview_ = {};
     stamp_boundary_.clear();
     stamp_scale = 1;
@@ -405,6 +410,50 @@ void Editor::reset_stamp() {
     stamp_pending_ = false;
     ++stamp_generation_;
     ++stamp_source_generation_;
+}
+void Editor::add_stamp_material() {
+    if (document.stamp.pixels.empty()) {
+        return;
+    }
+    stamp_basis_ = hard_stamp_.pixels.empty() ? document.stamp : hard_stamp_;
+    adding_stamp_material_ = true;
+    document.stamp = {};
+    stamp_pending_ = false;
+    ++stamp_generation_;
+    ++stamp_source_generation_;
+    refresh();
+}
+void Editor::update_stamp_hardness() {
+    if (hard_stamp_.pixels.empty()) {
+        return;
+    }
+    document.stamp = hard_stamp_;
+    if (stamp_hardness < 0.999) {
+        const std::vector<Point> outline =
+            stamp_outline(document.stamp_shape, document.stamp.width, document.stamp.height);
+        const double feather =
+            std::max(0.5, std::min(document.stamp.width, document.stamp.height) * 0.5 * (1 - stamp_hardness));
+        for (int y = 0; y < document.stamp.height; ++y) {
+            for (int x = 0; x < document.stamp.width; ++x) {
+                double distance = feather;
+                for (std::size_t i = 0; i < outline.size(); ++i) {
+                    const Point a = outline[i], b = outline[(i + 1) % outline.size()];
+                    const double dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
+                    const double t =
+                        length > 0
+                            ? std::clamp(((x + 0.5 - a.x) * dx + (y + 0.5 - a.y) * dy) / length, 0.0, 1.0)
+                            : 0;
+                    distance = std::min(distance, std::hypot(x + 0.5 - a.x - t * dx, y + 0.5 - a.y - t * dy));
+                }
+                const double t = distance / feather;
+                Color& color = document.stamp.pixels[static_cast<std::size_t>(y) * document.stamp.width + x];
+                color.a = static_cast<std::uint8_t>(std::lround(color.a * t * t * (3 - 2 * t)));
+            }
+        }
+    }
+    stamp_field_.reset();
+    ++stamp_source_generation_;
+    regenerate_stamp();
 }
 void Editor::regenerate_stamp() {
     if (document.stamp.pixels.empty()) {
@@ -429,17 +478,35 @@ void Editor::stamp_at(Point point, bool checkpoint) {
                                     {static_cast<int>(point.x - stamp_width / 2.0),
                                      static_cast<int>(point.y - height / 2.0), stamp_width, height},
                                     document.stamp_shape, document.stamp_transparent, document.ink.secondary);
+        if (adding_stamp_material_) {
+            document.stamp = heal_stamp_material(stamp_basis_, document.stamp);
+            adding_stamp_material_ = false;
+            stamp_basis_ = {};
+        }
+        hard_stamp_ = document.stamp;
         stamp_scale = 1;
         stamp_angle = 0;
-        stamp_field_.reset();
-        ++stamp_source_generation_;
-        regenerate_stamp();
+        update_stamp_hardness();
     } else if (!stamp_pending_ && !stamp_preview_.pixels.empty()) {
         if (checkpoint) {
             document.checkpoint();
         }
-        composite(document.image, stamp_preview_, static_cast<int>(point.x - stamp_preview_.width / 2.0),
-                  static_cast<int>(point.y - stamp_preview_.height / 2.0));
+        const int left = static_cast<int>(point.x - stamp_preview_.width / 2.0),
+                  top = static_cast<int>(point.y - stamp_preview_.height / 2.0);
+        if (atlas_painting() && atlas_wrap) {
+            for (int y = 0; y < stamp_preview_.height; ++y) {
+                for (int x = 0; x < stamp_preview_.width; ++x) {
+                    const int px =
+                        ((left + x) % document.image.width + document.image.width) % document.image.width;
+                    const int py =
+                        ((top + y) % document.image.height + document.image.height) % document.image.height;
+                    document.image.blend(px, py, stamp_preview_.get(x, y));
+                }
+            }
+        } else {
+            composite(document.image, stamp_preview_, left, top);
+        }
+        constrain_paint(document.image, paint_base_, guide, atlas_painting() && atlas_preserve_alpha);
     }
 }
 gf::Point Editor::rotation_handle() const {
@@ -538,7 +605,7 @@ void Editor::paint_warp_overlay(gf::Painter& painter) {
         height *= (*canvas_).zoom();
         gf::Rect bounds{(*cursor_client_).x - width / 2, (*cursor_client_).y - height / 2, width, height};
         if (stamp_image_.value != 0) {
-            painter.draw_image(stamp_image_, bounds, 0.65);
+            painter.draw_image(stamp_image_, bounds, adding_stamp_material_ ? 0.5 : 0.65);
         }
         double scale = (*canvas_).zoom();
         if (stamp_preview_.pixels.empty()) {

@@ -1,14 +1,21 @@
 #include "codecs.hpp"
+#include "color_tools.hpp"
 #include "conv.hpp"
+#include "desktop.hpp"
 #include "document.hpp"
 #include "fixtures/conv_reference.hpp"
+#include "guide.hpp"
 #include "material.hpp"
+#include "paint_tools.hpp"
+#include "text_session.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <numbers>
+#include <set>
 #include <stdexcept>
 namespace {
 void require(bool value, const char* message) {
@@ -32,6 +39,167 @@ void test_color() {
     }
     paint::Color invalid;
     require(!paint::from_hex("#12zz34", invalid), "invalid hex accepted");
+}
+void test_perceptual_tools() {
+    for (int r = 0; r <= 255; r += 17) {
+        for (int g = 0; g <= 255; g += 17) {
+            for (int b = 0; b <= 255; b += 17) {
+                const paint::Color color{static_cast<std::uint8_t>(r), static_cast<std::uint8_t>(g),
+                                         static_cast<std::uint8_t>(b), 255};
+                for (int space = 0; space < 2; ++space) {
+                    const paint::PickerSpace mode = static_cast<paint::PickerSpace>(space);
+                    const paint::ColorCoordinates coordinates = paint::picker_coordinates(mode, color);
+                    require(std::isfinite(coordinates.hue) && std::isfinite(coordinates.saturation) &&
+                                std::isfinite(coordinates.level),
+                            "picker produced nonfinite coordinate");
+                    const paint::Color restored = paint::picker_color(mode, coordinates);
+                    if (std::abs(restored.r - r) > 1 || std::abs(restored.g - g) > 1 ||
+                        std::abs(restored.b - b) > 1) {
+                        std::cerr << "space=" << space << " input=" << r << "," << g << "," << b
+                                  << " output=" << paint::to_hex(restored) << " hsl=" << coordinates.hue
+                                  << "," << coordinates.saturation << "," << coordinates.level << "\n";
+                    }
+                    require(std::abs(restored.r - r) <= 1 && std::abs(restored.g - g) <= 1 &&
+                                std::abs(restored.b - b) <= 1,
+                            "RGB / OKHSL roundtrip exceeds one byte");
+                }
+            }
+        }
+    }
+    const paint::ColorMosaic first(paint::PickerSpace::OKHSL), second(paint::PickerSpace::OKHSL);
+    std::set<std::string> unique;
+    for (int h = 0; h < 61; ++h) {
+        for (int s = 0; s < 13; ++s) {
+            const paint::Color sample =
+                paint::picker_color(paint::PickerSpace::OKHSL, {h / 61.0, s / 12.0, 0.63});
+            const paint::Color result = first.nearest(sample);
+            require(paint::equal(result, second.nearest(sample)), "mosaic differs between instances");
+            unique.insert(paint::to_hex(result));
+        }
+    }
+    require(unique.size() <= 96 && unique.size() > 12, "mosaic does not expose bounded useful palette");
+    paint::Image image;
+    image.reset(5, 5, {160, 100, 90, 255});
+    image.set(2, 2, {255, 255, 255, 255});
+    require(paint::equal(paint::sample_color(image, {2, 2}, paint::SampleMode::Exact), image.get(2, 2)),
+            "exact eyedropper changed default");
+    const paint::Color representative = paint::sample_color(image, {2, 2}, paint::SampleMode::Representative);
+    require(paint::equal(representative, image.get(0, 0)),
+            "representative eyedropper retained isolated glitter fleck");
+    require(!paint::equal(paint::sample_color(image, {2, 2}, paint::SampleMode::Average), representative),
+            "average unexpectedly rejects flecks");
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() / "rainstar-palette-migration-test.bin";
+    {
+        std::ofstream output(path, std::ios::binary);
+        const unsigned char header[] = {'R', 'S', 'P', 'C', '1', 1, 128};
+        output.write(reinterpret_cast<const char*>(header), sizeof(header));
+        for (int slot = 0; slot < 16; ++slot) {
+            const unsigned char color[] = {static_cast<unsigned char>(slot * 10), 70, 80, 130};
+            output.write(reinterpret_cast<const char*>(color), 4);
+        }
+    }
+    paint::CustomColors palette;
+    palette.storage_path = path.string();
+    palette.load();
+    require(palette.occupied == 0x8001 && palette.colors[15].r == 150 && palette.colors[16].r == 255,
+            "legacy custom palette migration failed");
+    palette.store(29, {7, 8, 9, 10});
+    paint::CustomColors reloaded;
+    reloaded.storage_path = path.string();
+    reloaded.load();
+    require((reloaded.occupied & (1U << 29)) && paint::equal(reloaded.colors[29], {7, 8, 9, 10}) &&
+                reloaded.colors[15].r == 150,
+            "30-slot custom palette persistence lost colors or occupancy");
+    std::filesystem::remove(path);
+}
+void test_transformative_brushes() {
+    paint::StrokeStabilizer whole, split;
+    whole.reset({0, 0});
+    split.reset({0, 0});
+    paint::Point whole_point = whole.advance({100, 0}, 15), split_point;
+    for (int step = 1; step <= 100; ++step) {
+        split_point = split.advance({static_cast<double>(step), 0}, 15);
+    }
+    require(std::hypot(whole_point.x - split_point.x, whole_point.y - split_point.y) < 1e-9 &&
+                whole_point.x < 100,
+            "stabilizer integrates the same straight trajectory independently of event frequency");
+    paint::Image source;
+    source.reset(80, 48, {130, 70, 50, 255});
+    for (int y = 0; y < source.height; ++y) {
+        for (int x = 0; x < source.width; ++x) {
+            source.set(x, y,
+                       {static_cast<std::uint8_t>(x * 3), static_cast<std::uint8_t>(y * 5),
+                        static_cast<std::uint8_t>((x + y) * 2), static_cast<std::uint8_t>(80 + x * 2)});
+        }
+    }
+    paint::HealingBrush clone;
+    clone.capture(source, {8, 12});
+    paint::Image target = source;
+    clone.begin(target, {40, 24});
+    clone.segment(target, {40, 24}, {60, 24}, 5, 1, 1);
+    for (int x = 40; x <= 60; ++x) {
+        require(paint::equal(target.get(x, 24), source.get(x - 32, 12)),
+                "hard continuous clone lost source offset or exact RGBA");
+    }
+    require(paint::equal(target.get(70, 40), source.get(70, 40)),
+            "clone changed pixels outside its footprint");
+    paint::Image heal_source, healed;
+    heal_source.reset(40, 40, {190, 110, 90, 255});
+    healed.reset(40, 40, {90, 150, 170, 255});
+    clone.capture(heal_source, {20, 20});
+    clone.begin(healed, {20, 20});
+    clone.segment(healed, {20, 20}, {20, 20}, 16, 0.2, 1);
+    const paint::Color healed_center = healed.get(20, 20);
+    require(std::abs(healed_center.r - 90) <= 1 && std::abs(healed_center.g - 150) <= 1 &&
+                std::abs(healed_center.b - 170) <= 1,
+            "OKLab healing did not correct a constant donor to recipient hue and lightness");
+    std::set<std::string> effects;
+    for (int index = 0; index < paint::mix_effect_count; ++index) {
+        paint::TransformStroke stroke;
+        target = source;
+        stroke.begin(target, {20, 20});
+        stroke.segment(target, {20, 20}, {60, 28}, 18, static_cast<paint::MixEffect>(index), 1, 16, 0.7);
+        require(paint::equal(target.get(78, 46), source.get(78, 46)), "mix effect escaped its footprint");
+        const paint::Image once = target;
+        stroke.segment(target, {20, 20}, {60, 28}, 18, static_cast<paint::MixEffect>(index), 1, 16, 0.7);
+        require(std::memcmp(target.pixels.data(), once.pixels.data(), target.pixels.size() * 4) == 0,
+                "mix effect accumulated with repeated identical pointer events");
+        std::uint64_t digest = 1469598103934665603ULL;
+        for (std::size_t pixel = 0; pixel < target.pixels.size(); ++pixel) {
+            digest = (digest ^ target.pixels[pixel].r) * 1099511628211ULL;
+            digest = (digest ^ target.pixels[pixel].g) * 1099511628211ULL;
+        }
+        effects.insert(std::to_string(digest));
+    }
+    require(effects.size() == paint::mix_effect_count, "transformative brush effects are indistinguishable");
+    paint::StrokeStabilizer stabilizer;
+    stabilizer.reset({0, 0});
+    const paint::Point delayed = stabilizer.advance({5, 0}, 8);
+    require(delayed.x > 0 && delayed.x < 5, "stabilizer failed to slow trajectory change");
+    const paint::Point direct = stabilizer.advance({7, 3}, 0);
+    require(direct.x == 7 && direct.y == 3, "disabled stabilizer changes trajectory");
+    paint::Image a, b;
+    a.reset(100, 60, {0, 0, 0, 0});
+    b = a;
+    paint::DynamicBrushStroke first, second;
+    paint::Ink ink;
+    ink.brush = paint::Brush::Airbrush;
+    ink.primary = {170, 110, 60, 255};
+    ink.size = 24;
+    first.segment(a, {20, 30}, {80, 30}, ink, true);
+    second.segment(b, {20, 30}, {40, 30}, ink, true);
+    second.segment(b, {40, 30}, {60, 30}, ink, true);
+    second.segment(b, {60, 30}, {80, 30}, ink, true);
+    require(std::memcmp(a.pixels.data(), b.pixels.data(), a.pixels.size() * 4) == 0,
+            "spray depends on pointer event segmentation");
+    std::set<std::string> colors;
+    for (std::size_t pixel = 0; pixel < a.pixels.size(); ++pixel) {
+        if (a.pixels[pixel].a) {
+            colors.insert(paint::to_hex(a.pixels[pixel]));
+        }
+    }
+    require(colors.size() > 20, "glitter spray lacks varying facets");
 }
 void test_conv() {
     paint::Image input, output;
@@ -611,6 +779,108 @@ void test_path_history() {
     require(doc.path.session == 0 && doc.image.width == 64 && doc.image.get(2, 2).r == 10,
             "transform undo lost the source drawing or restored obsolete path controls");
 }
+void test_guides_masks_and_path_swap() {
+    paint::Image source;
+    source.reset(40, 40, {248, 248, 248, 255});
+    for (int y = 10; y < 30; ++y) {
+        for (int x = 10; x < 30; ++x) {
+            source.set(x, y, {70, 100, 130, 255});
+        }
+    }
+    for (int y = 16; y < 24; ++y) {
+        for (int x = 16; x < 24; ++x) {
+            source.set(x, y, {248, 248, 248, 255});
+        }
+    }
+    source.set(6, 7, {246, 248, 249, 255});
+    const std::vector<paint::Point> loop{{4, 4}, {36, 4}, {36, 36}, {4, 36}};
+    paint::SelectionMask mask = paint::tighten_lasso(source, loop, false);
+    require(mask.coverage.size() == 32 * 32 && mask.coverage[8 * 32 + 8] == 255 &&
+                mask.coverage[16 * 32 + 16] == 0 && mask.coverage[3 * 32 + 2] == 0,
+            "tight lasso retains the ring, excludes its hole, and rejects near-white JPEG flecks");
+    paint::SelectionMask hole = paint::tighten_lasso(source, loop, true);
+    require(hole.coverage[16 * 32 + 16] == 255 && hole.coverage[8 * 32 + 8] == 0 &&
+                hole.coverage[2 * 32 + 2] == 0,
+            "inner-void lasso selects only the enclosed center background");
+    paint::Guide guide;
+    guide.nodes = {{9, 9}, {31, 9}, {31, 31}, {9, 31}};
+    guide.closed = true;
+    paint::Image target = source;
+    for (paint::Color& color : target.pixels) {
+        color = {255, 0, 0, 255};
+    }
+    paint::constrain_paint(target, source, guide, false);
+    require(paint::equal(target.get(20, 20), source.get(20, 20)) && target.get(3, 3).r == 255,
+            "guide protects its body while allowing edits outside");
+    guide.fill = false;
+    paint::Ink ink;
+    ink.primary = {255, 0, 0, 255};
+    target.reset(40, 40);
+    paint::stencil_flood(target, {2, 2}, ink, guide, false);
+    require(target.get(20, 20).g == 255 && target.get(2, 2).g == 0, "line-only guide blocks flood crossing");
+    guide.translate({3, -2});
+    require(guide.nodes[0].x == 12 && guide.nodes[0].y == 7, "guide translation follows the nodes");
+    paint::Document document;
+    document.new_image(80, 80);
+    document.tool = paint::Tool::Path;
+    document.add_path_node({10, 30});
+    document.add_path_node({60, 30});
+    require(document.swap_path_segment({0, 1}, paint::CurveKind::Bezier) == 0,
+            "existing path edge swaps to Bezier");
+    document.path.segments[0].geometry.move_handle(0, {20, 5});
+    document.sync_path();
+    require(document.path_contour(0, 2, false).size() > 2, "swapped path raster uses curved samples");
+    document.undo();
+    require(document.path.nodes.size() == 2 && document.path.segments.empty(),
+            "undo restores original line and active path nodes");
+    document.redo();
+    require(document.path.segments.size() == 1, "redo restores swapped segment geometry");
+}
+void test_text_treatments() {
+    paint::TextSession text;
+    text.begin({0, 0});
+    text.resize({0, 0, 260, 140});
+    text.style.size = 90;
+    text.style.face_path = (std::filesystem::path(__FILE__).parent_path().parent_path() /
+                            "assets/fonts/poster/Anton-Regular.ttf")
+                               .string();
+    text.replace("BO");
+    text.style.contour = true;
+    text.style.outline_width = 2;
+    text.refresh({20, 70, 160, 255}, {255, 210, 40, 255});
+    int edge = 0, body = 0, clear = 0;
+    for (paint::Color pixel : text.preview.pixels) {
+        edge += paint::equal(pixel, {20, 70, 160, 255});
+        body += paint::equal(pixel, {255, 210, 40, 255});
+        clear += pixel.a == 0;
+    }
+    require(edge > 100 && body > 100 && clear > 100,
+            "outline text keeps primary contours, Alt interiors, and open counters");
+    paint::Image flat = text.preview;
+    text.style.skew = 0.35;
+    text.style.perspective = -0.6;
+    text.style.warp = 0.3;
+    text.refresh({20, 70, 160, 255}, {255, 210, 40, 255});
+    require(std::memcmp(text.preview.pixels.data(), flat.pixels.data(),
+                        flat.pixels.size() * sizeof(paint::Color)) != 0,
+            "text transform changes the cached raster preview");
+    for (int y = 0; y <= 140; y += 7) {
+        for (int x = 0; x <= 260; x += 13) {
+            paint::Point mapped =
+                text.source_point(text.display_point({static_cast<double>(x), static_cast<double>(y)}));
+            require(std::hypot(mapped.x - x, mapped.y - y) < 1e-9,
+                    "transformed text hit testing inverts the visible mapping");
+        }
+    }
+    text.style.contour = false;
+    text.style.skew = text.style.perspective = text.style.warp = 0;
+    for (int style = 1; style <= 3; ++style) {
+        text.style.word_art = static_cast<paint::WordArt>(style);
+        text.refresh({20, 70, 160, 255}, {255, 210, 40, 255});
+        require(!text.preview.pixels.empty() && text.edit.content == "BO",
+                "WordArt preserves the editable text");
+    }
+}
 void test_codecs() {
     paint::Image image;
     image.reset(17, 13, {62, 147, 219, 255});
@@ -644,6 +914,8 @@ void test_codecs() {
 int main() {
     try {
         test_color();
+        test_perceptual_tools();
+        test_transformative_brushes();
         test_conv();
         test_conv_reference();
         test_editing();
@@ -654,6 +926,8 @@ int main() {
         test_path_history();
         test_stamp_masks_and_oblique_edges();
         test_curves();
+        test_guides_masks_and_path_swap();
+        test_text_treatments();
         test_codecs();
         std::cout << "Color, CONV, editing and seven-format codec tests passed.\n";
         return 0;

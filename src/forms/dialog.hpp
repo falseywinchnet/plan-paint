@@ -1,4 +1,5 @@
 #pragma once
+#include "color_tools.hpp"
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/controls/panel/combo_box/combo_box.hpp>
@@ -44,9 +45,15 @@ class EditorDialog final : public gui_forms::Control {
     gui_forms::SemanticDescriptor semantic_descriptor() const override;
     void choose_hsv(double hue, double saturation, double value);
     double hue = 0, saturation = 0, value = 0;
+    Color plane_color(double h, double s, double level) const;
+    PickerSpace picker_space = PickerSpace::RGB;
+    bool mosaic = false;
 
   private:
     std::weak_ptr<Editor> editor_;
+    std::shared_ptr<gui_forms::ComboBox> color_space_, background_;
+    std::shared_ptr<gui_forms::CheckBox> mosaic_;
+    void color_space_changed(std::optional<std::size_t> index);
     EditorDialogKind kind_;
     bool secondary_ = false, synchronizing_ = false, percent_ = false;
     Color original_, color_;

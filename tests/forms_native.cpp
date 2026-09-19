@@ -1,4 +1,6 @@
+#include "codecs.hpp"
 #include "forms/editor.hpp"
+#include <filesystem>
 #include <functional>
 #include <gui_forms/timer.hpp>
 #include <iostream>
@@ -10,7 +12,7 @@ namespace {
 namespace gf = gui_forms;
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
-    bool keep_open = false, resize_preview = false;
+    bool keep_open = false, resize_preview = false, features = false, compact = false;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
     gf::SubscriptionToken resize_tick;
@@ -34,6 +36,78 @@ struct NativeExercise {
                   << std::flush;
     }
 
+    void feature_gallery(gf::Window& window) {
+        paint::Document& document = (*editor).document;
+        document.new_image(960, 600);
+        document.image.reset(960, 600, {248, 246, 241, 255});
+        paint::TextStyle label;
+        label.size = 15;
+        const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+        const char* fonts[] = {"DynaPuff[wdth,wght].ttf", "Bubble Sans 1.01.otf", "Anton-Regular.ttf",
+                               "TitanOne-Regular.ttf"};
+        const char* names[] = {"DynaPuff", "Bubble Sans", "Anton", "Titan One"};
+        for (int index = 0; index < 4; ++index) {
+            paint::TextSession sample;
+            sample.begin({0, 0});
+            sample.resize({0, 0, 220, 110});
+            sample.style.face_path = (root / "assets/fonts/poster" / fonts[index]).string();
+            sample.style.size = 64;
+            sample.style.contour = true;
+            sample.style.outline_width = 1;
+            sample.replace("BOOM");
+            sample.refresh({74, 49, 117, 255}, {244, 183, 63, 255});
+            paint::composite(document.image, sample.preview, 10 + index * 235, 25);
+            paint::draw_text(document.image, {10.0 + index * 235, 7}, names[index], label, {45, 45, 55, 255},
+                             {}, "");
+        }
+        for (int index = 0; index < paint::brush_count; ++index) {
+            const int col = index % 6, row = index / 6;
+            paint::Ink ink;
+            ink.size = 37;
+            ink.primary = {38, 119, 164, 255};
+            ink.brush = static_cast<paint::Brush>(index);
+            paint::DynamicBrushStroke brush;
+            brush.segment(document.image, {20.0 + col * 156, 153.0 + row * 80},
+                          {136.0 + col * 156, 159.0 + row * 80}, ink, false);
+            paint::draw_text(document.image, {14.0 + col * 156, 177.0 + row * 80}, paint::brush_names[index],
+                             label, {45, 45, 55, 255}, {}, "");
+        }
+        paint::Ink glitter;
+        glitter.size = 58;
+        glitter.brush = paint::Brush::Airbrush;
+        glitter.primary = {192, 131, 34, 255};
+        paint::DynamicBrushStroke sparkles;
+        sparkles.segment(document.image, {45, 320}, {425, 325}, glitter, true);
+        paint::draw_text(document.image, {20, 350}, "Fine glitter spray", label, {45, 45, 55, 255}, {}, "");
+        paint::TextSession art;
+        art.begin({0, 0});
+        art.resize({0, 0, 440, 108});
+        art.style.size = 78;
+        art.style.face_path = (root / "assets/fonts/poster/TitanOne-Regular.ttf").string();
+        art.style.word_art = paint::WordArt::Extruded;
+        art.style.skew = -0.18;
+        art.style.perspective = 0.28;
+        art.style.warp = -0.12;
+        art.replace("Rainstar");
+        art.refresh({142, 68, 168, 255}, {});
+        paint::composite(document.image, art.preview, 465, 285);
+        document.ink.primary = {49, 91, 151, 255};
+        document.ink.secondary = {244, 183, 63, 255};
+        (*editor).choose_tool(paint::Tool::Text);
+        (*editor).text.begin({75, 425});
+        (*editor).text.resize({75, 425, 780, 135});
+        (*editor).text.style.face_path = (root / "assets/fonts/poster/Anton-Regular.ttf").string();
+        (*editor).text.style.size = 110;
+        (*editor).text.style.contour = true;
+        (*editor).text.style.outline_width = 2;
+        (*editor).text.style.skew = 0.2;
+        (*editor).text.style.perspective = -0.35;
+        (*editor).text.style.warp = 0.15;
+        (*editor).text.replace("EDITABLE LETTERING");
+        (*editor).refresh();
+        window.perform_layout();
+        entered = true;
+    }
     bool entered = false;
     void stroke(gf::Window& window, paint::Point first, paint::Point last) {
         gf::RasterCanvas& canvas = (*editor).canvas();
@@ -61,6 +135,10 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (features) {
+            feature_gallery(window);
+            return;
+        }
         if (resize_preview) {
             paint::Image sample;
             sample.reset(192, 112, {230, 70, 40, 255});
@@ -132,12 +210,15 @@ int main(int argc, char** argv) {
     try {
         NativeExercise exercise;
         exercise.keep_open = argc > 1;
+        exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
+                                         std::string(argv[1]) == "--features-compact");
+        exercise.compact = argc > 1 && std::string(argv[1]) == "--features-compact";
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));
         gf::ApplicationWindowOptions options;
         options.title = "Rainstar Paint — GUI.Forms native interaction check";
-        options.initial_size = {1280, 820};
-        options.minimum_size = {1280, 600};
+        options.initial_size = exercise.compact ? gf::Size{800, 600} : gf::Size{1280, 820};
+        options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;
         options.ready = std::bind(&NativeExercise::ready, std::ref(exercise), std::placeholders::_1,
                                   std::placeholders::_2);

@@ -37,11 +37,25 @@ with tempfile.TemporaryDirectory(prefix="rainstar-toolkit-") as temporary:
             parts = Path(member.name).parts
             if not parts or parts[0] != "gui-forms" or ".." in parts or not member.isfile():
                 raise SystemExit("Unexpected entry in the toolkit source archive.")
-        args.destination.mkdir(parents=True)
+        extracted = Path(temporary) / "source"
+        extracted.mkdir()
         for member in members:
-            target = args.destination.joinpath(*Path(member.name).parts[1:])
+            target = extracted.joinpath(*Path(member.name).parts[1:])
             target.parent.mkdir(parents=True, exist_ok=True)
             with source.extractfile(member) as data, target.open("wb") as output:
                 shutil.copyfileobj(data, output)
             target.chmod(member.mode & 0o777)
+    applied = []
+    for patch in lock.get("patches", []):
+        patch_path = root / patch["file"]
+        content = patch_path.read_bytes()
+        if hashlib.sha256(content).hexdigest() != patch["sha256"]:
+            raise SystemExit("GUI.Forms source patch checksum mismatch: " + patch["file"])
+        subprocess.run(["git", "apply", "--check", "-"], input=content, cwd=extracted, check=True)
+        subprocess.run(["git", "apply", "-"], input=content, cwd=extracted, check=True)
+        applied.append(patch)
+    if applied:
+        (extracted / "SOURCE_PATCHES.json").write_text(json.dumps(applied, indent=2) + "\n")
+    args.destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(extracted), str(args.destination))
 print(args.destination)

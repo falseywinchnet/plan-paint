@@ -416,6 +416,18 @@ void ribbon_galleries_and_modal_transactions() {
                 (*modal).absolute_bounds().height == window.client_size().height,
             "modal has real full-client geometry");
     require(!window.request_focus(window.find("canvas")), "modal focus scope rejects the background canvas");
+    const std::shared_ptr<gf::ComboBox> color_space =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("color-space"));
+    (*color_space).set_dropped_down(true);
+    window.perform_layout();
+    require(window.focus_scope_depth() == 2, "color-space dropdown nests inside the modal dialog");
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::down});
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::enter});
+    require((*color_space).selected_index() == 1 && !(*color_space).dropped_down() &&
+                window.focus_scope_depth() == 1,
+            "OKHSL can be selected through the modal dropdown and returns focus safely");
+    routed_button(window, "color-mosaic");
+    require(window.find("editor-dialog") != nullptr, "Mosaic remains in the live color dialog");
     std::size_t undo_count = editor.document.undo_history.size();
     fixture.drag(5, 5, 20, 5);
     require(editor.document.undo_history.size() == undo_count, "modal blocks background drawing");
@@ -912,8 +924,8 @@ class PreviewPainter final : public gf::Painter {
     void translate(gf::Point) override {}
     void clip_rect(gf::Rect) override {}
     void fill_rect(gf::Rect rectangle, gf::Color color) override {
-        if (color.red == 20 && color.green == 70 && color.blue == 110 && rectangle.width == 4 &&
-            rectangle.height == 4) {
+        if (color.red == 20 && color.green == 70 && color.blue == 110 && rectangle.width == 1 &&
+            rectangle.height == 1) {
             ++lens_samples;
         }
         if (color.red == 20 && color.green == 70 && color.blue == 110 && rectangle.width == 8 &&
@@ -930,7 +942,7 @@ class PreviewPainter final : public gf::Painter {
     void stroke_rect(gf::Rect, gf::Color, double) override {}
     void draw_line(gf::Point, gf::Point, gf::Color, double) override {}
     void draw_text_utf8(gf::Point, std::string_view text, gf::FontSpec, gf::Color) override {
-        if (text == "4×") {
+        if (text == "8×") {
             lens_caption = true;
         }
     }
@@ -1114,8 +1126,8 @@ void magnifier_hover_is_display_only() {
     fixture.pointer(gf::PointerAction::move, 20, 30, gf::PointerButton::none);
     PreviewPainter lens;
     editor.paint_canvas_overlay(lens, {});
-    require(lens.lens_samples == 1 && lens.lens_caption,
-            "magnifier previews the pointed source pixel at four screen pixels per image pixel");
+    require(lens.lens_samples == 64 && lens.lens_caption,
+            "magnifier previews the pointed source pixel at eight screen pixels per image pixel");
     require(editor.document.undo_history.size() == undo &&
                 std::memcmp(before.pixels.data(), editor.document.image.pixels.data(),
                             before.pixels.size() * 4) == 0,
@@ -1265,7 +1277,8 @@ void path_hover_snap_and_controls() {
     require(!(*window.find("r-pattern-0")).visible(), "path context does not duplicate Patterns");
     open_tab(window, "home-tab");
     editor.document.ink.brush = paint::Brush::Airbrush;
-    routed_button(window, "outline-menu");
+    routed_button(window, "primary");
+    open_tab(window, "patterns-tab");
     routed_button(window, "material-brush-0");
     require(editor.document.ink.brush == paint::Brush::Round,
             "Solid outline cannot retain the airbrush's random deposition");
@@ -1330,7 +1343,8 @@ void centered_circle_and_materials() {
     fixture.pointer(gf::PointerAction::up, 72, 61, gf::PointerButton::primary, gf::Modifier::control);
     require(!white(editor.document.image.get(40, 45)) && !white(editor.document.image.get(80, 45)),
             "Ctrl circle commit matches centered preview");
-    routed_button(window, "fill-menu");
+    routed_button(window, "secondary");
+    open_tab(window, "patterns-tab");
     require((*window.find("material-brush-4")).visible() && (*window.find("r-pattern-12")).visible() &&
                 (*window.find("grain-scale")).visible(),
             "fill brushes, patterns and material settings share one pane");
@@ -1610,6 +1624,128 @@ void scroll_distance_bounds_and_settings() {
             "accepted scroll distance persists between launches");
     std::filesystem::remove(editor.settings.storage_path);
 }
+void stamp_material_keeps_one_hardness_mask() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.choose_tool(paint::Tool::Stamp);
+    editor.stamp_width = editor.stamp_height = 20;
+    editor.stamp_hardness = 0.25;
+    editor.document.stamp_shape = paint::StampShape::Square;
+    for (int y = 15; y < 35; ++y) {
+        for (int x = 15; x < 85; ++x) {
+            editor.document.image.set(
+                x, y, x < 40 ? paint::Color{220, 70, 50, 255} : paint::Color{40, 130, 100, 255});
+        }
+    }
+    fixture.click(25, 25);
+    const paint::Image original = editor.document.stamp;
+    require(original.get(0, 10).a < original.get(10, 10).a, "stamp hardness feathers its capture boundary");
+    editor.add_stamp_material();
+    require(editor.document.stamp.pixels.empty() && editor.document.tool == paint::Tool::Stamp,
+            "Add material re-enters capture mode without leaving Stamp");
+    fixture.click(75, 25);
+    require(original.pixels.size() == editor.document.stamp.pixels.size(),
+            "added material retains the stamp dimensions");
+    for (std::size_t index = 0; index < original.pixels.size(); ++index) {
+        require(original.pixels[index].a == editor.document.stamp.pixels[index].a,
+                "adding material applies hardness once and preserves the retained silhouette");
+    }
+    fixture.click(70, 65);
+    editor.execute("undo");
+    require(white(editor.document.image.get(70, 65)), "mixed stamp placement is undoable as one gesture");
+}
+void compact_ribbon_keeps_icons_and_fields() {
+    Fixture fixture;
+    gf::Window& window = *fixture.window;
+    window.resize({800, 600});
+    window.perform_layout();
+    for (const char* id : {"tool-2", "tool-3", "tool-4", "shape-0", "shape-2", "shape-3", "brush-menu"}) {
+        const std::shared_ptr<gf::Button> button = std::dynamic_pointer_cast<gf::Button>(window.find(id));
+        require(button && (*button).image_list() &&
+                    static_cast<bool>((*(*button).image_list()).resolve((*button).image_key())),
+                "compact ribbon retains every small and large icon resource");
+    }
+    require((*window.find("home-tab")).committed_arranged_bounds().x >= 56,
+            "compact Home tab remains clear of the File menu");
+    require((*window.find("dimensions-status")).committed_arranged_bounds().right() <=
+                (*window.find("status-zoom-reset")).committed_arranged_bounds().x,
+            "compact status dimensions do not overlap the zoom controls");
+}
+void guide_atlas_and_text_effect_interactions() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.choose_tool(paint::Tool::Guide);
+    require(!editor.guide.fill, "new guide follows the ribbon fill switch");
+    routed_button(window, "fill-switch");
+    require(editor.guide.fill, "filled-square ribbon switch enables guide body protection");
+    fixture.click(20, 20);
+    fixture.click(60, 20);
+    fixture.click(60, 60);
+    fixture.click(20, 60);
+    fixture.pointer(gf::PointerAction::down, 20, 60, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 20, 60, gf::PointerButton::secondary);
+    require(editor.guide.closed && !editor.document.dirty(),
+            "guide is closed and never enters document history");
+    editor.choose_tool(paint::Tool::Pencil);
+    fixture.drag(5, 40, 80, 40);
+    require(white(editor.document.image.get(40, 40)) && !white(editor.document.image.get(10, 40)),
+            "routed pencil paints around guide stencil");
+    editor.choose_tool(paint::Tool::Select);
+    require(!editor.guide.active(), "selection deconstructs guide");
+    fixture.drag(10, 10, 30, 30);
+    editor.choose_tool(paint::Tool::Guide);
+    require(editor.guide.closed && !editor.document.selection.active,
+            "selection converts directly to guide polygon");
+    editor.execute("atlas-grid");
+    window.perform_layout();
+    (*std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("atlas-0"))).set_value(2);
+    routed_button(window, "dialog-ok");
+    require(!editor.guide.active() && editor.document.atlas.active >= 0,
+            "atlas conversion clears stale guide");
+    editor.choose_tool(paint::Tool::Pencil);
+    editor.atlas_wrap = true;
+    editor.atlas_preserve_alpha = true;
+    for (std::size_t index = 0; index < editor.document.image.pixels.size(); ++index) {
+        editor.document.image.pixels[index] = {30, 60, 90, static_cast<std::uint8_t>(index % 256)};
+    }
+    paint::Image before = editor.document.image;
+    editor.document.ink.size = 7;
+    editor.document.ink.primary = {240, 40, 90, 255};
+    editor.refresh();
+    fixture.drag(1, 1, -3, -3);
+    for (std::size_t index = 0; index < before.pixels.size(); ++index) {
+        require(before.pixels[index].a == editor.document.image.pixels[index].a,
+                "atlas painting preserves every alpha byte");
+    }
+    int w = before.width, h = before.height;
+    require(editor.document.image.get(w - 2, h - 2).r != before.get(w - 2, h - 2).r,
+            "corner stroke wraps across both atlas axes");
+    int active = editor.document.atlas.active;
+    paint::Image painted = editor.document.image;
+    editor.set_reference_frame(1);
+    require(editor.document.atlas.active == active && !editor.atlas_reference.pixels.empty() &&
+                std::memcmp(editor.document.image.pixels.data(), painted.pixels.data(),
+                            painted.pixels.size() * sizeof(paint::Color)) == 0,
+            "reference overlay leaves current frame and exported pixels untouched");
+    editor.execute("atlas-reference-clear");
+    require(editor.atlas_reference.pixels.empty(), "reference dismisses independently");
+    editor.execute("text");
+    fixture.click(2, 2);
+    window.dispatch_text({"BO"});
+    routed_button(window, "text-contour");
+    std::shared_ptr<gf::NumericUpDown> skew =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("text-skew"));
+    (*skew).set_value(0.3);
+    require(editor.text.style.contour && editor.text.style.skew == 0.3,
+            "text effect controls update editable session");
+    painted = editor.document.image;
+    paint::composite(painted, editor.text.preview, editor.text.bounds.x, editor.text.bounds.y);
+    routed_button(window, "text-place");
+    require(std::memcmp(editor.document.image.pixels.data(), painted.pixels.data(),
+                        painted.pixels.size() * sizeof(paint::Color)) == 0,
+            "transformed contour text places exactly its preview");
+}
 void zoom_anchors_the_point() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -1634,6 +1770,9 @@ int main() {
         retained_curve_save_undo_and_release();
         selection_move_path_and_stamp();
         scroll_distance_bounds_and_settings();
+        stamp_material_keeps_one_hardness_mask();
+        compact_ribbon_keeps_icons_and_fields();
+        guide_atlas_and_text_effect_interactions();
         zoom_anchors_the_point();
         magnifier_hover_is_display_only();
         zoom_out_clamps_each_axis();

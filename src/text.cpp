@@ -157,6 +157,85 @@ TextLayout layout_text(const std::string& text, const TextStyle& style, int wrap
 }
 void render_text(Image& image, Point origin, const TextLayout& layout, const TextStyle& style, Color color,
                  Color background) {
+    if (style.contour || style.word_art != WordArt::Plain) {
+        TextStyle plain = style;
+        plain.contour = false;
+        plain.word_art = WordArt::Plain;
+        plain.opaque = false;
+        Image mask;
+        mask.reset(image.width, image.height, {0, 0, 0, 0});
+        render_text(mask, origin, layout, plain, {255, 255, 255, 255}, background);
+        int radius = std::clamp(static_cast<int>(std::round(style.outline_width)), 1, 8);
+        int depth = style.word_art == WordArt::Extruded ? std::max(2, style.size / 8) : 0;
+        Lab dark = to_oklab(color);
+        dark.l *= 0.48;
+        Color shadow = from_oklab(dark);
+        shadow.a = color.a;
+        if (style.opaque) {
+            for (int y = 0; y < layout.height; ++y) {
+                for (int x = 0; x < layout.width; ++x) {
+                    image.set(static_cast<int>(origin.x) + x, static_cast<int>(origin.y) + y, background);
+                }
+            }
+        }
+        for (int y = std::max(0, static_cast<int>(origin.y) - radius);
+             y < std::min(image.height, static_cast<int>(origin.y) + layout.height + radius + depth); ++y) {
+            for (int x = std::max(0, static_cast<int>(origin.x) - radius - style.size / 3);
+                 x < std::min(image.width,
+                              static_cast<int>(origin.x) + layout.width + style.size / 3 + radius + depth);
+                 ++x) {
+                unsigned body = mask.get(x, y).a, outer = body, inner = body, extrusion = 0;
+                if (style.contour) {
+                    for (int dy = -radius; dy <= radius; ++dy) {
+                        for (int dx = -radius; dx <= radius; ++dx) {
+                            if (dx * dx + dy * dy <= radius * radius) {
+                                unsigned a = mask.contains(x + dx, y + dy) ? mask.get(x + dx, y + dy).a : 0;
+                                outer = std::max(outer, a);
+                                inner = std::min(inner, a);
+                            }
+                        }
+                    }
+                }
+                for (int d = 1; d <= depth; ++d) {
+                    if (mask.contains(x - d, y - d)) {
+                        extrusion = std::max(extrusion, static_cast<unsigned>(mask.get(x - d, y - d).a));
+                    }
+                }
+                if (extrusion) {
+                    Color c = shadow;
+                    c.a = static_cast<std::uint8_t>(extrusion * c.a / 255);
+                    image.blend(x, y, c);
+                }
+                Color fill = style.contour ? background : color;
+                if (!style.contour && style.word_art == WordArt::Sunset) {
+                    double t = std::clamp((y - origin.y) / std::max(1, layout.height - 1), 0.0, 1.0);
+                    Lab first = to_oklab(color), last = to_oklab(background);
+                    fill = from_oklab({first.l + t * (last.l - first.l), first.a + t * (last.a - first.a),
+                                       first.b + t * (last.b - first.b)});
+                    fill.a = color.a;
+                }
+                if (!style.contour && style.word_art == WordArt::Embossed && body) {
+                    int before = mask.contains(x - 1, y - 1) ? mask.get(x - 1, y - 1).a : 0;
+                    int after = mask.contains(x + 1, y + 1) ? mask.get(x + 1, y + 1).a : 0;
+                    Lab bevel = to_oklab(fill);
+                    bevel.l = std::clamp(bevel.l + (after - before) / 255.0 * 0.24, 0.0, 1.0);
+                    fill = from_oklab(bevel);
+                    fill.a = color.a;
+                }
+                // The eroded interior uses Alt; the complete inner/outer contour uses Primary.
+                unsigned interior = style.contour ? inner : body;
+                Color c = fill;
+                c.a = static_cast<std::uint8_t>(interior * c.a / 255);
+                image.blend(x, y, c);
+                if (style.contour) {
+                    c = color;
+                    c.a = static_cast<std::uint8_t>((outer - inner) * c.a / 255);
+                    image.blend(x, y, c);
+                }
+            }
+        }
+        return;
+    }
     RasterFont font(style);
     if (style.opaque) {
         for (int y = 0; y < layout.height; ++y) {

@@ -95,8 +95,8 @@ void Editor::update_transform_preview() {
     canvas().invalidate(gf::Dirty::paint);
 }
 bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
-    if (text.active || document.curve.base || warp_active() || panning_ || dragging_ ||
-        (!document.selection.active && document.fixed_canvas())) {
+    if (document.tool == Tool::Guide || text.active || document.curve.base || warp_active() || panning_ ||
+        dragging_ || (!document.selection.active && document.fixed_canvas())) {
         return false;
     }
     Rect bounds = document.selection.active
@@ -126,6 +126,7 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
             event.button != gf::PointerButton::primary) {
             return false;
         }
+        guide.clear();
         resize_handle_ = hovered;
         resize_selection_ = document.selection.active;
         resize_original_ = resize_preview_ = bounds;
@@ -182,7 +183,7 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
     return true;
 }
 void Editor::paint_resize_overlay(gf::Painter& painter) {
-    if (text.active || document.curve.base || warp_active() ||
+    if (document.tool == Tool::Guide || text.active || document.curve.base || warp_active() ||
         (!document.selection.active && document.fixed_canvas())) {
         return;
     }

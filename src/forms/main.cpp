@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
         gui_forms::ApplicationWindowOptions options;
         options.title = "Rainstar Paint";
         options.initial_size = {1280, 820};
-        options.minimum_size = {1280, 600};
+        options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;
         options.ready = std::bind(&paint::forms::Editor::ready, editor, std::placeholders::_1,
                                   std::placeholders::_2, initial_path);

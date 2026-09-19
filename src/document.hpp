@@ -1,6 +1,7 @@
 #pragma once
 #include "atlas.hpp"
 #include "curve.hpp"
+#include "guide.hpp"
 #include "raster.hpp"
 #include <deque>
 #include <memory>
@@ -18,7 +19,8 @@ enum class Tool {
     Shape,
     Path,
     Stamp,
-    Reshape
+    Reshape,
+    Guide
 };
 struct FloatingSelection {
     Image image;
@@ -36,7 +38,15 @@ struct PathRun {
     bool outline = true, fill = false, continuous = true;
     Brush fill_brush = Brush::Round;
 };
+struct PathSegment {
+    std::size_t first = 0, last = 0;
+    CurveGeometry geometry;
+};
+struct PathEdge {
+    std::size_t first = 0, last = 0;
+};
 struct EditablePath {
+    std::vector<PathSegment> segments;
     std::vector<Point> nodes;
     std::vector<PathRun> runs;
     std::shared_ptr<const Image> base;
@@ -111,6 +121,7 @@ struct Document {
     void new_image(int width = 960, int height = 640);
     void paste(const Image& pasted, int x = 0, int y = 0);
     void select(Rect bounds, const std::vector<Point>& lasso = {});
+    void select_mask(const SelectionMask& mask);
     void commit_selection();
     void delete_selection();
     void select_all();
@@ -124,6 +135,9 @@ struct Document {
     void add_path_node(Point point);
     void end_path_geometry();
     void move_path_node(std::size_t index, Point point);
+    std::vector<PathEdge> path_edges() const;
+    int swap_path_segment(PathEdge edge, CurveKind kind);
+    std::vector<Point> path_contour(std::size_t start, std::size_t count, bool closed) const;
     void sync_path();
     void restore_path(const EditablePath& previous);
     Image path_image(const Point* next = nullptr) const;

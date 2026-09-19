@@ -13,18 +13,21 @@ struct RecentFiles {
 struct EditorSettings {
     std::string storage_path;
     double scroll_distance = 6;
+    bool green_felt = false;
     void load();
     void save() const;
 };
 struct CustomColors {
     std::string storage_path;
-    std::array<Color, 16> colors;
-    std::uint16_t occupied = 0;
+    std::array<Color, 30> colors;
+    std::uint32_t occupied = 0;
     CustomColors();
     void load();
     void store(int slot, Color color);
 };
 Color office_color(int index);
+Color themed_color(int index);
+const char* theme_name(int column);
 std::string preference_directory();
 std::string desktop_export(const Image& image, const char* purpose);
 Image wallpaper_image(const Image& image, int width, int height, WallpaperLayout layout);

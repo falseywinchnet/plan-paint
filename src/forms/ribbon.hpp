@@ -46,8 +46,8 @@ class Ribbon final : public gui_forms::Control {
   private:
     std::weak_ptr<Editor> editor_;
     std::shared_ptr<AtlasPanel> atlas_;
-    std::shared_ptr<gui_forms::ImageList> small_icons_, medium_icons_, large_icons_, brush_previews_,
-        pattern_previews_, fill_previews_;
+    std::shared_ptr<gui_forms::ImageList> tiny_icons_, small_icons_, medium_icons_, large_icons_,
+        brush_previews_, pattern_previews_, fill_previews_;
     std::shared_ptr<gui_forms::ToolTip> tooltips_;
     std::vector<std::shared_ptr<gui_forms::Button>> buttons_;
     std::vector<gui_forms::SubscriptionToken> subscriptions_, popup_subscriptions_;
@@ -56,11 +56,12 @@ class Ribbon final : public gui_forms::Control {
     gui_forms::FocusScopeId focus_scope_;
     std::shared_ptr<gui_forms::DropDownButton> popup_owner_;
     std::shared_ptr<SwatchButton> primary_, secondary_;
-    bool secondary_color_ = false;
+    bool secondary_color_ = false, path_swap_menu_ = false;
     std::shared_ptr<gui_forms::Button> secondary_target_;
     void show_materials(bool fill);
     void prepare_material_previews();
-    int page_ = 1, building_page_ = 1;
+    int page_ = 1, building_page_ = 1, palette_page_ = 0;
+    Color palette_color(int index) const;
     bool synchronizing_ = false, fonts_loaded_ = false, collapsed_ = false;
     void ensure_fonts();
     std::vector<int> button_pages_;
@@ -70,7 +71,14 @@ class Ribbon final : public gui_forms::Control {
     std::shared_ptr<gui_forms::NumericUpDown> grain_, tooth_, load_, angle_, tool_size_, text_size_;
     std::shared_ptr<gui_forms::NumericUpDown> stamp_width_, stamp_height_, stamp_scale_, stamp_angle_,
         rotation_, mesh_spacing_;
-    std::shared_ptr<gui_forms::ComboBox> font_;
+    std::shared_ptr<gui_forms::ComboBox> font_, word_art_, picker_mode_, mix_effect_, eraser_mode_;
+    std::shared_ptr<gui_forms::NumericUpDown> effect_strength_, effect_scale_, effect_phase_, heal_hardness_,
+        heal_correction_, stabilizer_lag_, stamp_hardness_;
+    void mix_effect_changed(std::optional<std::size_t> index);
+    void eraser_mode_changed(std::optional<std::size_t> index);
+    void word_art_changed(std::optional<std::size_t> index);
+    std::shared_ptr<gui_forms::NumericUpDown> text_skew_, text_perspective_, text_warp_, text_outline_;
+    void picker_mode_changed(std::optional<std::size_t> index);
     std::vector<std::string> font_paths_;
     void font_changed(std::optional<std::size_t> index);
     void add_options();

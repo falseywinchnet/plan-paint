@@ -1,10 +1,12 @@
 #pragma once
+#include "color_tools.hpp"
 #include "desktop.hpp"
 #include "document.hpp"
 #include "forms/dialog.hpp"
 #include "forms/help.hpp"
 #include "forms/ribbon.hpp"
 #include "material.hpp"
+#include "paint_tools.hpp"
 #include "text_session.hpp"
 #include "warp_session.hpp"
 #include <gui_forms/application.hpp>
@@ -38,7 +40,9 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
 
   private:
     std::weak_ptr<Editor> editor_;
-    gui_forms::ImageId felt_;
+    gui_forms::ImageId felt_, green_felt_, repeated_, reference_;
+    std::uint64_t atlas_revision_ = 0;
+    void paint_atlas_context(gui_forms::Painter& painter, const Editor& editor);
 };
 class Editor final : public gui_forms::Control {
   public:
@@ -55,10 +59,28 @@ class Editor final : public gui_forms::Control {
     bool warp_active() const;
     bool background_busy() const;
     void reset_stamp();
+    void add_stamp_material();
+    void update_stamp_hardness();
+    double stamp_hardness = 1;
+    BrushFamily brush_family = BrushFamily::Additive;
+    MixEffect mix_effect = MixEffect::Ripple;
+    EraserMode eraser_mode = EraserMode::Hard;
+    double effect_strength = 0.75, effect_scale = 24, effect_phase = 0;
+    double heal_hardness = 0.35, heal_correction = 1;
+    bool set_heal_source = true, stabilize = false, glitter = false;
+    double stabilizer_lag = 5;
     void regenerate_stamp();
     int stamp_width = 80, stamp_height = 80;
     double stamp_scale = 1, stamp_angle = 0, rotation_angle = 0, mesh_spacing = 60;
     void select_frame(int index, bool sequence = false);
+    void set_reference_frame(int index);
+    bool atlas_wrap = false, atlas_preserve_alpha = false;
+    Image atlas_reference;
+    int reference_frame = -1;
+    std::uint64_t canvas_revision = 1;
+    Guide guide;
+    LassoMode lasso_mode = LassoMode::Free;
+    double lasso_tolerance = 0.025;
     bool pick_hotspot = false, show_hotspot = false;
     Document document;
     CustomColors custom_colors;
@@ -73,6 +95,8 @@ class Editor final : public gui_forms::Control {
     void text_focus(bool focused);
     void text_frame();
     bool show_help = false, eraser_soft = false;
+    SampleMode picker_mode = SampleMode::Exact;
+    bool picker_magnifier = false;
     bool show_rulers = false, show_grid = false, show_status = true, full_screen = false;
     void open_editor_dialog(EditorDialogKind kind, bool secondary = false);
     void close_editor_dialog();
@@ -89,6 +113,7 @@ class Editor final : public gui_forms::Control {
     void on_attached_to_window() override;
     void on_detaching_from_window(gui_forms::Window& former_window) noexcept override;
     void choose_shape(Shape shape);
+    void begin_path_swap(CurveKind kind);
     void refresh();
     void open_file(const std::string& path);
     bool save(bool save_as);
@@ -112,7 +137,8 @@ class Editor final : public gui_forms::Control {
     FloatingSelection warp_original_;
     ReshapeMesh reshape_mesh_;
     std::shared_ptr<const ConvWarpField> warp_field_, stamp_field_;
-    Image stamp_preview_;
+    Image stamp_preview_, hard_stamp_, stamp_basis_;
+    bool adding_stamp_material_ = false;
     std::vector<Point> stamp_boundary_;
     gui_forms::ImageId stamp_image_;
     void publish_stamp_preview();
@@ -153,6 +179,19 @@ class Editor final : public gui_forms::Control {
     Point text_drag_start_;
     void paint_atlas_overlay(gui_forms::Painter& painter);
     void paint_tool_preview(gui_forms::Painter& painter);
+    void paint_guide_overlay(gui_forms::Painter& painter);
+    bool guide_pointer(const gui_forms::PointerEvent& event, Point point);
+    std::optional<CurveKind> path_swap_kind_;
+    int path_swap_segment_ = -1, path_swap_handle_ = -1;
+    bool path_swap_checkpoint_ = false;
+    bool path_swap_pointer(const gui_forms::PointerEvent& event, Point point);
+    void paint_path_swap(gui_forms::Painter& painter);
+    int guide_node_ = -1;
+    bool guide_moving_ = false;
+    Point guide_last_;
+    Image paint_base_;
+    void paint_segment(Point start, Point end);
+    bool atlas_painting() const;
     void paint_text_overlay(gui_forms::Painter& painter);
     void text_pointer(const gui_forms::PointerEvent& event, Point point);
     void reset_text_caret();
@@ -163,6 +202,10 @@ class Editor final : public gui_forms::Control {
     Image preview_;
     EraserStroke eraser_;
     MaterialStroke material_;
+    DynamicBrushStroke dynamic_brush_;
+    TransformStroke transform_brush_;
+    HealingBrush healing_brush_;
+    StrokeStabilizer stabilizer_;
     bool shift_ = false, control_ = false;
     int path_node_ = -1;
     Ink gesture_ink_, gesture_fill_ink_;

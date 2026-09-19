@@ -23,3 +23,24 @@ Binary packages also carry the notices for their bundled codec dependencies. mac
 Portable Linux packages include musl and X11 client libraries, with their notices in `licenses/runtime`; X11 locale data comes from libX11. Linux and MinGW Windows packages carry GCC runtime notices and the GCC Runtime Library Exception. MinGW-w64 and winpthreads notices are also included. Runtime source locations are listed in [packaging/licenses/runtime/SOURCES.md](packaging/licenses/runtime/SOURCES.md).
 
 The released GUI.Forms application does not link SDL, Dear ImGui or GTK. Those sources and notices remain for the optional comparison frontend. Linux printing uses the configured operating-system CUPS service; acquisition and wallpaper commands use the relevant desktop services.
+
+## OKHSL color picker
+
+The OKHSL conversion in `vendor/ok_color/ok_color.h` is Björn Ottosson's 2021
+reference implementation, used under its included MIT license. Scalar arithmetic
+is promoted to double precision. Source and adaptation notes are in
+`vendor/ok_color/README.md`. The perceptual palette clustering and sampling code
+in Rainstar Paint are original implementations.
+
+## Poster fonts
+
+DynaPuff, Anton and Titan One are distributed from the Google Fonts source
+repository under the SIL Open Font License 1.1. Bubble Sans 1.01 is by the
+Bubble Sans Project Authors (Abay Emes / QR Type), also under OFL 1.1.
+Unmodified fonts and their separate copyright/license files are in
+`assets/fonts/poster/` and are copied into application packages. Sources:
+https://github.com/google/fonts/tree/main/ofl/dynapuff,
+https://github.com/google/fonts/tree/main/ofl/anton,
+https://github.com/google/fonts/tree/main/ofl/titanone,
+https://www.dafont.com/bubble-sans.font,
+https://github.com/abayemes/bubblesans.

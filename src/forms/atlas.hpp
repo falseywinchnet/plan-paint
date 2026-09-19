@@ -40,6 +40,8 @@ class AtlasPanel final : public gui_forms::Control {
     std::vector<std::shared_ptr<gui_forms::Button>> buttons_;
     std::vector<gui_forms::SubscriptionToken> subscriptions_;
     std::shared_ptr<gui_forms::Label> status_;
+    std::shared_ptr<gui_forms::CheckBox> wrap_, alpha_;
+    std::shared_ptr<gui_forms::Button> clear_reference_;
     bool gallery_ = false;
     AtlasKind kind_ = AtlasKind::None;
     int count_ = -1, active_ = -2;

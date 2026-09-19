@@ -1,7 +1,7 @@
 #include "platform.hpp"
 #include <algorithm>
-#include <filesystem>
 #include <cstdlib>
+#include <filesystem>
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #elif defined(_WIN32)
@@ -44,6 +44,8 @@ std::vector<std::string> installed_fonts() {
             }
         }
     }
+    std::sort(result.begin(), result.end());
+    const std::size_t bundled_count = result.size();
 #ifdef __APPLE__
     const char* directories[] = {"/System/Library/Fonts/Supplemental", "/Library/Fonts"};
 #elif defined(_WIN32)
@@ -67,7 +69,7 @@ std::vector<std::string> installed_fonts() {
             cursor.increment(error);
         }
     }
-    std::sort(result.begin(), result.end());
+    std::sort(result.begin() + static_cast<std::ptrdiff_t>(bundled_count), result.end());
     return result;
 }
 } // namespace paint

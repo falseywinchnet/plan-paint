@@ -1,8 +1,12 @@
 #pragma once
 #include "image.hpp"
 namespace paint {
+enum class WordArt { Plain, Extruded, Embossed, Sunset };
 struct TextStyle {
     int size = 24;
+    bool contour = false;
+    double outline_width = 2, skew = 0, perspective = 0, warp = 0;
+    WordArt word_art = WordArt::Plain;
     std::string face_path;
     bool bold = false;
     bool italic = false;

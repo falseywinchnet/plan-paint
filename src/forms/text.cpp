@@ -249,7 +249,8 @@ void Editor::text_pointer(const gf::PointerEvent& event, Point point) {
         if (text_drag_ == -3 && point.x >= text.bounds.x && point.x < text.bounds.x + text.bounds.w &&
             point.y >= text.bounds.y && point.y < text.bounds.y + text.bounds.h) {
             text_drag_ = -2;
-            text.edit.caret = text.caret_at({point.x - text.bounds.x, point.y - text.bounds.y});
+            text.edit.caret =
+                text.caret_at(text.source_point({point.x - text.bounds.x, point.y - text.bounds.y}));
             if (!shift_) {
                 text.edit.anchor = text.edit.caret;
             }
@@ -270,7 +271,8 @@ void Editor::text_pointer(const gf::PointerEvent& event, Point point) {
             dy = static_cast<int>(std::round(point.y - text_drag_start_.y));
         Rect bounds = text_drag_bounds_;
         if (text_drag_ == -2) {
-            text.edit.caret = text.caret_at({point.x - text.bounds.x, point.y - text.bounds.y});
+            text.edit.caret =
+                text.caret_at(text.source_point({point.x - text.bounds.x, point.y - text.bounds.y}));
             reset_text_caret();
             return;
         }
@@ -333,17 +335,26 @@ void Editor::paint_text_overlay(gf::Painter& painter) {
                 last = std::max(text.edit.caret, text.edit.anchor);
     for (const TextGlyph& glyph : text.layout.glyphs) {
         if (glyph.begin >= first && glyph.begin < last) {
-            painter.fill_rect({box.x + glyph.x * scale, box.y + glyph.y * scale,
-                               std::max(2, glyph.advance) * scale, text.layout.line_height * scale},
-                              gf::Color::rgba(60, 140, 240, 70));
+            for (int row = 0; row < text.layout.line_height; ++row) {
+                Point a =
+                    text.display_point({static_cast<double>(glyph.x), static_cast<double>(glyph.y + row)});
+                Point b = text.display_point({static_cast<double>(glyph.x + std::max(2, glyph.advance)),
+                                              static_cast<double>(glyph.y + row)});
+                painter.draw_line({box.x + a.x * scale, box.y + a.y * scale},
+                                  {box.x + b.x * scale, box.y + b.y * scale},
+                                  gf::Color::rgba(60, 140, 240, 70), scale);
+            }
         }
     }
     if (text_caret_visible_ && !text.layout.carets.empty() && window() &&
         (*window()).focused_control() == canvas_) {
         Point caret = text.layout.carets[text.edit.caret];
-        painter.draw_line({box.x + caret.x * scale, box.y + caret.y * scale},
-                          {box.x + caret.x * scale, box.y + (caret.y + text.layout.line_height) * scale},
-                          blue, 1);
+        for (int row = 0; row < text.layout.line_height; ++row) {
+            Point a = text.display_point({caret.x, caret.y + row});
+            Point b = text.display_point({caret.x, caret.y + row + 1});
+            painter.draw_line({box.x + a.x * scale, box.y + a.y * scale},
+                              {box.x + b.x * scale, box.y + b.y * scale}, blue, 1);
+        }
     }
     painter.restore();
 }

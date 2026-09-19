@@ -12,7 +12,8 @@ bool Document::dirty() const {
 std::size_t Snapshot::bytes() const {
     // Counting shared bases conservatively keeps the history bound predictable.
     return image.pixels.size() * sizeof(Color) + atlas.bytes() + path.nodes.size() * sizeof(Point) +
-           path.runs.size() * sizeof(PathRun) + (path.base ? (*path.base).pixels.size() * sizeof(Color) : 0) +
+           path.segments.size() * sizeof(PathSegment) + path.runs.size() * sizeof(PathRun) +
+           (path.base ? (*path.base).pixels.size() * sizeof(Color) : 0) +
            (curve.base ? (*curve.base).pixels.size() * sizeof(Color) : 0);
 }
 void Document::checkpoint() {
@@ -130,6 +131,34 @@ void Document::select(Rect bounds, const std::vector<Point>& lasso) {
         point.x -= bounds.x;
         point.y -= bounds.y;
     }
+}
+void Document::select_mask(const SelectionMask& mask) {
+    if (mask.bounds.w < 1 || mask.bounds.h < 1 ||
+        mask.coverage.size() != static_cast<std::size_t>(mask.bounds.w) * mask.bounds.h) {
+        return;
+    }
+    require_rgba_transform();
+    commit_path();
+    commit_curve();
+    commit_selection();
+    Image lifted = cropped(image, mask.bounds);
+    checkpoint();
+    for (int y = 0; y < mask.bounds.h; ++y) {
+        for (int x = 0; x < mask.bounds.w; ++x) {
+            const std::size_t index = static_cast<std::size_t>(y) * mask.bounds.w + x;
+            const std::uint8_t coverage = mask.coverage[index];
+            Color color = lifted.pixels[index];
+            color.a = static_cast<std::uint8_t>((color.a * coverage + 127) / 255);
+            if (!coverage) {
+                color = {0, 0, 0, 0};
+            }
+            lifted.pixels[index] = color;
+            if (coverage) {
+                image.set(mask.bounds.x + x, mask.bounds.y + y, ink.secondary);
+            }
+        }
+    }
+    selection = {std::move(lifted), mask.bounds.x, mask.bounds.y, true, mask.coverage, mask.outline};
 }
 void Document::commit_selection() {
     if (!selection.active) {
@@ -371,6 +400,19 @@ void Document::move_path_node(std::size_t index, Point point) {
             node = point;
         }
     }
+    for (std::size_t segment = 0; segment < path.segments.size(); ++segment) {
+        PathSegment& edge = path.segments[segment];
+        if (edge.first >= path.nodes.size() || edge.last >= path.nodes.size()) {
+            continue;
+        }
+        const Point first = path.nodes[edge.first], last = path.nodes[edge.last];
+        edge.geometry.first_control.x += first.x - edge.geometry.start.x;
+        edge.geometry.first_control.y += first.y - edge.geometry.start.y;
+        edge.geometry.second_control.x += last.x - edge.geometry.end.x;
+        edge.geometry.second_control.y += last.y - edge.geometry.end.y;
+        edge.geometry.start = first;
+        edge.geometry.end = last;
+    }
     sync_path();
 }
 Image Document::path_image(const Point* next) const {
@@ -379,8 +421,7 @@ Image Document::path_image(const Point* next) const {
     }
     Image result = *path.base;
     for (const PathRun& saved : path.runs) {
-        std::vector<Point> run(path.nodes.begin() + saved.start,
-                               path.nodes.begin() + saved.start + saved.count);
+        std::vector<Point> run = path_contour(saved.start, saved.count, !saved.continuous);
         Ink material = saved.ink;
         if (saved.alternate.pattern == Pattern::None) {
             material.secondary.a = 0;
@@ -389,7 +430,8 @@ Image Document::path_image(const Point* next) const {
                 &saved.alternate);
     }
     if (path.extending) {
-        std::vector<Point> run(path.nodes.begin() + path.start, path.nodes.end());
+        std::vector<Point> run =
+            path_contour(path.start, path.nodes.size() - path.start, !continuous_path && !next);
         if (next) {
             run.push_back(*next);
         }

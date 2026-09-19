@@ -17,7 +17,7 @@ namespace paint::forms {
 namespace gf = gui_forms;
 namespace {
 const Tool tools[] = {Tool::Select,    Tool::Lasso, Tool::Pencil, Tool::Fill, Tool::Eraser, Tool::Picker,
-                      Tool::Magnifier, Tool::Brush, Tool::Shape,  Tool::Path, Tool::Stamp};
+                      Tool::Magnifier, Tool::Brush, Tool::Shape,  Tool::Path, Tool::Stamp,  Tool::Guide};
 class ZoomTrackBar final : public gf::TrackBar {
   public:
     explicit ZoomTrackBar(gf::StableId id) : TrackBar(std::move(id)) {}
@@ -216,14 +216,19 @@ void Editor::arrange(gf::Rect bounds) {
         (*control).set_visible(show_status);
     }
     double y = bounds.height - 28;
-    set_child_layout(status_, {12, y, 230, 26});
-    set_child_layout(cursor_status_, {260, y, 165, 26});
-    set_child_layout(selection_status_, {445, y, 164, 26});
-    set_child_layout(dimensions_status_, {632, y, 210, 26});
-    set_child_layout(zoom_reset_, {bounds.width - 382, y + 1, 65, 25});
-    set_child_layout(zoom_out_, {bounds.width - 311, y + 1, 26, 25});
-    set_child_layout(zoom_slider_, {bounds.width - 279, y + 1, 238, 25});
-    set_child_layout(zoom_in_, {bounds.width - 34, y + 1, 26, 25});
+    const double scale = bounds.width / 1280;
+    set_child_layout(status_, {12 * scale, y, 230 * scale, 26});
+    set_child_layout(cursor_status_, {260 * scale, y, 165 * scale, 26});
+    set_child_layout(selection_status_, {445 * scale, y, 164 * scale, 26});
+    set_child_layout(dimensions_status_, {632 * scale, y, 210 * scale, 26});
+    set_child_layout(zoom_reset_, {898 * scale, y + 1, 65 * scale, 25});
+    set_child_layout(zoom_out_, {969 * scale, y + 1, 26 * scale, 25});
+    set_child_layout(zoom_slider_, {1001 * scale, y + 1, 238 * scale, 25});
+    set_child_layout(zoom_in_, {1246 * scale, y + 1, 26 * scale, 25});
+    for (const std::shared_ptr<gf::Label>& label :
+         {status_, cursor_status_, selection_status_, dimensions_status_}) {
+        (*label).set_font({gf::FontRole::control, std::clamp(12 * scale, 10.0, 12.0), 400, false});
+    }
 }
 void Editor::on_paint(gf::Painter& painter, gf::Rect) {
     gf::Rect bounds = committed_arranged_bounds();
@@ -276,7 +281,8 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
     }
     double y = bounds.height - 30;
     painter.draw_line({0, y}, {bounds.width, y}, gf::Color::rgba(172, 193, 214), 1);
-    for (double x : {249.0, 434.0, 621.0, bounds.width - 393}) {
+    for (double position : {249.0, 434.0, 621.0, 887.0}) {
+        const double x = position * bounds.width / 1280;
         painter.draw_line({x, y + 5}, {x, bounds.height - 5}, gf::Color::rgba(193, 208, 224), 1);
     }
 }
@@ -293,6 +299,7 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         painter.draw_image(transform_image_, transform_destination_);
     }
     paint_atlas_overlay(painter);
+    paint_guide_overlay(painter);
     if ((show_hotspot || pick_hotspot) && document.atlas.kind == AtlasKind::Cursor &&
         document.atlas.active >= 0) {
         const IconFrame& frame = document.atlas.icons[document.atlas.active];
@@ -355,6 +362,7 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         painter.fill_rounded_rect({point.x - 6, point.y - 6, 12, 12}, 6, gf::Color::rgba(255, 255, 255));
         painter.fill_rounded_rect({point.x - 5, point.y - 5, 10, 10}, 5, gf::Color::rgba(0, 120, 215));
     }
+    paint_path_swap(painter);
     paint_resize_overlay(painter);
     paint_warp_overlay(painter);
     paint_text_overlay(painter);
@@ -418,7 +426,8 @@ Point Editor::snap_path_point(Point point) const {
     return index < 0 ? point : document.path.nodes[static_cast<std::size_t>(index)];
 }
 bool Editor::path_preview_point(Point& point) const {
-    if (document.tool != Tool::Path || !document.path.extending || path_node_ >= 0 || !cursor_client_) {
+    if (path_swap_kind_ || document.tool != Tool::Path || !document.path.extending || path_node_ >= 0 ||
+        !cursor_client_) {
         return false;
     }
     gui_drawing::PointF mapped = (*canvas_).client_to_bitmap(*cursor_client_);
@@ -441,6 +450,7 @@ void Editor::publish_path_preview() {
     publish_image(path_preview_point(point) ? document.path_image(&point) : document.image, *canvas_);
 }
 void Editor::refresh() {
+    ++canvas_revision;
     if (text.active) {
         text.refresh(document.ink.primary, document.ink.secondary);
         Image composed = document.visible_image();
@@ -560,13 +570,38 @@ void Editor::finish_controls() {
     document.commit_curve();
 }
 void Editor::choose_shape(Shape shape) {
+    guide.clear();
     finish_controls();
     document.shape = shape;
     document.tool = Tool::Shape;
     refresh();
 }
 void Editor::choose_tool(Tool tool) {
+    if (tool == Tool::Guide && document.selection.active) {
+        const FloatingSelection& selected = document.selection;
+        guide.clear();
+        guide.selection.bounds = {selected.x, selected.y, selected.image.width, selected.image.height};
+        guide.selection.coverage.resize(selected.image.pixels.size());
+        for (std::size_t index = 0; index < selected.image.pixels.size(); ++index) {
+            guide.selection.coverage[index] = selected.image.pixels[index].a;
+        }
+        guide.nodes = mask_outline(guide.selection.coverage, selected.image.width, selected.image.height);
+        for (std::size_t index = 0; index < guide.nodes.size(); ++index) {
+            guide.nodes[index].x += selected.x;
+            guide.nodes[index].y += selected.y;
+        }
+        guide.closed = true;
+        guide.fill = true;
+    } else if (tool == Tool::Guide && guide.nodes.empty()) {
+        guide.fill = document.shape_fill;
+    } else if (tool == Tool::Select || tool == Tool::Lasso || tool == Tool::Path || tool == Tool::Shape ||
+               tool == Tool::Text || tool == Tool::Reshape) {
+        guide.clear();
+    }
     if (document.tool != tool) {
+        path_swap_kind_.reset();
+        path_swap_segment_ = -1;
+        path_swap_handle_ = -1;
         finish_controls();
     }
     document.tool = tool;
@@ -586,7 +621,8 @@ void Editor::pointer(const gf::PointerEvent& event) {
         }
         update_cursor_status();
         if (document.tool == Tool::Stamp || document.tool == Tool::Pencil || document.tool == Tool::Eraser ||
-            document.tool == Tool::Magnifier || document.tool == Tool::Path) {
+            document.tool == Tool::Magnifier || document.tool == Tool::Picker ||
+            document.tool == Tool::Brush || document.tool == Tool::Path) {
             (*canvas_).invalidate(gf::Dirty::paint);
         }
         if (document.tool == Tool::Path &&
@@ -622,6 +658,12 @@ void Editor::pointer(const gf::PointerEvent& event) {
                                  static_cast<int>(std::floor(point.y)));
             pick_hotspot = false;
             refresh();
+            return;
+        }
+        if (path_swap_pointer(event, point)) {
+            return;
+        }
+        if (guide_pointer(event, point)) {
             return;
         }
         if (warp_pointer(event, point)) {
@@ -697,6 +739,14 @@ void Editor::begin(Point point, bool secondary) {
     start_ = last_ = current_ = point;
     gesture_ink_ = secondary ? document.alternate_ink() : document.primary_ink();
     gesture_fill_ink_ = secondary ? document.primary_ink() : document.alternate_ink();
+    stabilizer_.reset(point);
+    if (document.tool == Tool::Brush && brush_family == BrushFamily::Heal &&
+        (set_heal_source || !healing_brush_.has_source())) {
+        healing_brush_.capture(document.visible_image(), point);
+        set_heal_source = false;
+        refresh();
+        return;
+    }
     if (document.curve.line_set) {
         for (int index = 0; index < document.curve.geometry.handle_count(); ++index) {
             Point handle = document.curve.geometry.handle(index);
@@ -729,7 +779,7 @@ void Editor::begin(Point point, bool secondary) {
         return;
     }
     if (document.tool == Tool::Picker) {
-        Color color = document.visible_image().get(static_cast<int>(point.x), static_cast<int>(point.y));
+        Color color = sample_color(document.visible_image(), point, picker_mode);
         if (secondary) {
             document.ink.secondary = color;
         } else {
@@ -763,6 +813,7 @@ void Editor::begin(Point point, bool secondary) {
     }
     if (document.tool == Tool::Stamp) {
         document.commit_selection();
+        paint_base_ = document.image;
         bool loaded = !document.stamp.pixels.empty() && !stamp_pending_ && !stamp_preview_.pixels.empty();
         stamp_at(point);
         if (loaded) {
@@ -790,12 +841,23 @@ void Editor::begin(Point point, bool secondary) {
         }
     } else {
         document.commit_selection();
+        paint_base_ = document.image;
         if (document.tool != Tool::Shape &&
             !(document.tool == Tool::Stamp && document.stamp.pixels.empty())) {
             document.checkpoint();
         }
         eraser_.clear();
         material_.clear();
+        dynamic_brush_.clear();
+        // A fresh stochastic deposit each gesture; pattern/shape materials retain
+        // their authored seed and remain independent of brush-only dynamics.
+        if (document.tool == Tool::Brush) {
+            gesture_ink_.noise += static_cast<std::uint32_t>(document.revision * 104729);
+        }
+        transform_brush_.begin(document.image, point);
+        if (document.tool == Tool::Brush && brush_family == BrushFamily::Heal) {
+            healing_brush_.begin(document.image, point);
+        }
         if (document.tool == Tool::Pencil) {
             gesture_ink_.size = 1;
             gesture_ink_.brush = Brush::Round;
@@ -806,6 +868,9 @@ void Editor::begin(Point point, bool secondary) {
     move(point);
 }
 void Editor::move(Point point) {
+    if (stabilize && (document.tool == Tool::Pencil || document.tool == Tool::Brush)) {
+        point = stabilizer_.advance(point, stabilizer_lag);
+    }
     if (shift_ && document.tool == Tool::Shape && curve_handle_ < 0 &&
         !(control_ && (document.shape == Shape::Circle || document.shape == Shape::Oval))) {
         Point anchor = document.curve.base ? document.curve.geometry.start : start_;
@@ -873,21 +938,23 @@ void Editor::move(Point point) {
             stamp_at({last_.x + (point.x - last_.x) * fraction, last_.y + (point.y - last_.y) * fraction},
                      false);
         }
-    } else if (document.tool == Tool::Pencil) {
-        pixel_line(document.image, last_, point, gesture_ink_);
-    } else if (document.tool == Tool::Brush) {
-        if (gesture_ink_.brush == Brush::Round || textured_brush(gesture_ink_.brush)) {
-            material_.segment(document.image, last_, point, gesture_ink_);
-        } else {
-            stroke(document.image, last_, point, gesture_ink_);
+    } else if (document.tool == Tool::Pencil || document.tool == Tool::Brush ||
+               document.tool == Tool::Eraser || document.tool == Tool::Fill) {
+        paint_segment(last_, point);
+        if (document.tool == Tool::Fill) {
+            dragging_ = false;
+            (*canvas_).set_pointer_capture(false);
         }
-    } else if (document.tool == Tool::Eraser) {
-        eraser_.segment(document.image, last_, point, gesture_ink_.size, eraser_soft);
-    } else if (document.tool == Tool::Fill) {
-        flood(document.image, static_cast<int>(start_.x), static_cast<int>(start_.y), gesture_ink_);
-        dragging_ = false;
-        (*canvas_).set_pointer_capture(false);
     }
+    if (document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Fill ||
+        document.tool == Tool::Stamp) {
+        constrain_paint(document.image, paint_base_, guide, atlas_painting() && atlas_preserve_alpha);
+    }
+    if (document.tool == Tool::Eraser && atlas_painting() && atlas_preserve_alpha) {
+        constrain_paint(document.image, paint_base_, Guide{}, true);
+    }
+    ++canvas_revision;
+
     if ((document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Eraser) &&
         curve_handle_ < 0 && !moving_selection_) {
         int margin = gesture_ink_.size + 3;
@@ -896,7 +963,7 @@ void Editor::move(Point point) {
         damage.y -= margin;
         damage.w += margin * 2;
         damage.h += margin * 2;
-        publish_image(document.image, *canvas_, damage);
+        publish_image(document.image, *canvas_, atlas_painting() && atlas_wrap ? Rect{} : damage);
         last_ = point;
         update_status();
     } else {
@@ -921,7 +988,12 @@ void Editor::end(Point point) {
                 bounds = rectangle(low, high);
             }
             if (std::hypot(point.x - start_.x, point.y - start_.y) > 0.5 || lasso_.size() > 3) {
-                document.select(bounds, document.tool == Tool::Lasso ? lasso_ : std::vector<Point>{});
+                if (document.tool == Tool::Lasso && lasso_mode != LassoMode::Free) {
+                    document.select_mask(tighten_lasso(document.image, lasso_,
+                                                       lasso_mode == LassoMode::InnerVoid, lasso_tolerance));
+                } else {
+                    document.select(bounds, document.tool == Tool::Lasso ? lasso_ : std::vector<Point>{});
+                }
             }
         } else if (document.tool == Tool::Shape) {
             if (document.curve.base) {
@@ -1153,6 +1225,10 @@ bool Editor::can_replace() {
 void Editor::open_file(const std::string& path) {
     ImageContainer image = load_container(path);
     finish_controls();
+    guide.clear();
+    atlas_reference = {};
+    reference_frame = -1;
+    healing_brush_.clear();
     document.replace_container(std::move(image), path);
     recent.remember(path);
     rebuild_file_menu();
@@ -1332,7 +1408,44 @@ void Editor::edit_color(bool secondary) {
 
 void Editor::execute(const std::string& command) {
     try {
+        if (command == "guide-clear") {
+            guide.clear();
+            refresh();
+            return;
+        }
+        if (command == "guide-set") {
+            guide.closed = guide.nodes.size() >= 3;
+            refresh();
+            return;
+        }
+        if (command == "guide-fill") {
+            guide.fill = !guide.fill;
+            refresh();
+            return;
+        }
+        if (command == "atlas-wrap") {
+            atlas_wrap = !atlas_wrap;
+            refresh();
+            return;
+        }
+        if (command == "atlas-alpha") {
+            atlas_preserve_alpha = !atlas_preserve_alpha;
+            refresh();
+            return;
+        }
+        if (command == "atlas-reference-clear") {
+            atlas_reference = {};
+            reference_frame = -1;
+            refresh();
+            return;
+        }
+        if (command == "crop" || command == "cut" || command == "paste" || command == "resize" ||
+            command == "text" || command == "select-all" || command == "new" || command == "open" ||
+            command == "reshape") {
+            guide.clear();
+        }
         if (command.starts_with("atlas-")) {
+            guide.clear();
             finish_controls();
             if (command == "atlas-gallery") {
                 open_editor_dialog(EditorDialogKind::atlas_gallery);
@@ -1406,6 +1519,9 @@ void Editor::execute(const std::string& command) {
         if (command == "new") {
             if (can_replace()) {
                 finish_controls();
+                atlas_reference = {};
+                reference_frame = -1;
+                healing_brush_.clear();
                 document.new_image();
             } else if (!pending_save_path.empty()) {
                 deferred_command = "new";
@@ -1563,7 +1679,11 @@ void Editor::execute(const std::string& command) {
         } else if (command == "outline") {
             document.shape_outline = !document.shape_outline;
         } else if (command == "fill") {
-            document.shape_fill = !document.shape_fill;
+            if (document.tool == Tool::Guide) {
+                guide.fill = !guide.fill;
+            } else {
+                document.shape_fill = !document.shape_fill;
+            }
         } else if (command == "smooth-lines") {
             document.ink.smooth = !document.ink.smooth;
         } else if (command == "continuous-path") {

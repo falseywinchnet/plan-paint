@@ -20,6 +20,16 @@ void AtlasThumbnail::clicked(gf::ButtonBase&) {
     sequence_ = false;
 }
 void AtlasThumbnail::on_pointer(gf::PointerEvent& event) {
+    if (event.button == gf::PointerButton::secondary) {
+        if (event.action == gf::PointerAction::down) {
+            const std::shared_ptr<Editor> editor = editor_.lock();
+            if (editor) {
+                (*editor).set_reference_frame(index_);
+            }
+        }
+        event.handled = true;
+        return;
+    }
     sequence_ = gf::has_modifier(event.modifiers, gf::Modifier::control) ||
                 gf::has_modifier(event.modifiers, gf::Modifier::meta);
     Button::on_pointer(event);
@@ -180,6 +190,25 @@ void AtlasPanel::initialize_control_tree() {
     status_ = gf::make_control<gf::Label>(gf::StableId(gallery_ ? "gallery-status" : "atlas-status"));
     (*status_).set_font({gf::FontRole::control, 11, 400, false});
     add_child(status_);
+    wrap_ = gf::make_control<gf::CheckBox>(gf::StableId(gallery_ ? "gallery-atlas-wrap" : "atlas-wrap"),
+                                           "Warp edges");
+    alpha_ = gf::make_control<gf::CheckBox>(gf::StableId(gallery_ ? "gallery-atlas-alpha" : "atlas-alpha"),
+                                            "Preserve transparency");
+    clear_reference_ = gf::make_control<gf::Button>(
+        gf::StableId(gallery_ ? "gallery-atlas-reference-clear" : "atlas-reference-clear"),
+        "Dismiss reference");
+    for (const std::shared_ptr<gf::CheckBox>& check : {wrap_, alpha_}) {
+        (*check).set_font({gf::FontRole::control, 11, 400, false});
+        subscriptions_.push_back((*check).clicked().subscribe(
+            *this, gf::Delegate<gf::ButtonBase&>::bind<AtlasPanel, &AtlasPanel::clicked>(*this)));
+        add_child(check);
+    }
+    (*clear_reference_).set_font({gf::FontRole::control, 11, 400, false});
+    subscriptions_.push_back(
+        (*clear_reference_)
+            .clicked()
+            .subscribe(*this, gf::Delegate<gf::ButtonBase&>::bind<AtlasPanel, &AtlasPanel::clicked>(*this)));
+    add_child(clear_reference_);
 }
 void AtlasPanel::arrange(gf::Rect bounds) {
     arrange_self(bounds);
@@ -187,8 +216,21 @@ void AtlasPanel::arrange(gf::Rect bounds) {
         set_child_layout(buttons_[i], (*buttons_[i]).requested_bounds());
     }
     set_child_layout(buttons_[8], {bounds.width - 96, bounds.height - 22, 88, 20});
-    set_child_layout(strip_, {224, 4, std::max(1.0, bounds.width - 232), bounds.height - 26});
-    set_child_layout(status_, {228, bounds.height - 22, std::max(1.0, bounds.width - 334), 20});
+    const double controls = std::min(218.0, bounds.width * 0.28);
+    const double options = std::min(190.0, bounds.width * 0.22);
+    set_child_layout(
+        strip_, {controls + 6, 4, std::max(1.0, bounds.width - controls - options - 18), bounds.height - 26});
+    set_child_layout(status_,
+                     {controls + 6, bounds.height - 22, std::max(1.0, bounds.width - controls - 112), 20});
+    set_child_layout(wrap_, {bounds.width - options - 6, 5, options, 25});
+    set_child_layout(alpha_, {bounds.width - options - 6, 34, options, 25});
+    set_child_layout(clear_reference_, {bounds.width - options - 6, 65, options, 25});
+    for (std::size_t i = 0; i < 8; ++i) {
+        gf::Rect rectangle = (*buttons_[i]).requested_bounds();
+        rectangle.x *= controls / 218;
+        rectangle.width *= controls / 218;
+        set_child_layout(buttons_[i], rectangle);
+    }
 }
 void AtlasPanel::clicked(gf::ButtonBase& control) {
     std::shared_ptr<Editor> editor = editor_.lock();
@@ -228,6 +270,11 @@ void AtlasPanel::synchronize() {
         active_ = atlas.active;
         reveal_current();
     }
+    (*wrap_).set_checked((*editor).atlas_wrap);
+    (*alpha_).set_checked((*editor).atlas_preserve_alpha);
+    (*wrap_).set_enabled(atlas.active >= 0);
+    (*alpha_).set_enabled(atlas.active >= 0);
+    (*clear_reference_).set_enabled(!(*editor).atlas_reference.pixels.empty());
     (*buttons_[8]).set_visible(!gallery_);
     (*buttons_[3]).set_enabled(atlas.kind == AtlasKind::Sheet);
     (*buttons_[4]).set_enabled(atlas.kind != AtlasKind::None);
@@ -288,7 +335,17 @@ void Editor::paint_atlas_overlay(gf::Painter& painter) {
         }
     }
 }
+void Editor::set_reference_frame(int index) {
+    if (!atlas_painting() || index < 0 || index >= document.atlas.count()) {
+        return;
+    }
+    document.sync_atlas();
+    reference_frame = index;
+    atlas_reference = document.atlas.frame_image(index);
+    refresh();
+}
 void Editor::select_frame(int index, bool sequence) {
+    guide.clear();
     finish_controls();
     document.atlas_select(index, sequence);
     refresh();

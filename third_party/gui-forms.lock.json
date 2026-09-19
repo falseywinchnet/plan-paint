@@ -3,5 +3,12 @@
   "release": "v0.2.3",
   "asset": "gui-forms-native-source-64248bcc06a1.tar.gz",
   "commit": "64248bcc06a1",
-  "sha256": "a368e03180a10911ff1316a4a0880028a4880bdbcf531456bd4ec35d0ace5a0f"
+  "sha256": "a368e03180a10911ff1316a4a0880028a4880bdbcf531456bd4ec35d0ace5a0f",
+  "patches": [
+    {
+      "file": "third_party/gui-forms-patches/nested-popup-focus.patch",
+      "sha256": "d3cb3e464622209400373c8e048b9757d099a837a9a99acd6638d21782d22b8a",
+      "upstream_commit": "f47893be9f8c1b1079a24b7d3641b3ae9184ccea"
+    }
+  ]
 }
