@@ -1,6 +1,6 @@
 # Native GUI.Forms application
 
-Rainstar Paint 0.2.3 uses GUI.Forms by default. The executable links the installed
+Rainstar Paint 0.3.0 uses GUI.Forms by default. The executable links the installed
 `GUIForms::Application` target and Paint's document, raster, material, CONV and
 format libraries. It does not link SDL, ImGui or GTK. The optional comparison
 frontend remains available with `RAINSTAR_LEGACY_UI=ON`.
@@ -29,7 +29,7 @@ cmake -S build-deps/gui-forms -B build-deps/gui-forms-build \
 cmake --build build-deps/gui-forms-build --parallel 4
 ctest --test-dir build-deps/gui-forms-build --output-on-failure
 cmake --install build-deps/gui-forms-build
-cmake -S . -B build-forms -DCMAKE_BUILD_TYPE=Release \
+cmake -S . -B build-forms -DCMAKE_BUILD_TYPE=Release -DRAINSTAR_BUNDLED_TIFF=ON \
   -DGUIForms_DIR="$PWD/build-deps/gui-forms-sdk/lib/cmake/GUIForms" \
   -DCMAKE_PREFIX_PATH=/opt/homebrew
 cmake --build build-forms --parallel 4

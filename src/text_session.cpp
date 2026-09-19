@@ -1,7 +1,15 @@
 #include "text_session.hpp"
 #include <algorithm>
+#include <bit>
 #include <cmath>
 namespace paint {
+namespace {
+std::string scalar_key(double value) {
+    // This is an internal cache identity, not display text. Keep every bit and
+    // avoid locale-sensitive printf conversions in fortified musl/LTO builds.
+    return std::to_string(std::bit_cast<std::uint64_t>(value));
+}
+} // namespace
 void TextSession::begin(Point origin) {
     clear();
     active = true;
@@ -27,9 +35,8 @@ void TextSession::refresh(Color foreground, Color background) {
         (style.mono ? "m" : "-") + (style.opaque ? "o" : "-") + (style.word_wrap ? "w" : "-") +
         to_hex(foreground) + std::to_string(foreground.a) + ":" + to_hex(background) +
         std::to_string(background.a) + ":" + std::to_string(style.contour) + ":" +
-        std::to_string(style.outline_width) + ":" + std::to_string(style.skew) + ":" +
-        std::to_string(style.perspective) + ":" + std::to_string(style.warp) + ":" +
-        std::to_string(static_cast<int>(style.word_art));
+        scalar_key(style.outline_width) + ":" + scalar_key(style.skew) + ":" + scalar_key(style.perspective) +
+        ":" + scalar_key(style.warp) + ":" + std::to_string(static_cast<int>(style.word_art));
     if (signature == signature_) {
         return;
     }
