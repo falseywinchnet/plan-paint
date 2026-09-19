@@ -117,6 +117,9 @@ class Editor final : public gui_forms::Control {
     void on_detaching_from_window(gui_forms::Window& former_window) noexcept override;
     void choose_shape(Shape shape);
     void begin_path_swap(CurveKind kind);
+    void begin_guide_swap(CurveKind kind);
+    void edit_guide();
+    void unset_guide();
     void refresh();
     void open_file(const std::string& path);
     bool save(bool save_as);
@@ -194,6 +197,10 @@ class Editor final : public gui_forms::Control {
     bool path_swap_checkpoint_ = false;
     bool path_swap_pointer(const gui_forms::PointerEvent& event, Point point);
     void paint_path_swap(gui_forms::Painter& painter);
+    std::optional<CurveKind> guide_swap_kind_;
+    int guide_swap_segment_ = -1, guide_swap_handle_ = -1;
+    Tool guide_previous_tool_ = Tool::Pencil;
+    bool guide_swap_pointer(const gui_forms::PointerEvent& event, Point point);
     int guide_node_ = -1;
     bool guide_moving_ = false, guide_connecting_ = false, guide_extending_ = false;
     Point guide_last_;

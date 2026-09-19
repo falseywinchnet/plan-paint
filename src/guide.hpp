@@ -1,4 +1,5 @@
 #pragma once
+#include "curve.hpp"
 #include "raster.hpp"
 namespace paint {
 enum class LassoMode { Free, Tighten, InnerVoid };
@@ -12,6 +13,10 @@ SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygo
 void trim_selection_mask(SelectionMask& mask);
 std::vector<std::vector<Point>> mask_contours(const std::vector<std::uint8_t>& mask, int width, int height);
 std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width, int height);
+struct GuideSegment {
+    std::size_t edge = 0;
+    CurveGeometry geometry;
+};
 struct Guide {
     std::vector<Point> nodes;
     bool closed = false, fill = true;
@@ -19,6 +24,13 @@ struct Guide {
     // A selection-derived mask preserves holes and feathered silhouettes until
     // a node edit replaces it with the editable polygon.
     SelectionMask selection;
+    std::vector<GuideSegment> segments;
+    std::vector<Point> curved_boundary;
+    const std::vector<Point>& boundary() const;
+    void rebuild_boundary();
+    int swap_segment(std::size_t edge, CurveKind kind);
+    void move_node(std::size_t index, Point point);
+    void move_handle(int segment, int handle, Point point);
     void clear();
     bool active() const;
     double blocked(int x, int y) const;

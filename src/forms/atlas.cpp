@@ -345,7 +345,7 @@ void Editor::set_reference_frame(int index) {
     refresh();
 }
 void Editor::select_frame(int index, bool sequence) {
-    guide.clear();
+    unset_guide();
     finish_controls();
     document.atlas_select(index, sequence);
     refresh();

@@ -601,13 +601,26 @@ void Editor::finish_controls() {
     document.commit_curve();
 }
 void Editor::choose_shape(Shape shape) {
-    guide.clear();
+    unset_guide();
     finish_controls();
     document.shape = shape;
     document.tool = Tool::Shape;
     refresh();
 }
 void Editor::choose_tool(Tool tool) {
+    if (tool == Tool::Guide && !document.selection.active &&
+        (guide.active() || !guide.nodes.empty() || document.tool == Tool::Guide)) {
+        unset_guide();
+        refresh();
+        return;
+    }
+    if (tool == Tool::Guide) {
+        guide_previous_tool_ = document.tool == Tool::Brush || document.tool == Tool::Stamp ||
+                                       document.tool == Tool::Fill || document.tool == Tool::Eraser
+                                   ? document.tool
+                                   : Tool::Pencil;
+    }
+
     if (tool == Tool::Guide && document.selection.active) {
         const FloatingSelection& selected = document.selection;
         guide.clear();
@@ -627,7 +640,7 @@ void Editor::choose_tool(Tool tool) {
         guide.fill = document.shape_fill;
     } else if (tool == Tool::Select || tool == Tool::Lasso || tool == Tool::Path || tool == Tool::Shape ||
                tool == Tool::Text || tool == Tool::Reshape) {
-        guide.clear();
+        unset_guide();
     }
     if (document.tool != tool) {
         path_swap_kind_.reset();
@@ -1283,7 +1296,7 @@ bool Editor::can_replace() {
 void Editor::open_file(const std::string& path) {
     ImageContainer image = load_container(path);
     finish_controls();
-    guide.clear();
+    unset_guide();
     atlas_reference = {};
     reference_frame = -1;
     healing_brush_.clear();
@@ -1459,13 +1472,18 @@ void Editor::edit_color(bool secondary) {
 
 void Editor::execute(const std::string& command) {
     try {
+        if (command == "guide-edit") {
+            edit_guide();
+            return;
+        }
         if (command == "guide-clear") {
-            guide.clear();
+            unset_guide();
             refresh();
             return;
         }
         if (command == "guide-set") {
             guide.closed = guide.nodes.size() >= 3;
+            guide.rebuild_boundary();
             refresh();
             return;
         }
@@ -1490,13 +1508,20 @@ void Editor::execute(const std::string& command) {
             refresh();
             return;
         }
+        if (command == "cut" && !document.selection.active && (guide.active() || !guide.nodes.empty())) {
+            // A stencil is editing state. Dismissing it must not enter Cut's
+            // no-selection fallback, which intentionally cuts the whole image.
+            unset_guide();
+            refresh();
+            return;
+        }
         if (command == "crop" || command == "cut" || command == "paste" || command == "resize" ||
             command == "text" || command == "select-all" || command == "new" || command == "open" ||
             command == "reshape") {
-            guide.clear();
+            unset_guide();
         }
         if (command.starts_with("atlas-")) {
-            guide.clear();
+            unset_guide();
             finish_controls();
             if (command == "atlas-gallery") {
                 open_editor_dialog(EditorDialogKind::atlas_gallery);

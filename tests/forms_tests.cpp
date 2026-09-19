@@ -1806,7 +1806,7 @@ void cobalt_tabs_and_split_button_routes() {
         require((*window.find("home-tab")).tab_index() < (*window.find("view-tab")).tab_index() &&
                     (*window.find("view-tab")).tab_index() < (*window.find("patterns-tab")).tab_index(),
                 "changing the foreground sheet preserves the logical keyboard order");
-        for (const char* id : {"paste", "brush-menu", "tool-10", "tool-9"}) {
+        for (const char* id : {"paste", "brush-menu", "tool-10", "tool-9", "tool-11"}) {
             const gf::Rect bounds = (*window.find(id)).absolute_bounds();
             const gf::Point arrow{bounds.x + bounds.width / 2, bounds.bottom() - 5};
             window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, arrow});
@@ -2088,6 +2088,90 @@ void stamp_material_union_and_menu_toggle() {
     window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, main});
     require(!window.find("ribbon-popup"), "clicking the main Stamp button closes its open menu");
 }
+void guide_dismissal_preserves_paint_and_curves() {
+    for (const paint::Tool tool : {paint::Tool::Select, paint::Tool::Lasso, paint::Tool::Path,
+                                   paint::Tool::Shape, paint::Tool::Text, paint::Tool::Reshape}) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.document.image.reset(128, 96, {40, 90, 130, 255});
+        editor.document.image.set(40, 40, {21, 43, 68, 97});
+        const paint::Image original = editor.document.image;
+        editor.choose_tool(paint::Tool::Guide);
+        fixture.click(20, 20);
+        fixture.click(80, 20);
+        fixture.click(80, 70);
+        fixture.click(20, 70);
+        editor.execute("guide-set");
+        editor.choose_tool(tool);
+        require(!editor.guide.active() && std::equal(original.pixels.begin(), original.pixels.end(),
+                                                     editor.document.image.pixels.begin(), paint::equal),
+                "switching away from a guide preserves every document pixel, including alpha");
+    }
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.image.reset(128, 96, {40, 90, 130, 255});
+    const paint::Image original = editor.document.image;
+    const std::uint64_t revision = editor.document.revision;
+    editor.choose_tool(paint::Tool::Guide);
+    fixture.click(20, 30);
+    fixture.click(100, 30);
+    fixture.click(100, 80);
+    fixture.click(20, 80);
+    editor.execute("guide-set");
+    editor.guide.fill = true;
+    editor.execute("cut");
+    require(!editor.guide.active() && editor.document.tool == paint::Tool::Pencil &&
+                editor.document.revision == revision && !editor.document.selection.active &&
+                std::equal(original.pixels.begin(), original.pixels.end(),
+                           editor.document.image.pixels.begin(), paint::equal),
+            "Cut dismisses a stencil without invoking whole-image Cut or changing history");
+    editor.choose_tool(paint::Tool::Guide);
+    fixture.click(20, 30);
+    fixture.click(100, 30);
+    fixture.click(100, 80);
+    fixture.click(20, 80);
+    editor.execute("guide-set");
+    editor.guide.fill = true;
+    open_tab(window, "home-tab");
+    const gf::Rect button = (*window.find("tool-11")).absolute_bounds();
+    const gf::Point arrow{button.x + button.width / 2, button.bottom() - 5};
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, arrow});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, arrow});
+    window.perform_layout();
+    routed_button(window, "popup-guide-swap");
+    window.perform_layout();
+    routed_button(window, "popup-guide-swap-bezier");
+    fixture.click(60, 30);
+    require(editor.guide.segments.size() == 1, "Guide split menu selects a curve without painting a path");
+    fixture.drag(46.6666666667, 30, 46.6666666667, 0);
+    fixture.drag(73.3333333333, 30, 73.3333333333, 0);
+    require(editor.guide.blocked(60, 18) > 0.9 && editor.guide.blocked(60, 2) == 0 &&
+                std::equal(original.pixels.begin(), original.pixels.end(),
+                           editor.document.image.pixels.begin(), paint::equal),
+            "curved guide moves its protection boundary without changing the painting");
+    editor.begin_guide_swap(paint::CurveKind::Arc);
+    fixture.click(100, 55);
+    fixture.drag(100, 55, 116, 55);
+    require(editor.guide.segments.size() == 2 && editor.guide.blocked(110, 55) > 0.9,
+            "Guide Arc handles curve the stencil boundary");
+    editor.choose_tool(paint::Tool::Pencil);
+    fixture.drag(2, 18, 124, 18);
+    require(paint::equal(editor.document.image.get(60, 18), original.get(60, 18)) &&
+                !paint::equal(editor.document.image.get(5, 18), original.get(5, 18)),
+            "painting respects the curved guide body");
+    const paint::Image painted = editor.document.image;
+    editor.choose_tool(paint::Tool::Guide);
+    require(!editor.guide.active() && editor.document.tool == paint::Tool::Pencil &&
+                std::equal(painted.pixels.begin(), painted.pixels.end(), editor.document.image.pixels.begin(),
+                           paint::equal),
+            "Guide toggles off from a painting tool and leaves its pixels intact");
+    editor.choose_tool(paint::Tool::Guide);
+    fixture.click(20, 20);
+    editor.choose_tool(paint::Tool::Guide);
+    require(editor.guide.nodes.empty() && editor.document.tool == paint::Tool::Pencil,
+            "Guide toggles off a pending first anchor as well");
+}
 void zoom_anchors_the_point() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -2121,6 +2205,7 @@ int main() {
         compact_ribbon_keeps_icons_and_fields();
         cobalt_tabs_and_split_button_routes();
         guide_atlas_and_text_effect_interactions();
+        guide_dismissal_preserves_paint_and_curves();
         zoom_anchors_the_point();
         magnifier_hover_is_display_only();
         zoom_out_clamps_each_axis();

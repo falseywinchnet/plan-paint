@@ -10,6 +10,9 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
     if (document.tool != Tool::Guide || event.button == gf::PointerButton::middle || panning_) {
         return false;
     }
+    if (guide_swap_pointer(event, point)) {
+        return true;
+    }
     if (event.action == gf::PointerAction::down) {
         if (event.button == gf::PointerButton::secondary) {
             if (guide.nodes.size() == 1) {
@@ -30,7 +33,8 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
                 }
             }
             guide_connecting_ = guide_node_ >= 0 && !guide.closed;
-            guide_moving_ = guide_node_ < 0 && guide.closed && inside_polygon(guide.nodes, point.x, point.y);
+            guide_moving_ =
+                guide_node_ < 0 && guide.closed && inside_polygon(guide.boundary(), point.x, point.y);
             if (guide_node_ < 0 && !guide_moving_) {
                 if (guide.closed) {
                     guide.clear();
@@ -55,13 +59,7 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
                 guide_connecting_ = false;
             }
             if (!guide_connecting_) {
-                const Point previous = guide.nodes[guide_node_];
-                for (std::size_t index = 0; index < guide.nodes.size(); ++index) {
-                    if (guide.nodes[index].x == previous.x && guide.nodes[index].y == previous.y) {
-                        guide.nodes[index] = point;
-                    }
-                }
-                guide.selection = {};
+                guide.move_node(static_cast<std::size_t>(guide_node_), point);
             }
         }
         if (event.action == gf::PointerAction::up) {
@@ -79,6 +77,7 @@ bool Editor::guide_pointer(const gf::PointerEvent& event, Point point) {
             canvas().set_pointer_capture(false);
         }
     }
+    guide.rebuild_boundary();
     canvas().invalidate(gf::Dirty::paint);
     return true;
 }
@@ -87,12 +86,10 @@ void Editor::paint_guide_overlay(gf::Painter& painter) {
         return;
     }
     const gf::Color blue = gf::Color::rgba(26, 112, 174, 230), white = gf::Color::rgba(255, 255, 255, 230);
-    const std::size_t edges = guide.nodes.size() < 2 ? 0
-                              : guide.closed         ? guide.nodes.size()
-                                                     : guide.nodes.size() - 1;
+    const std::vector<Point>& outline = guide.boundary();
+    const std::size_t edges = outline.size() < 2 ? 0 : guide.closed ? outline.size() : outline.size() - 1;
     for (std::size_t index = 0; index < edges; ++index) {
-        const gf::Point a = screen(guide.nodes[index]),
-                        b = screen(guide.nodes[(index + 1) % guide.nodes.size()]);
+        const gf::Point a = screen(outline[index]), b = screen(outline[(index + 1) % outline.size()]);
         painter.draw_line(a, b, white, 3);
         painter.draw_line(a, b, blue, 1);
     }
@@ -113,11 +110,11 @@ void Editor::paint_guide_overlay(gf::Painter& painter) {
     if (guide.fill && guide.closed) {
         // Sparse cross-hatching identifies the protected body without hiding it.
         double left = document.image.width, top = document.image.height, right = 0, bottom = 0;
-        for (std::size_t index = 0; index < guide.nodes.size(); ++index) {
-            left = std::min(left, guide.nodes[index].x);
-            top = std::min(top, guide.nodes[index].y);
-            right = std::max(right, guide.nodes[index].x);
-            bottom = std::max(bottom, guide.nodes[index].y);
+        for (std::size_t index = 0; index < guide.boundary().size(); ++index) {
+            left = std::min(left, guide.boundary()[index].x);
+            top = std::min(top, guide.boundary()[index].y);
+            right = std::max(right, guide.boundary()[index].x);
+            bottom = std::max(bottom, guide.boundary()[index].y);
         }
         const double step = std::max(1.0, 18 / canvas().zoom());
         for (double y = std::max(0.0, top); y < std::min(static_cast<double>(document.image.height), bottom);
@@ -130,6 +127,18 @@ void Editor::paint_guide_overlay(gf::Painter& painter) {
                                       gf::Color::rgba(26, 112, 174, 85), 1);
                 }
             }
+        }
+    }
+    if (document.tool == Tool::Guide && guide_swap_segment_ >= 0 &&
+        static_cast<std::size_t>(guide_swap_segment_) < guide.segments.size()) {
+        const CurveGeometry& geometry = guide.segments[guide_swap_segment_].geometry;
+        for (int index = 0; index < geometry.handle_count(); ++index) {
+            const gf::Point point = screen(geometry.handle(index));
+            if (geometry.kind == CurveKind::Bezier) {
+                painter.draw_line(screen(index == 0 ? geometry.start : geometry.end), point, blue, 1);
+            }
+            painter.fill_rect({point.x - 5, point.y - 5, 10, 10}, white);
+            painter.stroke_rect({point.x - 5, point.y - 5, 10, 10}, blue, 2);
         }
     }
     if (document.tool == Tool::Guide) {
@@ -207,7 +216,7 @@ void Editor::paint_segment(Point start, Point end) {
 
 namespace paint::forms {
 void Editor::begin_path_swap(CurveKind kind) {
-    guide.clear();
+    unset_guide();
     document.tool = Tool::Path;
     path_swap_kind_ = kind;
     path_swap_segment_ = -1;
@@ -308,5 +317,99 @@ void Editor::paint_path_swap(gf::Painter& painter) {
         painter.fill_rect({point.x - 5, point.y - 5, 10, 10}, white);
         painter.stroke_rect({point.x - 5, point.y - 5, 10, 10}, blue, 2);
     }
+}
+} // namespace paint::forms
+
+namespace paint::forms {
+void Editor::unset_guide() {
+    guide.clear();
+    guide_swap_kind_.reset();
+    guide_swap_segment_ = guide_swap_handle_ = guide_node_ = -1;
+    guide_extending_ = guide_connecting_ = guide_moving_ = false;
+    canvas().set_pointer_capture(false);
+    if (document.tool == Tool::Guide) {
+        document.tool = guide_previous_tool_;
+    }
+}
+void Editor::edit_guide() {
+    if (document.tool != Tool::Guide) {
+        guide_previous_tool_ = document.tool == Tool::Brush || document.tool == Tool::Stamp ||
+                                       document.tool == Tool::Fill || document.tool == Tool::Eraser
+                                   ? document.tool
+                                   : Tool::Pencil;
+        finish_controls();
+    }
+    document.tool = Tool::Guide;
+    guide_swap_kind_.reset();
+    guide_swap_segment_ = guide_swap_handle_ = guide_node_ = -1;
+    guide_extending_ = false;
+    refresh();
+}
+void Editor::begin_guide_swap(CurveKind kind) {
+    edit_guide();
+    guide_swap_kind_ = kind;
+    refresh();
+}
+bool Editor::guide_swap_pointer(const gf::PointerEvent& event, Point point) {
+    if (!guide_swap_kind_) {
+        return false;
+    }
+    if (event.action == gf::PointerAction::down && event.button == gf::PointerButton::secondary) {
+        edit_guide();
+        canvas().set_pointer_capture(false);
+        return true;
+    }
+    if (event.action == gf::PointerAction::down && event.button == gf::PointerButton::primary) {
+        if (guide_swap_segment_ >= 0 &&
+            static_cast<std::size_t>(guide_swap_segment_) < guide.segments.size()) {
+            const CurveGeometry& geometry = guide.segments[guide_swap_segment_].geometry;
+            for (int handle = 0; handle < geometry.handle_count(); ++handle) {
+                const Point location = geometry.handle(handle);
+                if (std::hypot(point.x - location.x, point.y - location.y) * canvas().zoom() < 10) {
+                    guide_swap_handle_ = handle;
+                    canvas().set_pointer_capture(true);
+                    return true;
+                }
+            }
+        }
+        const std::size_t edges = guide.nodes.size() < 2 ? 0
+                                  : guide.closed         ? guide.nodes.size()
+                                                         : guide.nodes.size() - 1;
+        double closest = 8 / canvas().zoom();
+        int selected = -1;
+        for (std::size_t edge = 0; edge < edges; ++edge) {
+            std::vector<Point> samples{guide.nodes[edge], guide.nodes[(edge + 1) % guide.nodes.size()]};
+            for (const GuideSegment& segment : guide.segments) {
+                if (segment.edge == edge) {
+                    samples = segment.geometry.samples();
+                    break;
+                }
+            }
+            for (std::size_t sample = 1; sample < samples.size(); ++sample) {
+                const Point a = samples[sample - 1], b = samples[sample];
+                const double dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
+                const double t =
+                    length > 0 ? std::clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / length, 0.0, 1.0)
+                               : 0;
+                const double distance = std::hypot(point.x - a.x - t * dx, point.y - a.y - t * dy);
+                if (distance < closest) {
+                    closest = distance;
+                    selected = static_cast<int>(edge);
+                }
+            }
+        }
+        if (selected >= 0) {
+            guide_swap_segment_ = guide.swap_segment(static_cast<std::size_t>(selected), *guide_swap_kind_);
+        }
+    } else if ((event.action == gf::PointerAction::move || event.action == gf::PointerAction::up) &&
+               guide_swap_handle_ >= 0) {
+        guide.move_handle(guide_swap_segment_, guide_swap_handle_, point);
+        if (event.action == gf::PointerAction::up) {
+            guide_swap_handle_ = -1;
+            canvas().set_pointer_capture(false);
+        }
+    }
+    canvas().invalidate(gf::Dirty::paint);
+    return true;
 }
 } // namespace paint::forms

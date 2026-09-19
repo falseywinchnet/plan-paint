@@ -315,6 +315,8 @@ SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygo
 }
 void Guide::clear() {
     nodes.clear();
+    segments.clear();
+    curved_boundary.clear();
     closed = false;
     selection = {};
 }
@@ -332,24 +334,122 @@ double Guide::blocked(int x, int y) const {
     if (nodes.size() < 2) {
         return 0;
     }
+    const std::vector<Point>& outline = boundary();
     const Point point{x + 0.5, y + 0.5};
-    if (fill && closed && inside_polygon(nodes, point.x, point.y)) {
+    if (fill && closed && inside_polygon(outline, point.x, point.y)) {
         return 1;
     }
     double distance = std::numeric_limits<double>::max();
-    const std::size_t edges = closed ? nodes.size() : nodes.size() - 1;
+    const std::size_t edges = closed ? outline.size() : outline.size() - 1;
     for (std::size_t index = 0; index < edges; ++index) {
-        distance = std::min(distance, edge_distance(point, nodes[index], nodes[(index + 1) % nodes.size()]));
+        distance =
+            std::min(distance, edge_distance(point, outline[index], outline[(index + 1) % outline.size()]));
     }
     return std::clamp(width * 0.5 + 0.5 - distance, 0.0, 1.0);
 }
+const std::vector<Point>& Guide::boundary() const {
+    return segments.empty() ? nodes : curved_boundary;
+}
+void Guide::rebuild_boundary() {
+    curved_boundary.clear();
+    if (segments.empty() || nodes.empty()) {
+        return;
+    }
+    curved_boundary.push_back(nodes.front());
+    const std::size_t edges = closed ? nodes.size() : nodes.size() - 1;
+    for (std::size_t edge = 0; edge < edges; ++edge) {
+        bool curved = false;
+        for (const GuideSegment& segment : segments) {
+            if (segment.edge == edge) {
+                const std::vector<Point> samples = segment.geometry.samples();
+                curved_boundary.insert(curved_boundary.end(), samples.begin() + 1, samples.end());
+                curved = true;
+                break;
+            }
+        }
+        if (!curved) {
+            curved_boundary.push_back(nodes[(edge + 1) % nodes.size()]);
+        }
+    }
+    if (closed && curved_boundary.size() > 1) {
+        curved_boundary.pop_back();
+    }
+}
+int Guide::swap_segment(std::size_t edge, CurveKind kind) {
+    const std::size_t edges = nodes.size() < 2 ? 0 : closed ? nodes.size() : nodes.size() - 1;
+    if (edge >= edges) {
+        return -1;
+    }
+    int index = -1;
+    for (std::size_t i = 0; i < segments.size(); ++i) {
+        if (segments[i].edge == edge) {
+            index = static_cast<int>(i);
+            break;
+        }
+    }
+    if (index >= 0 && segments[index].geometry.kind == kind) {
+        return index;
+    }
+    if (index < 0) {
+        index = static_cast<int>(segments.size());
+        segments.push_back({edge, {}});
+    }
+    segments[index].geometry.kind = kind;
+    segments[index].geometry.set_line(nodes[edge], nodes[(edge + 1) % nodes.size()]);
+    selection = {};
+    rebuild_boundary();
+    return index;
+}
+void Guide::move_node(std::size_t index, Point point) {
+    if (index >= nodes.size()) {
+        return;
+    }
+    const Point previous = nodes[index];
+    const Point delta{point.x - previous.x, point.y - previous.y};
+    for (std::size_t i = 0; i < nodes.size(); ++i) {
+        if (nodes[i].x != previous.x || nodes[i].y != previous.y) {
+            continue;
+        }
+        nodes[i] = point;
+        for (GuideSegment& segment : segments) {
+            if (segment.edge == i) {
+                segment.geometry.start = point;
+                segment.geometry.first_control.x += delta.x;
+                segment.geometry.first_control.y += delta.y;
+            }
+            if ((segment.edge + 1) % nodes.size() == i) {
+                segment.geometry.end = point;
+                segment.geometry.second_control.x += delta.x;
+                segment.geometry.second_control.y += delta.y;
+            }
+        }
+    }
+    selection = {};
+    rebuild_boundary();
+}
+void Guide::move_handle(int segment, int handle, Point point) {
+    if (segment < 0 || static_cast<std::size_t>(segment) >= segments.size()) {
+        return;
+    }
+    segments[segment].geometry.move_handle(handle, point);
+    selection = {};
+    rebuild_boundary();
+}
 void Guide::translate(Point delta) {
-    for (std::size_t index = 0; index < nodes.size(); ++index) {
-        nodes[index].x += delta.x;
-        nodes[index].y += delta.y;
+    for (Point& point : nodes) {
+        point.x += delta.x;
+        point.y += delta.y;
+    }
+    for (GuideSegment& segment : segments) {
+        for (Point* point : {&segment.geometry.start, &segment.geometry.end, &segment.geometry.first_control,
+                             &segment.geometry.second_control}) {
+            (*point).x += delta.x;
+            (*point).y += delta.y;
+        }
     }
     selection.bounds.x += static_cast<int>(std::lround(delta.x));
     selection.bounds.y += static_cast<int>(std::lround(delta.y));
+    rebuild_boundary();
 }
 void constrain_paint(Image& image, const Image& base, const Guide& guide, bool preserve_alpha) {
     if (image.width != base.width || image.height != base.height || (!guide.active() && !preserve_alpha)) {

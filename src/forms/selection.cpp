@@ -128,7 +128,7 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
             event.button != gf::PointerButton::primary) {
             return false;
         }
-        guide.clear();
+        unset_guide();
         resize_handle_ = hovered;
         resize_selection_ = document.selection.active;
         resize_original_ = resize_preview_ = bounds;

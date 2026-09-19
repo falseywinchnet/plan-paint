@@ -57,7 +57,7 @@ class Ribbon final : public gui_forms::Control {
     gui_forms::FocusScopeId focus_scope_;
     std::shared_ptr<gui_forms::DropDownButton> popup_owner_;
     std::shared_ptr<SwatchButton> primary_, secondary_;
-    bool secondary_color_ = false, path_swap_menu_ = false;
+    bool secondary_color_ = false, path_swap_menu_ = false, guide_swap_menu_ = false;
     std::shared_ptr<gui_forms::Button> secondary_target_;
     void show_materials(bool fill);
     void prepare_material_previews();

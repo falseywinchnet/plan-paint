@@ -102,20 +102,26 @@ gf::SurfaceMaterial action_material(bool selected, gf::ControlSurfaceState state
     const bool hot = state == gf::ControlSurfaceState::hot;
     gf::SurfaceMaterial material;
     material.corner_radius = 3;
-    material.fills = {gf::MaterialFillLayer::solid(disabled   ? gf::Color::rgba(211, 224, 240)
-                                                   : pressed  ? gf::Color::rgba(166, 193, 230)
-                                                   : selected ? gf::Color::rgba(189, 214, 246)
-                                                   : hot      ? gf::Color::rgba(246, 251, 255)
-                                                              : gf::Color::rgba(226, 238, 253))};
+    const gf::Color top = disabled   ? gf::Color::rgba(190, 207, 228)
+                          : pressed  ? gf::Color::rgba(152, 181, 218)
+                          : selected ? gf::Color::rgba(188, 210, 241)
+                          : hot      ? gf::Color::rgba(218, 233, 252)
+                                     : gf::Color::rgba(210, 228, 251);
+    const gf::Color bottom = disabled   ? gf::Color::rgba(181, 199, 222)
+                             : pressed  ? gf::Color::rgba(181, 204, 235)
+                             : selected ? gf::Color::rgba(153, 181, 222)
+                             : hot      ? gf::Color::rgba(177, 204, 242)
+                                        : gf::Color::rgba(163, 193, 236);
+    material.fills = {gf::MaterialFillLayer::linear({0, 0}, {0, 1}, {{0, top}, {1, bottom}})};
     material.border = gf::MaterialBorder{disabled ? gf::Color::rgba(143, 166, 196, 100)
                                          : hot    ? gf::Color::rgba(53, 94, 150)
                                                   : gf::Color::rgba(99, 132, 178),
                                          1};
-    const gf::Color upper = disabled              ? gf::Color::rgba(255, 255, 255, 100)
-                            : pressed || selected ? gf::Color::rgba(44, 86, 132, 90)
-                                                  : gf::Color::rgba(255, 255, 255, hot ? 255 : 207);
+    const gf::Color upper = disabled  ? gf::Color::rgba(255, 255, 255, 100)
+                            : pressed ? gf::Color::rgba(44, 86, 132, 130)
+                                      : gf::Color::rgba(255, 255, 255, selected ? 185 : 230);
     const gf::Color lower =
-        pressed || selected ? gf::Color::rgba(255, 255, 255, 136) : gf::Color::rgba(61, 96, 138, 85);
+        pressed ? gf::Color::rgba(255, 255, 255, 155) : gf::Color::rgba(49, 86, 134, selected ? 110 : 135);
     material.keylines.push_back({gf::MaterialEdge::top, upper, 1, 1});
     if (!disabled) {
         material.keylines.push_back({gf::MaterialEdge::left, upper, 1, 1});
@@ -123,8 +129,9 @@ gf::SurfaceMaterial action_material(bool selected, gf::ControlSurfaceState state
         material.keylines.push_back({gf::MaterialEdge::bottom, lower, 1, 1});
         if (selected) {
             material.keylines.push_back({gf::MaterialEdge::bottom, gf::Color::rgba(32, 93, 167), 2, 2});
-        } else if (!pressed) {
-            material.shadows.push_back({{0, 1}, 0, 0, gf::Color::rgba(41, 75, 119, 58), false});
+        }
+        if (!pressed) {
+            material.shadows.push_back({{0, 1}, 0, 0, gf::Color::rgba(41, 75, 119, 85), false});
         }
     }
     return material;
@@ -343,13 +350,16 @@ class ShapeSwitchButton final : public gf::Button {
   private:
     bool fill_;
 };
-class GuideButton final : public gf::Button {
+class GuideGlyph final : public gf::Control {
   public:
-    GuideButton(gf::StableId id, std::string text) : Button(std::move(id), std::move(text)) {}
-    void on_paint(gf::Painter& painter, gf::Rect damage) override {
-        Button::on_paint(painter, damage);
+    explicit GuideGlyph(gf::StableId id) : Control(std::move(id)) {
+        set_hit_test_transparent(true);
+        set_dock(gf::DockStyle::fill);
+    }
+    void on_paint(gf::Painter& painter, gf::Rect) override {
         painter.save();
-        if (pressed_visual()) {
+        const std::shared_ptr<gf::Button> owner = std::dynamic_pointer_cast<gf::Button>(parent());
+        if (owner && (*owner).pressed_visual()) {
             painter.translate({1, 1});
         }
         const double size = std::min(30.0, committed_arranged_bounds().width - 10),
@@ -382,6 +392,9 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
     if (disclosure) {
         std::shared_ptr<gf::DropDownButton> dropdown = gf::make_control<gf::DropDownButton>(
             gf::StableId(id), text, split ? gf::DropDownButtonMode::split : gf::DropDownButtonMode::menu);
+        if (id == "tool-11") {
+            (*dropdown).add_child(gf::make_control<GuideGlyph>(gf::StableId("guide-glyph")));
+        }
         if (tall) {
             (*dropdown).set_drop_down_edge(gf::DropDownButtonEdge::bottom);
             (*dropdown).add_child(gf::make_control<DisclosureDivider>(gf::StableId(id + "-divider")));
@@ -396,8 +409,6 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
         result = gf::make_control<RibbonTabButton>(gf::StableId(id), text);
     } else if (id == "edge-switch" || id == "fill-switch") {
         result = gf::make_control<ShapeSwitchButton>(gf::StableId(id), id == "fill-switch");
-    } else if (id == "tool-11") {
-        result = gf::make_control<GuideButton>(gf::StableId(id), text);
     } else {
         result = gf::make_control<gf::Button>(gf::StableId(id), text);
     }
@@ -463,8 +474,9 @@ void Ribbon::initialize_control_tree() {
     button("brush-menu", "Brushes", 13, {340, 34, 48, 83}, true, true, true);
     button("tool-10", "Stamp", 20, {392, 34, 46, 83}, true, true, true);
     button("tool-9", "Path", 21, {442, 34, 44, 83}, true, true, true);
-    std::shared_ptr<gf::Button> guide_button = button("tool-11", "Guide", -1, {490, 34, 44, 83}, true);
-    (*guide_button).set_content_padding({0, 42, 0, 0});
+    std::shared_ptr<gf::Button> guide_button =
+        button("tool-11", "Guide", -1, {490, 34, 44, 83}, true, true, true);
+    (*guide_button).set_content_padding({0, 38, 0, 14});
     for (std::size_t i = 0; i < std::size(home_shapes); ++i) {
         button("shape-" + std::to_string(static_cast<int>(home_shapes[i])), "",
                100 + static_cast<int>(home_shapes[i]), {546 + 25.0 * (i % 7), 36 + 25.0 * (i / 7), 25, 25});
@@ -1309,7 +1321,7 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
         const double scale = width / 1280;
         const gf::Rect tray{137 * scale, 32, 835 * scale, 83};
         const gf::GradientStop well[] = {{0, gf::Color::rgba(248, 251, 255)},
-                                          {1, gf::Color::rgba(255, 255, 255)}};
+                                         {1, gf::Color::rgba(255, 255, 255)}};
         painter.fill_linear_gradient(tray, {0, tray.y}, {0, tray.bottom()}, well);
         painter.stroke_rect(tray, gf::Color::rgba(148, 172, 200), 1);
         painter.draw_line({tray.x + 1, tray.y + 1}, {tray.right() - 1, tray.y + 1},
@@ -1427,7 +1439,8 @@ void Ribbon::synchronize() {
         bool selected = false;
         if (id.starts_with("tool-") && id != "tool-tab") {
             selected = document.tool == ribbon_tools[std::stoi(id.substr(5))] ||
-                       (id == "tool-0" && document.tool == Tool::Lasso);
+                       (id == "tool-0" && document.tool == Tool::Lasso) ||
+                       (id == "tool-11" && editor && (*editor).guide.active());
         }
         if (id.starts_with("shape-")) {
             selected =
@@ -1906,6 +1919,14 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
                                     : std::vector<std::string>{"Continue path", "Swap segment ▸"};
             path_swap_menu_ = false;
         }
+        if (id == "tool-11") {
+            ids = guide_swap_menu_ ? std::vector<std::string>{"guide-swap-bezier", "guide-swap-arc"}
+                                   : std::vector<std::string>{"guide-edit", "guide-swap", "guide-clear"};
+            texts = guide_swap_menu_
+                        ? std::vector<std::string>{"Bézier", "Arc"}
+                        : std::vector<std::string>{"Edit guide", "Swap segment ▸", "Unset guide"};
+            guide_swap_menu_ = false;
+        }
         if (id == "brush-menu") {
             ids = {"family-additive", "family-mix", "family-heal"};
             texts = {"Additive brushes", "Mix existing pixels", "Heal / continuous clone"};
@@ -2012,6 +2033,16 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         }
     } else if (id == "fill-on" || id == "fill-off") {
         document.shape_fill = id == "fill-on";
+    } else if (id == "guide-swap") {
+        guide_swap_menu_ = true;
+        const std::shared_ptr<gf::DropDownButton> owner =
+            std::dynamic_pointer_cast<gf::DropDownButton>((*attached_window()).find("tool-11"));
+        if (owner) {
+            dropdown(*owner);
+        }
+        return;
+    } else if (id == "guide-swap-bezier" || id == "guide-swap-arc") {
+        (*editor).begin_guide_swap(id == "guide-swap-bezier" ? CurveKind::Bezier : CurveKind::Arc);
     } else if (id == "path-swap") {
         path_swap_menu_ = true;
         const std::shared_ptr<gf::DropDownButton> owner =
