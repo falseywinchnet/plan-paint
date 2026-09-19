@@ -11,6 +11,7 @@ class Editor;
 class SwatchButton;
 class EditorDialog;
 enum class EditorDialogKind {
+    about,
     color,
     resize,
     atlas_grid,

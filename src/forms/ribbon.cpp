@@ -102,11 +102,11 @@ gf::SurfaceMaterial action_material(bool selected, gf::ControlSurfaceState state
     const bool hot = state == gf::ControlSurfaceState::hot;
     gf::SurfaceMaterial material;
     material.corner_radius = 3;
-    material.fills = {gf::MaterialFillLayer::solid(disabled   ? gf::Color::rgba(178, 198, 226, 45)
-                                                   : pressed  ? gf::Color::rgba(49, 95, 152, 32)
-                                                   : selected ? gf::Color::rgba(65, 124, 204, 41)
-                                                   : hot      ? gf::Color::rgba(244, 250, 255, 69)
-                                                              : gf::Color::rgba(255, 255, 255, 18))};
+    material.fills = {gf::MaterialFillLayer::solid(disabled   ? gf::Color::rgba(211, 224, 240)
+                                                   : pressed  ? gf::Color::rgba(166, 193, 230)
+                                                   : selected ? gf::Color::rgba(189, 214, 246)
+                                                   : hot      ? gf::Color::rgba(246, 251, 255)
+                                                              : gf::Color::rgba(226, 238, 253))};
     material.border = gf::MaterialBorder{disabled ? gf::Color::rgba(143, 166, 196, 100)
                                          : hot    ? gf::Color::rgba(53, 94, 150)
                                                   : gf::Color::rgba(99, 132, 178),
@@ -1225,8 +1225,13 @@ void Ribbon::arrange(gf::Rect bounds) {
                 control.set_content_padding({0, 2, 0, 2});
             }
         }
+        const bool tall_caption = control.requested_bounds().height > 45 && !control.text().empty();
+        const bool material_caption = id.starts_with("material-brush-");
+        const double font_size = material_caption ? std::clamp(11 * horizontal_scale, 8.0, 12.0)
+                                 : tall_caption   ? std::clamp(12 * horizontal_scale, 8.0, 14.0)
+                                                  : std::clamp(14 * horizontal_scale, 10.0, 15.0);
         (*buttons_[i])
-            .set_font({gf::FontRole::control, std::clamp(14 * horizontal_scale, 10.0, 15.0),
+            .set_font({gf::FontRole::control, font_size,
                        static_cast<std::uint16_t>(id.ends_with("-tab") && control.selected() ? 700 : 400),
                        false, 0.05});
         set_child_layout(buttons_[i], rectangle);
@@ -1301,6 +1306,16 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
         return;
     }
     if (page_ == 4) {
+        const double scale = width / 1280;
+        const gf::Rect tray{137 * scale, 32, 835 * scale, 83};
+        const gf::GradientStop well[] = {{0, gf::Color::rgba(248, 251, 255)},
+                                          {1, gf::Color::rgba(255, 255, 255)}};
+        painter.fill_linear_gradient(tray, {0, tray.y}, {0, tray.bottom()}, well);
+        painter.stroke_rect(tray, gf::Color::rgba(148, 172, 200), 1);
+        painter.draw_line({tray.x + 1, tray.y + 1}, {tray.right() - 1, tray.y + 1},
+                          gf::Color::rgba(111, 142, 177, 75), 1);
+        painter.draw_line({tray.x, tray.bottom() + 1}, {tray.right(), tray.bottom() + 1},
+                          gf::Color::rgba(255, 255, 255, 225), 1);
         paint_separator(painter, 132 * width / 1280);
         paint_separator(painter, 974 * width / 1280);
         return;

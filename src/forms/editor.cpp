@@ -221,6 +221,12 @@ void Editor::rebuild_file_menu() {
 void Editor::arrange(gf::Rect bounds) {
     arrange_self(bounds);
     double ribbon_height = (*ribbon_).ribbon_height();
+    const double previous_ribbon_height = (*ribbon_).committed_arranged_bounds().height;
+    if (previous_ribbon_height > 0 && previous_ribbon_height != ribbon_height) {
+        gui_drawing::PointF origin = (*canvas_).view_origin();
+        origin.y += (ribbon_height - previous_ribbon_height) / (*canvas_).zoom();
+        (*canvas_).set_view_origin(origin);
+    }
     set_child_layout(ribbon_, {0, 0, bounds.width, ribbon_height});
     set_child_layout(menu_, {0, 0, 56, 27});
     double ruler = show_rulers ? 20 : 0;
@@ -1763,30 +1769,7 @@ void Editor::execute(const std::string& command) {
             show_help = !show_help;
             invalidate(gf::Dirty::layout | gf::Dirty::paint);
         } else if (command == "about") {
-            gf::HostMessageDialogRequest request;
-            request.title = "Rainstar Paint";
-            request.message =
-                command == "about"
-                    ? "To the Holy One, blessed be He, from whom all good things come. "
-                      "This work is dedicated in gratitude for the nourishment that sustains human life, "
-                      "the energy that powers our tools, and the opportunity to weave information into "
-                      "works of use and beauty.\n\n"
-                      "Rainstar Paint " RAINSTAR_VERSION "\n\nAuthor: Astra\nSponsor: Rainstar\n\n"
-                      "Copyright (c) 2026 joshuah.rainstar@gmail.com\n"
-                      "Free and open source under the MIT license.\n"
-                      "Anyone may use, study, change, and share this program.\n\n"
-                      "An independent implementation inspired by Windows 7/10 Paint. "
-                      "Microsoft and Windows are trademarks of Microsoft Corporation."
-                    : "Draw with the left button; the right button uses Alt. Drag selections to move "
-                      "them. Drag Bézier and arc handles after setting their line. Escape releases editing "
-                      "controls. Enter or right-click ends a path run. Middle-drag pans; Ctrl/Command + "
-                      "wheel zooms. Text has its own font ribbon; Ctrl/Command+Enter places it. "
-                      "Select an object for Mesh or drag its rotation handle. Shift snaps rotation. "
-                      "Stamp: R rotates; + and - resize. Right-click resets the stamp.\n\n"
-                      "Atlas: split sprite sheets, select frames, and create icon or cursor sizes. "
-                      "Ctrl-click frames to choose a sequence. Cursor hotspots can be entered or picked on "
-                      "the canvas.";
-            static_cast<void>(dialog(request));
+            open_editor_dialog(EditorDialogKind::about);
         }
         document.sync_curve();
         document.sync_path();

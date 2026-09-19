@@ -16,16 +16,18 @@ Actual GUI.Forms application on Linux with dwm; the pictured shapes and editable
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.0/rainstar-paint-0.3.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.0/rainstar-paint-0.3.0-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.0/rainstar-paint-0.3.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.0/rainstar-paint-0.3.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.1/rainstar-paint-0.3.1-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.1/rainstar-paint-0.3.1-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.1/rainstar-paint-0.3.1-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.1/rainstar-paint-0.3.1-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.1/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
-## New in 0.3
+## New in 0.3.1
+
+The Royale Cobalt interface adds light raised controls, layered tabs and inset material trays. Collapsing the ribbon keeps the artwork stationary. File > Settings offers moss, brown and tan felt, plus matte slate, clay and ivory backings; the original pale backing remains the default. About Rainstar Paint now uses an in-house dialog. This release also fixes pencil strokes, path and Guide junctions, additive and subtractive lasso regions, stamp material capture, and the color picker.
 
 The source includes the [new painting and lettering tools](docs/PAINTING_TOOLS.md): additive, Mix and Heal brushes; guides and tightening lassos; atlas texture painting; poster lettering; and RGB/OKHSL palettes.
 
@@ -37,7 +39,7 @@ The [file and codec audit](docs/SECURITY_AUDIT_2026-09-19.md) and [memory-leak a
 - **Bend a curve.** Choose Bézier or Arc, then drag a starting line or click its two endpoints. Bézier has one control handle from each end; Arc has one middle handle. Drag them repeatedly to adjust the curve. Undo and Redo retain the controls. Escape or choosing another tool releases them and keeps the accepted drawing; a lone first click is cancelled without leaving a mark.
 - **Edit sprite sheets.** Set rows and columns in Atlas, choose a sprite from the ribbon, and use Left / Right to step through frames. Ctrl-click holds a sequence; Expand gallery preserves the sheet’s two-dimensional arrangement. Save writes the complete sheet.
 - **Edit pictures.** Rectangular and free-form selections, crop, copy/paste, resize, rotate, flip and undo/redo. Drop an image into the window to place it as a movable selection.
-- **Add text and color.** Move and resize text boxes, toggle word wrap, and choose a font, size, bold, italic, underline or strikeout. Place or cancel from the floating toolbar. Mix colors with RGB, hex or OKLab controls and save thirty custom swatches.
+- **Add text and color.** Move and resize text boxes, toggle word wrap, and choose a font, size, bold, italic, underline or strikeout. Place or cancel from the floating toolbar. Mix colors with RGB, hex or OKLab controls and save twenty-nine custom swatches beside a permanent transparency swatch.
 - **See before you mark.** The pencil previews its exact pixel, the round pink eraser offers hard and soft edges, and the magnifier enlarges the hovered region. Click to zoom around the pointer, up to 1600%.
 - **Work with materials.** Procedural watercolor, oil, bristles, crayon, graphite, pastel and charcoal respond to paper tooth, grain scale and paint load. Choose independent Primary and Alt brushes and patterns together in the Materials ribbon. No Color makes either material transparent.
 - **Control the workspace.** Click the selected ribbon tab to collapse or reopen it. File > Settings saves the wheel and trackpad scroll distance; scrolling keeps the viewport center within the canvas.

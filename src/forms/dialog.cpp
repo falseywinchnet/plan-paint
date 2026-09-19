@@ -204,6 +204,33 @@ void EditorDialog::initialize_control_tree() {
     if (!editor) {
         return;
     }
+    if (kind_ == EditorDialogKind::about) {
+        panel_ = {0, 0, 590, 460};
+        label("about-version", "Rainstar Paint " RAINSTAR_VERSION, {24, 54, 542, 28}, true);
+        label("about-dedication",
+              "To the Holy One, blessed be He, from whom all good things come.\n"
+              "This work is dedicated in gratitude for the nourishment that sustains human life, "
+              "the energy that powers our tools, and the opportunity to weave information into "
+              "works of use and beauty.",
+              {24, 98, 542, 88});
+        label("about-credits", "Author: Astra\nSponsor: Rainstar", {24, 200, 542, 42});
+        label("about-license",
+              "Copyright (c) 2026 joshuah.rainstar@gmail.com\n"
+              "Free and open source under the MIT license.\n"
+              "Anyone may use, study, change, and share this program.", {24, 258, 542, 72});
+        label("about-trademarks",
+              "An independent implementation inspired by Windows 7/10 Paint.\n"
+              "Microsoft and Windows are trademarks of Microsoft Corporation.", {24, 350, 542, 52});
+        for (const gf::Control::Ptr& control : controls_) {
+            const std::shared_ptr<gf::Label> text = std::dynamic_pointer_cast<gf::Label>(control);
+            if (text) {
+                (*text).set_text_wrapping(gf::TextWrapping::word);
+            }
+        }
+        std::shared_ptr<gf::Button> close = button("dialog-ok", "Close", {480, 419, 90, 28});
+        (*close).set_default_button(true);
+        return;
+    }
     if (kind_ == EditorDialogKind::color) {
         panel_ = {0, 0, 660, 540};
         original_ = secondary_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;
@@ -536,6 +563,8 @@ gf::SemanticDescriptor EditorDialog::semantic_descriptor() const {
 }
 std::string EditorDialog::title() const {
     switch (kind_) {
+    case EditorDialogKind::about:
+        return "About Rainstar Paint";
     case EditorDialogKind::color:
         return "Edit Colors";
     case EditorDialogKind::resize:
@@ -799,6 +828,10 @@ void EditorDialog::clicked(gf::ButtonBase& control) {
 void EditorDialog::accept() {
     std::shared_ptr<Editor> editor = editor_.lock();
     if (!editor) {
+        return;
+    }
+    if (kind_ == EditorDialogKind::about) {
+        (*editor).close_editor_dialog();
         return;
     }
     try {

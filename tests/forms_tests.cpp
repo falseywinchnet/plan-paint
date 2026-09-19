@@ -1507,11 +1507,49 @@ void ribbon_collapse_and_reopen() {
 }
 void about_reports_build_version() {
     Fixture fixture;
+    gf::Window& window = *fixture.window;
     TestServices services;
-    gf::HostSession session(*fixture.window, service_capabilities(), &services);
+    gf::HostSession session(window, service_capabilities(), &services);
     (*fixture.editor).execute("about");
-    require(services.message.find("Rainstar Paint " RAINSTAR_VERSION) != std::string::npos,
-            "About reports the exact configured release version");
+    window.perform_layout();
+    const std::shared_ptr<gf::Label> version =
+        std::dynamic_pointer_cast<gf::Label>(window.find("about-version"));
+    require(version && (*version).text() == "Rainstar Paint " RAINSTAR_VERSION && services.message.empty(),
+            "About reports the release version inside the application's own dialog");
+    require((*window.find("about-dedication")).absolute_bounds().bottom() <
+                (*window.find("about-credits")).absolute_bounds().y,
+            "About dedication precedes the credits");
+    routed_button(window, "dialog-ok");
+    require(!window.find("editor-dialog"), "Close dismisses the in-house About dialog");
+    (*fixture.editor).execute("about");
+    gf::KeyEvent enter;
+    enter.action = gf::KeyAction::down;
+    enter.physical_key = gf::PhysicalKey::enter;
+    window.dispatch_key(enter);
+    require(!window.find("editor-dialog"), "Enter closes About without applying editor settings");
+}
+void ribbon_preserves_artwork_position() {
+    Fixture fixture;
+    gf::Window& window = *fixture.window;
+    paint::forms::Editor& editor = *fixture.editor;
+    for (double zoom : {0.25, 1.0, 3.75, 16.0}) {
+        for (bool rulers : {false, true}) {
+            open_tab(window, "home-tab");
+            editor.show_rulers = rulers;
+            window.perform_layout();
+            editor.canvas().set_view(zoom, {-42.5, 67.25});
+            const gf::Rect before = editor.canvas().bitmap_to_client({85, 90, 1, 1});
+            const double screen_y = before.y + editor.canvas().absolute_bounds().y;
+            for (const char* tab : {"home-tab", "home-tab", "home-tab", "view-tab"}) {
+                routed_button(window, tab);
+                window.perform_layout();
+                const gf::Rect after = editor.canvas().bitmap_to_client({85, 90, 1, 1});
+                require(std::abs(after.y + editor.canvas().absolute_bounds().y - screen_y) < 0.000001 &&
+                            after.x == before.x && editor.canvas().zoom() == zoom,
+                        "ribbon collapse, reopening and tab changes preserve the artwork's screen position");
+            }
+        }
+    }
 }
 void select_all_delete_without_drag() {
     Fixture fixture;
@@ -2096,6 +2134,7 @@ int main() {
         select_all_delete_without_drag();
         ribbon_collapse_and_reopen();
         about_reports_build_version();
+        ribbon_preserves_artwork_position();
         crop_and_help_actions();
         stamp_reset_and_recapture();
         atlas_grid_frames_and_cursor_save();

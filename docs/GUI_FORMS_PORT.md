@@ -1,6 +1,6 @@
 # Native GUI.Forms application
 
-Rainstar Paint 0.3.0 uses GUI.Forms by default. The executable links the installed
+Rainstar Paint 0.3.1 uses GUI.Forms by default. The executable links the installed
 `GUIForms::Application` target and Paint's document, raster, material, CONV and
 format libraries. It does not link SDL, ImGui or GTK. The optional comparison
 frontend remains available with `RAINSTAR_LEGACY_UI=ON`.
