@@ -40,7 +40,9 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
 
   private:
     std::weak_ptr<Editor> editor_;
-    gui_forms::ImageId felt_, green_felt_, repeated_, reference_;
+    gui_forms::ImageId backing_, repeated_, reference_;
+    CanvasBacking loaded_backing_ = CanvasBacking::Count;
+    void update_backing();
     std::uint64_t atlas_revision_ = 0;
     void paint_atlas_context(gui_forms::Painter& painter, const Editor& editor);
 };

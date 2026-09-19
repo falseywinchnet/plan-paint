@@ -52,17 +52,20 @@ void EditorSettings::load() {
     std::istringstream input(encoded);
     std::string magic;
     double distance = 0;
-    if (input >> magic >> distance && (magic == "RSPS1" || magic == "RSPS2" || magic == "RSPS3") &&
+    if (input >> magic >> distance &&
+        (magic == "RSPS1" || magic == "RSPS2" || magic == "RSPS3" || magic == "RSPS4") &&
         std::isfinite(distance) && distance >= 0.1 && distance <= 100) {
         scroll_distance = distance;
         int background = 0;
         if (magic != "RSPS1" && input >> background) {
-            green_felt = background == 1;
+            canvas_backing = background >= 0 && background < (magic == "RSPS4" ? canvas_backing_count : 2)
+                                 ? static_cast<CanvasBacking>(background)
+                                 : CanvasBacking::PaleFelt;
         }
         int solid = 0;
         std::string color;
         Color parsed;
-        if (magic == "RSPS3" && input >> solid >> color && from_hex(color, parsed)) {
+        if ((magic == "RSPS3" || magic == "RSPS4") && input >> solid >> color && from_hex(color, parsed)) {
             solid_transparency = solid == 1;
             parsed.a = 255;
             transparency_color = parsed;
@@ -74,9 +77,9 @@ void EditorSettings::save() const {
         return;
     }
     std::ostringstream output;
-    output << "RSPS3\n"
+    output << "RSPS4\n"
            << scroll_distance << '\n'
-           << (green_felt ? 1 : 0) << '\n'
+           << static_cast<int>(canvas_backing) << '\n'
            << (solid_transparency ? 1 : 0) << '\n'
            << to_hex(transparency_color) << '\n';
     const std::string encoded = output.str();

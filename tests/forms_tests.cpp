@@ -1651,12 +1651,19 @@ void scroll_distance_bounds_and_settings() {
         std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("settings-scroll"));
     require(distance && (*distance).value() == 6, "settings presents modest default scroll distance");
     (*distance).set_value(2.5);
+    std::shared_ptr<gf::ComboBox> backing =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-background"));
+    (*backing).set_selected_index(static_cast<std::size_t>(paint::CanvasBacking::BrownFelt));
     routed_button(window, "dialog-cancel");
-    require(editor.settings.scroll_distance == 6, "cancel leaves scroll distance unchanged");
+    require(editor.settings.scroll_distance == 6 &&
+                editor.settings.canvas_backing == paint::CanvasBacking::PaleFelt,
+            "cancel leaves scroll distance and canvas surround unchanged");
     editor.execute("settings");
     window.perform_layout();
     distance = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("settings-scroll"));
     (*distance).set_value(2.5);
+    backing = std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-background"));
+    (*backing).set_selected_index(static_cast<std::size_t>(paint::CanvasBacking::TanFelt));
     const paint::Image unchanged = editor.document.image;
     const std::shared_ptr<gf::ComboBox> alpha_background =
         std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-alpha-background"));
@@ -1670,6 +1677,9 @@ void scroll_distance_bounds_and_settings() {
     reloaded.load();
     require(reloaded.scroll_distance == 2.5 && editor.settings.scroll_distance == 2.5,
             "accepted scroll distance persists between launches");
+    require(reloaded.canvas_backing == paint::CanvasBacking::TanFelt &&
+                editor.settings.canvas_backing == paint::CanvasBacking::TanFelt,
+            "accepted surround persists between launches");
     require(reloaded.solid_transparency && paint::equal(reloaded.transparency_color, {237, 130, 193, 255}) &&
                 editor.settings.solid_transparency,
             "solid transparency color persists between launches");
@@ -1727,6 +1737,49 @@ void compact_ribbon_keeps_icons_and_fields() {
     require((*window.find("dimensions-status")).committed_arranged_bounds().right() <=
                 (*window.find("status-zoom-reset")).committed_arranged_bounds().x,
             "compact status dimensions do not overlap the zoom controls");
+}
+void cobalt_tabs_and_split_button_routes() {
+    Fixture fixture;
+    gf::Window& window = *fixture.window;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.choose_tool(paint::Tool::Fill);
+    for (double width : {800.0, 1280.0, 1760.0}) {
+        window.resize({width, 700});
+        open_tab(window, "view-tab");
+        window.perform_layout();
+        const gf::Rect help = (*window.find("help")).committed_arranged_bounds();
+        require(help.width == 30 && help.right() == width,
+                "Help stays anchored to the right edge at every width");
+        const gf::Rect active = (*window.find("view-tab")).absolute_bounds();
+        const gf::Rect passive = (*window.find("patterns-tab")).absolute_bounds();
+        require(active.y < passive.y && active.height > passive.height,
+                "selected sheet is raised above the darker rear tabs");
+        // This point is inside the selected tab's overlap with the next sheet.
+        // Its visible foreground face must own the pointer event as well.
+        const gf::Point point{active.right() - 0.5, active.y + active.height / 2};
+        window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, point});
+        window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, point});
+        window.perform_layout();
+        require((*require_button(window, "view-tab")).selected() &&
+                    (*window.find("ribbon")).committed_arranged_bounds().height == 27,
+                "foreground tab overlap activates that tab and preserves collapse behavior");
+        open_tab(window, "home-tab");
+        window.perform_layout();
+        require((*window.find("home-tab")).tab_index() < (*window.find("view-tab")).tab_index() &&
+                    (*window.find("view-tab")).tab_index() < (*window.find("patterns-tab")).tab_index(),
+                "changing the foreground sheet preserves the logical keyboard order");
+        for (const char* id : {"paste", "brush-menu", "tool-10", "tool-9"}) {
+            const gf::Rect bounds = (*window.find(id)).absolute_bounds();
+            const gf::Point arrow{bounds.x + bounds.width / 2, bounds.bottom() - 5};
+            window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, arrow});
+            window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, arrow});
+            window.perform_layout();
+            require(window.find("ribbon-popup") != nullptr,
+                    "persistent divider leaves the split dropdown target active at every width");
+            window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+            require(!window.find("ribbon-popup"), "Escape dismisses each split-button popup");
+        }
+    }
 }
 void guide_atlas_and_text_effect_interactions() {
     Fixture fixture;
@@ -2028,6 +2081,7 @@ int main() {
         scroll_distance_bounds_and_settings();
         stamp_material_keeps_one_hardness_mask();
         compact_ribbon_keeps_icons_and_fields();
+        cobalt_tabs_and_split_button_routes();
         guide_atlas_and_text_effect_interactions();
         zoom_anchors_the_point();
         magnifier_hover_is_display_only();

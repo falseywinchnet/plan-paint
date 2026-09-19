@@ -12,6 +12,7 @@ class Editor;
 class AtlasPanel;
 Color ribbon_color(int index);
 std::shared_ptr<const gui_forms::Theme> ribbon_theme();
+std::shared_ptr<const gui_forms::Theme> gallery_theme();
 class SwatchButton final : public gui_forms::Button {
   public:
     SwatchButton(gui_forms::StableId id, std::string text, Color color);
@@ -60,7 +61,7 @@ class Ribbon final : public gui_forms::Control {
     std::shared_ptr<gui_forms::Button> secondary_target_;
     void show_materials(bool fill);
     void prepare_material_previews();
-    int page_ = 1, building_page_ = 1, palette_page_ = 0;
+    int page_ = 1, building_page_ = 1, palette_page_ = 0, ordered_tab_page_ = -1;
     Color palette_color(int index) const;
     bool synchronizing_ = false, fonts_loaded_ = false, collapsed_ = false;
     void ensure_fonts();

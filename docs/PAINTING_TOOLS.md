@@ -66,7 +66,11 @@ Themed colors form ten columns of Primary, Alt and accent: Glue, Phosphor, Camo,
 
 Eyedropper defaults to Exact pixel. Small average samples 5×5 pixels; Representative rejects isolated light and dark flecks in that neighborhood. Its optional local lens and the Magnifier use a round, cursor-centered 8× view.
 
-Settings offer the default canvas surround or green felt. **Transparency display** chooses Checkerboard or a configurable solid color, with pink as the initial solid choice. This changes only the view; exported RGBA pixels remain unchanged. The ribbon and status bar resize with the window, down to an 800-pixel client width.
+**File > Settings > Canvas surround** offers the original grey-blue felt, moss green felt, warm brown felt, tan felt, and matte-painted slate, clay or ivory. The original surround remains the default. The richer felt has small directional fibers and uneven pile; the matte surfaces use a fine, shallow stipple. These textures stay at a fixed screen size as the artwork zooms. Old green-felt preferences select moss green automatically.
+
+**Transparency display** chooses Checkerboard or a configurable solid color, with pink as the initial solid choice. Surround and transparency settings change only the view; exported RGBA pixels remain unchanged.
+
+The Royale Cobalt ribbon uses darker rear tabs with raised right edges. The selected tab comes forward and joins the command surface; clicking it again still collapses the ribbon. Buttons share a shallow raised edge and a continuous ribbon gradient, with separate press, selection, focus and disabled states. The fine divider above the arrow on Paste, Brushes, Stamp and Path identifies their dropdown region. Help stays at the right edge. The ribbon and status bar resize with the window, down to an 800-pixel client width.
 
 ## Sources and implementation scope
 

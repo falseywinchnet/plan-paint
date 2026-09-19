@@ -6,36 +6,38 @@ namespace paint::forms {
 namespace gf = gui_forms;
 void PaintCanvas::on_attached_to_window() {
     RasterCanvas::on_attached_to_window();
-    // A restrained, deterministic fiber tile; screen-space grain never alters artwork.
-    std::vector<std::byte> pixels(128 * 128 * 4);
-    std::uint32_t noise = 0x5241494eU;
-    for (int y = 0; y < 128; ++y) {
-        for (int x = 0; x < 128; ++x) {
-            noise = noise * 1664525U + 1013904223U;
-            int fiber = static_cast<int>((noise >> 24) % 7) - 3;
-            fiber += ((x + 3 * y) % 17 == 0 ? 1 : 0);
-            std::size_t offset = static_cast<std::size_t>(y * 128 + x) * 4;
-            pixels[offset] = static_cast<std::byte>(226 + fiber);
-            pixels[offset + 1] = static_cast<std::byte>(218 + fiber);
-            pixels[offset + 2] = static_cast<std::byte>(208 + fiber);
-            pixels[offset + 3] = std::byte{255};
-        }
+    update_backing();
+}
+void PaintCanvas::update_backing() {
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    const CanvasBacking choice = editor ? (*editor).settings.canvas_backing : CanvasBacking::PaleFelt;
+    if (!attached_window() || (backing_.value && choice == loaded_backing_)) {
+        return;
     }
-    felt_ = (*attached_window()).load_bgra32_premultiplied(128, 128, 512, pixels).image;
-    for (std::size_t offset = 0; offset < pixels.size(); offset += 4) {
-        const int fiber = static_cast<int>(pixels[offset]) - 226;
-        pixels[offset] = static_cast<std::byte>(72 + fiber);
-        pixels[offset + 1] = static_cast<std::byte>(106 + fiber);
-        pixels[offset + 2] = static_cast<std::byte>(46 + fiber);
+    const Image texture = canvas_backing_texture(choice);
+    std::vector<std::byte> pixels(texture.pixels.size() * 4);
+    for (std::size_t index = 0; index < texture.pixels.size(); ++index) {
+        const Color color = texture.pixels[index];
+        pixels[index * 4] = static_cast<std::byte>(color.b);
+        pixels[index * 4 + 1] = static_cast<std::byte>(color.g);
+        pixels[index * 4 + 2] = static_cast<std::byte>(color.r);
+        pixels[index * 4 + 3] = std::byte{255};
     }
-    green_felt_ = (*attached_window()).load_bgra32_premultiplied(128, 128, 512, pixels).image;
+    const gf::ImageLoadResult result =
+        backing_.value
+            ? (*attached_window())
+                  .replace_bgra32_premultiplied(backing_, texture.width, texture.height, texture.width * 4,
+                                                pixels, *this)
+            : (*attached_window())
+                  .load_bgra32_premultiplied(texture.width, texture.height, texture.width * 4, pixels);
+    if (result) {
+        backing_ = result.image;
+        loaded_backing_ = choice;
+    }
 }
 void PaintCanvas::on_detaching_from_window(gf::Window& former_window) noexcept {
-    if (felt_.value) {
-        static_cast<void>(former_window.remove_image(felt_));
-    }
-    if (green_felt_.value) {
-        static_cast<void>(former_window.remove_image(green_felt_));
+    if (backing_.value) {
+        static_cast<void>(former_window.remove_image(backing_));
     }
     if (repeated_.value) {
         static_cast<void>(former_window.remove_image(repeated_));
@@ -46,16 +48,13 @@ void PaintCanvas::on_detaching_from_window(gf::Window& former_window) noexcept {
     repeated_ = {};
     reference_ = {};
     atlas_revision_ = 0;
-    green_felt_ = {};
-    felt_ = {};
+    backing_ = {};
+    loaded_backing_ = CanvasBacking::Count;
     RasterCanvas::on_detaching_from_window(former_window);
 }
 void PaintCanvas::on_dispose() noexcept {
-    if (felt_.value && window()) {
-        static_cast<void>((*window()).remove_image(felt_));
-    }
-    if (green_felt_.value && window()) {
-        static_cast<void>((*window()).remove_image(green_felt_));
+    if (backing_.value && window()) {
+        static_cast<void>((*window()).remove_image(backing_));
     }
     if (window() && repeated_.value) {
         static_cast<void>((*window()).remove_image(repeated_));
@@ -66,16 +65,18 @@ void PaintCanvas::on_dispose() noexcept {
     repeated_ = {};
     reference_ = {};
     atlas_revision_ = 0;
-    green_felt_ = {};
-    felt_ = {};
+    backing_ = {};
+    loaded_backing_ = CanvasBacking::Count;
     RasterCanvas::on_dispose();
 }
 void PaintCanvas::on_paint(gf::Painter& painter, gf::Rect damage) {
     gf::Rect bounds = client_rectangle();
     const std::shared_ptr<Editor> editor = editor_.lock();
-    const gf::ImageId surface = editor && (*editor).settings.green_felt ? green_felt_ : felt_;
-    if (surface.value) {
-        painter.fill_image_pattern(surface, {128, 128}, bounds, {128, 128});
+    update_backing();
+    if (backing_.value) {
+        const double tile = canvas_backing_tile_size(loaded_backing_);
+        const double pixels = loaded_backing_ == CanvasBacking::PaleFelt ? 128 : 512;
+        painter.fill_image_pattern(backing_, {pixels, pixels}, bounds, {tile, tile});
     } else {
         painter.fill_rect(bounds, gf::Color::rgba(208, 218, 226));
     }

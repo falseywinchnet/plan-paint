@@ -1,4 +1,5 @@
 #pragma once
+#include "canvas_backing.hpp"
 #include "image.hpp"
 struct SDL_Window;
 #include <array>
@@ -13,7 +14,8 @@ struct RecentFiles {
 struct EditorSettings {
     std::string storage_path;
     double scroll_distance = 6;
-    bool green_felt = false, solid_transparency = false;
+    CanvasBacking canvas_backing = CanvasBacking::PaleFelt;
+    bool solid_transparency = false;
     Color transparency_color{255, 128, 192, 255};
     void load();
     void save() const;

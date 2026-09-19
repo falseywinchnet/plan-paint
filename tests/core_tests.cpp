@@ -1076,6 +1076,60 @@ void test_codecs() {
                 "import-only format remained writable");
     }
 }
+void test_canvas_backing_settings() {
+    const paint::Image original = paint::canvas_backing_texture(paint::CanvasBacking::PaleFelt);
+    std::uint64_t checksum = 14695981039346656037ULL;
+    for (const paint::Color color : original.pixels) {
+        for (const std::uint8_t value : {color.r, color.g, color.b, color.a}) {
+            checksum = (checksum ^ value) * 1099511628211ULL;
+        }
+    }
+    require(original.width == 128 && original.height == 128 && checksum == 0xfa489442779bc35eULL,
+            "the original grey-blue felt remains byte-identical");
+    for (int index = 1; index < paint::canvas_backing_count; ++index) {
+        const paint::Image texture = paint::canvas_backing_texture(static_cast<paint::CanvasBacking>(index));
+        require(texture.width == 512 && texture.height == 512, "new backing has two samples per UI pixel");
+        for (const paint::Color color : texture.pixels) {
+            require(color.a == 255, "a surround cannot introduce transparent holes");
+        }
+    }
+    const std::filesystem::path path = std::filesystem::temp_directory_path() / "rainstar-backing-test.txt";
+    for (int index = 0; index < paint::canvas_backing_count; ++index) {
+        paint::EditorSettings settings;
+        settings.storage_path = path.string();
+        settings.scroll_distance = 2.5;
+        settings.canvas_backing = static_cast<paint::CanvasBacking>(index);
+        settings.solid_transparency = true;
+        settings.transparency_color = {235, 131, 190, 255};
+        settings.save();
+        paint::EditorSettings loaded;
+        loaded.storage_path = settings.storage_path;
+        loaded.load();
+        require(loaded.canvas_backing == settings.canvas_backing && loaded.scroll_distance == 2.5 &&
+                    loaded.solid_transparency &&
+                    paint::equal(loaded.transparency_color, settings.transparency_color),
+                "every backing survives a preference round trip with scroll and transparency settings");
+    }
+    const std::string legacy[] = {"RSPS1\n3.5\n", "RSPS2\n3.5\n1\n", "RSPS3\n3.5\n1\n1\n#ED82C1\n",
+                                  "RSPS4\n3.5\n999\n0\n#FFFFFF\n"};
+    for (int index = 0; index < 4; ++index) {
+        const std::vector<std::uint8_t> bytes(legacy[index].begin(), legacy[index].end());
+        paint::write_file_atomic(bytes, path.string(), "settings migration fixture");
+        paint::EditorSettings loaded;
+        loaded.storage_path = path.string();
+        loaded.load();
+        require(loaded.canvas_backing == (index == 1 || index == 2 ? paint::CanvasBacking::MossFelt
+                                                                   : paint::CanvasBacking::PaleFelt) &&
+                    loaded.scroll_distance == 3.5,
+                "old felt preferences migrate and unknown backing values fall back safely");
+        if (index == 2) {
+            require(loaded.solid_transparency &&
+                        paint::equal(loaded.transparency_color, {237, 130, 193, 255}),
+                    "legacy settings retain their transparency display");
+        }
+    }
+    std::filesystem::remove(path);
+}
 void test_file_security() {
     const std::filesystem::path directory =
         std::filesystem::temp_directory_path() / "rainstar-file-security-tests";
@@ -1201,6 +1255,7 @@ int main() {
         test_guides_masks_and_path_swap();
         test_text_treatments();
         test_codecs();
+        test_canvas_backing_settings();
         test_file_security();
         std::cout << "Color, CONV, editing, codecs and file-security tests passed.\n";
         return 0;

@@ -162,7 +162,9 @@ void ColorPlane::on_pointer(gf::PointerEvent& event) {
 }
 EditorDialog::EditorDialog(gf::StableId id, std::weak_ptr<Editor> editor, EditorDialogKind kind,
                            bool secondary)
-    : Control(std::move(id)), editor_(std::move(editor)), kind_(kind), secondary_(secondary) {}
+    : Control(std::move(id)), editor_(std::move(editor)), kind_(kind), secondary_(secondary) {
+    set_theme_override(ribbon_theme());
+}
 void EditorDialog::put(gf::Control::Ptr control, gf::Rect bounds) {
     (*control).set_requested_bounds(bounds);
     controls_.push_back(control);
@@ -215,7 +217,7 @@ void EditorDialog::initialize_control_tree() {
                 gf::StableId("dialog-custom-" + std::to_string(i)), "",
                 i == 29 ? Color{255, 255, 255, 0}
                         : (*editor).custom_colors.colors[static_cast<std::size_t>(i)]);
-            (*swatch).set_theme_override(ribbon_theme());
+            (*swatch).set_theme_override(gallery_theme());
             (*swatch).set_accessible_name(i == 29 ? "Transparency" : "Custom color " + std::to_string(i + 1));
             subscriptions_.push_back((*swatch).clicked().subscribe(
                 *this, gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::clicked>(*this)));
@@ -278,9 +280,10 @@ void EditorDialog::initialize_control_tree() {
         label("settings-scroll-hint", "Default: 6. Smaller values move the canvas less.", {24, 129, 440, 26});
         label("settings-background-label", "Canvas surround", {24, 178, 220, 28});
         background_ = gf::make_control<gf::ComboBox>(gf::StableId("settings-background"));
-        (*background_).add_item("Original pale felt");
-        (*background_).add_item("Soft pool-table green felt");
-        (*background_).set_selected_index((*editor).settings.green_felt ? 1 : 0);
+        for (int index = 0; index < canvas_backing_count; ++index) {
+            (*background_).add_item(canvas_backing_name(static_cast<CanvasBacking>(index)));
+        }
+        (*background_).set_selected_index(static_cast<std::size_t>((*editor).settings.canvas_backing));
         put(background_, {230, 178, 230, 30});
         label("settings-alpha-label", "Transparency display", {24, 226, 200, 28});
         alpha_background_ = gf::make_control<gf::ComboBox>(gf::StableId("settings-alpha-background"));
@@ -816,7 +819,7 @@ void EditorDialog::accept() {
         } else if (kind_ == EditorDialogKind::settings) {
             EditorSettings settings = (*editor).settings;
             settings.scroll_distance = (*atlas_numbers_[0]).value();
-            settings.green_felt = (*background_).selected_index().value_or(0) == 1;
+            settings.canvas_backing = static_cast<CanvasBacking>((*background_).selected_index().value_or(0));
             settings.solid_transparency = (*alpha_background_).selected_index().value_or(0) == 1;
             if (!from_hex(std::string((*alpha_background_color_).text()), settings.transparency_color)) {
                 throw std::runtime_error("Enter the transparency color as hex, such as #FF80C0.");

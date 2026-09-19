@@ -1,5 +1,6 @@
 #include "codecs.hpp"
 #include "forms/editor.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <functional>
 #include <gui_forms/timer.hpp>
@@ -13,7 +14,8 @@ namespace gf = gui_forms;
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
-         materials = false;
+         materials = false, interface_review = false;
+    int backing = 0;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
     gf::SubscriptionToken resize_tick;
@@ -207,6 +209,33 @@ struct NativeExercise {
         paint::save_image(document.visible_image(), (root / "astra/material-review.png").string());
         entered = true;
     }
+    void interface_gallery(gf::Window& window) {
+        (*editor).settings.storage_path.clear();
+        (*editor).settings.canvas_backing = static_cast<paint::CanvasBacking>(backing);
+        paint::Document& document = (*editor).document;
+        document.new_image(640, 360);
+        document.image.reset(640, 360, {252, 250, 245, 255});
+        paint::TextStyle label;
+        label.size = 32;
+        paint::draw_text(document.image, {35, 25}, "Rainstar Paint", label, {35, 70, 104, 255}, {}, "");
+        const paint::Brush brushes[] = {paint::Brush::Round, paint::Brush::Pastel, paint::Brush::Crayon};
+        for (int index = 0; index < 3; ++index) {
+            paint::Ink ink;
+            ink.size = 35;
+            ink.primary = index == 0   ? paint::Color{45, 116, 149, 255}
+                          : index == 1 ? paint::Color{166, 100, 63, 255}
+                                       : paint::Color{88, 128, 95, 255};
+            ink.brush = brushes[index];
+            paint::DynamicBrushStroke stroke;
+            stroke.segment(document.image, {50, 125.0 + index * 75}, {585, 105.0 + index * 75}, ink, false);
+        }
+        (*editor).choose_tool(paint::Tool::Pencil);
+        (*editor).refresh();
+        window.perform_layout();
+        const gf::Rect area = (*editor).canvas().client_rectangle();
+        (*editor).canvas().set_view(1, {-(area.width - 640) / 2, -(area.height - 360) / 2});
+        entered = true;
+    }
     bool entered = false;
     void stroke(gf::Window& window, paint::Point first, paint::Point last) {
         gf::RasterCanvas& canvas = (*editor).canvas();
@@ -234,6 +263,10 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (interface_review) {
+            interface_gallery(window);
+            return;
+        }
         if (materials) {
             material_gallery(window);
             return;
@@ -319,7 +352,13 @@ int main(int argc, char** argv) {
         exercise.keep_open = argc > 1;
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
                                          std::string(argv[1]) == "--features-compact");
-        exercise.compact = argc > 1 && std::string(argv[1]) == "--features-compact";
+        exercise.interface_review = argc > 1 && (std::string(argv[1]) == "--interface" ||
+                                                 std::string(argv[1]) == "--interface-compact");
+        exercise.compact = argc > 1 && (std::string(argv[1]) == "--features-compact" ||
+                                        std::string(argv[1]) == "--interface-compact");
+        if (exercise.interface_review && argc > 2) {
+            exercise.backing = std::clamp(std::stoi(argv[2]), 0, paint::canvas_backing_count - 1);
+        }
         exercise.materials = argc > 1 && std::string(argv[1]) == "--materials";
         exercise.bugs = argc > 1 && std::string(argv[1]) == "--bugs";
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";

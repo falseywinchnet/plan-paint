@@ -48,7 +48,7 @@ void paint_separator(gf::Painter& painter, double x) {
     painter.fill_linear_gradient({x, 32, 1, 106}, {x, 32}, {x, 138}, shade);
     painter.fill_linear_gradient({x + 1, 32, 1, 106}, {x, 32}, {x, 138}, light);
 }
-gf::SurfaceMaterial ribbon_material(bool selected, bool hot, bool pressed) {
+gf::SurfaceMaterial gallery_material(bool selected, bool hot, bool pressed) {
     gf::SurfaceMaterial material;
     material.fills = {gf::MaterialFillLayer::solid(gf::Color::rgba(0, 0, 0, 0))};
     if (selected || hot || pressed) {
@@ -72,7 +72,7 @@ gf::SurfaceMaterial ribbon_material(bool selected, bool hot, bool pressed) {
 Color ribbon_color(int index) {
     return office_color(std::clamp(index, 0, 29));
 }
-static std::shared_ptr<const gf::Theme> make_ribbon_theme() {
+static std::shared_ptr<const gf::Theme> make_gallery_theme() {
     gf::ThemeDefinition definition = gf::windows_professional_theme_definition();
     definition.id = "rainstar-classic-ribbon";
     definition.structure.typography.control = {gf::FontRole::control, 14, 400, false, 0};
@@ -83,40 +83,158 @@ static std::shared_ptr<const gf::Theme> make_ribbon_theme() {
         for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
             bool hot = state == static_cast<std::size_t>(gf::ControlSurfaceState::hot);
             bool pressed = state == static_cast<std::size_t>(gf::ControlSurfaceState::pressed);
-            recipes.ordinary[state].material = ribbon_material(false, hot, pressed);
-            recipes.selected[state].material = ribbon_material(true, hot, pressed);
+            recipes.ordinary[state].material = gallery_material(false, hot, pressed);
+            recipes.selected[state].material = gallery_material(true, hot, pressed);
             recipes.ordinary[state].pressed_content_offset = {};
             recipes.selected[state].pressed_content_offset = {};
         }
     }
     return gf::Theme::create(std::move(definition));
 }
-std::shared_ptr<const gf::Theme> ribbon_theme() {
-    static const std::shared_ptr<const gf::Theme> theme = make_ribbon_theme();
+std::shared_ptr<const gf::Theme> gallery_theme() {
+    static const std::shared_ptr<const gf::Theme> theme = make_gallery_theme();
     return theme;
 }
-static std::shared_ptr<const gf::Theme> make_ribbon_tab_theme() {
-    gf::ThemeDefinition tab = (*ribbon_theme()).definition();
-    tab.id = "rainstar-home-tab";
-    for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
-        gf::SurfaceMaterial& material =
-            tab.roles[static_cast<std::size_t>(gf::ControlVisualRole::button)].selected[state].material;
-        material.fills = {gf::MaterialFillLayer::linear(
-            {0, 0}, {0, 1}, {{0, gf::Color::rgba(255, 255, 255)}, {1, gf::Color::rgba(249, 252, 255)}})};
-        material.keylines.clear();
-        material.keylines.push_back({gf::MaterialEdge::top, gf::Color::rgba(255, 255, 255), 1, 1});
-        material.keylines.push_back({gf::MaterialEdge::bottom, gf::Color::rgba(249, 252, 255), 1, 0});
-        material.border = gf::MaterialBorder{gf::Color::rgba(178, 198, 219), 1};
-        material.corner_radius = 2;
+namespace {
+gf::SurfaceMaterial action_material(bool selected, gf::ControlSurfaceState state) {
+    const bool disabled = state == gf::ControlSurfaceState::disabled;
+    const bool pressed = state == gf::ControlSurfaceState::pressed;
+    const bool hot = state == gf::ControlSurfaceState::hot;
+    gf::SurfaceMaterial material;
+    material.corner_radius = 3;
+    material.fills = {gf::MaterialFillLayer::solid(disabled   ? gf::Color::rgba(178, 198, 226, 45)
+                                                   : pressed  ? gf::Color::rgba(49, 95, 152, 32)
+                                                   : selected ? gf::Color::rgba(65, 124, 204, 41)
+                                                   : hot      ? gf::Color::rgba(244, 250, 255, 69)
+                                                              : gf::Color::rgba(255, 255, 255, 18))};
+    material.border = gf::MaterialBorder{disabled ? gf::Color::rgba(143, 166, 196, 100)
+                                         : hot    ? gf::Color::rgba(53, 94, 150)
+                                                  : gf::Color::rgba(99, 132, 178),
+                                         1};
+    const gf::Color upper = disabled              ? gf::Color::rgba(255, 255, 255, 100)
+                            : pressed || selected ? gf::Color::rgba(44, 86, 132, 90)
+                                                  : gf::Color::rgba(255, 255, 255, hot ? 255 : 207);
+    const gf::Color lower =
+        pressed || selected ? gf::Color::rgba(255, 255, 255, 136) : gf::Color::rgba(61, 96, 138, 85);
+    material.keylines.push_back({gf::MaterialEdge::top, upper, 1, 1});
+    if (!disabled) {
+        material.keylines.push_back({gf::MaterialEdge::left, upper, 1, 1});
+        material.keylines.push_back({gf::MaterialEdge::right, lower, 1, 1});
+        material.keylines.push_back({gf::MaterialEdge::bottom, lower, 1, 1});
+        if (selected) {
+            material.keylines.push_back({gf::MaterialEdge::bottom, gf::Color::rgba(32, 93, 167), 2, 2});
+        } else if (!pressed) {
+            material.shadows.push_back({{0, 1}, 0, 0, gf::Color::rgba(41, 75, 119, 58), false});
+        }
     }
-    return gf::Theme::create(std::move(tab));
+    return material;
 }
-static std::shared_ptr<const gf::Theme> ribbon_tab_theme() {
-    static const std::shared_ptr<const gf::Theme> theme = make_ribbon_tab_theme();
+std::shared_ptr<const gf::Theme> make_cobalt_theme() {
+    gf::ThemeDefinition definition = gf::windows_professional_theme_definition();
+    definition.id = "rainstar-royale-cobalt";
+    definition.structure.typography.control = {gf::FontRole::control, 14, 400, false, 0};
+    definition.structure.typography.field = {gf::FontRole::content, 14, 400, false};
+    definition.compatibility.border = gf::Color::rgba(99, 132, 178);
+    definition.compatibility.text = gf::Color::rgba(21, 55, 101);
+    definition.compatibility.disabled_text = gf::Color::rgba(98, 121, 151);
+    for (gf::ControlVisualRole role : {gf::ControlVisualRole::button, gf::ControlVisualRole::command_button,
+                                       gf::ControlVisualRole::accent_button}) {
+        gf::ControlRoleRecipes& recipes = definition.roles[static_cast<std::size_t>(role)];
+        for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
+            const gf::ControlSurfaceState surface = static_cast<gf::ControlSurfaceState>(state);
+            for (int selected = 0; selected < 2; ++selected) {
+                gf::ControlVisualRecipe& recipe =
+                    selected ? recipes.selected[state] : recipes.ordinary[state];
+                recipe.material = action_material(selected != 0, surface);
+                recipe.text = surface == gf::ControlSurfaceState::disabled ? gf::Color::rgba(98, 121, 151)
+                                                                           : gf::Color::rgba(21, 55, 101);
+                recipe.glyph = recipe.text;
+                recipe.focus_ring = gf::Color::rgba(20, 60, 116);
+                recipe.default_ring = gf::Color::rgba(33, 75, 129);
+                recipe.default_width = 1;
+                recipe.pressed_content_offset = {1, 1};
+            }
+        }
+    }
+    return gf::Theme::create(std::move(definition));
+}
+std::shared_ptr<const gf::Theme> make_tab_theme() {
+    gf::ThemeDefinition definition = (*ribbon_theme()).definition();
+    definition.id = "rainstar-cobalt-tab-stack";
+    gf::ControlRoleRecipes& recipes =
+        definition.roles[static_cast<std::size_t>(gf::ControlVisualRole::button)];
+    for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
+        for (int selected = 0; selected < 2; ++selected) {
+            gf::ControlVisualRecipe& recipe = selected ? recipes.selected[state] : recipes.ordinary[state];
+            const bool disabled = state == static_cast<std::size_t>(gf::ControlSurfaceState::disabled);
+            const bool hot = state == static_cast<std::size_t>(gf::ControlSurfaceState::hot);
+            gf::SurfaceMaterial material;
+            material.corner_radius = 4;
+            const gf::Color face = selected ? gf::Color::rgba(232, 242, 255)
+                                   : hot    ? gf::Color::rgba(172, 198, 231)
+                                            : gf::Color::rgba(155, 182, 218);
+            material.fills = {
+                gf::MaterialFillLayer::solid(face),
+                gf::MaterialFillLayer::linear(
+                    {0, 0}, {0, 1},
+                    {{0, selected ? gf::Color::rgba(255, 255, 255, 145) : gf::Color::rgba(34, 70, 116, 39)},
+                     {0.72, gf::Color::rgba(0, 0, 0, 0)},
+                     {1, gf::Color::rgba(0, 0, 0, 0)}})};
+            material.keylines = {
+                {gf::MaterialEdge::top, gf::Color::rgba(255, 255, 255, selected ? 255 : 125), 1, 0},
+                {gf::MaterialEdge::right, gf::Color::rgba(209, 224, 245), 1, 1},
+                {gf::MaterialEdge::right, gf::Color::rgba(73, 108, 159), 1, 0}};
+            material.shadows = {{{2, 0}, 0, 0, gf::Color::rgba(73, 108, 159), false},
+                                {{3, 1}, 2, 0, gf::Color::rgba(24, 56, 97, 55), false}};
+            recipe.material = material;
+            recipe.text = disabled   ? gf::Color::rgba(93, 116, 148)
+                          : selected ? gf::Color::rgba(23, 63, 121)
+                                     : gf::Color::rgba(35, 63, 102);
+            recipe.pressed_content_offset = {};
+        }
+    }
+    return gf::Theme::create(std::move(definition));
+}
+std::shared_ptr<const gf::Theme> ribbon_tab_theme() {
+    static const std::shared_ptr<const gf::Theme> theme = make_tab_theme();
+    return theme;
+}
+class RibbonTabButton final : public gf::Button {
+  public:
+    RibbonTabButton(gf::StableId id, std::string text) : Button(std::move(id), std::move(text)) {}
+    void on_paint(gf::Painter& painter, gf::Rect damage) override {
+        Button::on_paint(painter, damage);
+        // Continue the selected sheet into the ribbon; no enclosed bottom edge.
+        if (selected() && !visual_context().high_contrast) {
+            const gf::Rect bounds = client_rectangle();
+            painter.fill_rect({0, bounds.height - 3, bounds.width, 3}, gf::Color::rgba(232, 242, 255));
+        }
+    }
+};
+class DisclosureDivider final : public gf::Control {
+  public:
+    explicit DisclosureDivider(gf::StableId id) : Control(std::move(id)) {
+        set_hit_test_transparent(true);
+        set_dock(gf::DockStyle::bottom);
+        set_requested_bounds({0, 0, 0, 14});
+    }
+    void on_paint(gf::Painter& painter, gf::Rect) override {
+        const double right = std::max(3.0, client_rectangle().width - 3);
+        painter.draw_line({3, 0.5}, {right, 0.5}, gf::Color::rgba(99, 132, 178), 1);
+        painter.draw_line({3, 1.5}, {right, 1.5}, gf::Color::rgba(255, 255, 255, 155), 1);
+    }
+};
+} // namespace
+std::shared_ptr<const gf::Theme> ribbon_theme() {
+    static const std::shared_ptr<const gf::Theme> theme = make_cobalt_theme();
     return theme;
 }
 SwatchButton::SwatchButton(gf::StableId id, std::string text, Color color)
-    : Button(std::move(id), std::move(text)), color_(color) {}
+    : Button(std::move(id), std::move(text)), color_(color) {
+    if ((*this).text().empty()) {
+        set_theme_override(gallery_theme());
+    }
+}
 void SwatchButton::set_color(Color color) {
     color_ = color;
     invalidate(gf::Dirty::paint);
@@ -174,6 +292,10 @@ void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
         text().empty() ? std::min(3.0, bounds.width * 0.12) : std::min(9.0, bounds.width * 0.16);
     gf::Rect swatch = text().empty() ? gf::Rect{inset, 3, bounds.width - inset * 2, bounds.height - 6}
                                      : gf::Rect{inset, 7, bounds.width - inset * 2, 30};
+    if (pressed_visual() && !text().empty()) {
+        swatch.x += 1;
+        swatch.y += 1;
+    }
     if (color_.a == 0 ||
         (material_ink_ && (*material_ink_).pattern == Pattern::None && !(*material_ink_).alternate)) {
         painter.fill_rect(swatch, gf::Color::rgba(255, 255, 255));
@@ -197,6 +319,10 @@ class ShapeSwitchButton final : public gf::Button {
     ShapeSwitchButton(gf::StableId id, bool fill) : Button(std::move(id), ""), fill_(fill) {}
     void on_paint(gf::Painter& painter, gf::Rect damage) override {
         Button::on_paint(painter, damage);
+        painter.save();
+        if (pressed_visual()) {
+            painter.translate({1, 1});
+        }
         const gf::Rect bounds = client_rectangle();
         const double side = std::min(13.0, bounds.width * 0.28);
         const gf::Rect sample{3, (bounds.height - side) / 2, side, side};
@@ -211,6 +337,7 @@ class ShapeSwitchButton final : public gf::Button {
             {side + 6, bounds.height / 2 + 3.5}, fill_ ? "Fill" : "Edge",
             {gf::FontRole::control, std::clamp(bounds.width * 0.23, 8.5, 11.0), 500, false},
             gf::Color::rgba(34, 52, 72));
+        painter.restore();
     }
 
   private:
@@ -221,6 +348,10 @@ class GuideButton final : public gf::Button {
     GuideButton(gf::StableId id, std::string text) : Button(std::move(id), std::move(text)) {}
     void on_paint(gf::Painter& painter, gf::Rect damage) override {
         Button::on_paint(painter, damage);
+        painter.save();
+        if (pressed_visual()) {
+            painter.translate({1, 1});
+        }
         const double size = std::min(30.0, committed_arranged_bounds().width - 10),
                      left = (committed_arranged_bounds().width - size) * 0.5;
         const gf::Color color = gf::Color::rgba(38, 95, 140);
@@ -237,6 +368,7 @@ class GuideButton final : public gf::Button {
             const double y = 13 + size * tick / 5;
             painter.draw_line({left, y}, {left + 3, y}, color, 1);
         }
+        painter.restore();
     }
 };
 } // namespace
@@ -252,6 +384,7 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
             gf::StableId(id), text, split ? gf::DropDownButtonMode::split : gf::DropDownButtonMode::menu);
         if (tall) {
             (*dropdown).set_drop_down_edge(gf::DropDownButtonEdge::bottom);
+            (*dropdown).add_child(gf::make_control<DisclosureDivider>(gf::StableId(id + "-divider")));
         }
         (*dropdown).set_drop_down_width(tall ? 14 : 16);
         subscriptions_.push_back((*dropdown).drop_down_requested().subscribe(
@@ -259,6 +392,8 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
         subscriptions_.push_back((*dropdown).drop_down_close_requested().subscribe(
             *this, gf::Delegate<gf::DropDownButton&>::bind<Ribbon, &Ribbon::dropdown>(*this)));
         result = dropdown;
+    } else if (id.ends_with("-tab")) {
+        result = gf::make_control<RibbonTabButton>(gf::StableId(id), text);
     } else if (id == "edge-switch" || id == "fill-switch") {
         result = gf::make_control<ShapeSwitchButton>(gf::StableId(id), id == "fill-switch");
     } else if (id == "tool-11") {
@@ -268,6 +403,9 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
     }
     if (id.ends_with("-tab")) {
         (*result).set_theme_override(ribbon_tab_theme());
+    } else if (id.starts_with("shape-") || id.starts_with("r-pattern-") ||
+               id.starts_with("material-brush-") || id.starts_with("stamp-shape-")) {
+        (*result).set_theme_override(gallery_theme());
     }
     (*result).set_requested_bounds(bounds);
     (*result).set_accessible_name(text.empty() ? id : text);
@@ -279,8 +417,9 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
                                            : gf::TextImageRelation::image_before_text);
     (*result).set_image_gap(id == "paste" ? 1 : 4);
     (*result).set_text_line_spacing(1.1);
-    (*result).set_text_alignment(tall || text.empty() ? gf::ContentAlignment::middle_center
-                                                      : gf::ContentAlignment::middle_left);
+    (*result).set_text_alignment(tall || text.empty() || id.ends_with("-tab") || id == "help"
+                                     ? gf::ContentAlignment::middle_center
+                                     : gf::ContentAlignment::middle_left);
     (*result).set_image_alignment(tall || text.empty() ? gf::ContentAlignment::middle_center
                                                        : gf::ContentAlignment::middle_left);
     if (icon >= 0) {
@@ -361,12 +500,18 @@ void Ribbon::initialize_control_tree() {
     button("edit-colors", "Edit\ncolors", 24, {1132, 34, 52, 83}, true);
     button("palette-pane", "Basic", -1, {921, 110, 200, 22});
     add_options();
+    // Tab order describes the authored interface, independently of visual overlap.
+    for (std::size_t index = 0; index < children().size(); ++index) {
+        (*children()[index]).set_tab_index(static_cast<std::uint32_t>(index));
+    }
     show_page();
 }
 namespace {
 class PatternButton final : public gf::Button {
   public:
-    PatternButton(gf::StableId id, int pattern) : Button(std::move(id)), pattern_(pattern) {}
+    PatternButton(gf::StableId id, int pattern) : Button(std::move(id)), pattern_(pattern) {
+        set_theme_override(gallery_theme());
+    }
     void on_paint(gf::Painter& painter, gf::Rect damage) override {
         Button::on_paint(painter, damage);
         Ink ink;
@@ -934,6 +1079,8 @@ void Ribbon::on_attached_to_window() {
             name = tool_names[std::stoi(id.substr(5))];
         } else if (id.starts_with("shape-")) {
             name = shape_names[std::stoi(id.substr(6))];
+        } else if (id == "help") {
+            name = "Paint Help (F1)";
         } else if (id == "undo") {
             name = "Undo (Ctrl/Command+Z)";
         } else if (id == "redo") {
@@ -1050,8 +1197,13 @@ void Ribbon::arrange(gf::Rect bounds) {
         gf::Button& control = *buttons_[i];
         const std::string id(control.stable_id().value());
         if (id == "help") {
-            rectangle.width = std::max(24.0, rectangle.width);
-            rectangle.x = bounds.width - rectangle.width - 4;
+            rectangle.width = 30;
+            rectangle.x = bounds.width - rectangle.width;
+        }
+        if (id.ends_with("-tab")) {
+            rectangle.y = control.selected() ? 0 : 4;
+            rectangle.height = control.selected() && !collapsed_ ? 29 : control.selected() ? 27 : 23;
+            rectangle.width += 3;
         }
         if (!control.image_key().empty() && !id.starts_with("material-brush-") &&
             !id.starts_with("r-pattern-")) {
@@ -1074,8 +1226,9 @@ void Ribbon::arrange(gf::Rect bounds) {
             }
         }
         (*buttons_[i])
-            .set_font(
-                {gf::FontRole::control, std::clamp(14 * horizontal_scale, 10.0, 15.0), 400, false, 0.05});
+            .set_font({gf::FontRole::control, std::clamp(14 * horizontal_scale, 10.0, 15.0),
+                       static_cast<std::uint16_t>(id.ends_with("-tab") && control.selected() ? 700 : 400),
+                       false, 0.05});
         set_child_layout(buttons_[i], rectangle);
     }
     for (const std::shared_ptr<gf::Control>& control : option_controls_) {
@@ -1127,18 +1280,18 @@ void Ribbon::arrange(gf::Rect bounds) {
 }
 void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     double width = committed_arranged_bounds().width;
-    const gf::GradientStop tabs[] = {{0, gf::Color::rgba(241, 247, 253)},
-                                     {1, gf::Color::rgba(224, 235, 248)}};
+    const gf::GradientStop tabs[] = {{0, gf::Color::rgba(155, 181, 216)},
+                                     {1, gf::Color::rgba(155, 181, 216)}};
     painter.fill_linear_gradient({0, 0, width, 27}, {0, 0}, {0, 27}, tabs);
     if (collapsed_) {
         painter.draw_line({0, 26}, {width, 26}, gf::Color::rgba(145, 172, 202), 1);
         return;
     }
     // Broadly spaced stops keep the body continuous behind every tool group.
-    const gf::GradientStop stops[] = {{0, gf::Color::rgba(249, 252, 255)},
-                                      {0.28, gf::Color::rgba(241, 247, 253)},
-                                      {0.62, gf::Color::rgba(226, 237, 249)},
-                                      {1, gf::Color::rgba(208, 226, 245)}};
+    const gf::GradientStop stops[] = {{0, gf::Color::rgba(232, 242, 255)},
+                                      {0.28, gf::Color::rgba(202, 222, 251)},
+                                      {0.62, gf::Color::rgba(165, 196, 241)},
+                                      {1, gf::Color::rgba(118, 159, 223)}};
     painter.fill_linear_gradient({0, 27, width, 116}, {0, 27}, {0, 143}, stops);
     painter.draw_line({0, 27}, {width, 27}, gf::Color::rgba(171, 192, 216), 1);
     painter.draw_line({0, 28}, {width, 28}, gf::Color::rgba(255, 255, 255, 225), 1);
@@ -1336,6 +1489,18 @@ void Ribbon::synchronize() {
             control.set_enabled(!secondary_color_ || document.alt_enabled());
         }
         control.set_selected(selected);
+    }
+    if (ordered_tab_page_ != page_) {
+        // Backmost first, foreground last: paint and hit testing share this order.
+        for (int index = 4; index >= 0; --index) {
+            (*buttons_[static_cast<std::size_t>(index)]).bring_to_front();
+        }
+        for (std::size_t index = 0; index < 5; ++index) {
+            if ((*buttons_[index]).selected()) {
+                (*buttons_[index]).bring_to_front();
+            }
+        }
+        ordered_tab_page_ = page_;
     }
     synchronizing_ = true;
     const Ink& material = secondary_color_ ? document.alt_ink : document.ink;
@@ -1620,7 +1785,7 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
     Document& document = (*editor).document;
     std::string id(button.stable_id().value());
     std::shared_ptr<gf::Panel> panel = gf::make_control<gf::Panel>(gf::StableId("ribbon-popup-content"));
-    (*panel).set_theme_override(ribbon_theme());
+    (*panel).set_theme_override(gallery_theme());
     gf::SurfaceMaterial material;
     material.fills = {gf::MaterialFillLayer::solid(gf::Color::rgba(250, 252, 255))};
     material.border = gf::MaterialBorder{gf::Color::rgba(141, 164, 190), 1};

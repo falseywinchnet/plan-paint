@@ -7,7 +7,8 @@ struct HelpTopic {
 };
 inline constexpr std::string_view help_welcome =
     "Hello! A picture can begin with one little mark. This guide shows you where to "
-    "click and how to try again. Close this book with the × at its upper left, or click the yellow ? button. "
+    "click and how to try again. Close this book with the × at its upper left, or click the ? button at the "
+    "right edge of the ribbon. "
     "F1 also hides or shows it.";
 inline constexpr HelpTopic help_topics[] = {
     {"Atlas: sprite sheets, icons and cursors",
@@ -35,7 +36,8 @@ inline constexpr HelpTopic help_topics[] = {
      "Click the selected ribbon tab to collapse it; click again or choose another tab to reopen. "
      "Wheel and trackpad scrolling stop when the viewport center reaches a canvas edge. "
      "File > Settings saves a scroll-distance multiplier in screen pixels, adjusted for zoom, and "
-     "offers green felt behind the canvas alongside the default surface. Transparency display can use a "
+     "offers moss green, brown and tan felt plus slate, clay and ivory matte-painted surrounds. "
+     "The original grey-blue surface remains the default. Transparency display can use a "
      "checkerboard or a chosen solid color without changing exported pixels.",
      true},
     {"2. Colors, brushes and patterns",

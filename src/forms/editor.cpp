@@ -94,7 +94,9 @@ void PaintCanvas::on_paint_overlay(gf::Painter& painter, gf::Rect damage) {
         (*editor).paint_canvas_overlay(painter, damage);
     }
 }
-Editor::Editor(gf::StableId id) : Control(std::move(id)) {}
+Editor::Editor(gf::StableId id) : Control(std::move(id)) {
+    set_theme_override(ribbon_theme());
+}
 void Editor::initialize_control_tree() {
     set_allow_drop(true);
     initialize_warp();
@@ -122,7 +124,7 @@ void Editor::initialize_control_tree() {
     for (std::size_t state = 0; state < gf::control_surface_state_count; ++state) {
         gf::SurfaceMaterial surface;
         surface.fills = {gf::MaterialFillLayer::linear(
-            {0, 0}, {0, 1}, {{0, gf::Color::rgba(70, 139, 210)}, {1, gf::Color::rgba(38, 105, 177)}})};
+            {0, 0}, {0, 1}, {{0, gf::Color::rgba(82, 139, 224)}, {1, gf::Color::rgba(23, 63, 136)}})};
         file_theme.roles[static_cast<std::size_t>(gf::ControlVisualRole::panel)].ordinary[state].material =
             surface;
         gf::ControlRoleRecipes& item =
