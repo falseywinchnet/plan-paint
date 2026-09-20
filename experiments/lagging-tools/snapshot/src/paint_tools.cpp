@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <numbers>
 namespace paint {
 namespace {
@@ -192,48 +193,217 @@ const char* mix_effect_name(MixEffect effect) {
                                                    "Smudge"};
     return names.at(static_cast<std::size_t>(effect));
 }
-void CarpetStroke::clear() {
-    std::unordered_map<int, Deposit> released;
-    deposits_.swap(released);
-}
-void CarpetStroke::segment(Image& image, Point a, Point b, double diameter, const Image& tile, double opacity,
-                           bool wrap) {
-    if (tile.pixels.empty() || image.pixels.empty()) {
-        return;
-    }
-    const double radius = std::max(.5, diameter * .5);
-    const int left = static_cast<int>(std::floor(std::min(a.x, b.x) - radius - 1));
-    const int right = static_cast<int>(std::ceil(std::max(a.x, b.x) + radius + 1));
-    const int top = static_cast<int>(std::floor(std::min(a.y, b.y) - radius - 1));
-    const int bottom = static_cast<int>(std::ceil(std::max(a.y, b.y) + radius + 1));
-    const double dx = b.x - a.x, dy = b.y - a.y, length = dx * dx + dy * dy;
-    for (int y = top; y <= bottom; ++y) {
-        for (int x = left; x <= right; ++x) {
-            if (!wrap && (x < 0 || y < 0 || x >= image.width || y >= image.height)) {
-                continue;
+void StrokeStateTracker::reset(Point point, double noise_pixels, double momentum) {
+    anchor_ = filtered_ = point;
+    last_time_ = cell_time_ = 0;
+    noise_pixels = std::isfinite(noise_pixels) ? std::clamp(noise_pixels, 0.1, 20.0) : 1.5;
+    variance_ = noise_pixels * noise_pixels;
+    momentum_ = std::isfinite(momentum) ? std::clamp(momentum, 0.0, 100.0) : 0;
+    // Preserve the broad constant-velocity prior, but reduce the local current's
+    // variance and process noise together. Established motion keeps its momentum;
+    // isolated deviations have less authority to bend it. Zero preserves the
+    // original tracker exactly. This changes the prior, not just the output gain.
+    const double local_variance = 40000 * std::exp(-0.10 * momentum_);
+    // Paper's midpoint-cell Matérn-3/2 realization, retuned from metres/seconds
+    // to pointer pixels/seconds. Fixed 240 Hz cells extend for the whole stroke.
+    // No history, dense oracle, or finite-horizon transition table is retained.
+    constexpr double h = 1.0 / 240;
+    constexpr double lengths[5] = {0.03, 0.07, 0.15, 0.3, 0.6};
+    constexpr double velocity_variance = 40000;
+    for (int k = 0; k < 5; ++k) {
+        Branch& branch = branches_[k];
+        branch = {};
+        const double a = std::sqrt(3.0) * h / lengths[k];
+        const double e = std::exp(-a);
+        branch.transition[0][0] = branch.transition[1][1] = 1;
+        branch.transition[0][1] = branch.transition[0][2] = h;
+        branch.transition[2][2] = e * (1 + a);
+        branch.transition[2][3] = e * a;
+        branch.transition[3][2] = -e * a;
+        branch.transition[3][3] = e * (1 - a);
+        branch.covariance[0][0] = variance_;
+        for (int i = 1; i < 4; ++i) {
+            branch.covariance[i][i] = i == 1 ? velocity_variance : local_variance;
+        }
+        for (int i = 2; i < 4; ++i) {
+            for (int j = 2; j < 4; ++j) {
+                double product = 0;
+                for (int d = 2; d < 4; ++d) {
+                    product += branch.transition[i][d] * branch.transition[j][d];
+                }
+                branch.noise[i][j] = local_variance * ((i == j ? 1.0 : 0.0) - product);
             }
-            const double t =
-                length > 0 ? std::clamp(((x + .5 - a.x) * dx + (y + .5 - a.y) * dy) / length, 0.0, 1.0) : 0;
-            const double coverage =
-                std::clamp(radius + .5 - std::hypot(x + .5 - a.x - t * dx, y + .5 - a.y - t * dy), 0.0, 1.0);
-            if (coverage <= 0) {
-                continue;
-            }
-            const int px = (x % image.width + image.width) % image.width,
-                      py = (y % image.height + image.height) % image.height;
-            const int index = py * image.width + px;
-            std::pair<std::unordered_map<int, Deposit>::iterator, bool> entry =
-                deposits_.try_emplace(index, Deposit{image.get(px, py), 0});
-            Deposit& deposit = (*entry.first).second;
-            if (coverage <= deposit.coverage) {
-                continue;
-            }
-            deposit.coverage = coverage;
-            const Color texture = tile.get(px % tile.width, py % tile.height);
-            image.set(px, py,
-                      interpolate_pixel(deposit.original, texture, coverage * std::clamp(opacity, 0.0, 1.0)));
         }
     }
+}
+Point StrokeStateTracker::advance(Point point, double seconds) {
+    if (!std::isfinite(seconds) || !std::isfinite(point.x) || !std::isfinite(point.y) ||
+        seconds <= last_time_) {
+        return filtered_;
+    }
+    // A long delivery gap provides no evidence of continued hand motion.
+    // Re-anchor instead of extrapolating a stale velocity across a pause.
+    if (seconds - last_time_ > 0.5) {
+        reset(point, std::sqrt(variance_), momentum_);
+        last_time_ = cell_time_ = seconds;
+        return filtered_;
+    }
+    constexpr double h = 1.0 / 240;
+    while (cell_time_ + h <= seconds) {
+        for (Branch& branch : branches_) {
+            double mean[4][2] = {}, temp[4][4] = {}, covariance[4][4] = {};
+            for (int i = 0; i < 4; ++i) {
+                for (int j = 0; j < 4; ++j) {
+                    for (int d = 0; d < 2; ++d) {
+                        mean[i][d] += branch.transition[i][j] * branch.mean[j][d];
+                    }
+                    for (int d = 0; d < 4; ++d) {
+                        temp[i][d] += branch.transition[i][j] * branch.covariance[j][d];
+                    }
+                }
+            }
+            for (int i = 0; i < 4; ++i) {
+                for (int j = 0; j < 4; ++j) {
+                    covariance[i][j] = branch.noise[i][j];
+                    for (int d = 0; d < 4; ++d) {
+                        covariance[i][j] += temp[i][d] * branch.transition[j][d];
+                    }
+                    branch.covariance[i][j] = covariance[i][j];
+                }
+                for (int d = 0; d < 2; ++d) {
+                    branch.mean[i][d] = mean[i][d];
+                }
+            }
+        }
+        cell_time_ += h;
+    }
+    const double offset = seconds - cell_time_;
+    const double observation[4] = {1, offset, offset, 0};
+    double max_evidence = -std::numeric_limits<double>::infinity();
+    for (Branch& branch : branches_) {
+        double projected[4] = {}, residual[2] = {point.x - anchor_.x, point.y - anchor_.y};
+        double innovation = variance_;
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                projected[i] += branch.covariance[i][j] * observation[j];
+            }
+            innovation += observation[i] * projected[i];
+            for (int d = 0; d < 2; ++d) {
+                residual[d] -= observation[i] * branch.mean[i][d];
+            }
+        }
+        branch.evidence -= 0.5 * (2 * std::log(2 * std::numbers::pi * innovation) +
+                                  (residual[0] * residual[0] + residual[1] * residual[1]) / innovation);
+        max_evidence = std::max(max_evidence, branch.evidence);
+        for (int i = 0; i < 4; ++i) {
+            for (int d = 0; d < 2; ++d) {
+                branch.mean[i][d] += projected[i] / innovation * residual[d];
+            }
+            for (int j = i; j < 4; ++j) {
+                const double value = 0.5 * (branch.covariance[i][j] + branch.covariance[j][i]) -
+                                     projected[i] * projected[j] / innovation;
+                branch.covariance[i][j] = branch.covariance[j][i] = value;
+            }
+        }
+    }
+    Point total{};
+    double weight_sum = 0;
+    for (Branch& branch : branches_) {
+        branch.evidence -= max_evidence;
+        const double weight = std::exp(branch.evidence);
+        weight_sum += weight;
+        for (int i = 0; i < 4; ++i) {
+            total.x += weight * observation[i] * branch.mean[i][0];
+            total.y += weight * observation[i] * branch.mean[i][1];
+        }
+    }
+    filtered_ = {anchor_.x + total.x / weight_sum, anchor_.y + total.y / weight_sum};
+    last_time_ = seconds;
+    return filtered_;
+}
+void SparseStrokeTracker::reset(Point point, double uncertainty, double momentum, double dither) {
+    tracker_.reset(point, uncertainty, momentum);
+    raw_ = retained_ = emitted_ = point;
+    for (Point& knot : knots_) {
+        knot = point;
+    }
+    raw_time_ = 0;
+    remaining_ = 6;
+    seed_ = 1;
+    finished_ = false;
+    dither_ = std::isfinite(dither) ? std::clamp(dither, 0.0, 1.0) : 0;
+}
+double SparseStrokeTracker::noise() {
+    seed_ = 1664525U * seed_ + 1013904223U;
+    return dither_ * (2 * static_cast<double>(seed_ >> 8) / 16777215 - 1);
+}
+void SparseStrokeTracker::append(Point point, std::vector<Point>& output) {
+    // A uniform cubic B-spline stays inside its control hull and shares first
+    // and second derivatives at joins. No posterior correction is drawn as a
+    // discontinuous jump. Tessellate the actual curve, not just its endpoints.
+    const Point p[4] = {knots_[0], knots_[1], knots_[2], point};
+    double length = 0;
+    for (int i = 1; i < 4; ++i) {
+        length += std::hypot(p[i].x - p[i - 1].x, p[i].y - p[i - 1].y);
+    }
+    const int steps = std::clamp(static_cast<int>(std::ceil(length / 0.75)), 4, 4096);
+    for (int i = 1; i <= steps; ++i) {
+        const double t = static_cast<double>(i) / steps, t2 = t * t, t3 = t2 * t;
+        const double b[4] = {(1 - 3 * t + 3 * t2 - t3) / 6, (4 - 6 * t2 + 3 * t3) / 6,
+                             (1 + 3 * t + 3 * t2 - 3 * t3) / 6, t3 / 6};
+        Point value{};
+        for (int j = 0; j < 4; ++j) {
+            value.x += b[j] * p[j].x;
+            value.y += b[j] * p[j].y;
+        }
+        if (std::hypot(value.x - emitted_.x, value.y - emitted_.y) > 1e-9) {
+            output.push_back(value);
+            emitted_ = value;
+        }
+    }
+    knots_[0] = knots_[1];
+    knots_[1] = knots_[2];
+    knots_[2] = point;
+}
+std::vector<Point> SparseStrokeTracker::advance(Point point, double seconds) {
+    std::vector<Point> output;
+    if (finished_ || !std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(seconds) ||
+        seconds <= raw_time_) {
+        return output;
+    }
+    const Point start = raw_;
+    const double distance = std::hypot(point.x - start.x, point.y - start.y);
+    double consumed = 0;
+    while (distance - consumed >= remaining_) {
+        consumed += remaining_;
+        const double fraction = consumed / distance;
+        const Point observation{start.x + fraction * (point.x - start.x),
+                                start.y + fraction * (point.y - start.y)};
+        const double time = raw_time_ + fraction * (seconds - raw_time_);
+        retained_ = tracker_.advance({observation.x + noise(), observation.y + noise()}, time);
+        append(retained_, output);
+        remaining_ = 6;
+    }
+    remaining_ = std::max(1e-9, remaining_ - (distance - consumed));
+    raw_ = point;
+    raw_time_ = seconds;
+    return output;
+}
+std::vector<Point> SparseStrokeTracker::finish(Point point, double seconds) {
+    if (finished_ || !std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(seconds)) {
+        return {};
+    }
+    std::vector<Point> output = advance(point, seconds);
+    // Flush a short gesture and the final partial interval without adding dither
+    // to the endpoint. Repeated knots finish the tail with zero tangent; they
+    // are reconstruction constraints, never additional estimator observations.
+    retained_ = tracker_.advance(point, std::max(seconds, raw_time_) + 1e-6);
+    append(retained_, output);
+    for (int i = 0; i < 3; ++i) {
+        append(retained_, output);
+    }
+    finished_ = true;
+    return output;
 }
 void StrokeStabilizer::reset(Point point) {
     filtered_ = pointer_ = point;

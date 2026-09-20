@@ -151,6 +151,11 @@ void Editor::paint_guide_overlay(gf::Painter& painter) {
 }
 void Editor::paint_segment(Point start, Point end) {
     const bool wrap = atlas_painting() && atlas_wrap;
+    if (document.tool == Tool::Brush && brush_family == BrushFamily::Carpet) {
+        carpet_stroke_.segment(document.image, start, end, gesture_ink_.size, carpet_tile,
+                               gesture_ink_.primary.a / 255.0, wrap);
+        return;
+    }
     if (document.tool == Tool::Eraser && atlas_painting() && atlas_preserve_alpha &&
         eraser_mode <= EraserMode::Soft) {
         return;

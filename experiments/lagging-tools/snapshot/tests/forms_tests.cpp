@@ -1473,52 +1473,41 @@ void centered_circle_and_materials() {
     require((*window.find("grain-angle")).visible() && (*window.find("new-grain")).visible(),
             "all texture settings are available together in Materials");
 }
-void await_carpet(Fixture& fixture) {
-    const std::chrono::steady_clock::time_point deadline =
-        std::chrono::steady_clock::now() + std::chrono::seconds(15);
-    while (!(*(*fixture.window).find("dialog-ok")).enabled()) {
-        static_cast<void>((*fixture.window).drain_posted_work());
-        require(std::chrono::steady_clock::now() < deadline, "carpet render finishes on the UI dispatcher");
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    }
-}
-void carpet_generator_controls() {
+void state_tracker_controls() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
     gf::Window& window = *fixture.window;
-    require(!window.find("stroke-state-tracker"), "archived tracker controls remain in shipping UI");
-    editor.open_editor_dialog(paint::forms::EditorDialogKind::carpet);
-    window.perform_layout();
-    await_carpet(fixture);
-    require(window.find("carpet-slider-9") && window.find("carpet-hillshade"), "carpet controls missing");
-    const std::shared_ptr<gf::TextBox> dye =
-        std::dynamic_pointer_cast<gf::TextBox>(window.find("carpet-color"));
-    (*dye).set_text("#12");
-    static_cast<void>(window.drain_posted_work());
-    require(!(*window.find("dialog-ok")).enabled(), "invalid dye text permits accepting stale texture");
-    (*dye).set_text("#1645C5");
-    await_carpet(fixture);
-    const std::shared_ptr<gf::TrackBar> tilt =
-        std::dynamic_pointer_cast<gf::TrackBar>(window.find("carpet-slider-8"));
-    (*tilt).set_value(30);
-    (*tilt).set_value(35);
-    await_carpet(fixture);
-    routed_button(window, "carpet-hillshade");
-    await_carpet(fixture);
-    routed_button(window, "dialog-ok");
-    require(editor.brush_family == paint::BrushFamily::Carpet && editor.carpet_parameters.view == 35 &&
-                editor.carpet_parameters.hillshade && editor.carpet_tile.width == 512,
-            "carpet controls not applied");
+    open_tab(window, "tool-tab");
+    require(!editor.use_state_tracker && !editor.stabilize &&
+                (*window.find("stroke-state-tracker")).visible(),
+            "state tracker is an opt-in Pencil control");
+    routed_button(window, "stroke-state-tracker");
+    require(editor.use_state_tracker && editor.stabilize && (*window.find("stroke-noise")).enabled() &&
+                (*window.find("stroke-momentum")).enabled() && editor.tracker_momentum == 60 &&
+                !(*window.find("stroke-lag")).enabled(),
+            "state tracker enables smoothing and its own noise control");
+    require(editor.tracker_sparse && (*window.find("stroke-sparse")).visible(),
+            "sparse reconstruction is available and selected for the trial");
+    fixture.click(30, 30);
+    require(!white(editor.document.image.get(30, 30)), "tracker preserves a single-click pencil dot");
+    fixture.drag(10, 60, 100, 60);
+    bool painted = false;
+    for (int x = 30; x < 80; ++x) {
+        painted = painted || !white(editor.document.image.get(x, 60));
+    }
+    require(painted, "sparse stroke flushes a drawn path on release");
+    routed_button(window, "stroke-sparse");
+    require(!editor.tracker_sparse, "sparse checkbox restores dense tracker for comparison");
+    routed_button(window, "stroke-state-tracker");
+    require(!editor.use_state_tracker && editor.stabilize && (*window.find("stroke-lag")).enabled() &&
+                !(*window.find("stroke-noise")).enabled() && !(*window.find("stroke-momentum")).enabled(),
+            "unchecking state tracker restores the original lag model");
     editor.choose_tool(paint::Tool::Brush);
-    fixture.drag(20, 40, 100, 40);
-    require(!white(editor.document.image.get(50, 40)), "carpet brush paints no texture");
-    editor.execute("undo");
-    require(white(editor.document.image.get(50, 40)), "carpet stroke does not undo as one gesture");
-    editor.open_editor_dialog(paint::forms::EditorDialogKind::carpet);
-    window.perform_layout();
-    // Closing an active worker must cancel/join without publishing to a dead dialog.
-    routed_button(window, "dialog-cancel");
-    require(editor.carpet_parameters.view == 35, "cancel changes committed carpet parameters");
+    open_tab(window, "tool-tab");
+    require((*window.find("stroke-state-tracker")).visible(), "Brush offers state tracker");
+    editor.choose_tool(paint::Tool::Eraser);
+    open_tab(window, "tool-tab");
+    require(!(*window.find("stroke-state-tracker")).visible(), "other tools do not offer state tracker");
 }
 void independent_color_materials_and_no_color() {
     Fixture fixture;
@@ -2340,7 +2329,7 @@ int main() {
         path_hover_snap_and_controls();
         path_node_drag_and_overlap();
         centered_circle_and_materials();
-        carpet_generator_controls();
+        state_tracker_controls();
         independent_color_materials_and_no_color();
         select_all_delete_without_drag();
         ribbon_collapse_and_reopen();

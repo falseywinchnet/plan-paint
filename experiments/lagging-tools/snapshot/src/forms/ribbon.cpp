@@ -699,13 +699,16 @@ void Ribbon::add_options() {
     effect_strength_ = number("effect-strength", "Strength", {260, 36, 230, 28}, 0, 1, 0.75, 2);
     effect_scale_ = number("effect-scale", "Scale (px)", {510, 36, 230, 28}, 2, 128, 24);
     effect_phase_ = number("effect-phase", "Phase", {760, 36, 230, 28}, -10, 10, 0, 2);
-    button("carpet-settings", "Carpet settings…", -1, {12, 36, 222, 30});
     button("heal-source", "Set source", -1, {12, 36, 222, 30});
     heal_hardness_ = number("heal-hardness", "Hardness", {260, 36, 230, 28}, 0, 1, 0.35, 2);
     heal_correction_ = number("heal-correction", "OKLab match", {510, 36, 230, 28}, 0, 1, 1, 2);
-    check("stroke-stabilize", "Stabilizer", {12, 79, 150, 28});
-    stabilizer_lag_ = number("stroke-lag", "Lag (px)", {180, 79, 220, 28}, 0.1, 50, 5, 1);
-    check("spray-glitter", "Fine glitter", {920, 79, 200, 28});
+    check("stroke-stabilize", "Stabilizer", {12, 79, 120, 28});
+    stabilizer_lag_ = number("stroke-lag", "Lag (px)", {140, 79, 190, 28}, 0.1, 50, 5, 1);
+    check("stroke-state-tracker", "Use state-tracker", {345, 79, 190, 28});
+    tracker_noise_ = number("stroke-noise", "Noise (px)", {550, 79, 210, 28}, 0.1, 20, 1.5, 1);
+    tracker_momentum_ = number("stroke-momentum", "Momentum (%)", {775, 79, 255, 28}, 0, 100, 60);
+    check("stroke-sparse", "Sparse smoothing", {1045, 79, 225, 28});
+    check("spray-glitter", "Fine glitter", {12, 36, 220, 28});
     building_page_ = 40;
     rotation_ = number("rotation-degrees", "Angle (°)", {242, 36, 240, 28}, -360, 360, 15, 1);
     button("rotate-custom", "Apply rotation", 6, {242, 79, 240, 30});
@@ -863,9 +866,6 @@ void Ribbon::show_page() {
             if (id.starts_with("guide-")) {
                 visible = tool == Tool::Guide;
             }
-            if (id == "carpet-settings") {
-                visible = tool == Tool::Brush && (*editor).brush_family == BrushFamily::Carpet;
-            }
             if (id == "heal-source") {
                 visible = tool == Tool::Brush && (*editor).brush_family == BrushFamily::Heal;
                 control.set_selected((*editor).set_heal_source);
@@ -1006,6 +1006,8 @@ void Ribbon::options_changed(double) {
     (*editor).heal_hardness = (*heal_hardness_).value();
     (*editor).heal_correction = (*heal_correction_).value();
     (*editor).stabilizer_lag = (*stabilizer_lag_).value();
+    (*editor).tracker_noise = (*tracker_noise_).value();
+    (*editor).tracker_momentum = (*tracker_momentum_).value();
     if ((*editor).stamp_hardness != (*stamp_hardness_).value()) {
         (*editor).stamp_hardness = (*stamp_hardness_).value();
         (*editor).update_stamp_hardness();
@@ -1036,12 +1038,17 @@ void Ribbon::apply_choice(const std::string& id) {
         ++document.ink.noise;
     } else if (id == "context-stamp-add") {
         (*editor).add_stamp_material();
-    } else if (id == "carpet-settings") {
-        (*editor).open_editor_dialog(EditorDialogKind::carpet);
     } else if (id == "heal-source") {
         (*editor).set_heal_source = true;
     } else if (id == "stroke-stabilize") {
         (*editor).stabilize = !(*editor).stabilize;
+    } else if (id == "stroke-state-tracker") {
+        (*editor).use_state_tracker = !(*editor).use_state_tracker;
+        if ((*editor).use_state_tracker) {
+            (*editor).stabilize = true;
+        }
+    } else if (id == "stroke-sparse") {
+        (*editor).tracker_sparse = !(*editor).tracker_sparse;
     } else if (id == "spray-glitter") {
         (*editor).glitter = !(*editor).glitter;
     } else if (id == "picker-magnifier") {
@@ -1548,6 +1555,11 @@ void Ribbon::synchronize() {
     (*heal_hardness_).set_value((*editor).heal_hardness);
     (*heal_correction_).set_value((*editor).heal_correction);
     (*stabilizer_lag_).set_value((*editor).stabilizer_lag);
+    (*stabilizer_lag_).set_enabled((*editor).stabilize && !(*editor).use_state_tracker);
+    (*tracker_noise_).set_value((*editor).tracker_noise);
+    (*tracker_noise_).set_enabled((*editor).stabilize && (*editor).use_state_tracker);
+    (*tracker_momentum_).set_value((*editor).tracker_momentum);
+    (*tracker_momentum_).set_enabled((*editor).stabilize && (*editor).use_state_tracker);
     (*mix_effect_).set_selected_index(static_cast<std::size_t>((*editor).mix_effect));
     (*eraser_mode_).set_selected_index(static_cast<std::size_t>((*editor).eraser_mode));
     std::optional<std::size_t> font_index;
@@ -1587,6 +1599,8 @@ void Ribbon::synchronize() {
         }
         (*check).set_checked(id == "guide-fill"              ? (*editor).guide.fill
                              : id == "stroke-stabilize"      ? (*editor).stabilize
+                             : id == "stroke-state-tracker"  ? (*editor).use_state_tracker
+                             : id == "stroke-sparse"         ? (*editor).tracker_sparse
                              : id == "spray-glitter"         ? (*editor).glitter
                              : id == "picker-magnifier"      ? (*editor).picker_magnifier
                              : id == "soft-eraser"           ? (*editor).eraser_soft
@@ -1913,9 +1927,8 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             guide_swap_menu_ = false;
         }
         if (id == "brush-menu") {
-            ids = {"family-additive", "family-mix", "family-heal", "family-carpet"};
-            texts = {"Additive brushes", "Mix existing pixels", "Heal / continuous clone",
-                     "Carpet generator…"};
+            ids = {"family-additive", "family-mix", "family-heal"};
+            texts = {"Additive brushes", "Mix existing pixels", "Heal / continuous clone"};
         }
         if (id == "tool-10") {
             ids = {"tool-10", "stamp-add", "stamp-clear"};
@@ -2045,16 +2058,11 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
                                                      : LassoMode::InnerVoid;
         (*editor).choose_tool(Tool::Lasso);
     } else if (id.starts_with("family-")) {
-        if (id != "family-carpet") {
-            (*editor).brush_family = id == "family-additive" ? BrushFamily::Additive
-                                     : id == "family-mix" ? BrushFamily::Mix
-                                                          : BrushFamily::Heal;
-        }
+        (*editor).brush_family = id == "family-additive" ? BrushFamily::Additive
+                                 : id == "family-mix"    ? BrushFamily::Mix
+                                                         : BrushFamily::Heal;
         (*editor).choose_tool(Tool::Brush);
-        if (id == "family-carpet") {
-            show_tool_context();
-            (*editor).open_editor_dialog(EditorDialogKind::carpet);
-        } else if (id == "family-additive") {
+        if (id == "family-additive") {
             show_materials(false);
         } else {
             show_tool_context();

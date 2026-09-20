@@ -231,7 +231,9 @@ void EditorDialog::initialize_control_tree() {
         (*close).set_default_button(true);
         return;
     }
-    if (kind_ == EditorDialogKind::color) {
+    if (kind_ == EditorDialogKind::carpet) {
+        initialize_carpet();
+    } else if (kind_ == EditorDialogKind::color) {
         panel_ = {0, 0, 660, 540};
         original_ = secondary_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;
         primary_tab_ = button("dialog-color1", "Primary", {18, 48, 90, 28});
@@ -563,6 +565,8 @@ gf::SemanticDescriptor EditorDialog::semantic_descriptor() const {
 }
 std::string EditorDialog::title() const {
     switch (kind_) {
+    case EditorDialogKind::carpet:
+        return "Carpet generator";
     case EditorDialogKind::about:
         return "About Rainstar Paint";
     case EditorDialogKind::color:
@@ -743,6 +747,11 @@ void EditorDialog::height_changed(double value) {
 }
 void EditorDialog::clicked(gf::ButtonBase& control) {
     std::string id(control.stable_id().value());
+    if (id == "carpet-hillshade" || id == "carpet-seed") {
+        if (id == "carpet-seed") ++carpet_.seed;
+        carpet_changed(0);
+        return;
+    }
     if (id == "paper-a4" || id == "paper-letter" || id == "paper-rotate") {
         const double width = (*atlas_numbers_[0]).value();
         const double height = (*atlas_numbers_[1]).value();
@@ -835,6 +844,17 @@ void EditorDialog::accept() {
         return;
     }
     try {
+        if (kind_ == EditorDialogKind::carpet) {
+            if (carpet_image_.pixels.empty() || !(*(*attached_window()).find("dialog-ok")).enabled()) return;
+            (*editor).carpet_parameters = carpet_;
+            (*editor).carpet_tile = carpet_image_;
+            (*editor).brush_family = BrushFamily::Carpet;
+            (*editor).document.ink.size = std::max(24, (*editor).document.ink.size);
+            (*editor).close_editor_dialog();
+            (*editor).refresh();
+            return;
+        }
+
         if (kind_ == EditorDialogKind::color) {
             Color parsed;
             if (!from_hex(std::string((*hex_).text()), parsed)) {

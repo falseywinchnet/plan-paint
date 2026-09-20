@@ -590,7 +590,6 @@ void Editor::release_gesture() {
     eraser_.clear();
     material_.clear();
     dynamic_brush_.clear();
-    carpet_stroke_.clear();
     (*canvas_).set_pointer_capture(false);
 }
 void Editor::finish_controls() {
@@ -797,6 +796,9 @@ void Editor::begin(Point point, bool secondary) {
     gesture_ink_ = secondary ? document.alternate_ink() : document.primary_ink();
     gesture_fill_ink_ = secondary ? document.primary_ink() : document.body_ink();
     stabilizer_.reset(point);
+    state_tracker_.reset(point, tracker_noise, tracker_momentum);
+    sparse_tracker_.reset(point, tracker_noise, tracker_momentum);
+    stroke_time_ = std::chrono::steady_clock::now();
     if (document.tool == Tool::Brush && brush_family == BrushFamily::Heal &&
         (set_heal_source || !healing_brush_.has_source())) {
         healing_brush_.capture(document.visible_image(), point);
@@ -915,7 +917,6 @@ void Editor::begin(Point point, bool secondary) {
         eraser_.clear();
         material_.clear();
         dynamic_brush_.clear();
-        carpet_stroke_.clear();
         // A fresh stochastic deposit each gesture; pattern/shape materials retain
         // their authored seed and remain independent of brush-only dynamics.
         if (document.tool == Tool::Brush) {
@@ -935,8 +936,49 @@ void Editor::begin(Point point, bool secondary) {
 }
 void Editor::move(Point point) {
     if (stabilize && (document.tool == Tool::Pencil || document.tool == Tool::Brush)) {
-        point = stabilizer_.advance(point, stabilizer_lag);
+        if (use_state_tracker) {
+            const double seconds =
+                std::chrono::duration<double>(std::chrono::steady_clock::now() - stroke_time_).count();
+            if (tracker_sparse) {
+                const std::vector<Point> points = sparse_tracker_.advance(point, seconds);
+                apply_curve(points);
+                // Preserve initial dabs even before the first sparse observation.
+                if (points.empty() && point.x == start_.x && point.y == start_.y) {
+                    apply_move(start_);
+                }
+                return;
+            }
+            point = state_tracker_.advance(point, seconds);
+        } else {
+            point = stabilizer_.advance(point, stabilizer_lag);
+        }
     }
+    apply_move(point);
+}
+void Editor::apply_curve(const std::vector<Point>& points) {
+    if (points.empty()) {
+        return;
+    }
+    Point low = last_, high = last_;
+    for (Point sample : points) {
+        low.x = std::min(low.x, sample.x);
+        low.y = std::min(low.y, sample.y);
+        high.x = std::max(high.x, sample.x);
+        high.y = std::max(high.y, sample.y);
+        apply_move(sample, false);
+    }
+    constrain_paint(document.image, paint_base_, guide, atlas_painting() && atlas_preserve_alpha);
+    const int margin = gesture_ink_.size + 3;
+    Rect damage = rectangle(low, high);
+    damage.x -= margin;
+    damage.y -= margin;
+    damage.w += 2 * margin;
+    damage.h += 2 * margin;
+    ++canvas_revision;
+    publish_image(document.image, *canvas_, atlas_painting() && atlas_wrap ? Rect{} : damage);
+    update_status();
+}
+void Editor::apply_move(Point point, bool publish) {
     if (shift_ && document.tool == Tool::Shape && curve_handle_ < 0 &&
         !(control_ && (document.shape == Shape::Circle || document.shape == Shape::Oval))) {
         Point anchor = document.curve.base ? document.curve.geometry.start : start_;
@@ -1012,6 +1054,10 @@ void Editor::move(Point point) {
             (*canvas_).set_pointer_capture(false);
         }
     }
+    if (!publish) {
+        last_ = point;
+        return;
+    }
     if (document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Fill ||
         document.tool == Tool::Stamp) {
         constrain_paint(document.image, paint_base_, guide, atlas_painting() && atlas_preserve_alpha);
@@ -1038,7 +1084,14 @@ void Editor::move(Point point) {
     }
 }
 void Editor::end(Point point) {
-    move(point);
+    if (stabilize && use_state_tracker && tracker_sparse &&
+        (document.tool == Tool::Pencil || document.tool == Tool::Brush)) {
+        const double seconds =
+            std::chrono::duration<double>(std::chrono::steady_clock::now() - stroke_time_).count();
+        apply_curve(sparse_tracker_.finish(point, seconds));
+    } else {
+        move(point);
+    }
     point = current_;
     if (curve_handle_ < 0 && !moving_selection_) {
         if (document.tool == Tool::Select || document.tool == Tool::Lasso) {

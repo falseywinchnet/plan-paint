@@ -2,7 +2,7 @@
 #include "material.hpp"
 #include <unordered_map>
 namespace paint {
-enum class BrushFamily { Additive, Mix, Heal, Carpet };
+enum class BrushFamily { Additive, Mix, Heal };
 enum class MixEffect {
     Ripple,
     Glass,
@@ -25,6 +25,40 @@ class StrokeStabilizer {
     void reset(Point point);
     Point advance(Point point, double lag);
 };
+// Causal 2D adaptation of the relational-current four-state filter.
+// Each branch stores (position, constant current, local current, current derivative).
+class StrokeStateTracker {
+    struct Branch {
+        double mean[4][2] = {};
+        double covariance[4][4] = {};
+        double transition[4][4] = {};
+        double noise[4][4] = {};
+        double evidence = 0;
+    };
+    Branch branches_[5];
+    Point anchor_, filtered_;
+    double last_time_ = 0, cell_time_ = 0, variance_ = 2.25, momentum_ = 0;
+
+  public:
+    void reset(Point point, double noise_pixels = 1.5, double momentum = 0);
+    // Seconds since reset, strictly increasing; duplicate timestamps do not add evidence.
+    Point advance(Point point, double seconds);
+};
+// Sparse spatial observations followed by a delayed, C2 cubic B-spline.
+class SparseStrokeTracker {
+    StrokeStateTracker tracker_;
+    Point knots_[3], raw_, retained_, emitted_;
+    double raw_time_ = 0, remaining_ = 6, dither_ = 0.2;
+    std::uint32_t seed_ = 1;
+    bool finished_ = false;
+    void append(Point point, std::vector<Point>& output);
+    double noise();
+
+  public:
+    void reset(Point point, double uncertainty = 1.5, double momentum = 60, double dither = 0.2);
+    std::vector<Point> advance(Point point, double seconds);
+    std::vector<Point> finish(Point point, double seconds);
+};
 Color interpolate_pixel(Color base, Color replacement, double amount);
 Color sample_bilinear(const Image& image, double x, double y, bool wrap = false);
 class DynamicBrushStroke {
@@ -41,18 +75,6 @@ class DynamicBrushStroke {
   public:
     void clear();
     void segment(Image& image, Point start, Point end, const Ink& ink, bool glitter, bool wrap = false);
-};
-class CarpetStroke {
-    struct Deposit {
-        Color original;
-        double coverage = 0;
-    };
-    std::unordered_map<int, Deposit> deposits_;
-
-  public:
-    void clear();
-    void segment(Image& image, Point a, Point b, double diameter, const Image& tile, double opacity,
-                 bool wrap);
 };
 class TransformStroke {
     Image base_;

@@ -1,16 +1,22 @@
 #pragma once
+#include "carpet.hpp"
 #include "color_tools.hpp"
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
+#include <gui_forms/canvas.hpp>
 #include <gui_forms/controls/panel/combo_box/combo_box.hpp>
 #include <gui_forms/controls/panel/numeric_up_down/numeric_up_down.hpp>
 #include <gui_forms/controls/panel/text_box/text_box.hpp>
+#include <gui_forms/controls/range_control/track_bar/track_bar.hpp>
 #include <memory>
+#include <thread>
 namespace paint::forms {
 class Editor;
 class SwatchButton;
 class EditorDialog;
+struct CarpetRenderJob;
 enum class EditorDialogKind {
+    carpet,
     about,
     color,
     resize,
@@ -46,6 +52,10 @@ class ColorPlane final : public gui_forms::Control {
 class EditorDialog final : public gui_forms::Control {
   public:
     EditorDialog(gui_forms::StableId id, std::weak_ptr<Editor> editor, EditorDialogKind kind, bool secondary);
+    ~EditorDialog() override;
+    void on_attached_to_window() override;
+    void on_detaching_from_window(gui_forms::Window& window) noexcept override;
+    void deliver_carpet();
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
     void arrange(gui_forms::Rect bounds) override;
@@ -61,6 +71,23 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    CarpetParameters carpet_;
+    Image carpet_image_;
+    std::shared_ptr<CarpetRenderJob> carpet_job_;
+    std::thread carpet_worker_;
+    std::shared_ptr<gui_forms::RasterCanvas> carpet_preview_;
+    std::shared_ptr<gui_forms::ComboBox> carpet_presets_;
+    std::shared_ptr<gui_forms::CheckBox> carpet_hillshade_;
+    std::shared_ptr<gui_forms::TextBox> carpet_color_;
+    std::vector<std::shared_ptr<gui_forms::TrackBar>> carpet_sliders_;
+    std::vector<std::shared_ptr<gui_forms::Label>> carpet_values_;
+    void initialize_carpet();
+    void sync_carpet();
+    void carpet_changed(double value);
+    void carpet_color_changed(const std::string& value);
+    void carpet_preset_changed(std::optional<std::size_t> index);
+    void render_carpet_preview();
+    void stop_carpet();
     std::weak_ptr<Editor> editor_;
     mutable std::array<std::unique_ptr<ColorMosaic>, 48> mosaics_;
     std::shared_ptr<gui_forms::ComboBox> background_, alpha_background_;

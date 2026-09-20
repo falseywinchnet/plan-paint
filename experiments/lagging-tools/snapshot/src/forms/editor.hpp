@@ -1,5 +1,4 @@
 #pragma once
-#include "carpet.hpp"
 #include "color_tools.hpp"
 #include "desktop.hpp"
 #include "document.hpp"
@@ -10,6 +9,7 @@
 #include "paint_tools.hpp"
 #include "text_session.hpp"
 #include "warp_session.hpp"
+#include <chrono>
 #include <gui_forms/application.hpp>
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
@@ -65,15 +65,14 @@ class Editor final : public gui_forms::Control {
     void add_stamp_material();
     void update_stamp_hardness();
     double stamp_hardness = 1;
-    CarpetParameters carpet_parameters;
-    Image carpet_tile;
     BrushFamily brush_family = BrushFamily::Additive;
     MixEffect mix_effect = MixEffect::Ripple;
     EraserMode eraser_mode = EraserMode::Hard;
     double effect_strength = 0.75, effect_scale = 24, effect_phase = 0;
     double heal_hardness = 0.35, heal_correction = 1;
     bool set_heal_source = true, stabilize = false, glitter = false;
-    double stabilizer_lag = 5;
+    double stabilizer_lag = 5, tracker_noise = 1.5, tracker_momentum = 60;
+    bool use_state_tracker = false, tracker_sparse = true;
     void regenerate_stamp();
     int stamp_width = 80, stamp_height = 80;
     double stamp_scale = 1, stamp_angle = 0, rotation_angle = 0, mesh_spacing = 60;
@@ -225,7 +224,9 @@ class Editor final : public gui_forms::Control {
     TransformStroke transform_brush_;
     HealingBrush healing_brush_;
     StrokeStabilizer stabilizer_;
-    CarpetStroke carpet_stroke_;
+    StrokeStateTracker state_tracker_;
+    SparseStrokeTracker sparse_tracker_;
+    std::chrono::steady_clock::time_point stroke_time_;
     bool shift_ = false, control_ = false, alt_ = false;
     int selection_edit_ = 0;
     int path_node_ = -1;
@@ -251,6 +252,8 @@ class Editor final : public gui_forms::Control {
     gui_forms::MenuItemSpec menu_item(const std::string& id, const std::string& text);
     void begin(Point point, bool secondary);
     void move(Point point);
+    void apply_move(Point point, bool publish = true);
+    void apply_curve(const std::vector<Point>& points);
     void end(Point point);
     void release_gesture();
     void finish_controls();

@@ -16,14 +16,24 @@ Actual packaged Rainstar Paint 0.3.2 on Apple Silicon Mac. The specimen was pain
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.3/rainstar-paint-0.3.3-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.3/rainstar-paint-0.3.3-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.3/rainstar-paint-0.3.3-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.3/rainstar-paint-0.3.3-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/rainstar-paint-0.3.4-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/rainstar-paint-0.3.4-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/rainstar-paint-0.3.4-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/rainstar-paint-0.3.4-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.3/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
+
+## New in 0.3.4
+
+- Carpet generates native fiber textures with twelve presets and ten controls, from velvet pile to tangled felt. Open the Brushes arrow and choose **Carpet generator…**.
+- Optional Horn hillshade adds relief to the fabric color. Dye color and a new-fiber seed control are included.
+- Twelve fabric backings are available in Settings; the original grey-blue backing remains unchanged.
+- Occluded fiber samples are rejected before intersection work, and the shadow pass omits unused surface calculations. Painting uses a cached tile; generation scratch and per-gesture coverage storage are released after use.
+- Experimental state tracking, momentum damping and sparse smoothing are archived outside the application. The conventional stabilizer remains available.
+
+See [Carpet textures](docs/CARPET.md) for the controls, renderer and measured optimization.
 
 ## New in 0.3.3
 
