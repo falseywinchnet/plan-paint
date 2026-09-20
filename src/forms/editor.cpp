@@ -19,6 +19,15 @@ namespace gf = gui_forms;
 namespace {
 const Tool tools[] = {Tool::Select,    Tool::Lasso, Tool::Pencil, Tool::Fill, Tool::Eraser, Tool::Picker,
                       Tool::Magnifier, Tool::Brush, Tool::Shape,  Tool::Path, Tool::Stamp,  Tool::Guide};
+bool centered_shape(Shape shape) {
+    return shape != Shape::Line && shape != Shape::Bezier && shape != Shape::Arc && shape != Shape::Polygon;
+}
+bool radial_shape(Shape shape) {
+    return shape == Shape::Circle || shape == Shape::Oval || shape == Shape::Pentagon ||
+           shape == Shape::Hexagon || shape == Shape::Octagon || shape == Shape::Star4 ||
+           shape == Shape::Star5 || shape == Shape::Star6 || shape == Shape::Star8 || shape == Shape::Gear ||
+           shape == Shape::Burst;
+}
 class ZoomTrackBar final : public gf::TrackBar {
   public:
     explicit ZoomTrackBar(gf::StableId id) : TrackBar(std::move(id)) {}
@@ -590,8 +599,12 @@ void Editor::command_invoked(const gf::CommandInvocation& invocation) {
     execute(invocation.command_id);
 }
 void Editor::release_gesture() {
+    if (placing_shape_ && document.curve.base && !document.curve.line_set) {
+        document.curve = {};
+    }
     clear_transform_preview();
     dragging_ = false;
+    placing_shape_ = false;
     panning_ = false;
     moving_selection_ = false;
     preview_active_ = false;
@@ -723,6 +736,24 @@ void Editor::pointer(const gf::PointerEvent& event) {
             refresh();
             return;
         }
+        // Between placement clicks the preview follows hover without retaining
+        // native capture, so ribbon commands and Settings remain reachable.
+        if (placing_shape_ && !panning_ && event.button != gf::PointerButton::middle) {
+            if (event.action == gf::PointerAction::move) {
+                move(point);
+            } else if (event.action == gf::PointerAction::up) {
+                (*canvas_).set_pointer_capture(false);
+            } else if (event.action == gf::PointerAction::down) {
+                if (event.button == placement_button_) {
+                    end(point);
+                } else if (event.button == gf::PointerButton::secondary) {
+                    document.curve = {};
+                    release_gesture();
+                    refresh();
+                }
+            }
+            return;
+        }
         if (path_swap_pointer(event, point)) {
             return;
         }
@@ -779,14 +810,17 @@ void Editor::pointer(const gf::PointerEvent& event) {
                 return;
             }
             if (event.button == gf::PointerButton::secondary && document.tool == Tool::Shape &&
-                ((document.curve.base && !document.curve.line_set) ||
-                 (dragging_ && document.shape == Shape::Line))) {
+                ((document.curve.base && !document.curve.line_set) || dragging_)) {
                 document.curve = {};
                 release_gesture();
                 refresh();
                 return;
             }
             begin(point, event.button == gf::PointerButton::secondary);
+            if (!settings.drag_shapes && document.tool == Tool::Shape && dragging_ && curve_handle_ < 0) {
+                placing_shape_ = true;
+                placement_button_ = event.button;
+            }
         } else if (event.action == gf::PointerAction::move) {
             if (panning_) {
                 (*canvas_).set_view_origin({pan_origin_.x - (client.x - pan_start_.x) / (*canvas_).zoom(),
@@ -956,7 +990,7 @@ void Editor::move(Point point) {
         point = stabilizer_.advance(point, stabilizer_lag);
     }
     if (shift_ && document.tool == Tool::Shape && curve_handle_ < 0 &&
-        !(control_ && (document.shape == Shape::Circle || document.shape == Shape::Oval))) {
+        !(control_ && radial_shape(document.shape))) {
         Point anchor = document.curve.base ? document.curve.geometry.start : start_;
         double dx = point.x - anchor.x, dy = point.y - anchor.y;
         if (document.shape == Shape::Line || document.shape == Shape::Bezier ||
@@ -1004,10 +1038,13 @@ void Editor::move(Point point) {
         } else {
             preview_ = document.image;
             Point first = start_, last = point;
-            if (control_ && (document.shape == Shape::Circle || document.shape == Shape::Oval)) {
-                double radius = std::hypot(point.x - start_.x, point.y - start_.y);
-                first = {start_.x - radius, start_.y - radius};
-                last = {start_.x + radius, start_.y + radius};
+            if (control_ && centered_shape(document.shape)) {
+                double radius_x = std::abs(point.x - start_.x), radius_y = std::abs(point.y - start_.y);
+                if (radial_shape(document.shape)) {
+                    radius_x = radius_y = std::hypot(point.x - start_.x, point.y - start_.y);
+                }
+                first = {start_.x - radius_x, start_.y - radius_y};
+                last = {start_.x + radius_x, start_.y + radius_y};
             }
             draw_shape(preview_, document.shape, first, last, gesture_ink_, document.shape_outline,
                        document.shape_fill, gesture_fill_ink_.brush, &gesture_fill_ink_);

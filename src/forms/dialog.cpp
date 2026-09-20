@@ -301,7 +301,7 @@ void EditorDialog::initialize_control_tree() {
         }
         set_color(original_);
     } else if (kind_ == EditorDialogKind::settings) {
-        panel_ = {0, 0, 490, 410};
+        panel_ = {0, 0, 490, 458};
         label("settings-scroll-label", "Scroll distance", {24, 58, 220, 28});
         atlas_numbers_.push_back(
             number("settings-scroll", {280, 57, 180, 30}, 0.1, 100, (*editor).settings.scroll_distance, 1));
@@ -325,6 +325,12 @@ void EditorDialog::initialize_control_tree() {
         (*alpha_background_color_).set_text(to_hex((*editor).settings.transparency_color));
         (*alpha_background_color_).set_accessible_name("Transparency background color, hex RGB");
         put(alpha_background_color_, {230, 271, 230, 30});
+        label("settings-shape-label", "Lines and shapes", {24, 319, 200, 28});
+        shape_gesture_ = gf::make_control<gf::ComboBox>(gf::StableId("settings-shape-gesture"));
+        (*shape_gesture_).add_item("Click, move, click");
+        (*shape_gesture_).add_item("Click, hold, release");
+        (*shape_gesture_).set_selected_index((*editor).settings.drag_shapes ? 1 : 0);
+        put(shape_gesture_, {230, 319, 230, 30});
     } else if (kind_ == EditorDialogKind::properties) {
         panel_ = {0, 0, 460, 345};
         Document& document = (*editor).document;
@@ -872,6 +878,7 @@ void EditorDialog::accept() {
         } else if (kind_ == EditorDialogKind::settings) {
             EditorSettings settings = (*editor).settings;
             settings.scroll_distance = (*atlas_numbers_[0]).value();
+            settings.drag_shapes = (*shape_gesture_).selected_index().value_or(0) == 1;
             settings.canvas_backing = static_cast<CanvasBacking>((*background_).selected_index().value_or(0));
             settings.solid_transparency = (*alpha_background_).selected_index().value_or(0) == 1;
             if (!from_hex(std::string((*alpha_background_color_).text()), settings.transparency_color)) {

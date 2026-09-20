@@ -16,6 +16,7 @@ struct EditorSettings {
     double scroll_distance = 6;
     CanvasBacking canvas_backing = CanvasBacking::PaleFelt;
     bool solid_transparency = false;
+    bool drag_shapes = false;
     Color transparency_color{255, 128, 192, 255};
     void load();
     void save() const;

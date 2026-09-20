@@ -71,6 +71,7 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    std::shared_ptr<gui_forms::ComboBox> shape_gesture_;
     CarpetParameters carpet_;
     Image carpet_image_;
     std::shared_ptr<CarpetRenderJob> carpet_job_;

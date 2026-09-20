@@ -91,17 +91,19 @@ inline constexpr HelpTopic help_topics[] = {
      "click. "
      "Hover previews and zoom do not change your saved picture."},
     {"4. Lines, curves and shapes",
-     "Choose a shape in the little gallery. Hold the mouse button where it should start, drag, "
-     "then release. Materials selects their treatment; Alt carries body assigns Alt to interiors. "
+     "Choose a shape in the little gallery. Click once to anchor it, move the mouse to size it, then "
+     "click again to place it. File > Settings > Lines and shapes also offers Click, hold, release. "
+     "Materials selects their treatment; Alt carries body assigns Alt to interiors. "
      "The Edge and Fill switches turn either part off. Size sets outline thickness. Hold Ctrl while drawing "
-     "Circle or Oval to keep the initial "
-     "click at the center and grow the radius toward the pointer. Hold Shift for constrained lines "
-     "and equal-sided shapes.\n\nChoose Bézier or Arc. Drag the starting line, or click its two endpoints. "
+     "a closed shape to keep the initial click at its center. Circles, stars and regular polygons grow "
+     "by radius; other closed shapes grow symmetrically toward the pointer. Hold Shift for constrained lines "
+     "and equal-sided shapes.\n\nChoose Bézier or Arc and place its starting line with two clicks "
+     "(or drag it when the drag option is enabled). "
      "Bézier has a draggable control handle from each endpoint; Arc has one middle handle. "
      "Keep dragging the handles until the curve is right. Undo and Redo keep the controls editable. "
      "Escape or choosing another tool releases the curve and keeps the drawing. If you only placed "
      "the first point, Escape or right-click cancels it without leaving an anchor or a mark. Right-click "
-     "also cancels a Line while it is being dragged. A polygon is made "
+     "also cancels an unfinished shape. A polygon is made "
      "by clicking corners; clicking the first corner closes it. Escape also finishes it."},
     {"5. The continuous junction path",
      "Choose Path at the right of Home. Click to place each corner; the next segment follows the "

@@ -1098,6 +1098,7 @@ void test_canvas_backing_settings() {
         paint::EditorSettings settings;
         settings.storage_path = path.string();
         settings.scroll_distance = 2.5;
+        settings.drag_shapes = index % 2 != 0;
         settings.canvas_backing = static_cast<paint::CanvasBacking>(index);
         settings.solid_transparency = true;
         settings.transparency_color = {235, 131, 190, 255};
@@ -1106,7 +1107,7 @@ void test_canvas_backing_settings() {
         loaded.storage_path = settings.storage_path;
         loaded.load();
         require(loaded.canvas_backing == settings.canvas_backing && loaded.scroll_distance == 2.5 &&
-                    loaded.solid_transparency &&
+                    loaded.drag_shapes == settings.drag_shapes && loaded.solid_transparency &&
                     paint::equal(loaded.transparency_color, settings.transparency_color),
                 "every backing survives a preference round trip with scroll and transparency settings");
     }
@@ -1120,7 +1121,7 @@ void test_canvas_backing_settings() {
         loaded.load();
         require(loaded.canvas_backing == (index == 1 || index == 2 ? paint::CanvasBacking::MossFelt
                                                                    : paint::CanvasBacking::PaleFelt) &&
-                    loaded.scroll_distance == 3.5,
+                    loaded.scroll_distance == 3.5 && !loaded.drag_shapes,
                 "old felt preferences migrate and unknown backing values fall back safely");
         if (index == 2) {
             require(loaded.solid_transparency &&

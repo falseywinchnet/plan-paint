@@ -91,3 +91,11 @@ A selection made on the canvas remains active when switching tools. Pencil, all 
 Pasted images remain floating overlays. They do not constrain drawing on the underlying canvas. Copying or moving a canvas selection uses the current artwork, including paint added after selecting. Undo and Redo retain the selection alongside the canvas edit.
 
 Four gold handles sit just outside the selection's edge midpoints. The top and bottom handles slide horizontally; the side handles slide vertically. Each shears its edge while holding the opposite edge fixed. The drag preview is bounded by the viewport, and release renders with the existing CONV transform. The selection mask transforms separately from image alpha, so transparent selected pixels remain paintable. Square handles continue to resize.
+
+## Placing lines and shapes
+
+Lines and preset shapes use click–move–click by default. The first click anchors a live preview; move without holding a mouse button and click again to place it. Escape or right-click cancels an unfinished shape. Bézier and Arc use the same gesture to establish their starting line; their control handles remain draggable afterward. Polygon and Path retain their existing corner-by-corner placement.
+
+File > Settings > Lines and shapes offers **Click, move, click** and **Click, hold, release**. The choice persists between launches. Freehand Pencil, Brush and Eraser strokes retain their held gesture.
+
+Hold Ctrl to draw a preset closed shape around its initial center. Circles, stars, regular polygons, gears and bursts use the pointer distance as their radius. Other closed shapes grow symmetrically from the center toward the pointer; Ctrl+Shift constrains their proportions. Lines, curves and vertex-by-vertex polygons retain their endpoint controls.

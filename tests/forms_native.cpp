@@ -259,6 +259,7 @@ struct NativeExercise {
             throw std::runtime_error("Native host services were not attached");
         }
         (*editor).ready(window, handle);
+        (*editor).settings.drag_shapes = true; // This fixture exercises held native capture.
         (*editor).document.new_image(960, 540);
         (*editor).refresh();
         window.perform_layout();

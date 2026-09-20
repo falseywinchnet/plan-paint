@@ -24,6 +24,7 @@ struct Fixture {
     std::unique_ptr<gf::Window> window;
     Fixture() {
         editor = gf::make_control<paint::forms::Editor>(gf::StableId("test.editor"));
+        (*editor).settings.drag_shapes = true; // Existing fixtures exercise the optional drag workflow.
         (*editor).document.new_image(128, 96);
         (*editor).refresh();
         window = std::make_unique<gf::Window>(editor, gf::Size{1280, 820});
@@ -1607,6 +1608,89 @@ void path_node_drag_and_overlap() {
     require(editor.document.path.nodes.empty() && !white(editor.document.image.get(100, 45)),
             "Escape clears nodes and preserves rasterized artwork");
 }
+void click_move_click_shapes() {
+    require(!paint::EditorSettings{}.drag_shapes, "click placement is the default");
+    const paint::Shape shapes[] = {paint::Shape::Line, paint::Shape::Rectangle, paint::Shape::Star5,
+                                   paint::Shape::Bezier, paint::Shape::Arc};
+    for (paint::Shape shape : shapes) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.settings.drag_shapes = false;
+        editor.choose_shape(shape);
+        fixture.drag(20, 20, 80, 60);
+        require(!editor.canvas().has_pointer_capture() && editor.document.undo_history.empty() &&
+                    !editor.document.dirty(),
+                "first release neither places geometry nor keeps capture");
+        fixture.pointer(gf::PointerAction::move, 100, 70, gf::PointerButton::none);
+        fixture.click(100, 70);
+        require(editor.document.undo_history.size() == 1 && editor.document.dirty(),
+                "second click places exactly one geometry transaction");
+        const paint::Image committed = editor.document.image;
+        fixture.pointer(gf::PointerAction::move, 115, 80, gf::PointerButton::none);
+        require(std::memcmp(committed.pixels.data(), editor.document.image.pixels.data(),
+                            committed.pixels.size() * sizeof(paint::Color)) == 0,
+                "mouse movement after second click cannot extend geometry");
+        editor.execute("undo");
+        require(!editor.document.dirty(), "one undo removes click-placed geometry");
+    }
+    for (int cancel = 0; cancel < 3; ++cancel) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.settings.drag_shapes = false;
+        editor.choose_shape(paint::Shape::Rectangle);
+        fixture.click(20, 20);
+        fixture.pointer(gf::PointerAction::move, 90, 65, gf::PointerButton::none);
+        require(!display_white(editor, 20, 40) && white(editor.document.image.get(20, 40)),
+                "unheld mouse movement updates display-only shape preview");
+        if (cancel == 0) {
+            static_cast<void>((*fixture.window).dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape}));
+        } else if (cancel == 1) {
+            fixture.pointer(gf::PointerAction::down, 90, 65, gf::PointerButton::secondary);
+            fixture.pointer(gf::PointerAction::up, 90, 65, gf::PointerButton::secondary);
+        } else {
+            editor.choose_tool(paint::Tool::Pencil);
+        }
+        require(editor.document.undo_history.empty() && !editor.document.dirty() &&
+                    !editor.canvas().has_pointer_capture() && display_white(editor, 20, 40),
+                "cancel or tool change removes pending shape without artwork or history");
+    }
+}
+void centered_closed_shapes() {
+    const paint::Shape shapes[] = {paint::Shape::Rectangle, paint::Shape::RoundedRectangle,
+                                   paint::Shape::Diamond,   paint::Shape::Triangle,
+                                   paint::Shape::Heart,     paint::Shape::RightArrow,
+                                   paint::Shape::Star5,     paint::Shape::Hexagon};
+    for (bool drag : {false, true}) {
+        for (paint::Shape shape : shapes) {
+            Fixture fixture;
+            paint::forms::Editor& editor = *fixture.editor;
+            editor.settings.drag_shapes = drag;
+            editor.choose_shape(shape);
+            editor.document.shape_fill = true;
+            const gf::Modifier ctrl = gf::Modifier::control;
+            fixture.pointer(gf::PointerAction::down, 60, 45, gf::PointerButton::primary, ctrl);
+            if (!drag) {
+                fixture.pointer(gf::PointerAction::up, 60, 45, gf::PointerButton::primary, ctrl);
+            }
+            fixture.pointer(gf::PointerAction::move, 72, 61, gf::PointerButton::none, ctrl);
+            if (!drag) {
+                fixture.pointer(gf::PointerAction::down, 72, 61, gf::PointerButton::primary, ctrl);
+            }
+            fixture.pointer(gf::PointerAction::up, 72, 61, gf::PointerButton::primary, ctrl);
+            paint::Image expected;
+            expected.reset(128, 96);
+            const bool radial = shape == paint::Shape::Star5 || shape == paint::Shape::Hexagon;
+            const paint::Point first = radial ? paint::Point{40, 25} : paint::Point{48, 29};
+            const paint::Point last = radial ? paint::Point{80, 65} : paint::Point{72, 61};
+            const paint::Ink body = editor.document.body_ink();
+            paint::draw_shape(expected, shape, first, last, editor.document.primary_ink(), true, true,
+                              body.brush, &body);
+            require(std::memcmp(expected.pixels.data(), editor.document.image.pixels.data(),
+                                expected.pixels.size() * sizeof(paint::Color)) == 0,
+                    "Ctrl closed geometry grows around its first click in both gesture modes");
+        }
+    }
+}
 void centered_circle_and_materials() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -1993,8 +2077,12 @@ void scroll_distance_bounds_and_settings() {
     std::shared_ptr<gf::ComboBox> backing =
         std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-background"));
     (*backing).set_selected_index(static_cast<std::size_t>(paint::CanvasBacking::BrownFelt));
+    std::shared_ptr<gf::ComboBox> gesture =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-shape-gesture"));
+    require(gesture && (*gesture).selected_index().value_or(0) == 1, "settings exposes active drag option");
+    (*gesture).set_selected_index(0);
     routed_button(window, "dialog-cancel");
-    require(editor.settings.scroll_distance == 6 &&
+    require(editor.settings.drag_shapes && editor.settings.scroll_distance == 6 &&
                 editor.settings.canvas_backing == paint::CanvasBacking::PaleFelt,
             "cancel leaves scroll distance and canvas surround unchanged");
     editor.execute("settings");
@@ -2008,13 +2096,16 @@ void scroll_distance_bounds_and_settings() {
         std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-alpha-background"));
     const std::shared_ptr<gf::TextBox> alpha_color =
         std::dynamic_pointer_cast<gf::TextBox>(window.find("settings-alpha-color"));
+    gesture = std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-shape-gesture"));
+    (*gesture).set_selected_index(0);
     (*alpha_background).set_selected_index(1);
     (*alpha_color).set_text("#ED82C1");
     routed_button(window, "dialog-ok");
     paint::EditorSettings reloaded;
     reloaded.storage_path = editor.settings.storage_path;
     reloaded.load();
-    require(reloaded.scroll_distance == 2.5 && editor.settings.scroll_distance == 2.5,
+    require(!reloaded.drag_shapes && !editor.settings.drag_shapes && reloaded.scroll_distance == 2.5 &&
+                editor.settings.scroll_distance == 2.5,
             "accepted scroll distance persists between launches");
     require(reloaded.canvas_backing == paint::CanvasBacking::TanFelt &&
                 editor.settings.canvas_backing == paint::CanvasBacking::TanFelt,
@@ -2521,6 +2612,8 @@ int main() {
         stamp_scrubs_one_undo_gesture();
         path_hover_snap_and_controls();
         path_node_drag_and_overlap();
+        click_move_click_shapes();
+        centered_closed_shapes();
         centered_circle_and_materials();
         carpet_generator_controls();
         independent_color_materials_and_no_color();

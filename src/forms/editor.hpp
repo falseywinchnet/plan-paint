@@ -232,6 +232,8 @@ class Editor final : public gui_forms::Control {
     Ink gesture_ink_, gesture_fill_ink_;
     bool dragging_ = false, moving_selection_ = false, preview_active_ = false, panning_ = false;
     bool handle_checkpoint_ = false;
+    bool placing_shape_ = false;
+    gui_forms::PointerButton placement_button_ = gui_forms::PointerButton::primary;
     int curve_handle_ = -1;
     int resize_handle_ = -1;
     bool resize_selection_ = false;
