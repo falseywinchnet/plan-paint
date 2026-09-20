@@ -16,14 +16,22 @@ Actual packaged Rainstar Paint 0.3.2 on Apple Silicon Mac. The specimen was pain
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/rainstar-paint-0.3.4-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/rainstar-paint-0.3.4-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/rainstar-paint-0.3.4-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/rainstar-paint-0.3.4-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/rainstar-paint-0.3.5-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/rainstar-paint-0.3.5-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/rainstar-paint-0.3.5-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/rainstar-paint-0.3.5-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.4/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
+
+## New in 0.3.5
+
+- Canvas selections persist across tool changes and constrain drawing, fill, brushes, stamps, erasing, shapes, paths and text. Lasso holes stay protected; fill cannot cross unselected space to reach a separate island. Escape deselects.
+- Pasted images remain floating above the canvas and do not constrain painting underneath. Copy and move use the current selected artwork; Undo and Redo retain the selection with the edit.
+- Four gold edge handles skew selected artwork and its mask. Top and bottom handles slide horizontally; side handles slide vertically, keeping the opposite edge fixed.
+- Lines and preset shapes default to click, move, click. File > Settings > Lines and shapes retains click, hold, release as a saved option. Escape or right-click cancels an unfinished shape.
+- Ctrl-centered drawing extends to closed shapes. Rectangles and similar shapes grow symmetrically; circles, stars and regular polygons grow by radius.
 
 ## New in 0.3.4
 
@@ -60,7 +68,7 @@ The [file and codec audit](docs/SECURITY_AUDIT_2026-09-19.md) and [memory-leak a
 ## Make something
 
 - **Draw and paint.** Pencil, twelve brushes, 37 shapes (including a constrained circle, Bézier and Arc), flood fill, eraser, eyedropper and adjustable outlines. Use solid colors or eighteen two-color patterns.
-- **Bend a curve.** Choose Bézier or Arc, then drag a starting line or click its two endpoints. Bézier has one control handle from each end; Arc has one middle handle. Drag them repeatedly to adjust the curve. Undo and Redo retain the controls. Escape or choosing another tool releases them and keeps the accepted drawing; a lone first click is cancelled without leaving a mark.
+- **Bend a curve.** Choose Bézier or Arc, then click the two endpoints of its starting line, or drag when that option is enabled in Settings. Bézier has one control handle from each end; Arc has one middle handle. Drag them repeatedly to adjust the curve. Undo and Redo retain the controls. Escape or choosing another tool releases them and keeps the accepted drawing; a lone first click is cancelled without leaving a mark.
 - **Edit sprite sheets.** Set rows and columns in Atlas, choose a sprite from the ribbon, and use Left / Right to step through frames. Ctrl-click holds a sequence; Expand gallery preserves the sheet’s two-dimensional arrangement. Save writes the complete sheet.
 - **Edit pictures.** Rectangular and free-form selections, crop, copy/paste, resize, rotate, flip and undo/redo. Drop an image into the window to place it as a movable selection.
 - **Add text and color.** Move and resize text boxes, toggle word wrap, and choose a font, size, bold, italic, underline or strikeout. Place or cancel from the floating toolbar. Mix colors with RGB, hex or OKLab controls and save twenty-nine custom swatches beside a permanent transparency swatch.
