@@ -65,14 +65,37 @@ void Editor::text_focus(bool focused) {
     } else {
         text_caret_frame_.disconnect();
         text_caret_visible_ = false;
+        (*canvas_).invalidate(text_caret_damage());
     }
+}
+gf::Rect Editor::text_caret_damage() const {
+    if (!text.active || text.edit.caret >= text.layout.carets.size()) {
+        return {};
+    }
+    const Point caret = text.layout.carets[text.edit.caret];
+    const double scale = (*canvas_).zoom();
+    const gf::Point origin = screen({static_cast<double>(text.bounds.x), static_cast<double>(text.bounds.y)});
+    const Point first = text.display_point(caret);
+    double left = first.x, right = first.x, top = first.y, bottom = first.y;
+    // Match every endpoint painted by the transformed caret, including bends.
+    for (int row = 1; row <= text.layout.line_height; ++row) {
+        const Point point = text.display_point({caret.x, caret.y + row});
+        left = std::min(left, point.x);
+        right = std::max(right, point.x);
+        top = std::min(top, point.y);
+        bottom = std::max(bottom, point.y);
+    }
+    const gf::Rect bounds{origin.x + left * scale - 2, origin.y + top * scale - 2,
+                          (right - left) * scale + 4, (bottom - top) * scale + 4};
+    const gf::Rect box{origin.x, origin.y, text.bounds.w * scale, text.bounds.h * scale};
+    return gf::Rect::intersection(bounds, box);
 }
 void Editor::text_frame() {
     if (!text.active || !window() || (*window()).focused_control() != canvas_) {
         return;
     }
     text_caret_visible_ = !text_caret_visible_;
-    (*canvas_).invalidate(gf::Dirty::paint);
+    (*canvas_).invalidate(text_caret_damage());
     text_caret_frame_ =
         (*window()).schedule_paint(canvas_, gf::FrameClock::now() + std::chrono::milliseconds(530));
 }

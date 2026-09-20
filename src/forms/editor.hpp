@@ -210,6 +210,7 @@ class Editor final : public gui_forms::Control {
     void paint_text_overlay(gui_forms::Painter& painter);
     void text_pointer(const gui_forms::PointerEvent& event, Point point);
     void reset_text_caret();
+    gui_forms::Rect text_caret_damage() const;
     Point start_, last_, current_, selection_offset_, handle_offset_;
     gui_drawing::PointF pan_origin_;
     gui_forms::Point pan_start_;

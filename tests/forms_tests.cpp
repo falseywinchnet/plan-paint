@@ -253,12 +253,34 @@ void captured_stroke_undo_and_right_color() {
     editor.document.ink.secondary = {250, 20, 50, 255};
     fixture.pointer(gf::PointerAction::down, 10, 20, gf::PointerButton::secondary);
     fixture.pointer(gf::PointerAction::up, 20, 20, gf::PointerButton::secondary);
-    require(white(editor.document.image.get(15, 20)), "Primary Solid disables right drawing with Alt");
+    require(paint::equal(editor.document.image.get(15, 20), editor.document.ink.secondary),
+            "right pencil stroke uses Alt with a solid Primary");
     paint::select_pattern(editor.document.ink, paint::Pattern::Checker);
     fixture.pointer(gf::PointerAction::down, 10, 20, gf::PointerButton::secondary);
     fixture.pointer(gf::PointerAction::up, 20, 20, gf::PointerButton::secondary);
     require(paint::equal(editor.document.image.get(15, 20), editor.document.ink.secondary),
             "right stroke uses enabled Alt");
+}
+void solid_primary_keeps_alternate_drawing() {
+    for (paint::Tool tool : {paint::Tool::Pencil, paint::Tool::Brush, paint::Tool::Fill}) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.choose_tool(tool);
+        editor.document.ink.primary = {20, 80, 180, 255};
+        editor.document.ink.secondary = {220, 40, 70, 255};
+        paint::select_pattern(editor.document.ink, paint::Pattern::Solid);
+        paint::select_pattern(editor.document.alt_ink, paint::Pattern::Solid);
+        fixture.pointer(gf::PointerAction::down, 30, 30, gf::PointerButton::secondary);
+        fixture.pointer(gf::PointerAction::up, 30, 30, gf::PointerButton::secondary);
+        require(paint::equal(editor.document.image.get(30, 30), editor.document.ink.secondary),
+                "solid Primary permits Alt pencil, brush and fill drawing");
+        require(editor.document.undo_history.size() == 1, "Alt drawing creates one undo transaction");
+        editor.execute("undo");
+        require(white(editor.document.image.get(30, 30)), "Alt drawing remains undoable");
+        editor.execute("redo");
+        require(paint::equal(editor.document.image.get(30, 30), editor.document.ink.secondary),
+                "Alt drawing remains redoable");
+    }
 }
 void material_deposition_does_not_depend_on_event_count() {
     Fixture first;
@@ -949,6 +971,7 @@ class PreviewPainter final : public gf::Painter {
     gf::ImageId image;
     gf::Rect image_bounds;
     std::vector<gf::ImageId> painted_images;
+    std::vector<gf::Point> text_caret_points;
     void save() override {}
     void restore() override {}
     void translate(gf::Point) override {}
@@ -970,7 +993,11 @@ class PreviewPainter final : public gf::Painter {
         }
     }
     void stroke_rect(gf::Rect, gf::Color, double) override {}
-    void draw_line(gf::Point, gf::Point, gf::Color color, double) override {
+    void draw_line(gf::Point first, gf::Point last, gf::Color color, double) override {
+        if (color.red == 29 && color.green == 103 && color.blue == 180) {
+            text_caret_points.push_back(first);
+            text_caret_points.push_back(last);
+        }
         if (color.red == 26 && color.green == 112 && color.blue == 174 && color.alpha == 230) {
             ++guide_lines;
         }
@@ -986,6 +1013,47 @@ class PreviewPainter final : public gf::Painter {
         painted_images.push_back(id);
     }
 };
+void text_caret_deadlines_damage_only_the_transformed_caret() {
+    for (int transformed = 0; transformed < 2; ++transformed) {
+        Fixture fixture;
+        gf::Window& window = *fixture.window;
+        paint::forms::Editor& editor = *fixture.editor;
+        routed_button(window, "text");
+        fixture.click(12, 14);
+        require(window.dispatch_text({"Hi"}), "text input starts caret workload");
+        editor.text.resize({12, 14, 110, 70});
+        editor.text.style.skew = transformed ? 0.3 : 0;
+        editor.text.style.perspective = transformed ? 0.2 : 0;
+        editor.text.style.warp = transformed ? 0.25 : 0;
+        editor.canvas().set_view(1.5, {-8, -6});
+        editor.refresh();
+        editor.text_focus(true);
+        PreviewPainter overlay;
+        editor.paint_canvas_overlay(overlay, {});
+        require(!overlay.text_caret_points.empty(), "active text paints a caret");
+        PreviewPainter initial;
+        const std::optional<gf::PaintReceipt> receipt = window.paint(initial);
+        if (receipt) static_cast<void>(window.notify_presented(*receipt));
+        static_cast<void>(window.take_damage());
+        const gf::FramePollResult frame =
+            window.poll_frame_schedule(gf::FrameClock::now() + std::chrono::milliseconds(600));
+        require(frame.deadlines_fired > 0, "caret deadline fires through the window scheduler");
+        const gf::Rect damage = window.take_damage().bounds();
+        require(!damage.empty() && damage.width < 100 && damage.height < 100,
+                "caret deadline does not invalidate the canvas or whole window");
+        for (const gf::Point point : overlay.text_caret_points) {
+            const gf::Point native = editor.canvas().point_to_window(point);
+            require(native.x >= damage.x && native.x <= damage.x + damage.width &&
+                        native.y >= damage.y && native.y <= damage.y + damage.height,
+                    "caret damage covers every transformed painted segment");
+        }
+        PreviewPainter hidden;
+        editor.paint_canvas_overlay(hidden, {});
+        require(hidden.text_caret_points.empty(), "deadline hides the caret without altering text");
+        require(editor.text.edit.content == "Hi" && !editor.document.dirty(),
+                "caret blink preserves the text and document");
+    }
+}
 void transforms_preview_before_release() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -1409,13 +1477,21 @@ void independent_color_materials_and_no_color() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
     gf::Window& window = *fixture.window;
-    editor.choose_tool(paint::Tool::Brush);
+    routed_button(window, "secondary");
+    routed_button(window, "swatch-6");
+    require(paint::equal(editor.document.ink.secondary, paint::forms::ribbon_color(6)),
+            "Pencil permits selecting Alt and assigning its color with solid Primary");
+    routed_button(window, "primary");
     routed_button(window, "swatch-5");
+    require((*window.find("secondary")).enabled() &&
+                paint::equal(editor.document.ink.secondary, paint::forms::ribbon_color(6)),
+            "choosing a Primary color preserves the selectable Alt color");
+    editor.choose_tool(paint::Tool::Brush);
     open_tab(window, "patterns-tab");
     require(!window.find("material-brush-0") && !window.find("material-enabled"),
             "Solid is one material choice without a duplicate Brush or Enabled switch");
-    require(!(*window.find("material-fill")).enabled() && !(*window.find("alt-carries-body")).enabled(),
-            "Primary Solid disables Alt and body assignment");
+    require((*window.find("material-fill")).enabled() && (*window.find("alt-carries-body")).enabled(),
+            "Primary Solid leaves Alt and body assignment available");
     routed_button(window, "material-brush-4");
     routed_button(window, "r-pattern-12");
     require(editor.document.ink.pattern == paint::Pattern::Checker &&
@@ -1464,17 +1540,17 @@ void independent_color_materials_and_no_color() {
             "Alt carries body fills with Alt independently of Primary's pattern");
     routed_button(window, "material-edge");
     routed_button(window, "r-pattern-0");
-    require(paint::solid_material(editor.document.ink) && !editor.document.alt_enabled() &&
-                !(*window.find("material-fill")).enabled() && !(*window.find("alt-carries-body")).enabled(),
-            "Solid clears Primary texture and disables Alt even with body assignment selected");
+    require(paint::solid_material(editor.document.ink) &&
+                (*window.find("material-fill")).enabled() && (*window.find("alt-carries-body")).enabled(),
+            "Solid clears Primary texture without disabling Alt or body assignment");
     fixture.drag(10, 50, 110, 85);
-    require(paint::equal(editor.document.image.get(40, 65), editor.document.ink.primary),
-            "Solid owns the entire enabled shape body");
+    require(paint::equal(editor.document.image.get(40, 65), editor.document.ink.secondary),
+            "Alt still carries the shape body when Primary is solid");
     const std::size_t history = editor.document.undo_history.size();
     fixture.pointer(gf::PointerAction::down, 10, 90, gf::PointerButton::secondary);
     fixture.pointer(gf::PointerAction::up, 110, 90, gf::PointerButton::secondary);
-    require(editor.document.undo_history.size() == history,
-            "disabled Alt does not create an empty painting history entry");
+    require(editor.document.undo_history.size() == history + 1,
+            "right drawing with solid Primary creates one undo transaction");
 }
 
 void ribbon_collapse_and_reopen() {
@@ -2188,6 +2264,7 @@ void zoom_anchors_the_point() {
 } // namespace
 int main() {
     try {
+        text_caret_deadlines_damage_only_the_transformed_caret();
         pencil_is_independent_of_brush_material();
         backward_path_and_guide_connections();
         cancel_pending_lines_and_guide_preview();
@@ -2197,6 +2274,7 @@ int main() {
         display_preserves_document_and_hidden_rgb();
         startup_file_opens_after_window_attachment();
         captured_stroke_undo_and_right_color();
+        solid_primary_keeps_alternate_drawing();
         material_deposition_does_not_depend_on_event_count();
         retained_curve_save_undo_and_release();
         selection_move_path_and_stamp();

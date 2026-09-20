@@ -161,22 +161,6 @@ Color mix_pixel(const Image& image, int x, int y, Point origin, Point motion, Mi
             chroma = 0.13 * std::cos(angle);
             lightness = 0.19 * std::sin(angle);
             fold = 0.38 * std::cos(solid_angle);
-        } else if (effect == MixEffect::Flux) {
-            double ax = 0, ay = 0;
-            for (int knot = 0; knot < 3; ++knot) {
-                const double p = phase * (0.35 + 0.17 * knot) + tau * knot / 3;
-                const double ex = u - 0.28 * std::cos(p), ey = v - 0.24 * std::sin(1.31 * p);
-                const double radius2 = ex * ex + ey * ey + 0.004;
-                const double fringe = std::sin(36 * std::sqrt(radius2) - phase + std::atan2(ey, ex));
-                ax -= ey * fringe / radius2;
-                ay += ex * fringe / radius2;
-            }
-            dx = 0.2 * bx + 0.055 * ax * (0.35 + spread + cancel);
-            dy = 0.2 * by + 0.055 * ay * (0.35 + spread + cancel);
-            hue = 0.22 * std::sin(0.18 * (ax - ay) + phase);
-            chroma = 0.12 * std::cos(0.15 * (ax + ay));
-            lightness = 0.20 * std::sin(0.11 * (ax + ay) - phase);
-            fold = 0.44 * std::cos(0.13 * (ax - ay));
         }
         dx *= scale * 0.18;
         dy *= scale * 0.18;
@@ -202,10 +186,10 @@ Color mix_pixel(const Image& image, int x, int y, Point origin, Point motion, Mi
 }
 } // namespace
 const char* mix_effect_name(MixEffect effect) {
-    static const std::array<const char*, 11> names{"Ripples",       "Glass tile",   "Wigner counterflow",
+    static const std::array<const char*, 10> names{"Ripples",       "Glass tile",   "Wigner counterflow",
                                                    "Support braid", "Support lens", "Moving rooms",
-                                                   "Holonomy",      "Flux knots",   "Blur",
-                                                   "Sharpen",       "Smudge"};
+                                                   "Holonomy",      "Blur",         "Sharpen",
+                                                   "Smudge"};
     return names.at(static_cast<std::size_t>(effect));
 }
 void StrokeStabilizer::reset(Point point) {

@@ -792,11 +792,6 @@ void Editor::pointer(const gf::PointerEvent& event) {
     }
 }
 void Editor::begin(Point point, bool secondary) {
-    if (secondary && !document.alt_enabled() &&
-        (document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Fill ||
-         document.tool == Tool::Shape)) {
-        return;
-    }
     start_ = last_ = current_ = point;
     gesture_ink_ = secondary ? document.alternate_ink() : document.primary_ink();
     gesture_fill_ink_ = secondary ? document.primary_ink() : document.body_ink();

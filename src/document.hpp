@@ -95,7 +95,6 @@ struct Document {
     Ink primary_ink() const;
     Ink alternate_ink() const;
     Ink body_ink() const;
-    bool alt_enabled() const;
     bool alt_carries_body = false;
     Tool tool = Tool::Pencil;
     Shape shape = Shape::Rectangle;

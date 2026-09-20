@@ -393,16 +393,13 @@ Ink Document::primary_ink() const {
     Ink result = ink;
     result.alternate.reset();
     result.transparent_pattern = true;
-    if (alt_enabled() && !alt_carries_body) {
+    if (!solid_material(ink) && !alt_carries_body) {
         result.alternate = std::make_shared<const Ink>(alternate_ink());
     }
     return result;
 }
-bool Document::alt_enabled() const {
-    return !solid_material(ink);
-}
 Ink Document::body_ink() const {
-    return alt_carries_body && alt_enabled() ? alternate_ink() : primary_ink();
+    return alt_carries_body ? alternate_ink() : primary_ink();
 }
 Ink Document::alternate_ink() const {
     Ink result = alt_ink;
@@ -411,10 +408,6 @@ Ink Document::alternate_ink() const {
     result.alternate.reset();
     result.secondary.a = 0;
     result.transparent_pattern = true;
-    if (!alt_enabled()) {
-        result.pattern = Pattern::None;
-        result.brush = Brush::Round;
-    }
     result.size = ink.size;
     result.smooth = ink.smooth;
     return result;

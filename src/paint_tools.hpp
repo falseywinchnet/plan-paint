@@ -11,12 +11,11 @@ enum class MixEffect {
     SupportLens,
     Rooms,
     Holonomy,
-    Flux,
     Blur,
     Sharpen,
     Smudge
 };
-inline constexpr int mix_effect_count = 8;
+inline constexpr int mix_effect_count = 7;
 const char* mix_effect_name(MixEffect effect);
 enum class EraserMode { Hard, Soft, Blur, Sharpen, Smudge };
 class StrokeStabilizer {

@@ -100,6 +100,9 @@ gf::SurfaceMaterial action_material(bool selected, gf::ControlSurfaceState state
     const bool disabled = state == gf::ControlSurfaceState::disabled;
     const bool pressed = state == gf::ControlSurfaceState::pressed;
     const bool hot = state == gf::ControlSurfaceState::hot;
+    if (selected && !disabled) {
+        return gallery_material(true, hot, pressed);
+    }
     gf::SurfaceMaterial material;
     material.corner_radius = 3;
     const gf::Color top = disabled   ? gf::Color::rgba(190, 207, 228)
@@ -127,9 +130,6 @@ gf::SurfaceMaterial action_material(bool selected, gf::ControlSurfaceState state
         material.keylines.push_back({gf::MaterialEdge::left, upper, 1, 1});
         material.keylines.push_back({gf::MaterialEdge::right, lower, 1, 1});
         material.keylines.push_back({gf::MaterialEdge::bottom, lower, 1, 1});
-        if (selected) {
-            material.keylines.push_back({gf::MaterialEdge::bottom, gf::Color::rgba(32, 93, 167), 2, 2});
-        }
         if (!pressed) {
             material.shadows.push_back({{0, 1}, 0, 0, gf::Color::rgba(41, 75, 119, 85), false});
         }
@@ -1409,9 +1409,6 @@ void Ribbon::synchronize() {
     stored_alt.secondary.a = 0;
     stored_alt.transparent_pattern = true;
     (*secondary_).set_material(document.tool == Tool::Pencil ? pencil_ink(stored_alt) : stored_alt);
-    if (!document.alt_enabled()) {
-        (*secondary_).set_accessible_name((*secondary_).accessible_name() + " (disabled by Primary Solid)");
-    }
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());
@@ -1510,12 +1507,6 @@ void Ribbon::synchronize() {
                                             ? "Transform tools"
                                             : std::string(names[static_cast<int>(document.tool)]) + " tools");
         }
-        if (id == "secondary" || id == "material-fill") {
-            control.set_enabled(document.alt_enabled());
-        }
-        if (id.starts_with("material-brush-") || id.starts_with("r-pattern-") || id == "new-grain") {
-            control.set_enabled(!secondary_color_ || document.alt_enabled());
-        }
         control.set_selected(selected);
     }
     if (ordered_tab_page_ != page_) {
@@ -1532,10 +1523,6 @@ void Ribbon::synchronize() {
     }
     synchronizing_ = true;
     const Ink& material = secondary_color_ ? document.alt_ink : document.ink;
-    (*grain_).set_enabled(!secondary_color_ || document.alt_enabled());
-    (*tooth_).set_enabled(!secondary_color_ || document.alt_enabled());
-    (*load_).set_enabled(!secondary_color_ || document.alt_enabled());
-    (*angle_).set_enabled(!secondary_color_ || document.alt_enabled());
     (*grain_).set_value(material.grain_scale);
     (*tooth_).set_value(material.paper_roughness);
     (*load_).set_value(material.pigment_load);
@@ -1592,9 +1579,6 @@ void Ribbon::synchronize() {
                                                           : style.word_wrap);
             continue;
         }
-        if (id == "alt-carries-body") {
-            (*check).set_enabled(document.alt_enabled());
-        }
         (*check).set_checked(id == "guide-fill"              ? (*editor).guide.fill
                              : id == "stroke-stabilize"      ? (*editor).stabilize
                              : id == "spray-glitter"         ? (*editor).glitter
@@ -1636,11 +1620,6 @@ void Ribbon::on_pointer_preview(gf::PointerEvent& event) {
         set_pointer_capture(false);
         event.handled = true;
         if ((*choice).absolute_bounds().contains(event.position)) {
-            const std::shared_ptr<Editor> editor = editor_.lock();
-            if (editor && !(*editor).document.alt_enabled() &&
-                !(*choice).stable_id().value().starts_with("swatch-")) {
-                return;
-            }
             secondary_color_ = true;
             clicked(*choice);
         }
