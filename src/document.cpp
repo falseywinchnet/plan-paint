@@ -1,9 +1,37 @@
 #include "document.hpp"
 #include "conv.hpp"
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 namespace paint {
+bool FloatingSelection::contains(int px, int py) const {
+    const int column = px - x, row = py - y;
+    if (!image.contains(column, row)) {
+        return false;
+    }
+    return coverage.empty() ? image.get(column, row).a != 0
+                            : coverage[static_cast<std::size_t>(row) * image.width + column] != 0;
+}
+std::vector<std::uint8_t> FloatingSelection::transformed_mask(const AffineMap& map, Rect bounds) const {
+    const double determinant = map.xx * map.yy - map.xy * map.yx;
+    if (!std::isfinite(determinant) || std::abs(determinant) < 1e-9) {
+        throw std::runtime_error("Selection transform is singular.");
+    }
+    std::vector<std::uint8_t> mask(static_cast<std::size_t>(bounds.w) * bounds.h, 0);
+    for (int row = 0; row < bounds.h; ++row) {
+        for (int column = 0; column < bounds.w; ++column) {
+            const double dx = column + bounds.x - map.tx, dy = row + bounds.y - map.ty;
+            const int sx = static_cast<int>(std::floor((map.yy * dx - map.xy * dy) / determinant + 0.5));
+            const int sy = static_cast<int>(std::floor((map.xx * dy - map.yx * dx) / determinant + 0.5));
+            mask[static_cast<std::size_t>(row) * bounds.w + column] = contains(x + sx, y + sy) ? 1 : 0;
+        }
+    }
+    return mask;
+}
 void FloatingSelection::composite_onto(Image& target) const {
+    if (on_canvas) {
+        return;
+    }
     // Putting an untouched lifted selection back must preserve its original
     // RGBA bytes, including feathered edges and invisible RGB under alpha zero.
     bool original = source && x == (*source).x && y == (*source).y && image.width == (*source).image.width &&
@@ -35,17 +63,20 @@ Document::Document() {
     image.reset(960, 640);
 }
 bool Document::dirty() const {
-    return revision != saved_revision || selection.active;
+    return revision != saved_revision || (selection.active && !selection.on_canvas);
 }
 std::size_t Snapshot::bytes() const {
     // Counting shared bases conservatively keeps the history bound predictable.
     return image.pixels.size() * sizeof(Color) + atlas.bytes() + path.nodes.size() * sizeof(Point) +
            path.segments.size() * sizeof(PathSegment) + path.runs.size() * sizeof(PathRun) +
            (path.base ? (*path.base).pixels.size() * sizeof(Color) : 0) +
-           (curve.base ? (*curve.base).pixels.size() * sizeof(Color) : 0);
+           (curve.base ? (*curve.base).pixels.size() * sizeof(Color) : 0) +
+           selection.image.pixels.size() * sizeof(Color) + selection.coverage.size() +
+           selection.outline.size() * sizeof(Point) +
+           (selection.source ? (*selection.source).image.pixels.size() * sizeof(Color) : 0);
 }
 void Document::checkpoint() {
-    Snapshot snapshot{image, atlas, revision, path, curve};
+    Snapshot snapshot{image, atlas, revision, path, curve, selection};
     history_bytes += snapshot.bytes();
     undo_history.push_back(std::move(snapshot));
     redo_history.clear();
@@ -59,13 +90,13 @@ void Document::undo() {
     if (undo_history.empty()) {
         return;
     }
-    commit_selection();
-    redo_history.push_back({std::move(image), std::move(atlas), revision, path, curve});
+    redo_history.push_back({std::move(image), std::move(atlas), revision, path, curve, selection});
     history_bytes -= undo_history.back().bytes();
     // Escape and tool changes end a session permanently. Later image undo must
     // not resurrect its controls; undo within that session keeps them editable.
     restore_path(undo_history.back().path);
     restore_curve(undo_history.back().curve);
+    selection = std::move(undo_history.back().selection);
     image = std::move(undo_history.back().image);
     atlas = std::move(undo_history.back().atlas);
     ++atlas_epoch;
@@ -76,11 +107,11 @@ void Document::redo() {
     if (redo_history.empty()) {
         return;
     }
-    selection = {};
-    undo_history.push_back({std::move(image), std::move(atlas), revision, path, curve});
+    undo_history.push_back({std::move(image), std::move(atlas), revision, path, curve, selection});
     history_bytes += undo_history.back().bytes();
     restore_path(redo_history.back().path);
     restore_curve(redo_history.back().curve);
+    selection = std::move(redo_history.back().selection);
     image = std::move(redo_history.back().image);
     atlas = std::move(redo_history.back().atlas);
     ++atlas_epoch;
@@ -155,7 +186,7 @@ void Document::select(Rect bounds, const std::vector<Point>& lasso) {
             }
         }
     }
-    selection = {std::move(lifted), bounds.x, bounds.y, true, std::move(coverage), {}, source};
+    selection = {std::move(lifted), bounds.x, bounds.y, true, std::move(coverage), {}, source, true};
     selection.outline = lasso;
     for (Point& point : selection.outline) {
         point.x -= bounds.x;
@@ -190,7 +221,8 @@ void Document::select_mask(const SelectionMask& mask) {
             }
         }
     }
-    selection = {std::move(lifted), mask.bounds.x, mask.bounds.y, true, mask.coverage, mask.outline, source};
+    selection = {std::move(lifted), mask.bounds.x, mask.bounds.y, true,
+                 mask.coverage,     mask.outline,  source,        true};
 }
 void Document::edit_selection(const std::vector<Point>& polygon, bool subtract) {
     if (polygon.size() < 3) {
@@ -228,6 +260,71 @@ void Document::edit_selection(const std::vector<Point>& polygon, bool subtract) 
     trim_selection_mask(mask);
     select_mask(mask);
 }
+void Document::settle_selection() {
+    if (!selection.active || !selection.canvas_selection || selection.on_canvas) {
+        return;
+    }
+    if (selection.coverage.empty()) {
+        selection.coverage.resize(selection.image.pixels.size());
+        for (std::size_t index = 0; index < selection.coverage.size(); ++index) {
+            selection.coverage[index] = selection.image.pixels[index].a ? 255 : 0;
+        }
+        selection.source.reset();
+    }
+    selection.composite_onto(image);
+    selection.on_canvas = true;
+}
+Image Document::selected_image() const {
+    if (!selection.on_canvas) {
+        return selection.image;
+    }
+    Image result = cropped(image, {selection.x, selection.y, selection.image.width, selection.image.height});
+    for (int y = 0; y < result.height; ++y) {
+        for (int x = 0; x < result.width; ++x) {
+            if (!selection.contains(selection.x + x, selection.y + y)) {
+                result.set(x, y, {0, 0, 0, 0});
+            }
+        }
+    }
+    return result;
+}
+void Document::lift_selection() {
+    if (!selection.active || !selection.on_canvas) {
+        return;
+    }
+    checkpoint();
+    Image original =
+        cropped(image, {selection.x, selection.y, selection.image.width, selection.image.height});
+    selection.image = selected_image();
+    // Once painted in place the mask is geometric; alpha belongs to the canvas.
+    for (std::uint8_t& coverage : selection.coverage) {
+        coverage = coverage ? 1 : 0;
+    }
+    selection.source = std::make_shared<SelectionSource>(
+        SelectionSource{std::move(original), selection.x, selection.y, false, false, ink.secondary});
+    for (int y = 0; y < selection.image.height; ++y) {
+        for (int x = 0; x < selection.image.width; ++x) {
+            if (selection.contains(selection.x + x, selection.y + y)) {
+                image.set(selection.x + x, selection.y + y, ink.secondary);
+            }
+        }
+    }
+    selection.on_canvas = false;
+}
+void Document::constrain_selection(Image& target, const Image& base) const {
+    if (!selection.active || !selection.canvas_selection || target.width != base.width ||
+        target.height != base.height) {
+        return;
+    }
+    for (int y = 0; y < target.height; ++y) {
+        for (int x = 0; x < target.width; ++x) {
+            if (!selection.contains(x, y)) {
+                const std::size_t index = static_cast<std::size_t>(y) * target.width + x;
+                target.pixels[index] = base.pixels[index];
+            }
+        }
+    }
+}
 void Document::commit_selection() {
     if (!selection.active) {
         return;
@@ -236,6 +333,7 @@ void Document::commit_selection() {
     selection = {};
 }
 void Document::delete_selection() {
+    lift_selection();
     if (selection.active) {
         selection = {};
     }
@@ -273,7 +371,7 @@ void Document::invert_selection() {
             lifted.pixels[index] = {0, 0, 0, 0};
         }
     }
-    selection = {std::move(lifted), 0, 0, true, std::move(coverage), {}, {}};
+    selection = {std::move(lifted), 0, 0, true, std::move(coverage), {}, {}, true};
 }
 void Document::crop() {
     if (atlas.kind == AtlasKind::Sheet) {
@@ -283,6 +381,7 @@ void Document::crop() {
     if (!selection.active) {
         return;
     }
+    lift_selection();
     Image replacement = selection.image;
     selection = {};
     image = std::move(replacement);
@@ -300,6 +399,7 @@ void Document::resize(int width, int height, bool scale) {
         (width > 256 || height > 256)) {
         throw std::runtime_error("ICO and CUR images must be at most 256 by 256 pixels.");
     }
+    lift_selection();
     const Image& input = selection.active ? selection.image : image;
     Image replacement;
     if (scale) {
@@ -309,8 +409,12 @@ void Document::resize(int width, int height, bool scale) {
         composite(replacement, input, 0, 0);
     }
     if (selection.active) {
+        const double sx = static_cast<double>(width) / input.width;
+        const double sy = static_cast<double>(height) / input.height;
+        const AffineMap map = scale ? AffineMap{sx, 0, (sx - 1) * 0.5, 0, sy, (sy - 1) * 0.5} : AffineMap{};
+        selection.coverage = selection.transformed_mask(map, {0, 0, width, height});
         selection.image = std::move(replacement);
-        selection.coverage.clear();
+        selection.source.reset();
         selection.outline.clear();
     } else {
         checkpoint();
@@ -318,11 +422,18 @@ void Document::resize(int width, int height, bool scale) {
     }
 }
 void Document::rotate(int turns) {
+    lift_selection();
     commit_path();
     commit_curve();
     if (selection.active) {
-        selection.image = rotate_quarter(selection.image, turns);
-        selection.coverage.clear();
+        int normalized = (turns % 4 + 4) % 4;
+        for (int i = 0; i < normalized; ++i) {
+            const AffineMap map{0, -1, static_cast<double>(selection.image.height - 1), 1, 0, 0};
+            selection.coverage =
+                selection.transformed_mask(map, {0, 0, selection.image.height, selection.image.width});
+            selection.image = rotate_quarter(selection.image, 1);
+        }
+        selection.source.reset();
         selection.outline.clear();
     } else {
         sync_atlas();
@@ -349,11 +460,17 @@ void Document::rotate(int turns) {
     }
 }
 void Document::flip(bool horizontal) {
+    lift_selection();
     commit_path();
     commit_curve();
     if (selection.active) {
+        const AffineMap map =
+            horizontal ? AffineMap{-1, 0, static_cast<double>(selection.image.width - 1), 0, 1, 0}
+                       : AffineMap{1, 0, 0, 0, -1, static_cast<double>(selection.image.height - 1)};
+        selection.coverage =
+            selection.transformed_mask(map, {0, 0, selection.image.width, selection.image.height});
         selection.image = flipped(selection.image, horizontal);
-        selection.coverage.clear();
+        selection.source.reset();
         selection.outline.clear();
     } else {
         sync_atlas();
@@ -377,6 +494,7 @@ void Document::flip(bool horizontal) {
     }
 }
 void Document::invert_colors() {
+    lift_selection();
     commit_path();
     commit_curve();
     if (!selection.active) {
@@ -438,6 +556,7 @@ void Document::restore_path(const EditablePath& previous) {
     }
 }
 void Document::add_path_node(Point point) {
+    settle_selection();
     commit_curve();
     if (path.session == 0) {
         path.session = next_path_session++;
@@ -525,6 +644,7 @@ Image Document::path_image(const Point* next) const {
                     &body);
         }
     }
+    constrain_selection(result, *path.base);
     return result;
 }
 void Document::sync_path() {

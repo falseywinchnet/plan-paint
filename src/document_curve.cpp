@@ -3,7 +3,7 @@
 #include <cmath>
 namespace paint {
 void Document::begin_curve(CurveKind kind, Point start, bool secondary) {
-    commit_selection();
+    settle_selection();
     commit_path();
     commit_curve();
     curve.geometry.kind = kind;
@@ -35,6 +35,7 @@ Image Document::curve_image(const Point* pending_end) const {
     }
     Ink stroke_ink = curve.secondary ? alternate_ink() : primary_ink();
     polygon(result, geometry.samples(), stroke_ink, true, false, false);
+    constrain_selection(result, *curve.base);
     return result;
 }
 void Document::sync_curve() {

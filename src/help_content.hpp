@@ -64,7 +64,8 @@ inline constexpr HelpTopic help_topics[] = {
      "velvet-to-felt structure, fiber diameter, depth, disorder, crimp, roughness, dye, light, tilt and "
      "magnification. Hillshade relief adds surface shading; New fibers changes the seed. Accept the "
      "preview, then paint. Carpet settings reopens the generator. Dye and lighting determine the "
-     "texture color. File > Settings offers the same fabric presets around the canvas. Pencil and Brushes have a configurable Stabilizer to smooth the stroke.\n\n"
+     "texture color. File > Settings offers the same fabric presets around the canvas. Pencil and Brushes "
+     "have a configurable Stabilizer to smooth the stroke.\n\n"
      "The palette button cycles Basic, Custom and Themed. Custom has 29 saved colors and a red-slash "
      "Transparency swatch. Themed columns contain "
      "Primary, Alt and accent. Edit colors offers RGB or OKHSL picking, numeric RGB, hex and OKLab. "
@@ -118,7 +119,11 @@ inline constexpr HelpTopic help_topics[] = {
      "ordinary Path editing."},
     {"6. Select, move, copy and paste",
      "Select draws a rectangle around part of the picture. The little arrow beneath Select also offers "
-     "Free-form selection: draw a lasso around an object. Drag inside the selected area to move it. Arrow "
+     "Free-form selection: draw a lasso around an object. A canvas selection stays active when you change "
+     "tools: drawing, brushes, fill, stamps, erasing, paths and text affect only its selected pixels. "
+     "Holes remain protected. Escape deselects and restores unrestricted painting. Pasted images stay "
+     "floating above the canvas and do not restrict painting underneath. Return to Select or Lasso to "
+     "move or transform a canvas selection. Drag inside the selected area to move it. Arrow "
      "keys nudge it one pixel; Shift plus an arrow moves ten pixels. Escape places it.\n\nCopy keeps the "
      "original. Cut removes it. Paste makes a new movable selection. Paste from opens an image file as a "
      "selection. Drag an image file from Finder or your file manager onto this window to paste it "
@@ -171,7 +176,10 @@ inline constexpr HelpTopic help_topics[] = {
      "it while you drag. Large selections may take a moment to prepare.\n\nThe same menu keeps exact "
      "quarter turns, a half turn, and horizontal or vertical flips. With a selection, only that "
      "content changes. Without one, the whole picture rotates into an expanded canvas. "
-     "Resize also has horizontal and vertical Skew angles. Drag the little handles around a selection "
+     "The four small gold handles just outside the edge midpoints skew the selection. Top and bottom "
+     "handles slide left/right; left and right handles slide up/down. The opposite edge stays fixed. "
+     "The pixels and selection mask transform together. Resize also has horizontal and vertical Skew "
+     "angles. Drag the square handles around a selection "
      "to resize its pixels, or the three handles on the canvas edge to change the paper boundary. "
      "Properties shows dimensions and lets you change the canvas size and JPEG quality."},
     {"9. Reshape an object like soft cloth",

@@ -88,6 +88,7 @@ void Editor::cancel_warp() {
         document.selection = std::move(warp_original_);
     }
     warp_mode_ = WarpMode::none;
+    warp_coverage_.clear();
     warp_field_.reset();
     reshape_mesh_ = {};
     warp_pending_ = warp_commit_ = rotation_dragging_ = warp_whole_image_ = false;
@@ -108,6 +109,7 @@ void Editor::start_reshape() {
     if (warp_worker_.busy()) {
         throw std::runtime_error("The stamp is still preparing. Try reshape after it finishes.");
     }
+    document.lift_selection();
     std::vector<Point> outline = document.selection.outline;
     if (outline.size() >= 3) {
         if (std::hypot(outline.back().x - outline.front().x, outline.back().y - outline.front().y) > 0.1) {
@@ -141,6 +143,7 @@ void Editor::start_rotation() {
     if (!document.selection.active || warp_active() || warp_worker_.busy()) {
         throw std::runtime_error("Select an object and finish the current transform before rotating.");
     }
+    document.lift_selection();
     warp_original_ = document.selection;
     warp_mode_ = WarpMode::rotation;
     warp_field_.reset();
@@ -182,6 +185,7 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
     }
     document.commit_curve();
     document.commit_path();
+    document.lift_selection();
     const Image& input = document.selection.active ? document.selection.image : document.image;
     Image source;
     if (scale) {
@@ -215,6 +219,19 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
     int x = static_cast<int>(std::floor(left + 0.5)), y = static_cast<int>(std::floor(top + 0.5));
     Rect bounds{x, y, std::max(1, static_cast<int>(std::ceil(right + 0.5)) - x),
                 std::max(1, static_cast<int>(std::ceil(bottom + 0.5)) - y)};
+    warp_coverage_.clear();
+    if (document.selection.active) {
+        const double sx = static_cast<double>(width) / input.width;
+        const double sy = static_cast<double>(height) / input.height;
+        const AffineMap mask_map = scale ? AffineMap{sx,
+                                                     horizontal * sy,
+                                                     (sx - 1 + horizontal * (sy - 1)) * 0.5,
+                                                     vertical * sx,
+                                                     sy,
+                                                     (sy - 1 + vertical * (sx - 1)) * 0.5}
+                                         : map;
+        warp_coverage_ = document.selection.transformed_mask(mask_map, bounds);
+    }
     warp_original_ = document.selection;
     warp_whole_image_ = !document.selection.active;
     warp_mode_ = WarpMode::transform;
@@ -293,11 +310,15 @@ void Editor::poll_warp() {
                         document.assign_canvas(std::move(result.image));
                         document.selection = {};
                     } else {
+                        if (result.task == WarpTask::CommitRotation) {
+                            warp_coverage_ = warp_original_.transformed_mask(rotation_map(), result.bounds);
+                        }
                         document.selection.image = std::move(result.image);
                         document.selection.x = warp_original_.x + result.bounds.x;
                         document.selection.y = warp_original_.y + result.bounds.y;
-                        document.selection.coverage.clear();
+                        document.selection.coverage = std::move(warp_coverage_);
                         document.selection.outline.clear();
+                        document.selection.source.reset();
                     }
                     if (committed) {
                         clear_transform_preview();
@@ -508,6 +529,7 @@ void Editor::stamp_at(Point point, bool checkpoint) {
             composite(document.image, stamp_preview_, left, top);
         }
         constrain_paint(document.image, paint_base_, guide, atlas_painting() && atlas_preserve_alpha);
+        document.constrain_selection(document.image, paint_base_);
     }
 }
 gf::Point Editor::rotation_handle() const {
@@ -557,7 +579,8 @@ bool Editor::warp_pointer(const gf::PointerEvent& event, Point point) {
         (*canvas_).invalidate(gf::Dirty::paint);
         return true;
     }
-    if (!document.selection.active || dragging_ || text.active) {
+    if (!document.selection.active || dragging_ || text.active ||
+        (document.selection.on_canvas && document.tool != Tool::Select && document.tool != Tool::Lasso)) {
         return false;
     }
     gf::Point pointer = screen(point), handle = rotation_handle();
@@ -647,7 +670,8 @@ void Editor::paint_warp_overlay(gf::Painter& painter) {
             painter.fill_rect({point.x - 4, point.y - 4, 8, 8}, white);
             painter.stroke_rect({point.x - 4, point.y - 4, 8, 8}, blue, 2);
         }
-    } else if (document.selection.active) {
+    } else if (document.selection.active &&
+               (!document.selection.on_canvas || document.tool == Tool::Select || document.tool == Tool::Lasso)) {
         gf::Point handle = rotation_handle();
         painter.fill_rect({handle.x - 10, handle.y - 10, 20, 20}, white);
         painter.stroke_rect({handle.x - 10, handle.y - 10, 20, 20}, blue, 1);

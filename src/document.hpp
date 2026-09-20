@@ -3,6 +3,7 @@
 #include "curve.hpp"
 #include "guide.hpp"
 #include "raster.hpp"
+#include "warp.hpp"
 #include <deque>
 #include <memory>
 namespace paint {
@@ -35,6 +36,11 @@ struct FloatingSelection {
     std::vector<std::uint8_t> coverage;
     std::vector<Point> outline;
     std::shared_ptr<const SelectionSource> source;
+    // Canvas selections become persistent masks while painting. Pasted pixels
+    // remain floating and never restrict edits underneath them.
+    bool canvas_selection = false, on_canvas = false;
+    bool contains(int px, int py) const;
+    std::vector<std::uint8_t> transformed_mask(const AffineMap& map, Rect bounds) const;
     void composite_onto(Image& target) const;
 };
 // Every run shares an immutable session background. Retained node edits replay
@@ -83,6 +89,7 @@ struct Snapshot {
     std::uint64_t revision = 0;
     EditablePath path;
     EditableCurve curve;
+    FloatingSelection selection;
     std::size_t bytes() const;
 };
 struct Document {
@@ -138,6 +145,10 @@ struct Document {
     void select_mask(const SelectionMask& mask);
     void edit_selection(const std::vector<Point>& polygon, bool subtract);
     void commit_selection();
+    void settle_selection();
+    void lift_selection();
+    Image selected_image() const;
+    void constrain_selection(Image& target, const Image& base) const;
     void delete_selection();
     void select_all();
     void invert_selection();

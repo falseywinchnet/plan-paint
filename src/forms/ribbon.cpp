@@ -714,8 +714,8 @@ void Ribbon::add_options() {
     button("warp-place", "Place", -1, {778, 36, 120, 30});
     button("warp-cancel", "Cancel", -1, {778, 79, 120, 30});
     std::shared_ptr<gf::Label> warp_hint = gf::make_control<gf::Label>(
-        gf::StableId("warp-hint"), "Drag blue mesh nodes or the rotation handle.\nShift snaps rotation to "
-                                   "15°. Escape places; Undo cancels.");
+        gf::StableId("warp-hint"), "Gold edge handles skew; square handles resize.\nDrag the rotation handle to turn. "
+                                   "Shift snaps to 15°. Escape deselects.");
     option(warp_hint, {920, 36, 320, 75});
     building_page_ = 16;
     std::vector<std::string> fonts{"Portsmouth", "Portsmouth Mono"};

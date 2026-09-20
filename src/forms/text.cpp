@@ -126,8 +126,11 @@ void Editor::finish_text(bool place) {
     }
     if (place && !text.edit.content.empty()) {
         text.refresh(document.ink.primary, document.ink.secondary);
+        document.settle_selection();
         document.checkpoint();
+        const Image base = document.image;
         composite(document.image, text.preview, text.bounds.x, text.bounds.y);
+        document.constrain_selection(document.image, base);
     }
     text.clear();
     text_drag_ = -3;

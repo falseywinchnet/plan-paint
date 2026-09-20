@@ -161,7 +161,7 @@ void Editor::paint_segment(Point start, Point end) {
         return;
     }
     if (document.tool == Tool::Fill) {
-        stencil_flood(document.image, start_, gesture_ink_, guide, wrap);
+        stencil_flood(document.image, start_, gesture_ink_, guide, wrap, &document.selection);
         return;
     }
     // Repeat only footprints which intersect this torus cell. The same material

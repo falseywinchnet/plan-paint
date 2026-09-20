@@ -200,7 +200,7 @@ void Editor::paint_tool_preview(gf::Painter& painter) {
                 Color color = document.image.get(px, py);
                 const int checker = ((px / 4 + py / 4) & 1) ? 225 : 255;
                 const double alpha = color.a / 255.0;
-                if (document.selection.active) {
+                if (document.selection.active && !document.selection.on_canvas) {
                     const Color selected =
                         document.selection.image.get(px - document.selection.x, py - document.selection.y);
                     const double sa = selected.a / 255.0;

@@ -624,6 +624,186 @@ void canvas_text_editing_and_commit() {
     editor.execute("text-cancel");
     require(!editor.text.active && !editor.document.dirty(), "Cancel discards text without changing picture");
 }
+void persistent_selection_painting() {
+    const paint::Tool tools[] = {paint::Tool::Pencil, paint::Tool::Brush, paint::Tool::Eraser,
+                                 paint::Tool::Fill, paint::Tool::Shape};
+    for (paint::Tool tool : tools) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.document.image.reset(128, 96, {220, 225, 230, 255});
+        const paint::Image base = editor.document.image;
+        editor.document.select({30, 20, 60, 50}, {{30, 20}, {90, 20}, {70, 70}, {45, 70}});
+        editor.choose_tool(paint::Tool::Select);
+        editor.choose_tool(tool);
+        editor.document.ink.primary = {190, 30, 75, 255};
+        editor.document.ink.size = 30;
+        editor.document.shape = paint::Shape::Rectangle;
+        editor.document.shape_fill = true;
+        editor.refresh();
+        if (tool == paint::Tool::Fill) {
+            fixture.click(54, 42);
+        } else if (tool == paint::Tool::Shape) {
+            fixture.drag(5, 5, 115, 85);
+        } else {
+            fixture.drag(5, 42, 115, 42);
+        }
+        require(editor.document.selection.active && editor.document.selection.on_canvas,
+                "canvas selection persists across tools and drawing");
+        bool changed = false;
+        for (int y = 0; y < 96; ++y) {
+            for (int x = 0; x < 128; ++x) {
+                const bool different = !paint::equal(base.get(x, y), editor.document.image.get(x, y));
+                require(!different || editor.document.selection.contains(x, y),
+                        "painting never changes pixels outside lasso mask");
+                changed = changed || different;
+            }
+        }
+        require(changed, "selected canvas receives paint");
+        const paint::Image painted = editor.document.image;
+        editor.execute("undo");
+        require(editor.document.selection.active && editor.document.selection.on_canvas &&
+                    editor.document.image.pixels.size() == base.pixels.size() &&
+                    std::memcmp(editor.document.image.pixels.data(), base.pixels.data(),
+                                base.pixels.size() * sizeof(paint::Color)) == 0,
+                "stroke undo restores canvas while retaining selection");
+        editor.execute("redo");
+        require(editor.document.selection.active &&
+                    std::memcmp(editor.document.image.pixels.data(), painted.pixels.data(),
+                                painted.pixels.size() * sizeof(paint::Color)) == 0,
+                "stroke redo retains selection and exact artwork");
+    }
+}
+void selection_holes_flood_and_floating_paste() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    paint::SelectionMask mask;
+    mask.bounds = {20, 20, 80, 50};
+    mask.coverage.resize(80 * 50);
+    for (int y = 0; y < 50; ++y) {
+        for (int x = 0; x < 80; ++x) {
+            mask.coverage[y * 80 + x] =
+                (x < 25 || x >= 55) && !(x >= 8 && x < 16 && y >= 15 && y < 35) ? 255 : 0;
+        }
+    }
+    editor.document.select_mask(mask);
+    editor.choose_tool(paint::Tool::Fill);
+    editor.document.ink.primary = {40, 90, 180, 255};
+    fixture.click(25, 42);
+    require(!white(editor.document.image.get(25, 42)) && white(editor.document.image.get(85, 42)) &&
+                white(editor.document.image.get(30, 42)),
+            "fill respects holes and cannot cross unselected space to another island");
+    const std::uint64_t revision = editor.document.revision;
+    static_cast<void>((*fixture.window).dispatch_key({gf::KeyAction::down, gf::PhysicalKey::q}));
+    require(editor.document.selection.on_canvas && editor.document.revision == revision,
+            "unrelated keys do not lift a persistent selection or create history");
+    fixture.click(60, 42);
+    require(white(editor.document.image.get(85, 42)), "fill outside selection does nothing");
+    editor.choose_tool(paint::Tool::Pencil);
+    fixture.drag(5, 10, 115, 10);
+    require(white(editor.document.image.get(60, 10)), "outside strokes are clipped");
+    editor.execute("release");
+    fixture.drag(5, 10, 115, 10);
+    require(!white(editor.document.image.get(60, 10)), "deselect restores unrestricted painting");
+    paint::Image pasted;
+    pasted.reset(30, 20, {220, 30, 40, 255});
+    editor.document.paste(pasted, 45, 30);
+    editor.choose_tool(paint::Tool::Pencil);
+    editor.document.ink.primary = {10, 80, 150, 255};
+    fixture.drag(5, 42, 115, 42);
+    require(editor.document.selection.active && !editor.document.selection.canvas_selection &&
+                paint::equal(editor.document.image.get(60, 42), editor.document.ink.primary) &&
+                paint::equal(editor.document.visible_image().get(60, 42), pasted.get(0, 0)) &&
+                paint::equal(editor.document.image.get(10, 42), editor.document.ink.primary),
+            "paste stays above unrestricted underlying canvas painting");
+    editor.execute("undo");
+    require(editor.document.selection.active && !editor.document.selection.canvas_selection,
+            "undoing paint below paste retains floating paste");
+}
+void selection_text_path_carpet_and_move() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.select({30, 20, 60, 50});
+    editor.choose_tool(paint::Tool::Brush);
+    editor.brush_family = paint::BrushFamily::Carpet;
+    editor.carpet_tile.reset(8, 8, {60, 120, 180, 255});
+    editor.document.ink.size = 30;
+    fixture.drag(5, 42, 115, 42);
+    require(white(editor.document.image.get(20, 42)) && !white(editor.document.image.get(50, 42)),
+            "carpet is clipped to persistent selection");
+    editor.choose_tool(paint::Tool::Text);
+    fixture.click(8, 22);
+    require((*fixture.window).dispatch_text({"MMMMMMMMMMMM"}), "masked text receives input");
+    editor.execute("text-place");
+    for (int y = 0; y < 96; ++y) {
+        for (int x = 0; x < 128; ++x) {
+            require(editor.document.selection.contains(x, y) || white(editor.document.image.get(x, y)),
+                    "text placement preserves every pixel outside selection");
+        }
+    }
+    editor.choose_tool(paint::Tool::Stamp);
+    fixture.click(55, 42);
+    await_background(fixture);
+    fixture.drag(10, 35, 110, 35);
+    for (int y = 0; y < 96; ++y) {
+        for (int x = 0; x < 128; ++x) {
+            require(editor.document.selection.contains(x, y) || white(editor.document.image.get(x, y)),
+                    "stamp scrub preserves every pixel outside selection");
+        }
+    }
+    editor.choose_tool(paint::Tool::Path);
+    fixture.click(5, 60);
+    fixture.click(115, 60);
+    editor.execute("finish-path");
+    require(editor.document.selection.active && white(editor.document.image.get(10, 60)) &&
+                !white(editor.document.image.get(50, 60)),
+            "retained path clips and keeps mask");
+    editor.choose_tool(paint::Tool::Select);
+    const paint::Image before = editor.document.image;
+    const paint::Image copied = editor.document.selected_image();
+    require(paint::equal(copied.get(20, 22), before.get(50, 42)), "copy reads newly painted selected pixels");
+    fixture.drag(50, 42, 60, 52);
+    require(editor.document.selection.x == 40 && editor.document.selection.y == 30 &&
+                paint::equal(editor.document.visible_image().get(60, 52), before.get(50, 42)),
+            "moving mask lifts current painted artwork");
+    editor.execute("undo");
+    require(editor.document.selection.on_canvas && editor.document.selection.x == 30 &&
+                std::memcmp(before.pixels.data(), editor.document.image.pixels.data(),
+                            before.pixels.size() * sizeof(paint::Color)) == 0,
+            "move undo restores exact painted canvas and mask");
+}
+void selection_skew_handles() {
+    for (int handle = 0; handle < 4; ++handle) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.document.image.reset(128, 96, {77, 88, 99, 0});
+        editor.document.select({30, 24, 40, 32});
+        editor.document.settle_selection();
+        editor.choose_tool(paint::Tool::Select);
+        const double hx[] = {50, 86, 50, 14}, hy[] = {8, 40, 72, 40};
+        const bool horizontal = handle == 0 || handle == 2;
+        fixture.drag(hx[handle], hy[handle], hx[handle] + (horizontal ? 12 : 0),
+                     hy[handle] + (horizontal ? 0 : -12));
+        await_background(fixture);
+        require(!editor.warp_active() && editor.document.selection.canvas_selection &&
+                    editor.document.selection.image.width == (horizontal ? 52 : 40) &&
+                    editor.document.selection.image.height == (horizontal ? 32 : 44),
+                "four skew handles move their edge along the advertised axis");
+        int selected = 0;
+        for (std::uint8_t coverage : editor.document.selection.coverage) {
+            selected += coverage != 0;
+        }
+        require(selected == 40 * 32, "skew transforms geometric mask even over transparent canvas");
+        editor.choose_tool(paint::Tool::Pencil);
+        editor.document.ink.primary = {180, 30, 80, 255};
+        fixture.drag(5, 40, 120, 40);
+        require(editor.document.selection.active, "skewed selection persists as painting mask");
+        editor.execute("undo");
+        editor.execute("undo");
+        require(editor.document.selection.on_canvas && editor.document.selection.x == 30 &&
+                    editor.document.selection.y == 24 && editor.document.selection.image.width == 40,
+                "skew undo restores original selection and canvas");
+    }
+}
 void skew_transaction_and_undo() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -1124,9 +1304,7 @@ void selection_handles_repaint_during_capture() {
         editor.refresh();
         PreviewPainter initial;
         std::optional<gf::PaintReceipt> receipt = window.paint(initial);
-        if (receipt) {
-            static_cast<void>(window.notify_presented(*receipt));
-        }
+        if (receipt) static_cast<void>(window.notify_presented(*receipt));
         double x = 30 + handles[handle][0] * 40, y = 25 + handles[handle][1] * 30;
         fixture.pointer(gf::PointerAction::down, x, y);
         std::uint64_t prior = 0;
@@ -2311,6 +2489,10 @@ void zoom_anchors_the_point() {
 } // namespace
 int main() {
     try {
+        persistent_selection_painting();
+        selection_holes_flood_and_floating_paste();
+        selection_text_path_carpet_and_move();
+        selection_skew_handles();
         text_caret_deadlines_damage_only_the_transformed_caret();
         pencil_is_independent_of_brush_material();
         backward_path_and_guide_connections();

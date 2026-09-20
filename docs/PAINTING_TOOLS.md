@@ -83,3 +83,11 @@ The Royale Cobalt ribbon uses darker rear tabs with raised right edges. The sele
 - The [Fine Glitter Texture demonstration by PrettyWebz Media](https://www.youtube.com/watch?v=wdm7KHKfxxw) informed the combination of fine grain and sparse high-intensity highlights. Rainstar generates its own facets during painting.
 
 Collapsing or reopening the ribbon keeps the artwork at the same screen position and zoom. The expanded workspace reveals the area previously covered by the ribbon. File > About Rainstar Paint displays the version, dedication, credits and license inside a keyboard-accessible application dialog.
+
+## Persistent selections and skew handles
+
+A selection made on the canvas remains active when switching tools. Pencil, all brush families, fill, stamp, eraser, shapes, editable paths and text affect only selected pixels. Lasso holes remain protected; flood fill cannot cross unselected space to reach another selected island. Escape dismisses the selection. Choosing Select or Lasso exposes its movement and transform handles.
+
+Pasted images remain floating overlays. They do not constrain drawing on the underlying canvas. Copying or moving a canvas selection uses the current artwork, including paint added after selecting. Undo and Redo retain the selection alongside the canvas edit.
+
+Four gold handles sit just outside the selection's edge midpoints. The top and bottom handles slide horizontally; the side handles slide vertically. Each shears its edge while holding the opposite edge fixed. The drag preview is bounded by the viewport, and release renders with the existing CONV transform. The selection mask transforms separately from image alpha, so transparent selected pixels remain paintable. Square handles continue to resize.

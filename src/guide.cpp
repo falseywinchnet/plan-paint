@@ -1,4 +1,5 @@
 #include "guide.hpp"
+#include "document.hpp"
 #include "paint_tools.hpp"
 #include <algorithm>
 #include <cmath>
@@ -469,7 +470,8 @@ void constrain_paint(Image& image, const Image& base, const Guide& guide, bool p
         }
     }
 }
-void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide, bool wrap) {
+void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide, bool wrap,
+                   const FloatingSelection* selection) {
     if (image.width < 1 || image.height < 1) {
         return;
     }
@@ -478,7 +480,8 @@ void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide
         x = (x % image.width + image.width) % image.width;
         y = (y % image.height + image.height) % image.height;
     }
-    if (!image.contains(x, y) || guide.blocked(x, y) >= 0.5) {
+    const bool selected = selection && (*selection).active && (*selection).canvas_selection;
+    if (!image.contains(x, y) || guide.blocked(x, y) >= 0.5 || (selected && !(*selection).contains(x, y))) {
         return;
     }
     const Color original = image.get(x, y);
@@ -504,7 +507,8 @@ void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide
                 continue;
             }
             const int next = py * image.width + px;
-            if (visited[next] || guide.blocked(px, py) >= 0.5 || !equal(image.pixels[next], original)) {
+            if (visited[next] || guide.blocked(px, py) >= 0.5 ||
+                (selected && !(*selection).contains(px, py)) || !equal(image.pixels[next], original)) {
                 continue;
             }
             visited[next] = 1;

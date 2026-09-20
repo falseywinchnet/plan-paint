@@ -8,8 +8,8 @@
 namespace paint::forms {
 namespace gf = gui_forms;
 namespace {
-const double handle_x[] = {0, 0.5, 1, 1, 1, 0.5, 0, 0};
-const double handle_y[] = {0, 0, 0, 0.5, 1, 1, 1, 0.5};
+const double handle_x[] = {0, 0.5, 1, 1, 1, 0.5, 0, 0, 0.5, 1, 0.5, 0};
+const double handle_y[] = {0, 0, 0, 0.5, 1, 1, 1, 0.5, 0, 0.5, 1, 0.5};
 } // namespace
 // Interactive pixels are display-only. The document keeps its original samples
 // until CONV produces the final transform. Sampling work is bounded by the viewport.
@@ -24,6 +24,7 @@ void Editor::update_transform_preview() {
         return;
     }
     const bool rotating = warp_mode_ == WarpMode::rotation;
+    const bool shearing = resize_handle_ >= 8;
     const Image& source = rotating ? warp_original_.image : document.selection.image;
     if (source.pixels.empty()) {
         return;
@@ -64,6 +65,14 @@ void Editor::update_transform_preview() {
             double dy = origin.y + (top + (y + 0.5) * pixel_height) * inverse_zoom - center_y;
             double sx = (cosine * dx + sine * dy) * source.width / width + source.width * 0.5 - 0.5;
             double sy = (-sine * dx + cosine * dy) * source.height / height + source.height * 0.5 - 0.5;
+            if (shearing) {
+                const double px = origin.x + (left + (x + 0.5) * pixel_width) * inverse_zoom -
+                                  resize_original_.x - 0.5 - shear_map_.tx;
+                const double py = origin.y + (top + (y + 0.5) * pixel_height) * inverse_zoom -
+                                  resize_original_.y - 0.5 - shear_map_.ty;
+                sx = px - shear_map_.xy * py;
+                sy = py - shear_map_.yx * px;
+            }
             int ix = static_cast<int>(std::floor(sx)), iy = static_cast<int>(std::floor(sy));
             double fx = sx - ix, fy = sy - iy;
             double channels[4] = {};
@@ -96,8 +105,11 @@ void Editor::update_transform_preview() {
     canvas().invalidate(gf::Dirty::paint);
 }
 bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
+    if (document.selection.on_canvas && document.tool != Tool::Select && document.tool != Tool::Lasso) {
+        return false;
+    }
     if ((document.tool == Tool::Lasso && (control_ || alt_)) || document.tool == Tool::Guide || text.active ||
-        document.curve.base || warp_active() || panning_ || dragging_ ||
+        document.curve.base || warp_active() || warp_worker_.busy() || panning_ || dragging_ ||
         (!document.selection.active && document.fixed_canvas())) {
         return false;
     }
@@ -107,32 +119,42 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
                       : Rect{0, 0, document.image.width, document.image.height};
     if (resize_handle_ < 0) {
         int hovered = -1;
-        for (int i = 0; i < 8; ++i) {
+        for (int i = 0; i < 12; ++i) {
             if (!document.selection.active && i != 3 && i != 4 && i != 5) {
                 continue;
             }
             Point handle{bounds.x + bounds.w * handle_x[i], bounds.y + bounds.h * handle_y[i]};
+            if (i >= 8) {
+                handle.x += (i == 9 ? 16 : i == 11 ? -16 : 0) / canvas().zoom();
+                handle.y += (i == 10 ? 16 : i == 8 ? -16 : 0) / canvas().zoom();
+            }
             if (std::abs(point.x - handle.x) * canvas().zoom() <= 6 &&
                 std::abs(point.y - handle.y) * canvas().zoom() <= 6) {
                 hovered = i;
                 break;
             }
         }
-        canvas().set_cursor(hovered == 1 || hovered == 5   ? gf::CursorKind::resize_vertical
-                            : hovered == 3 || hovered == 7 ? gf::CursorKind::resize_horizontal
-                            : hovered == 0 || hovered == 4 ? gf::CursorKind::resize_diagonal_down
-                            : hovered == 2 || hovered == 6 ? gf::CursorKind::resize_diagonal_up
-                            : document.tool == Tool::Text  ? gf::CursorKind::text
-                                                           : gf::CursorKind::crosshair);
+        canvas().set_cursor(hovered == 9 || hovered == 11   ? gf::CursorKind::resize_vertical
+                            : hovered == 8 || hovered == 10 ? gf::CursorKind::resize_horizontal
+                            : hovered == 1 || hovered == 5  ? gf::CursorKind::resize_vertical
+                            : hovered == 3 || hovered == 7  ? gf::CursorKind::resize_horizontal
+                            : hovered == 0 || hovered == 4  ? gf::CursorKind::resize_diagonal_down
+                            : hovered == 2 || hovered == 6  ? gf::CursorKind::resize_diagonal_up
+                            : document.tool == Tool::Text   ? gf::CursorKind::text
+                                                            : gf::CursorKind::crosshair);
         if (hovered < 0 || event.action != gf::PointerAction::down ||
             event.button != gf::PointerButton::primary) {
             return false;
         }
         unset_guide();
+        if (document.selection.active) {
+            document.lift_selection();
+        }
         resize_handle_ = hovered;
         resize_selection_ = document.selection.active;
         resize_original_ = resize_preview_ = bounds;
         resize_start_ = point;
+        shear_map_ = {};
         refresh();
         canvas().set_pointer_capture(true);
         if (window()) {
@@ -164,17 +186,52 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
     if (resize_handle_ == 0 || resize_handle_ == 1 || resize_handle_ == 2) {
         resize_preview_.y = resize_original_.y + resize_original_.h - resize_preview_.h;
     }
+    if (resize_handle_ >= 8) {
+        // Coordinates are pixel centres. The half-pixel translation anchors the
+        // opposite footprint edge, rather than its first row of pixel centres.
+        const bool horizontal = resize_handle_ == 8 || resize_handle_ == 10;
+        const bool far_edge = resize_handle_ == 9 || resize_handle_ == 10;
+        const double extent = horizontal ? resize_original_.h : resize_original_.w;
+        const double displacement =
+            std::clamp(static_cast<double>(horizontal ? dx : dy), -4 * extent, 4 * extent);
+        const double slope = displacement / extent * (far_edge ? 1 : -1);
+        const double offset = far_edge ? slope * 0.5 : displacement + slope * 0.5;
+        shear_map_ = horizontal ? AffineMap{1, slope, offset, 0, 1, 0} : AffineMap{1, 0, 0, slope, 1, offset};
+        const int low = static_cast<int>(std::floor(std::min(0.0, displacement)));
+        const int extra = static_cast<int>(std::ceil(std::abs(displacement)));
+        resize_preview_ = resize_original_;
+        resize_preview_.x += horizontal ? low : 0;
+        resize_preview_.y += horizontal ? 0 : low;
+        resize_preview_.w += horizontal ? extra : 0;
+        resize_preview_.h += horizontal ? 0 : extra;
+    }
     if (resize_selection_) {
         update_transform_preview();
     }
     canvas().invalidate(gf::Dirty::paint);
     update_status();
     if (event.action == gf::PointerAction::up && event.button == gf::PointerButton::primary) {
-        if (resize_selection_) {
+        if (resize_handle_ >= 8 && (dx != 0 || dy != 0)) {
+            const Rect transformed{resize_preview_.x - resize_original_.x,
+                                   resize_preview_.y - resize_original_.y, resize_preview_.w,
+                                   resize_preview_.h};
+            warp_original_ = document.selection;
+            warp_coverage_ = warp_original_.transformed_mask(shear_map_, transformed);
+            warp_whole_image_ = false;
+            warp_mode_ = WarpMode::transform;
+            warp_commit_ = true;
+            ++warp_generation_;
+            try {
+                warp_worker_.transform(warp_original_.image, shear_map_, transformed, warp_generation_);
+            } catch (...) {
+                cancel_warp();
+                throw;
+            }
+        } else if (resize_selection_ && resize_handle_ < 8) {
             document.resize(resize_preview_.w, resize_preview_.h, true);
             document.selection.x = resize_preview_.x;
             document.selection.y = resize_preview_.y;
-        } else {
+        } else if (!resize_selection_) {
             document.resize(resize_preview_.w, resize_preview_.h, false);
         }
         clear_transform_preview();
@@ -185,6 +242,9 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
     return true;
 }
 void Editor::paint_resize_overlay(gf::Painter& painter) {
+    if (document.selection.on_canvas && document.tool != Tool::Select && document.tool != Tool::Lasso) {
+        return;
+    }
     if (document.tool == Tool::Guide || text.active || document.curve.base || warp_active() ||
         (!document.selection.active && document.fixed_canvas())) {
         return;
@@ -196,15 +256,40 @@ void Editor::paint_resize_overlay(gf::Painter& painter) {
     if (resize_handle_ >= 0) {
         bounds = resize_preview_;
     }
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 12; ++i) {
+        if (resize_handle_ >= 8) {
+            break;
+        }
         if (!document.selection.active && i != 3 && i != 4 && i != 5) {
             continue;
         }
         gf::Point point = screen({bounds.x + bounds.w * handle_x[i], bounds.y + bounds.h * handle_y[i]});
+        if (i >= 8) {
+            point.x += i == 9 ? 16 : i == 11 ? -16 : 0;
+            point.y += i == 10 ? 16 : i == 8 ? -16 : 0;
+            const gf::Color gold = gf::Color::rgba(166, 112, 22);
+            painter.fill_rounded_rect({point.x - 4, point.y - 4, 8, 8}, 4, gf::Color::rgba(255, 224, 144));
+            painter.stroke_rounded_rect({point.x - 4, point.y - 4, 8, 8}, 4, gold, 1);
+            const bool horizontal = i == 8 || i == 10;
+            painter.draw_line({point.x - (horizontal ? 8 : 0), point.y - (horizontal ? 0 : 8)},
+                              {point.x + (horizontal ? 8 : 0), point.y + (horizontal ? 0 : 8)}, gold, 1);
+            continue;
+        }
         painter.fill_rect({point.x - 3, point.y - 3, 6, 6}, gf::Color::rgba(255, 255, 255));
         painter.stroke_rect({point.x - 3, point.y - 3, 6, 6}, gf::Color::rgba(30, 95, 160), 1);
     }
-    if (resize_handle_ >= 0) {
+    if (resize_handle_ >= 8) {
+        gf::Point corners[4];
+        for (int i = 0; i < 4; ++i) {
+            const double x = (i == 1 || i == 2 ? resize_original_.w : 0) - 0.5;
+            const double y = (i >= 2 ? resize_original_.h : 0) - 0.5;
+            corners[i] = screen({resize_original_.x + x + shear_map_.xy * y + shear_map_.tx + 0.5,
+                                 resize_original_.y + y + shear_map_.yx * x + shear_map_.ty + 0.5});
+        }
+        for (int i = 0; i < 4; ++i) {
+            painter.draw_line(corners[i], corners[(i + 1) % 4], gf::Color::rgba(166, 112, 22), 2);
+        }
+    } else if (resize_handle_ >= 0) {
         gf::Point point = screen({static_cast<double>(bounds.x), static_cast<double>(bounds.y)});
         double width = bounds.w * canvas().zoom(), height = bounds.h * canvas().zoom();
         painter.stroke_rect({point.x, point.y, width, height}, gf::Color::rgba(30, 95, 160), 2);

@@ -237,6 +237,8 @@ class Editor final : public gui_forms::Control {
     bool resize_selection_ = false;
     Point resize_start_;
     Rect resize_original_, resize_preview_;
+    AffineMap shear_map_;
+    std::vector<std::uint8_t> warp_coverage_;
     gui_forms::ImageId transform_image_;
     gui_forms::Rect transform_destination_;
     void update_transform_preview();
@@ -253,7 +255,7 @@ class Editor final : public gui_forms::Control {
     void move(Point point);
     void end(Point point);
     void release_gesture();
-    void finish_controls();
+    void finish_controls(bool deselect = false);
     void zoom(double factor, gui_forms::Point anchor);
     void copy();
     void paste();

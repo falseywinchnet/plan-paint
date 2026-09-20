@@ -471,7 +471,11 @@ bool Editor::path_preview_point(Point& point) const {
 }
 void Editor::publish_path_preview() {
     Point point;
-    publish_image(path_preview_point(point) ? document.path_image(&point) : document.image, *canvas_);
+    Image composed = path_preview_point(point) ? document.path_image(&point) : document.image;
+    if (document.selection.active) {
+        document.selection.composite_onto(composed);
+    }
+    publish_image(composed, *canvas_);
 }
 void Editor::refresh() {
     ++canvas_revision;
@@ -483,13 +487,21 @@ void Editor::refresh() {
                                                                  : gf::Color::rgba(211, 215, 220));
     if (text.active) {
         text.refresh(document.ink.primary, document.ink.secondary);
-        Image composed = document.visible_image();
+        Image composed = document.image;
         composite(composed, text.preview, text.bounds.x, text.bounds.y);
+        document.constrain_selection(composed, document.image);
+        if (document.selection.active) {
+            document.selection.composite_onto(composed);
+        }
         publish_image(composed, *canvas_);
     } else if (document.tool == Tool::Path && document.path.extending) {
         publish_path_preview();
     } else if (preview_active_) {
-        publish_image(preview_, *canvas_);
+        Image composed = preview_;
+        if (document.selection.active) {
+            document.selection.composite_onto(composed);
+        }
+        publish_image(composed, *canvas_);
     } else if ((resize_handle_ >= 0 && resize_selection_) || warp_mode_ == WarpMode::rotation) {
         publish_image(document.image, *canvas_);
     } else if (document.selection.active) {
@@ -593,17 +605,21 @@ void Editor::release_gesture() {
     carpet_stroke_.clear();
     (*canvas_).set_pointer_capture(false);
 }
-void Editor::finish_controls() {
+void Editor::finish_controls(bool deselect) {
     finish_text(true);
-    finish_warp(true);
+    finish_warp(false);
     release_gesture();
-    document.commit_selection();
     document.commit_path();
     document.commit_curve();
+    if (deselect) {
+        document.commit_selection();
+    } else {
+        document.settle_selection();
+    }
 }
 void Editor::choose_shape(Shape shape) {
     unset_guide();
-    finish_controls();
+    finish_controls(false);
     document.shape = shape;
     document.tool = Tool::Shape;
     refresh();
@@ -637,6 +653,7 @@ void Editor::choose_tool(Tool tool) {
         }
         guide.closed = true;
         guide.fill = true;
+        document.commit_selection();
     } else if (tool == Tool::Guide && guide.nodes.empty()) {
         guide.fill = document.shape_fill;
     } else if (tool == Tool::Select || tool == Tool::Lasso || tool == Tool::Path || tool == Tool::Shape ||
@@ -647,7 +664,7 @@ void Editor::choose_tool(Tool tool) {
         path_swap_kind_.reset();
         path_swap_segment_ = -1;
         path_swap_handle_ = -1;
-        finish_controls();
+        finish_controls(false);
     }
     document.tool = tool;
     refresh();
@@ -823,7 +840,7 @@ void Editor::begin(Point point, bool secondary) {
         return;
     }
     if (document.tool == Tool::Text) {
-        finish_controls();
+        finish_controls(false);
         text.begin(point);
         text.bounds.w = std::max(80, std::min(440, document.image.width - text.bounds.x));
         (*ribbon_).show_tool_context();
@@ -871,7 +888,7 @@ void Editor::begin(Point point, bool secondary) {
         return;
     }
     if (document.tool == Tool::Stamp) {
-        document.commit_selection();
+        document.settle_selection();
         paint_base_ = document.image;
         bool loaded = !document.stamp.pixels.empty() && !stamp_pending_ && !stamp_preview_.pixels.empty();
         stamp_at(point);
@@ -892,6 +909,7 @@ void Editor::begin(Point point, bool secondary) {
             moving_selection_ = document.selection.coverage[static_cast<std::size_t>(y) * bounds.w + x] != 0;
         }
         if (moving_selection_) {
+            document.lift_selection();
             selection_offset_ = {point.x - bounds.x, point.y - bounds.y};
         } else {
             if (!selection_edit_) {
@@ -906,7 +924,7 @@ void Editor::begin(Point point, bool secondary) {
                                  secondary);
         }
     } else {
-        document.commit_selection();
+        document.settle_selection();
         paint_base_ = document.image;
         if (document.tool != Tool::Shape &&
             !(document.tool == Tool::Stamp && document.stamp.pixels.empty())) {
@@ -994,6 +1012,7 @@ void Editor::move(Point point) {
             draw_shape(preview_, document.shape, first, last, gesture_ink_, document.shape_outline,
                        document.shape_fill, gesture_fill_ink_.brush, &gesture_fill_ink_);
         }
+        document.constrain_selection(preview_, document.image);
         preview_active_ = true;
     } else if (document.tool == Tool::Stamp) {
         // Deposit at each pixel along the gesture, even between sparse pointer events.
@@ -1019,6 +1038,10 @@ void Editor::move(Point point) {
     if (document.tool == Tool::Eraser && atlas_painting() && atlas_preserve_alpha) {
         constrain_paint(document.image, paint_base_, Guide{}, true);
     }
+    if (document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Fill ||
+        document.tool == Tool::Stamp || document.tool == Tool::Eraser) {
+        document.constrain_selection(document.image, paint_base_);
+    }
     ++canvas_revision;
 
     if ((document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Eraser) &&
@@ -1029,7 +1052,9 @@ void Editor::move(Point point) {
         damage.y -= margin;
         damage.w += margin * 2;
         damage.h += margin * 2;
-        publish_image(document.image, *canvas_, atlas_painting() && atlas_wrap ? Rect{} : damage);
+        publish_image(document.selection.active && !document.selection.on_canvas ? document.visible_image()
+                                                                                 : document.image,
+                      *canvas_, atlas_painting() && atlas_wrap ? Rect{} : damage);
         last_ = point;
         update_status();
     } else {
@@ -1211,7 +1236,10 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
             refresh();
             event.handled = true;
             return;
-        } else if (document.selection.active && !warp_active()) {
+        } else if (document.selection.active && !warp_active() &&
+                   (event.physical_key == gf::PhysicalKey::left || event.physical_key == gf::PhysicalKey::right ||
+                    event.physical_key == gf::PhysicalKey::up || event.physical_key == gf::PhysicalKey::down)) {
+            document.lift_selection();
             int step = shift ? 10 : 1;
             if (event.physical_key == gf::PhysicalKey::left) {
                 document.selection.x -= step;
@@ -1353,7 +1381,7 @@ void Editor::save_path(const std::string& path) {
     refresh();
 }
 void Editor::copy() {
-    Image image = document.selection.active ? document.selection.image : document.visible_image();
+    Image image = document.selection.active ? document.selected_image() : document.visible_image();
     gf::HostImageView view{static_cast<unsigned>(image.width), static_cast<unsigned>(image.height),
                            static_cast<std::uint64_t>(image.width) * 4,
                            std::as_bytes(std::span<const Color>(image.pixels))};
@@ -1729,7 +1757,7 @@ void Editor::execute(const std::string& command) {
             finish_controls();
             document.invert_colors();
         } else if (command == "release") {
-            finish_controls();
+            finish_controls(true);
             reset_stamp();
         } else if (command == "finish-path") {
             if (document.tool == Tool::Path) {

@@ -37,5 +37,7 @@ struct Guide {
     void translate(Point delta);
 };
 void constrain_paint(Image& image, const Image& base, const Guide& guide, bool preserve_alpha);
-void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide, bool wrap);
+struct FloatingSelection;
+void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide, bool wrap,
+                   const FloatingSelection* selection = nullptr);
 } // namespace paint
