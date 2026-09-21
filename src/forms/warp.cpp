@@ -391,6 +391,7 @@ void Editor::poll_warp() {
     }
 }
 void Editor::publish_stamp_preview() {
+    ++stamp_pixels_revision_;
     stamp_boundary_.clear();
     for (int y = 0; y < stamp_preview_.height; ++y) {
         for (int x = 0; x < stamp_preview_.width; ++x) {
@@ -439,6 +440,10 @@ void Editor::publish_stamp_preview() {
     stamp_image_ = result.image;
 }
 void Editor::reset_stamp() {
+    if (transform_preview_stamp_) {
+        end_transform_preview();
+    }
+    stamp_rendered_revision_ = 0;
     if (stamp_view_image_.value && window()) {
         static_cast<void>((*window()).remove_image(stamp_view_image_));
     }
@@ -647,25 +652,44 @@ bool Editor::warp_pointer(const gf::PointerEvent& event, Point point) {
     return warp_active();
 }
 void Editor::prepare_stamp_view() {
-    stamp_view_destination_ = {};
+    if (document.tool == Tool::Stamp && cursor_client_ && std::abs(canvas().view_angle) > 1e-10) {
+        canvas().prepare_display();
+    }
+}
+void Editor::render_stamp_view() {
     if (document.tool != Tool::Stamp || !cursor_client_ || std::abs(canvas().view_angle) < 1e-10 ||
         stamp_preview_.pixels.empty() || !window()) {
+        stamp_view_destination_ = {};
         return;
     }
     const gui_drawing::PointF center = canvas().client_to_bitmap(*cursor_client_);
     const Point origin{std::round(center.x - stamp_preview_.width * 0.5),
                        std::round(center.y - stamp_preview_.height * 0.5)};
-    if (!stamp_view_generation_ || stamp_view_generation_ != stamp_generation_) {
+    if (!stamp_view_generation_ || stamp_view_generation_ != stamp_pixels_revision_) {
         begin_transform_preview(true);
-        stamp_view_generation_ = stamp_generation_;
+        stamp_view_generation_ = stamp_pixels_revision_;
+    }
+    const gui_drawing::PointF view_origin = canvas().view_origin();
+    const gf::Rect viewport = canvas().client_rectangle();
+    const bool prepared = static_cast<bool>(transform_preview_field_);
+    if (stamp_rendered_revision_ == stamp_pixels_revision_ && stamp_rendered_prepared_ == prepared &&
+        stamp_rendered_origin_.x == origin.x && stamp_rendered_origin_.y == origin.y &&
+        stamp_rendered_view_origin_.x == view_origin.x && stamp_rendered_view_origin_.y == view_origin.y &&
+        stamp_rendered_angle_ == canvas().view_angle && stamp_rendered_zoom_ == canvas().zoom() &&
+        stamp_rendered_viewport_.width == viewport.width &&
+        stamp_rendered_viewport_.height == viewport.height) {
+        return;
     }
     const gf::Rect destination = gf::Rect::intersection(
         canvas().client_rectangle(),
         canvas().bitmap_to_client({static_cast<int>(origin.x), static_cast<int>(origin.y),
                                    stamp_preview_.width, stamp_preview_.height}));
     if (destination.empty()) {
+        stamp_view_destination_ = {};
+        stamp_rendered_revision_ = 0;
         return;
     }
+    ++canvas().work_statistics_.stamp_renders;
     const int width = static_cast<int>(std::ceil(destination.width)),
               height = static_cast<int>(std::ceil(destination.height));
     Image image;
@@ -701,8 +725,13 @@ void Editor::prepare_stamp_view() {
                                 : (*window()).load_bgra32_premultiplied(width, height, width * 4, pixels);
     if (result) {
         stamp_view_image_ = result.image;
-    }
-    if (result) {
+        stamp_rendered_revision_ = stamp_pixels_revision_;
+        stamp_rendered_prepared_ = prepared;
+        stamp_rendered_origin_ = origin;
+        stamp_rendered_view_origin_ = view_origin;
+        stamp_rendered_angle_ = canvas().view_angle;
+        stamp_rendered_zoom_ = canvas().zoom();
+        stamp_rendered_viewport_ = viewport;
         stamp_view_destination_ = {destination.x, destination.y, static_cast<double>(width),
                                    static_cast<double>(height)};
     }

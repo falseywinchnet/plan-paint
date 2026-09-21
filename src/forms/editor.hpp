@@ -20,6 +20,9 @@
 #include <gui_forms/host.hpp>
 namespace paint::forms {
 class Editor;
+struct CanvasWorkStatistics {
+    std::uint64_t view_preparations = 0, view_renders = 0, stamp_preparations = 0, stamp_renders = 0;
+};
 class PaintCanvas final : public gui_forms::RasterCanvas {
   public:
     PaintCanvas(gui_forms::StableId id, std::weak_ptr<Editor> editor);
@@ -27,6 +30,12 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
     void publish_source(const Image& source, Rect damage);
     void poll_view();
     void prepare_display();
+    void display_frame(gui_forms::FrameTime now);
+    void preparation_frame(gui_forms::FrameTime now);
+    void settle_view();
+    const CanvasWorkStatistics& work_statistics() const noexcept {
+        return work_statistics_;
+    }
     void set_zoom(double zoom);
     void set_view_origin(gui_drawing::PointF origin);
     void set_view(double zoom, gui_drawing::PointF origin);
@@ -61,6 +70,11 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
     bool on_semantic_action(gui_forms::SemanticAction action, std::string_view value) override;
 
   private:
+    friend class Editor;
+    CanvasWorkStatistics work_statistics_;
+    gui_forms::FrameRequestToken display_request_, preparation_request_;
+    gui_forms::FrameTime next_display_{}, preparation_deadline_{};
+    void render_display();
     std::weak_ptr<Editor> editor_;
     gui_forms::ImageId backing_, repeated_, reference_, rotated_;
     Image view_source_;
@@ -73,7 +87,7 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
     gui_forms::Size rendered_size_;
     bool view_worker_initialized_ = false;
     void paint_rotated(gui_forms::Painter& painter, const Editor& editor);
-    void prepare_view();
+    void prepare_view(gui_forms::FrameTime now = gui_forms::FrameClock::now());
 
     CanvasBacking loaded_backing_ = CanvasBacking::Count;
     void update_backing();
@@ -89,6 +103,7 @@ class Editor final : public gui_forms::Control {
     void poll_warp();
     void poll_transform_preview();
     void prepare_stamp_view();
+    void render_stamp_view();
     void start_reshape();
     void request_rotation(double degrees);
     void request_skew(int width, int height, bool scale, double horizontal, double vertical);
@@ -184,6 +199,12 @@ class Editor final : public gui_forms::Control {
     std::uint64_t stamp_view_generation_ = 0;
     gui_forms::ImageId stamp_view_image_;
     gui_forms::Rect stamp_view_destination_;
+    std::uint64_t stamp_pixels_revision_ = 1, stamp_rendered_revision_ = 0;
+    bool stamp_rendered_prepared_ = false;
+    Point stamp_rendered_origin_;
+    gui_drawing::PointF stamp_rendered_view_origin_;
+    double stamp_rendered_angle_ = 0, stamp_rendered_zoom_ = 0;
+    gui_forms::Rect stamp_rendered_viewport_;
     void begin_transform_preview(bool stamp = false);
     void end_transform_preview();
     enum class WarpMode { none, mesh, rotation, transform };

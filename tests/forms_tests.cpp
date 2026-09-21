@@ -2186,6 +2186,7 @@ void rotated_frames_use_published_images() {
             fixture.click(35, 35);
         }
         fixture.pointer(gf::PointerAction::move, 60 + step, 55);
+        static_cast<void>(window.poll_frame_schedule(gf::FrameClock::now() + std::chrono::milliseconds(20)));
         // The native host snapshots its image registry before Window::paint.
         const std::vector<gf::ImageId> available = window.image_resources().image_ids();
         const std::uint64_t revision = window.image_resources().snapshot().revision;
@@ -2207,6 +2208,78 @@ void rotated_frames_use_published_images() {
     editor.paint_canvas_overlay(prepared, {});
     require(window.image_resources().snapshot().revision == revision,
             "worker completion publishes the prepared image before painting");
+}
+void drain_canvas_work(Fixture& fixture) {
+    const gf::FrameTime deadline = gf::FrameClock::now() + std::chrono::seconds(10);
+    do {
+        static_cast<void>((*fixture.window).drain_posted_work());
+        static_cast<void>((*fixture.window).poll_frame_schedule(gf::FrameClock::now()));
+        require(gf::FrameClock::now() < deadline, "canvas work settles without an idle render loop");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    } while ((*fixture.editor).canvas().view_busy() || (*fixture.editor).background_busy());
+}
+void canvas_work_is_coalesced_and_stamp_is_cached() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.settings.rotate_view = true;
+    editor.document.image.set(35, 35, {20, 70, 110, 255});
+    editor.rotate_view(0.35);
+    editor.execute("fit");
+    drain_canvas_work(fixture);
+    const paint::forms::CanvasWorkStatistics initial = editor.canvas().work_statistics();
+    for (int i = 0; i < 120; ++i) {
+        editor.rotate_view(0.35 + i * 0.001);
+    }
+    require(editor.canvas().work_statistics().view_renders == initial.view_renders,
+            "a burst of rotation events does not render between display deadlines");
+    drain_canvas_work(fixture);
+    require(editor.canvas().work_statistics().view_renders == initial.view_renders + 1 &&
+                editor.canvas().work_statistics().view_preparations == initial.view_preparations,
+            "120 angle updates share one render and the same CONV field");
+    const std::uint64_t preparations = editor.canvas().work_statistics().view_preparations;
+    fixture.pointer(gf::PointerAction::down, 20, 25);
+    for (int i = 0; i < 80; ++i) {
+        fixture.pointer(gf::PointerAction::move, 20 + i, 25 + i * 0.3);
+    }
+    require(editor.canvas().work_statistics().view_preparations == preparations,
+            "moving stroke does not repeatedly prepare obsolete source images");
+    fixture.pointer(gf::PointerAction::up, 99, 48.7);
+    drain_canvas_work(fixture);
+    require(editor.canvas().work_statistics().view_preparations == preparations + 1,
+            "release prepares the latest completed stroke exactly once");
+    require(!white(editor.document.image.get(99, 48)), "batched rendering preserves the stroke endpoint");
+    editor.choose_tool(paint::Tool::Stamp);
+    fixture.click(35, 35);
+    drain_canvas_work(fixture);
+    const std::uint64_t stamp_preparations = editor.canvas().work_statistics().stamp_preparations;
+    fixture.click(65, 55);
+    drain_canvas_work(fixture);
+    fixture.click(70, 55);
+    drain_canvas_work(fixture);
+    require(editor.canvas().work_statistics().stamp_preparations == stamp_preparations,
+            "stamp preparation survives repeated placement and mouse-up");
+    const std::uint64_t stamp_renders = editor.canvas().work_statistics().stamp_renders;
+    for (int i = 0; i < 50; ++i) {
+        fixture.pointer(gf::PointerAction::move, 70, 55);
+    }
+    drain_canvas_work(fixture);
+    require(editor.canvas().work_statistics().stamp_renders == stamp_renders,
+            "unchanged stamp preview skips both resampling and upload");
+    editor.stamp_hardness = 0.4;
+    editor.update_stamp_hardness();
+    editor.prepare_stamp_view();
+    drain_canvas_work(fixture);
+    require(editor.canvas().work_statistics().stamp_preparations == stamp_preparations + 1,
+            "new stamp pixels invalidate the prepared stamp even when its geometry is unchanged");
+    const paint::forms::CanvasWorkStatistics idle = editor.canvas().work_statistics();
+    static_cast<void>(window.poll_frame_schedule(gf::FrameClock::now() + std::chrono::seconds(1)));
+    require(!editor.canvas().view_busy() &&
+                editor.canvas().work_statistics().view_renders == idle.view_renders &&
+                editor.canvas().work_statistics().stamp_renders == idle.stamp_renders,
+            "settled canvas and stamp leave no recurring work timer");
+    std::cout << "Canvas work: 120 rotations -> 1 render; 80 stroke moves -> 1 preparation; "
+                 "stamp reuse and idle-work checks passed.\n";
 }
 void scroll_distance_bounds_and_settings() {
     Fixture fixture;
@@ -2755,6 +2828,7 @@ int main() {
         freehand_wand_picker_and_size();
         working_view_coordinates_and_reset();
         rotated_frames_use_published_images();
+        canvas_work_is_coalesced_and_stamp_is_cached();
         persistent_selection_painting();
         selection_holes_flood_and_floating_paste();
         selection_text_path_carpet_and_move();

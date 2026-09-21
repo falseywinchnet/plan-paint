@@ -94,6 +94,9 @@ void PaintCanvas::on_pointer(gf::PointerEvent& event) {
         return;
     }
     (*editor).pointer(event);
+    if (event.action == gf::PointerAction::up) {
+        settle_view();
+    }
     prepare_display();
     (*editor).prepare_stamp_view();
     event.handled = event.action == gf::PointerAction::down || event.action == gf::PointerAction::up ||
@@ -648,7 +651,9 @@ void Editor::command_invoked(const gf::CommandInvocation& invocation) {
     execute(invocation.command_id);
 }
 void Editor::release_gesture() {
-    end_transform_preview();
+    if (!transform_preview_stamp_) {
+        end_transform_preview();
+    }
     if (placing_shape_ && document.curve.base && !document.curve.line_set) {
         document.curve = {};
     }
@@ -726,6 +731,9 @@ void Editor::choose_tool(Tool tool) {
         unset_guide();
     }
     if (document.tool != tool) {
+        if (tool != Tool::Stamp && transform_preview_stamp_) {
+            end_transform_preview();
+        }
         path_swap_kind_.reset();
         path_swap_segment_ = -1;
         path_swap_handle_ = -1;

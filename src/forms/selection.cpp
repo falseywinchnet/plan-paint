@@ -19,6 +19,9 @@ void Editor::begin_transform_preview(bool stamp) {
         return;
     }
     transform_preview_stamp_ = stamp;
+    if (stamp) {
+        ++canvas().work_statistics_.stamp_preparations;
+    }
     transform_preview_source_ = stamp ? stamp_preview_ : document.selection.image;
     transform_preview_pending_ = true;
     poll_transform_preview();
@@ -26,6 +29,7 @@ void Editor::begin_transform_preview(bool stamp) {
 void Editor::end_transform_preview() {
     ++transform_preview_generation_;
     stamp_view_generation_ = 0;
+    transform_preview_stamp_ = false;
     transform_preview_pending_ = false;
     transform_preview_worker_.cancel();
     transform_preview_source_ = {};

@@ -136,6 +136,8 @@ void PaintCanvas::on_detaching_from_window(gf::Window& former_window) noexcept {
     atlas_revision_ = 0;
     backing_ = {};
     loaded_backing_ = CanvasBacking::Count;
+    display_request_.disconnect();
+    preparation_request_.disconnect();
     RasterCanvas::on_detaching_from_window(former_window);
 }
 void PaintCanvas::on_dispose() noexcept {
@@ -368,6 +370,24 @@ void Editor::paint_tool_preview(gf::Painter& painter) {
 
 namespace paint::forms {
 namespace {
+struct DisplayDeadline {
+    std::weak_ptr<PaintCanvas> canvas;
+    void operator()(gf::FrameTime now) const {
+        const std::shared_ptr<PaintCanvas> owner = canvas.lock();
+        if (owner) {
+            (*owner).display_frame(now);
+        }
+    }
+};
+struct PreparationDeadline {
+    std::weak_ptr<PaintCanvas> canvas;
+    void operator()(gf::FrameTime now) const {
+        const std::shared_ptr<PaintCanvas> owner = canvas.lock();
+        if (owner) {
+            (*owner).preparation_frame(now);
+        }
+    }
+};
 struct ViewDelivery {
     std::weak_ptr<PaintCanvas> canvas;
     void operator()() const {
@@ -390,12 +410,14 @@ PaintCanvas::~PaintCanvas() {
     view_worker_.wait();
 }
 bool PaintCanvas::view_busy() const {
-    return view_worker_.busy();
+    return view_worker_.busy() || display_request_.connected() || preparation_request_.connected();
 }
 void PaintCanvas::publish_source(const Image& source, Rect damage) {
     const std::shared_ptr<Editor> editor = editor_.lock();
     if (!editor || !(*editor).settings.rotate_view || std::abs(view_angle) < 1e-10) {
         view_worker_.cancel();
+        display_request_.disconnect();
+        preparation_request_.disconnect();
         if (rotated_.value && window()) {
             static_cast<void>((*window()).remove_image(rotated_));
         }
@@ -426,22 +448,34 @@ void PaintCanvas::publish_source(const Image& source, Rect damage) {
     }
     if (changed) {
         ++source_generation_;
+        preparation_deadline_ = gf::FrameClock::now() + std::chrono::milliseconds(120);
+        preparation_request_.disconnect();
         view_error.clear();
         view_worker_.cancel();
     }
     prepare_view();
     prepare_display();
 }
-void PaintCanvas::prepare_view() {
+void PaintCanvas::prepare_view(gf::FrameTime now) {
     if (std::abs(view_angle) < 1e-10 || !attached_window() || view_worker_.busy() ||
         view_source_.pixels.empty() || prepared_generation_ == source_generation_ || !view_error.empty()) {
         return;
     }
+    if (now < preparation_deadline_) {
+        if (!preparation_request_.connected()) {
+            preparation_request_ = (*window()).schedule_ui_timer(
+                *this, std::chrono::milliseconds(120), preparation_deadline_,
+                PreparationDeadline{std::static_pointer_cast<PaintCanvas>(shared_from_this())});
+        }
+        return;
+    }
+    preparation_request_.disconnect();
     if (!view_worker_initialized_) {
         view_worker_.set_completion(
             ViewCompletion{this, std::static_pointer_cast<PaintCanvas>(shared_from_this())});
         view_worker_initialized_ = true;
     }
+    ++work_statistics_.view_preparations;
     view_worker_.compile(WarpTask::CompileRotation, view_source_, source_generation_);
 }
 void PaintCanvas::poll_view() {
@@ -478,13 +512,45 @@ void PaintCanvas::arrange(gf::Rect bounds) {
     RasterCanvas::arrange(bounds);
     prepare_display();
 }
+void PaintCanvas::preparation_frame(gf::FrameTime now) {
+    preparation_request_.disconnect();
+    prepare_view(now);
+}
+void PaintCanvas::settle_view() {
+    preparation_deadline_ = gf::FrameClock::now();
+    preparation_request_.disconnect();
+    prepare_view();
+}
 void PaintCanvas::prepare_display() {
+    if (!window() || std::abs(view_angle) < 1e-10) {
+        return;
+    }
+    // The first image must exist before native paint can synchronize resources.
+    if (!rotated_.value && !view_source_.pixels.empty()) {
+        render_display();
+        next_display_ = gf::FrameClock::now() + std::chrono::milliseconds(16);
+    }
+    if (!display_request_.connected()) {
+        display_request_ = (*window()).schedule_ui_timer(
+            *this, std::chrono::milliseconds(16), std::max(gf::FrameClock::now(), next_display_),
+            DisplayDeadline{std::static_pointer_cast<PaintCanvas>(shared_from_this())});
+    }
+}
+void PaintCanvas::display_frame(gf::FrameTime now) {
+    display_request_.disconnect();
+    next_display_ = now + std::chrono::milliseconds(16);
+    render_display();
+    const std::shared_ptr<Editor> owner = editor_.lock();
+    if (owner) {
+        (*owner).render_stamp_view();
+    }
+}
+void PaintCanvas::render_display() {
     const std::shared_ptr<Editor> owner = editor_.lock();
     if (!owner || !window() || std::abs(view_angle) < 1e-10 || view_source_.pixels.empty()) {
         return;
     }
     const Editor& editor = *owner;
-    prepare_view();
     const gf::Rect viewport = client_rectangle();
     const gui_drawing::PointF origin = view_origin();
     const int width = std::max(1, static_cast<int>(std::ceil(viewport.width)));
@@ -495,6 +561,7 @@ void PaintCanvas::prepare_display() {
         rendered_revision_ != editor.canvas_revision || rendered_angle_ != view_angle ||
         rendered_zoom_ != zoom() || rendered_origin_.x != origin.x || rendered_origin_.y != origin.y ||
         rendered_size_.width != width || rendered_size_.height != height) {
+        ++work_statistics_.view_renders;
         Image result;
         const double c = std::cos(view_angle), s = std::sin(view_angle), scale = zoom();
         const bool prepared = view_field_ && prepared_generation_ == source_generation_;
@@ -509,7 +576,9 @@ void PaintCanvas::prepare_display() {
         std::vector<std::byte> pixels(static_cast<std::size_t>(width) * height * 4);
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
-                const gui_drawing::PointF point = client_to_bitmap({x + 0.5, y + 0.5});
+                const double vx = (x + 0.5) / scale + origin.x;
+                const double vy = (y + 0.5) / scale + origin.y;
+                const gui_drawing::PointF point{c * vx + s * vy, -s * vx + c * vy};
                 const int sx = static_cast<int>(std::floor(point.x)),
                           sy = static_cast<int>(std::floor(point.y));
                 const std::size_t index = static_cast<std::size_t>(y) * width + x;

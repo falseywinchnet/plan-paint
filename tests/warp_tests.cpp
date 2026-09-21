@@ -1,9 +1,11 @@
 #include "warp.hpp"
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <thread>
 namespace {
 void require(bool value, const char* message) {
     if (!value) {
@@ -350,6 +352,40 @@ void test_sampling_continuity_and_equivalent_maps() {
         require(paint::equal(identity.get(2, 2), moved.get(2, 2)), "filter switched at a scale threshold");
     }
 }
+struct ConcurrentAffineProbe {
+    const paint::ConvWarpField& field;
+    paint::Image result;
+    paint::WarpSampling sampling;
+    static void run(ConcurrentAffineProbe& probe) {
+        for (int i = 0; i < 4; ++i) {
+            paint::render_affine(probe.field, {}, 256, 256, probe.result, probe.sampling);
+        }
+    }
+};
+void test_reused_affine_workers() {
+    paint::Image first, second;
+    first.reset(5, 5, {200, 30, 40, 255});
+    second.reset(5, 5, {20, 90, 220, 255});
+    paint::ConvWarpField a, b;
+    a.compile(first);
+    b.compile(second);
+    std::array<ConcurrentAffineProbe, 3> probes{{{a, {}, paint::WarpSampling::Point},
+                                                 {b, {}, paint::WarpSampling::Point},
+                                                 {a, {}, paint::WarpSampling::Area}}};
+    std::vector<std::jthread> callers;
+    for (ConcurrentAffineProbe& probe : probes) {
+        callers.emplace_back(ConcurrentAffineProbe::run, std::ref(probe));
+    }
+    for (std::jthread& caller : callers) {
+        caller.join();
+    }
+    require(paint::equal(probes[0].result.get(2, 2), first.get(2, 2)) &&
+                paint::equal(probes[1].result.get(2, 2), second.get(2, 2)) &&
+                paint::equal(probes[2].result.get(2, 2), first.get(2, 2)),
+            "reused point and area workers retain distinct concurrent jobs");
+    require(probes[0].result.get(20, 20).a == 0 && probes[1].result.get(20, 20).a == 0,
+            "reused workers clear pixels outside each source");
+}
 void benchmark(int side) {
     paint::Image image;
     image.reset(side, side);
@@ -383,6 +419,7 @@ int main(int argc, char** argv) {
         test_admitted_edge_and_mesh_area();
         test_physical_alpha_before_filtering();
         test_sampling_continuity_and_equivalent_maps();
+        test_reused_affine_workers();
         std::cout << "CONV warp constants, affine fields, cardinality, alpha, tiny images, mesh identity, "
                      "folds and lasso tests passed.\n";
         if (argc > 1) {

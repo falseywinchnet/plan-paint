@@ -4,8 +4,11 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <condition_variable>
+#include <exception>
 #include <functional>
 #include <limits>
+#include <mutex>
 #include <stdexcept>
 #include <thread>
 #include <utility>
@@ -1203,6 +1206,98 @@ static void affine_worker(AffineJob& job) {
         }
     }
 }
+// Bounded executors serve concurrent viewport and commit callers. Threads
+// sleep between jobs; each caller retains its stack-owned job until completion.
+class AffineExecutor {
+  public:
+    AffineExecutor() {
+        const unsigned count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
+        try {
+            for (unsigned i = 0; i < count; ++i) {
+                workers_.emplace_back(run, std::ref(*this));
+            }
+        } catch (...) {
+            stop();
+            throw;
+        }
+    }
+    ~AffineExecutor() {
+        stop();
+    }
+    void execute(AffineJob& job) {
+        std::lock_guard<std::mutex> caller(caller_mutex_);
+        std::unique_lock<std::mutex> lock(mutex_);
+        job_ = &job;
+        remaining_ = workers_.size();
+        error_ = {};
+        ++generation_;
+        ready_.notify_all();
+        while (remaining_) {
+            finished_.wait(lock);
+        }
+        job_ = nullptr;
+        if (error_) {
+            std::rethrow_exception(error_);
+        }
+    }
+
+  private:
+    std::mutex caller_mutex_, mutex_;
+    std::condition_variable ready_, finished_;
+    std::vector<std::thread> workers_;
+    AffineJob* job_ = nullptr;
+    std::uint64_t generation_ = 0;
+    std::size_t remaining_ = 0;
+    bool stopping_ = false;
+    std::exception_ptr error_;
+    void stop() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            stopping_ = true;
+        }
+        ready_.notify_all();
+        for (std::thread& worker : workers_) {
+            worker.join();
+        }
+    }
+    static void run(AffineExecutor& executor) {
+        std::uint64_t seen = 0;
+        std::unique_lock<std::mutex> lock(executor.mutex_);
+        for (;;) {
+            while (!executor.stopping_ && seen == executor.generation_) {
+                executor.ready_.wait(lock);
+            }
+            if (executor.stopping_) {
+                return;
+            }
+            seen = executor.generation_;
+            AffineJob& job = *executor.job_;
+            lock.unlock();
+            std::exception_ptr error;
+            try {
+                affine_worker(job);
+            } catch (...) {
+                error = std::current_exception();
+            }
+            lock.lock();
+            if (error && !executor.error_) {
+                executor.error_ = error;
+            }
+            if (--executor.remaining_ == 0) {
+                executor.finished_.notify_one();
+            }
+        }
+    }
+};
+static AffineExecutor& affine_executor(WarpSampling sampling) {
+    // A long final area integration must not hold up interactive point views.
+    if (sampling == WarpSampling::Point) {
+        static AffineExecutor interactive;
+        return interactive;
+    }
+    static AffineExecutor final;
+    return final;
+}
 static double orient(Point a, Point b, Point c) {
     double result = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
     return result;
@@ -1279,21 +1374,10 @@ void render_affine(const ConvWarpField& field, const AffineMap& map, int width, 
     SampleRule rule = sample_rule(map_footprint(inverse), sampling);
     AffineStencil stencil = prepare_affine_stencil(inverse, rule);
     AffineJob job{field, inverse, stencil, output, sampling == WarpSampling::Area};
-    unsigned count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
     if (output.pixels.size() < 65536) {
-        count = 1;
-    }
-    if (count == 1) {
         affine_worker(job);
     } else {
-        std::vector<std::jthread> workers;
-        workers.reserve(count);
-        for (unsigned i = 0; i < count; ++i) {
-            workers.emplace_back(affine_worker, std::ref(job));
-        }
-        for (std::jthread& worker : workers) {
-            worker.join();
-        }
+        affine_executor(sampling).execute(job);
     }
     destination = std::move(output);
 }
