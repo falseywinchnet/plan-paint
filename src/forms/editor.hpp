@@ -26,6 +26,11 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
     ~PaintCanvas() override;
     void publish_source(const Image& source, Rect damage);
     void poll_view();
+    void prepare_display();
+    void set_zoom(double zoom);
+    void set_view_origin(gui_drawing::PointF origin);
+    void set_view(double zoom, gui_drawing::PointF origin);
+    void arrange(gui_forms::Rect bounds) override;
     bool view_busy() const;
     std::string view_error;
 
@@ -83,6 +88,7 @@ class Editor final : public gui_forms::Control {
     void initialize_control_tree();
     void poll_warp();
     void poll_transform_preview();
+    void prepare_stamp_view();
     void start_reshape();
     void request_rotation(double degrees);
     void request_skew(int width, int height, bool scale, double horizontal, double vertical);
@@ -177,7 +183,7 @@ class Editor final : public gui_forms::Control {
     bool transform_preview_pending_ = false, transform_preview_stamp_ = false;
     std::uint64_t stamp_view_generation_ = 0;
     gui_forms::ImageId stamp_view_image_;
-    void paint_stamp_view(gui_forms::Painter& painter, Point origin);
+    gui_forms::Rect stamp_view_destination_;
     void begin_transform_preview(bool stamp = false);
     void end_transform_preview();
     enum class WarpMode { none, mesh, rotation, transform };

@@ -38,6 +38,7 @@ void Editor::poll_transform_preview() {
         (resize_handle_ >= 0 || (transform_preview_stamp_ && document.tool == Tool::Stamp))) {
         transform_preview_field_ = std::move(result.field);
         if (transform_preview_stamp_) {
+            prepare_stamp_view();
             canvas().invalidate(gf::Dirty::paint);
         } else {
             update_transform_preview();

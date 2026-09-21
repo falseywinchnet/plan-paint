@@ -2166,6 +2166,48 @@ void working_view_coordinates_and_reset() {
                 paint::equal(editor.document.selection.image.get(0, 0), pasted.get(0, 0)),
             "right-click view reset preserves floating pixels, placement and history");
 }
+void rotated_frames_use_published_images() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.settings.rotate_view = true;
+    editor.document.image.set(35, 35, {20, 70, 110, 255});
+    editor.rotate_view(0.35);
+    editor.execute("fit");
+    PreviewPainter warm;
+    static_cast<void>(window.paint(warm));
+    for (int step = 0; step < 8; ++step) {
+        editor.rotate_view(0.35 + step * 0.08);
+        if (step == 3) {
+            fixture.drag(25, 30, 80, 60);
+        }
+        if (step == 5) {
+            editor.choose_tool(paint::Tool::Stamp);
+            fixture.click(35, 35);
+        }
+        fixture.pointer(gf::PointerAction::move, 60 + step, 55);
+        // The native host snapshots its image registry before Window::paint.
+        const std::vector<gf::ImageId> available = window.image_resources().image_ids();
+        const std::uint64_t revision = window.image_resources().snapshot().revision;
+        PreviewPainter frame;
+        editor.canvas().on_paint(frame, editor.canvas().client_rectangle());
+        editor.paint_canvas_overlay(frame, {});
+        require(window.image_resources().snapshot().revision == revision,
+                "rotation and stamp painting must not replace resources after native synchronization");
+        require(!frame.painted_images.empty(), "every rotated frame contains a published canvas image");
+        for (gf::ImageId image : frame.painted_images) {
+            require(std::find(available.begin(), available.end(), image) != available.end(),
+                    "every drawn image was available before the frame started");
+        }
+    }
+    await_background(fixture);
+    const std::uint64_t revision = window.image_resources().snapshot().revision;
+    PreviewPainter prepared;
+    editor.canvas().on_paint(prepared, editor.canvas().client_rectangle());
+    editor.paint_canvas_overlay(prepared, {});
+    require(window.image_resources().snapshot().revision == revision,
+            "worker completion publishes the prepared image before painting");
+}
 void scroll_distance_bounds_and_settings() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -2712,6 +2754,7 @@ int main() {
     try {
         freehand_wand_picker_and_size();
         working_view_coordinates_and_reset();
+        rotated_frames_use_published_images();
         persistent_selection_painting();
         selection_holes_flood_and_floating_paste();
         selection_text_path_carpet_and_move();

@@ -94,6 +94,8 @@ void PaintCanvas::on_pointer(gf::PointerEvent& event) {
         return;
     }
     (*editor).pointer(event);
+    prepare_display();
+    (*editor).prepare_stamp_view();
     event.handled = event.action == gf::PointerAction::down || event.action == gf::PointerAction::up ||
                     event.action == gf::PointerAction::move || event.action == gf::PointerAction::wheel;
 }
@@ -556,6 +558,7 @@ void Editor::refresh() {
             (*gallery).synchronize();
         }
     }
+    prepare_stamp_view();
     update_status();
     invalidate(gf::Dirty::paint);
     (*canvas_).invalidate(gf::Dirty::paint);

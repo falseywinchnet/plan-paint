@@ -646,10 +646,15 @@ bool Editor::warp_pointer(const gf::PointerEvent& event, Point point) {
     }
     return warp_active();
 }
-void Editor::paint_stamp_view(gf::Painter& painter, Point origin) {
-    if (stamp_preview_.pixels.empty() || !window()) {
+void Editor::prepare_stamp_view() {
+    stamp_view_destination_ = {};
+    if (document.tool != Tool::Stamp || !cursor_client_ || std::abs(canvas().view_angle) < 1e-10 ||
+        stamp_preview_.pixels.empty() || !window()) {
         return;
     }
+    const gui_drawing::PointF center = canvas().client_to_bitmap(*cursor_client_);
+    const Point origin{std::round(center.x - stamp_preview_.width * 0.5),
+                       std::round(center.y - stamp_preview_.height * 0.5)};
     if (!stamp_view_generation_ || stamp_view_generation_ != stamp_generation_) {
         begin_transform_preview(true);
         stamp_view_generation_ = stamp_generation_;
@@ -697,11 +702,9 @@ void Editor::paint_stamp_view(gf::Painter& painter, Point origin) {
     if (result) {
         stamp_view_image_ = result.image;
     }
-    if (stamp_view_image_.value) {
-        painter.draw_image(
-            stamp_view_image_,
-            {destination.x, destination.y, static_cast<double>(width), static_cast<double>(height)},
-            adding_stamp_material_ ? 0.5 : 0.65);
+    if (result) {
+        stamp_view_destination_ = {destination.x, destination.y, static_cast<double>(width),
+                                   static_cast<double>(height)};
     }
 }
 void Editor::paint_warp_overlay(gf::Painter& painter) {
@@ -721,7 +724,10 @@ void Editor::paint_warp_overlay(gf::Painter& painter) {
                                  std::round(center.y - height / (2 * canvas().zoom()))};
         if (stamp_image_.value != 0) {
             if (std::abs(canvas().view_angle) > 1e-10) {
-                paint_stamp_view(painter, image_origin);
+                if (stamp_view_image_.value && !stamp_view_destination_.empty()) {
+                    painter.draw_image(stamp_view_image_, stamp_view_destination_,
+                                       adding_stamp_material_ ? 0.5 : 0.65);
+                }
             } else {
                 painter.draw_image(stamp_image_, bounds, adding_stamp_material_ ? 0.5 : 0.65);
             }

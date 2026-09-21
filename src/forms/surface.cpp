@@ -430,6 +430,7 @@ void PaintCanvas::publish_source(const Image& source, Rect damage) {
         view_worker_.cancel();
     }
     prepare_view();
+    prepare_display();
 }
 void PaintCanvas::prepare_view() {
     if (std::abs(view_angle) < 1e-10 || !attached_window() || view_worker_.busy() ||
@@ -458,9 +459,31 @@ void PaintCanvas::poll_view() {
         }
     }
     prepare_view();
+    prepare_display();
     invalidate(gf::Dirty::paint);
 }
-void PaintCanvas::paint_rotated(gf::Painter& painter, const Editor& editor) {
+void PaintCanvas::set_zoom(double scale) {
+    RasterCanvas::set_zoom(scale);
+    prepare_display();
+}
+void PaintCanvas::set_view_origin(gui_drawing::PointF origin) {
+    RasterCanvas::set_view_origin(origin);
+    prepare_display();
+}
+void PaintCanvas::set_view(double scale, gui_drawing::PointF origin) {
+    RasterCanvas::set_view(scale, origin);
+    prepare_display();
+}
+void PaintCanvas::arrange(gf::Rect bounds) {
+    RasterCanvas::arrange(bounds);
+    prepare_display();
+}
+void PaintCanvas::prepare_display() {
+    const std::shared_ptr<Editor> owner = editor_.lock();
+    if (!owner || !window() || std::abs(view_angle) < 1e-10 || view_source_.pixels.empty()) {
+        return;
+    }
+    const Editor& editor = *owner;
     prepare_view();
     const gf::Rect viewport = client_rectangle();
     const gui_drawing::PointF origin = view_origin();
@@ -569,8 +592,13 @@ void PaintCanvas::paint_rotated(gf::Painter& painter, const Editor& editor) {
         rendered_origin_ = origin;
         rendered_size_ = {static_cast<double>(width), static_cast<double>(height)};
     }
+}
+void PaintCanvas::paint_rotated(gf::Painter& painter, const Editor&) {
+    // Native hosts synchronize image resources before entering paint. Publish
+    // replacements from input/layout/worker delivery, never from this callback.
+    const gf::Rect viewport = client_rectangle();
     if (rotated_.value) {
-        painter.draw_image(rotated_, {0, 0, static_cast<double>(width), static_cast<double>(height)});
+        painter.draw_image(rotated_, {0, 0, rendered_size_.width, rendered_size_.height});
     }
     stroke_outline(painter, {0, 0, view_source_.width, view_source_.height},
                    gf::Color::rgba(93, 111, 130, 155), 1);
