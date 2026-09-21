@@ -53,28 +53,32 @@ void EditorSettings::load() {
     std::string magic;
     double distance = 0;
     if (input >> magic >> distance &&
-        (magic == "RSPS1" || magic == "RSPS2" || magic == "RSPS3" || magic == "RSPS4" || magic == "RSPS5") &&
+        (magic == "RSPS1" || magic == "RSPS2" || magic == "RSPS3" || magic == "RSPS4" || magic == "RSPS5" ||
+         magic == "RSPS6") &&
         std::isfinite(distance) && distance >= 0.1 && distance <= 100) {
         scroll_distance = distance;
         int background = 0;
         if (magic != "RSPS1" && input >> background) {
             canvas_backing =
-                background >= 0 &&
-                        background < ((magic == "RSPS4" || magic == "RSPS5") ? canvas_backing_count : 2)
+                background >= 0 && background < ((magic == "RSPS4" || magic == "RSPS5" || magic == "RSPS6")
+                                                     ? canvas_backing_count
+                                                     : 2)
                     ? static_cast<CanvasBacking>(background)
                     : CanvasBacking::PaleFelt;
         }
         int solid = 0;
         std::string color;
         Color parsed;
-        if ((magic == "RSPS3" || magic == "RSPS4" || magic == "RSPS5") && input >> solid >> color &&
-            from_hex(color, parsed)) {
+        if ((magic == "RSPS3" || magic == "RSPS4" || magic == "RSPS5" || magic == "RSPS6") &&
+            input >> solid >> color && from_hex(color, parsed)) {
             solid_transparency = solid == 1;
             parsed.a = 255;
             transparency_color = parsed;
         }
         int drag = 0;
-        drag_shapes = magic == "RSPS5" && (input >> drag) && drag == 1;
+        drag_shapes = (magic == "RSPS5" || magic == "RSPS6") && (input >> drag) && drag == 1;
+        int rotate = 0;
+        rotate_view = magic == "RSPS6" && (input >> rotate) && rotate == 1;
     }
 }
 void EditorSettings::save() const {
@@ -82,12 +86,13 @@ void EditorSettings::save() const {
         return;
     }
     std::ostringstream output;
-    output << "RSPS5\n"
+    output << "RSPS6\n"
            << scroll_distance << '\n'
            << static_cast<int>(canvas_backing) << '\n'
            << (solid_transparency ? 1 : 0) << '\n'
            << to_hex(transparency_color) << '\n'
-           << (drag_shapes ? 1 : 0) << '\n';
+           << (drag_shapes ? 1 : 0) << '\n'
+           << (rotate_view ? 1 : 0) << '\n';
     const std::string encoded = output.str();
     const std::vector<std::uint8_t> bytes(encoded.begin(), encoded.end());
     write_file_atomic(bytes, storage_path, "Paint could not save its settings file.");

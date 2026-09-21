@@ -13,6 +13,44 @@ const double handle_y[] = {0, 0, 0, 0.5, 1, 1, 1, 0.5, 0, 0.5, 1, 0.5};
 } // namespace
 // Interactive pixels are display-only. The document keeps its original samples
 // until CONV produces the final transform. Sampling work is bounded by the viewport.
+void Editor::begin_transform_preview(bool stamp) {
+    end_transform_preview();
+    if (!stamp && !document.selection.active) {
+        return;
+    }
+    transform_preview_stamp_ = stamp;
+    transform_preview_source_ = stamp ? stamp_preview_ : document.selection.image;
+    transform_preview_pending_ = true;
+    poll_transform_preview();
+}
+void Editor::end_transform_preview() {
+    ++transform_preview_generation_;
+    stamp_view_generation_ = 0;
+    transform_preview_pending_ = false;
+    transform_preview_worker_.cancel();
+    transform_preview_source_ = {};
+    transform_preview_field_.reset();
+}
+void Editor::poll_transform_preview() {
+    WarpResult result;
+    if (transform_preview_worker_.take(result) && result.generation == transform_preview_generation_ &&
+        result.error.empty() &&
+        (resize_handle_ >= 0 || (transform_preview_stamp_ && document.tool == Tool::Stamp))) {
+        transform_preview_field_ = std::move(result.field);
+        if (transform_preview_stamp_) {
+            canvas().invalidate(gf::Dirty::paint);
+        } else {
+            update_transform_preview();
+        }
+    }
+    if (!transform_preview_worker_.busy() && transform_preview_pending_) {
+        transform_preview_worker_.compile(WarpTask::CompileSelection, transform_preview_source_,
+                                          transform_preview_generation_);
+        transform_preview_pending_ = false;
+        transform_preview_source_ = {};
+    }
+    update_status();
+}
 void Editor::clear_transform_preview() {
     if (transform_image_.value && window()) {
         static_cast<void>((*window()).remove_image(transform_image_));
@@ -39,13 +77,15 @@ void Editor::update_transform_preview() {
         rotating ? warp_original_.y + source.height * 0.5 : resize_preview_.y + height * 0.5;
     const double half_x = (std::abs(cosine) * width + std::abs(sine) * height) * 0.5;
     const double half_y = (std::abs(sine) * width + std::abs(cosine) * height) * 0.5;
-    gf::Point first = screen({center_x - half_x, center_y - half_y});
-    gf::Point last = screen({center_x + half_x, center_y + half_y});
-    gf::Rect viewport = canvas().committed_arranged_bounds();
-    double left = std::clamp(std::floor(first.x), 0.0, viewport.width);
-    double top = std::clamp(std::floor(first.y), 0.0, viewport.height);
-    double right = std::clamp(std::ceil(last.x), left, viewport.width);
-    double bottom = std::clamp(std::ceil(last.y), top, viewport.height);
+    const gf::Rect view_box = canvas().bitmap_to_client(
+        {static_cast<int>(std::floor(center_x - half_x)), static_cast<int>(std::floor(center_y - half_y)),
+         static_cast<int>(std::ceil(center_x + half_x) - std::floor(center_x - half_x)),
+         static_cast<int>(std::ceil(center_y + half_y) - std::floor(center_y - half_y))});
+    gf::Rect viewport = canvas().client_rectangle();
+    double left = std::clamp(std::floor(view_box.x), 0.0, viewport.width);
+    double top = std::clamp(std::floor(view_box.y), 0.0, viewport.height);
+    double right = std::clamp(std::ceil(view_box.right()), left, viewport.width);
+    double bottom = std::clamp(std::ceil(view_box.bottom()), top, viewport.height);
     transform_destination_ = {left, top, right - left, bottom - top};
     if (right <= left || bottom <= top) {
         clear_transform_preview();
@@ -55,21 +95,20 @@ void Editor::update_transform_preview() {
     const int columns = std::max(1, static_cast<int>(std::ceil((right - left) / step)));
     const int rows = std::max(1, static_cast<int>(std::ceil((bottom - top) / step)));
     std::vector<std::byte> pixels(static_cast<std::size_t>(columns) * rows * 4);
-    const gui_drawing::PointF origin = canvas().view_origin();
-    const double inverse_zoom = 1.0 / canvas().zoom();
+
     const double pixel_width = (right - left) / columns;
     const double pixel_height = (bottom - top) / rows;
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < columns; ++x) {
-            double dx = origin.x + (left + (x + 0.5) * pixel_width) * inverse_zoom - center_x;
-            double dy = origin.y + (top + (y + 0.5) * pixel_height) * inverse_zoom - center_y;
+            const gui_drawing::PointF mapped =
+                canvas().client_to_bitmap({left + (x + 0.5) * pixel_width, top + (y + 0.5) * pixel_height});
+            double dx = mapped.x - center_x;
+            double dy = mapped.y - center_y;
             double sx = (cosine * dx + sine * dy) * source.width / width + source.width * 0.5 - 0.5;
             double sy = (-sine * dx + cosine * dy) * source.height / height + source.height * 0.5 - 0.5;
             if (shearing) {
-                const double px = origin.x + (left + (x + 0.5) * pixel_width) * inverse_zoom -
-                                  resize_original_.x - 0.5 - shear_map_.tx;
-                const double py = origin.y + (top + (y + 0.5) * pixel_height) * inverse_zoom -
-                                  resize_original_.y - 0.5 - shear_map_.ty;
+                const double px = mapped.x - resize_original_.x - 0.5 - shear_map_.tx;
+                const double py = mapped.y - resize_original_.y - 0.5 - shear_map_.ty;
                 sx = px - shear_map_.xy * py;
                 sy = py - shear_map_.yx * px;
             }
@@ -85,6 +124,15 @@ void Editor::update_transform_preview() {
                     channels[2] += color.r * color.a / 255.0 * weight;
                     channels[3] += color.a * weight;
                 }
+            }
+            const std::shared_ptr<const ConvWarpField>& field =
+                rotating ? warp_field_ : transform_preview_field_;
+            if (field) {
+                const WarpSample value = (*field).sample_premultiplied({sx, sy});
+                channels[0] = value.b * 255;
+                channels[1] = value.g * 255;
+                channels[2] = value.r * 255;
+                channels[3] = value.a * 255;
             }
             std::size_t offset = (static_cast<std::size_t>(y) * columns + x) * 4;
             for (int channel = 0; channel < 4; ++channel) {
@@ -155,6 +203,9 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
         resize_original_ = resize_preview_ = bounds;
         resize_start_ = point;
         shear_map_ = {};
+        if (resize_selection_) {
+            begin_transform_preview();
+        }
         refresh();
         canvas().set_pointer_capture(true);
         if (window()) {
@@ -235,6 +286,7 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
             document.resize(resize_preview_.w, resize_preview_.h, false);
         }
         clear_transform_preview();
+        end_transform_preview();
         resize_handle_ = -1;
         canvas().set_pointer_capture(false);
         refresh();
@@ -265,14 +317,18 @@ void Editor::paint_resize_overlay(gf::Painter& painter) {
         }
         gf::Point point = screen({bounds.x + bounds.w * handle_x[i], bounds.y + bounds.h * handle_y[i]});
         if (i >= 8) {
-            point.x += i == 9 ? 16 : i == 11 ? -16 : 0;
-            point.y += i == 10 ? 16 : i == 8 ? -16 : 0;
+            const double dx = i == 9 ? 16 : i == 11 ? -16 : 0;
+            const double dy = i == 10 ? 16 : i == 8 ? -16 : 0;
+            const gui_drawing::PointF offset = canvas().view_point({dx, dy});
+            point.x += offset.x;
+            point.y += offset.y;
             const gf::Color gold = gf::Color::rgba(166, 112, 22);
             painter.fill_rounded_rect({point.x - 4, point.y - 4, 8, 8}, 4, gf::Color::rgba(255, 224, 144));
             painter.stroke_rounded_rect({point.x - 4, point.y - 4, 8, 8}, 4, gold, 1);
-            const bool horizontal = i == 8 || i == 10;
-            painter.draw_line({point.x - (horizontal ? 8 : 0), point.y - (horizontal ? 0 : 8)},
-                              {point.x + (horizontal ? 8 : 0), point.y + (horizontal ? 0 : 8)}, gold, 1);
+            const gui_drawing::PointF direction =
+                canvas().view_point({i == 8 || i == 10 ? 8.0 : 0.0, i == 9 || i == 11 ? 8.0 : 0.0});
+            painter.draw_line({point.x - direction.x, point.y - direction.y},
+                              {point.x + direction.x, point.y + direction.y}, gold, 1);
             continue;
         }
         painter.fill_rect({point.x - 3, point.y - 3, 6, 6}, gf::Color::rgba(255, 255, 255));
@@ -291,8 +347,10 @@ void Editor::paint_resize_overlay(gf::Painter& painter) {
         }
     } else if (resize_handle_ >= 0) {
         gf::Point point = screen({static_cast<double>(bounds.x), static_cast<double>(bounds.y)});
-        double width = bounds.w * canvas().zoom(), height = bounds.h * canvas().zoom();
-        painter.stroke_rect({point.x, point.y, width, height}, gf::Color::rgba(30, 95, 160), 2);
+        const gf::Rect client = canvas().bitmap_to_client({bounds.x, bounds.y, bounds.w, bounds.h});
+        const double width = client.width, height = client.height;
+        canvas().stroke_outline(painter, {bounds.x, bounds.y, bounds.w, bounds.h},
+                                gf::Color::rgba(30, 95, 160), 2);
         painter.draw_text_utf8({point.x + width + 8, point.y + height + 16},
                                std::to_string(bounds.w) + " × " + std::to_string(bounds.h) + " px",
                                {gf::FontRole::control, 12, 400, false}, gf::Color::rgba(30, 65, 95));

@@ -17,6 +17,7 @@ struct EditorSettings {
     CanvasBacking canvas_backing = CanvasBacking::PaleFelt;
     bool solid_transparency = false;
     bool drag_shapes = false;
+    bool rotate_view = false;
     Color transparency_color{255, 128, 192, 255};
     void load();
     void save() const;

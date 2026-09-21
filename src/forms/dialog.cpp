@@ -217,10 +217,12 @@ void EditorDialog::initialize_control_tree() {
         label("about-license",
               "Copyright (c) 2026 joshuah.rainstar@gmail.com\n"
               "Free and open source under the MIT license.\n"
-              "Anyone may use, study, change, and share this program.", {24, 258, 542, 72});
+              "Anyone may use, study, change, and share this program.",
+              {24, 258, 542, 72});
         label("about-trademarks",
               "An independent implementation inspired by Windows 7/10 Paint.\n"
-              "Microsoft and Windows are trademarks of Microsoft Corporation.", {24, 350, 542, 52});
+              "Microsoft and Windows are trademarks of Microsoft Corporation.",
+              {24, 350, 542, 52});
         for (const gf::Control::Ptr& control : controls_) {
             const std::shared_ptr<gf::Label> text = std::dynamic_pointer_cast<gf::Label>(control);
             if (text) {
@@ -231,7 +233,11 @@ void EditorDialog::initialize_control_tree() {
         (*close).set_default_button(true);
         return;
     }
-    if (kind_ == EditorDialogKind::carpet) {
+    if (kind_ == EditorDialogKind::tool_size) {
+        panel_ = {0, 0, 360, 210};
+        label("custom-tool-size-label", "Size in pixels", {24, 54, 160, 28});
+        width_ = number("custom-tool-size", {196, 54, 136, 30}, 1, 1024, (*editor).document.ink.size);
+    } else if (kind_ == EditorDialogKind::carpet) {
         initialize_carpet();
     } else if (kind_ == EditorDialogKind::color) {
         panel_ = {0, 0, 660, 540};
@@ -301,7 +307,7 @@ void EditorDialog::initialize_control_tree() {
         }
         set_color(original_);
     } else if (kind_ == EditorDialogKind::settings) {
-        panel_ = {0, 0, 490, 458};
+        panel_ = {0, 0, 490, 510};
         label("settings-scroll-label", "Scroll distance", {24, 58, 220, 28});
         atlas_numbers_.push_back(
             number("settings-scroll", {280, 57, 180, 30}, 0.1, 100, (*editor).settings.scroll_distance, 1));
@@ -331,6 +337,10 @@ void EditorDialog::initialize_control_tree() {
         (*shape_gesture_).add_item("Click, hold, release");
         (*shape_gesture_).set_selected_index((*editor).settings.drag_shapes ? 1 : 0);
         put(shape_gesture_, {230, 319, 230, 30});
+        rotate_view_ = gf::make_control<gf::CheckBox>(gf::StableId("settings-rotate-view"),
+                                                      "Enable canvas rotation handle");
+        (*rotate_view_).set_checked((*editor).settings.rotate_view);
+        put(rotate_view_, {24, 366, 430, 30});
     } else if (kind_ == EditorDialogKind::properties) {
         panel_ = {0, 0, 460, 345};
         Document& document = (*editor).document;
@@ -571,6 +581,8 @@ gf::SemanticDescriptor EditorDialog::semantic_descriptor() const {
 }
 std::string EditorDialog::title() const {
     switch (kind_) {
+    case EditorDialogKind::tool_size:
+        return "Tool size";
     case EditorDialogKind::carpet:
         return "Carpet generator";
     case EditorDialogKind::about:
@@ -754,7 +766,9 @@ void EditorDialog::height_changed(double value) {
 void EditorDialog::clicked(gf::ButtonBase& control) {
     std::string id(control.stable_id().value());
     if (id == "carpet-hillshade" || id == "carpet-seed") {
-        if (id == "carpet-seed") ++carpet_.seed;
+        if (id == "carpet-seed") {
+            ++carpet_.seed;
+        }
         carpet_changed(0);
         return;
     }
@@ -851,7 +865,9 @@ void EditorDialog::accept() {
     }
     try {
         if (kind_ == EditorDialogKind::carpet) {
-            if (carpet_image_.pixels.empty() || !(*(*attached_window()).find("dialog-ok")).enabled()) return;
+            if (carpet_image_.pixels.empty() || !(*(*attached_window()).find("dialog-ok")).enabled()) {
+                return;
+            }
             (*editor).carpet_parameters = carpet_;
             (*editor).carpet_tile = carpet_image_;
             (*editor).brush_family = BrushFamily::Carpet;
@@ -875,10 +891,13 @@ void EditorDialog::accept() {
             }
             (*editor).document.sync_curve();
             (*editor).document.sync_path();
+        } else if (kind_ == EditorDialogKind::tool_size) {
+            (*editor).document.ink.size = static_cast<int>((*width_).value());
         } else if (kind_ == EditorDialogKind::settings) {
             EditorSettings settings = (*editor).settings;
             settings.scroll_distance = (*atlas_numbers_[0]).value();
             settings.drag_shapes = (*shape_gesture_).selected_index().value_or(0) == 1;
+            settings.rotate_view = (*rotate_view_).checked();
             settings.canvas_backing = static_cast<CanvasBacking>((*background_).selected_index().value_or(0));
             settings.solid_transparency = (*alpha_background_).selected_index().value_or(0) == 1;
             if (!from_hex(std::string((*alpha_background_color_).text()), settings.transparency_color)) {
@@ -887,6 +906,9 @@ void EditorDialog::accept() {
             settings.transparency_color.a = 255;
             settings.save();
             (*editor).settings = settings;
+            if (!settings.rotate_view) {
+                (*editor).rotate_view(0);
+            }
             (*editor).close_editor_dialog();
         } else if (kind_ == EditorDialogKind::properties) {
             Document& document = (*editor).document;

@@ -11,6 +11,9 @@ void WarpWorker::set_completion(std::function<void()> completion) {
     }
     completion_ = std::move(completion);
 }
+void WarpWorker::cancel() {
+    cancelled_.store(true, std::memory_order_relaxed);
+}
 void WarpWorker::wait() {
     if (thread_.joinable()) {
         thread_.join();
@@ -20,6 +23,7 @@ bool WarpWorker::busy() const {
     return busy_;
 }
 void WarpWorker::launch(WarpTask task) {
+    cancelled_.store(false, std::memory_order_relaxed);
     task_ = task;
     result_ = {};
     finished_.store(false, std::memory_order_relaxed);
@@ -90,21 +94,21 @@ void WarpWorker::run(WarpWorker& worker) {
         if (worker.task_ == WarpTask::CompileSelection || worker.task_ == WarpTask::CompileStamp ||
             worker.task_ == WarpTask::CompileRotation || worker.task_ == WarpTask::Transform) {
             std::shared_ptr<ConvWarpField> field = std::make_shared<ConvWarpField>();
-            (*field).compile(worker.source_);
+            (*field).compile(worker.source_, &worker.cancelled_);
             result.field = std::move(field);
             if (worker.task_ == WarpTask::Transform) {
-                render_affine(*result.field, worker.map_, worker.bounds_.w, worker.bounds_.h, result.image);
+                render_affine(*result.field, worker.map_, worker.bounds_.w, worker.bounds_.h, result.image,
+                              WarpSampling::Area);
                 result.field.reset();
             }
         } else if (worker.task_ == WarpTask::PreviewMesh || worker.task_ == WarpTask::CommitMesh) {
             render_mesh(*worker.field_, worker.mesh_, worker.bounds_.w, worker.bounds_.h, result.image,
-                        worker.task_ == WarpTask::PreviewMesh ? WarpSampling::Point
-                                                              : WarpSampling::Minification);
+                        worker.task_ == WarpTask::PreviewMesh ? WarpSampling::Point : WarpSampling::Area);
         } else if (worker.task_ == WarpTask::Stamp || worker.task_ == WarpTask::PreviewRotation ||
                    worker.task_ == WarpTask::CommitRotation) {
             render_affine(*worker.field_, worker.map_, worker.bounds_.w, worker.bounds_.h, result.image,
                           worker.task_ == WarpTask::PreviewRotation ? WarpSampling::Point
-                                                                    : WarpSampling::Minification);
+                                                                    : WarpSampling::Area);
         }
     } catch (const std::exception& exception) {
         result.error = exception.what();

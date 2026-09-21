@@ -1,6 +1,7 @@
 #pragma once
 #include "image.hpp"
 #include <array>
+#include <atomic>
 #include <cstddef>
 #include <vector>
 
@@ -21,7 +22,7 @@ struct WarpSample {
 // compile() prepares a replacement before publishing; old state survives failure.
 class ConvWarpField {
   public:
-    void compile(const Image& source);
+    void compile(const Image& source, const std::atomic<bool>* cancelled = nullptr);
     // Independently admitted CONV channels, before physical color projection.
     // Raw RGB can exceed alpha; use only for numerical inspection/reference work.
     [[nodiscard]] WarpSample sample_components(Point source_position) const;
@@ -39,6 +40,8 @@ class ConvWarpField {
   private:
     int width_ = 0, height_ = 0, lattice_width_ = 0;
     std::vector<double> controls_;
+    bool constant_ = false;
+    WarpSample constant_value_;
 };
 
 enum class WarpSampling { Point, Minification, Area };
@@ -46,8 +49,10 @@ enum class WarpSampling { Point, Minification, Area };
 // Point preserves nodal samples. Minification uses a continuous residual filter:
 // target-square side sqrt(max(0, 1 - 1 / sigma_max(inverse)^2)), so identity,
 // translations and quarter rotations remain exact. Area always uses the full
-// unit target square, including at identity. Both filters use fixed positive
-// 8x8 Gauss nodes; neither is an exact coverage or conservation guarantee.
+// unit target square, including at identity. Affine Area clips footprints at
+// source-cell boundaries and uses positive triangle quadrature; physical color
+// projection is piecewise polynomial, so its integral remains a numerical approximation.
+// Mesh Area additionally clips at triangle boundaries. Minification uses an 8x8 stencil.
 // Transparent outside the source footprint; edge centres extend half a pixel.
 // All output pixels are replaced. Invalid maps leave destination unchanged.
 // affine_bounds includes every target pixel basin intersecting the transformed

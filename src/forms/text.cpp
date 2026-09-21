@@ -73,8 +73,7 @@ gf::Rect Editor::text_caret_damage() const {
         return {};
     }
     const Point caret = text.layout.carets[text.edit.caret];
-    const double scale = (*canvas_).zoom();
-    const gf::Point origin = screen({static_cast<double>(text.bounds.x), static_cast<double>(text.bounds.y)});
+
     const Point first = text.display_point(caret);
     double left = first.x, right = first.x, top = first.y, bottom = first.y;
     // Match every endpoint painted by the transformed caret, including bends.
@@ -85,9 +84,14 @@ gf::Rect Editor::text_caret_damage() const {
         top = std::min(top, point.y);
         bottom = std::max(bottom, point.y);
     }
-    const gf::Rect bounds{origin.x + left * scale - 2, origin.y + top * scale - 2,
-                          (right - left) * scale + 4, (bottom - top) * scale + 4};
-    const gf::Rect box{origin.x, origin.y, text.bounds.w * scale, text.bounds.h * scale};
+    const gf::Rect mapped =
+        (*canvas_).bitmap_to_client({text.bounds.x + static_cast<int>(std::floor(left)),
+                                     text.bounds.y + static_cast<int>(std::floor(top)),
+                                     static_cast<int>(std::ceil(right) - std::floor(left)),
+                                     static_cast<int>(std::ceil(bottom) - std::floor(top))});
+    const gf::Rect bounds{mapped.x - 2, mapped.y - 2, mapped.width + 4, mapped.height + 4};
+    const gf::Rect box =
+        (*canvas_).bitmap_to_client({text.bounds.x, text.bounds.y, text.bounds.w, text.bounds.h});
     return gf::Rect::intersection(bounds, box);
 }
 void Editor::text_frame() {
@@ -269,8 +273,11 @@ void Editor::text_pointer(const gf::PointerEvent& event, Point point) {
                 break;
             }
         }
-        if (text_drag_ == -3 && point.x >= text.bounds.x && point.x <= text.bounds.x + text.bounds.w &&
-            point.y >= text.bounds.y - 23 / scale && point.y < text.bounds.y) {
+        const gf::Point client = screen(point);
+        const gf::Rect box =
+            canvas().bitmap_to_client({text.bounds.x, text.bounds.y, text.bounds.w, text.bounds.h});
+        if (text_drag_ == -3 && client.x >= box.x && client.x <= box.x + 92 && client.y >= box.y - 23 &&
+            client.y < box.y) {
             text_drag_ = -1;
         }
         if (text_drag_ == -3 && point.x >= text.bounds.x && point.x < text.bounds.x + text.bounds.w &&
@@ -343,16 +350,17 @@ void Editor::paint_text_overlay(gf::Painter& painter) {
         return;
     }
     double scale = (*canvas_).zoom();
-    gf::Point origin = screen({static_cast<double>(text.bounds.x), static_cast<double>(text.bounds.y)});
-    gf::Rect box{origin.x, origin.y, text.bounds.w * scale, text.bounds.h * scale};
+    gf::Rect box = canvas().bitmap_to_client({text.bounds.x, text.bounds.y, text.bounds.w, text.bounds.h});
     gf::Color blue = gf::Color::rgba(29, 103, 180);
     painter.fill_rect({box.x, box.y - 22, 92, 20}, gf::Color::rgba(223, 236, 250));
     painter.draw_text_utf8({box.x + 7, box.y - 8}, "Move text", {gf::FontRole::control, 12, 400, false},
                            blue);
-    painter.stroke_rect(box, blue, 1);
+    canvas().stroke_outline(painter, {text.bounds.x, text.bounds.y, text.bounds.w, text.bounds.h}, blue, 1);
     const double hx[] = {0, .5, 1, 1, 1, .5, 0, 0}, hy[] = {0, 0, 0, .5, 1, 1, 1, .5};
     for (int i = 0; i < 8; ++i) {
-        double x = box.x + hx[i] * box.width, y = box.y + hy[i] * box.height;
+        const gf::Point handle =
+            screen({text.bounds.x + hx[i] * text.bounds.w, text.bounds.y + hy[i] * text.bounds.h});
+        double x = handle.x, y = handle.y;
         painter.fill_rect({x - 3, y - 3, 6, 6}, gf::Color::rgba(255, 255, 255));
         painter.stroke_rect({x - 3, y - 3, 6, 6}, blue, 1);
     }
@@ -367,8 +375,8 @@ void Editor::paint_text_overlay(gf::Painter& painter) {
                     text.display_point({static_cast<double>(glyph.x), static_cast<double>(glyph.y + row)});
                 Point b = text.display_point({static_cast<double>(glyph.x + std::max(2, glyph.advance)),
                                               static_cast<double>(glyph.y + row)});
-                painter.draw_line({box.x + a.x * scale, box.y + a.y * scale},
-                                  {box.x + b.x * scale, box.y + b.y * scale},
+                painter.draw_line(screen({text.bounds.x + a.x, text.bounds.y + a.y}),
+                                  screen({text.bounds.x + b.x, text.bounds.y + b.y}),
                                   gf::Color::rgba(60, 140, 240, 70), scale);
             }
         }
@@ -379,8 +387,8 @@ void Editor::paint_text_overlay(gf::Painter& painter) {
         for (int row = 0; row < text.layout.line_height; ++row) {
             Point a = text.display_point({caret.x, caret.y + row});
             Point b = text.display_point({caret.x, caret.y + row + 1});
-            painter.draw_line({box.x + a.x * scale, box.y + a.y * scale},
-                              {box.x + b.x * scale, box.y + b.y * scale}, blue, 1);
+            painter.draw_line(screen({text.bounds.x + a.x, text.bounds.y + a.y}),
+                              screen({text.bounds.x + b.x, text.bounds.y + b.y}), blue, 1);
         }
     }
     painter.restore();

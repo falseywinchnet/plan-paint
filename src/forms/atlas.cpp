@@ -297,6 +297,9 @@ void AtlasPanel::reveal_current() {
     (*strip_).scroll_control_into_view(thumbnails_[static_cast<std::size_t>(active_)]);
 }
 void Editor::paint_atlas_overlay(gf::Painter& painter) {
+    if (std::abs(canvas().view_angle) > 1e-10) {
+        return;
+    }
     if ((document.atlas.kind != AtlasKind::Icon && document.atlas.kind != AtlasKind::Cursor) ||
         document.atlas.active < 0) {
         return;

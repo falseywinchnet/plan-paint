@@ -37,6 +37,7 @@ class WarpWorker {
     bool busy() const;
     void set_completion(std::function<void()> completion);
     void wait();
+    void cancel();
     void compile(WarpTask task, const Image& source, std::uint64_t generation = 0);
     void mesh(WarpTask task, std::shared_ptr<const ConvWarpField> field, const ReshapeMesh& mesh, Rect bounds,
               std::uint64_t generation);
@@ -58,7 +59,7 @@ class WarpWorker {
     WarpTask task_ = WarpTask::None;
     WarpResult result_;
     bool busy_ = false;
-    std::atomic<bool> finished_{false};
+    std::atomic<bool> finished_{false}, cancelled_{false};
     std::jthread thread_;
 };
 } // namespace paint

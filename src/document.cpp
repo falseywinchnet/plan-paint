@@ -403,7 +403,7 @@ void Document::resize(int width, int height, bool scale) {
     const Image& input = selection.active ? selection.image : image;
     Image replacement;
     if (scale) {
-        conv_resize(input, width, height, replacement);
+        conv_resize_area(input, width, height, replacement);
     } else {
         replacement.reset(width, height, ink.secondary);
         composite(replacement, input, 0, 0);

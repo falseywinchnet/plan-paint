@@ -26,6 +26,22 @@ struct WarpCompletion {
         static_cast<void>((*editor).begin_invoke(WarpDelivery{owner}));
     }
 };
+struct PreviewDelivery {
+    std::weak_ptr<Editor> editor;
+    void operator()() const {
+        const std::shared_ptr<Editor> owner = editor.lock();
+        if (owner) {
+            (*owner).poll_transform_preview();
+        }
+    }
+};
+struct PreviewCompletion {
+    Editor* editor;
+    std::weak_ptr<Editor> owner;
+    void operator()() const {
+        static_cast<void>((*editor).begin_invoke(PreviewDelivery{owner}));
+    }
+};
 static Rect mesh_bounds(const ReshapeMesh& mesh) {
     double left = std::numeric_limits<double>::infinity(), top = left;
     double right = -left, bottom = -left;
@@ -72,13 +88,17 @@ static void simplify_segment(const std::vector<Point>& input, std::size_t first,
 }
 } // namespace
 Editor::~Editor() {
+    transform_preview_worker_.cancel();
+    transform_preview_worker_.wait();
     warp_worker_.wait();
 }
 void Editor::initialize_warp() {
     warp_worker_.set_completion(WarpCompletion{this, std::static_pointer_cast<Editor>(shared_from_this())});
+    transform_preview_worker_.set_completion(
+        PreviewCompletion{this, std::static_pointer_cast<Editor>(shared_from_this())});
 }
 bool Editor::background_busy() const {
-    return warp_worker_.busy() || stamp_pending_;
+    return warp_worker_.busy() || stamp_pending_ || transform_preview_worker_.busy();
 }
 bool Editor::warp_active() const {
     return warp_mode_ != WarpMode::none;
@@ -189,7 +209,7 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
     const Image& input = document.selection.active ? document.selection.image : document.image;
     Image source;
     if (scale) {
-        conv_resize(input, width, height, source);
+        source = input;
     } else {
         source.reset(width, height, document.ink.secondary);
         composite(source, input, 0, 0);
@@ -199,11 +219,22 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
     if (std::abs(1 - horizontal * vertical) < 0.05) {
         throw std::runtime_error("This skew collapses the picture. Choose smaller angles.");
     }
-    AffineMap map{1, horizontal, 0, vertical, 1, 0};
-    Point corners[4] = {{-0.5, -0.5}, {width - 0.5, -0.5}, {width - 0.5, height - 0.5}, {-0.5, height - 0.5}};
+    const double sx = scale ? static_cast<double>(width) / input.width : 1;
+    const double sy = scale ? static_cast<double>(height) / input.height : 1;
+    AffineMap map{sx,
+                  horizontal * sy,
+                  (sx - 1 + horizontal * (sy - 1)) * 0.5,
+                  vertical * sx,
+                  sy,
+                  (sy - 1 + vertical * (sx - 1)) * 0.5};
+    Point corners[4] = {{-0.5, -0.5},
+                        {source.width - 0.5, -0.5},
+                        {source.width - 0.5, source.height - 0.5},
+                        {-0.5, source.height - 0.5}};
     double left = 0, right = 0, top = 0, bottom = 0;
     for (int i = 0; i < 4; ++i) {
-        double x = corners[i].x + horizontal * corners[i].y, y = vertical * corners[i].x + corners[i].y;
+        double x = map.xx * corners[i].x + map.xy * corners[i].y + map.tx,
+               y = map.yx * corners[i].x + map.yy * corners[i].y + map.ty;
         if (i == 0) {
             left = x;
             right = x;
@@ -221,16 +252,7 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
                 std::max(1, static_cast<int>(std::ceil(bottom + 0.5)) - y)};
     warp_coverage_.clear();
     if (document.selection.active) {
-        const double sx = static_cast<double>(width) / input.width;
-        const double sy = static_cast<double>(height) / input.height;
-        const AffineMap mask_map = scale ? AffineMap{sx,
-                                                     horizontal * sy,
-                                                     (sx - 1 + horizontal * (sy - 1)) * 0.5,
-                                                     vertical * sx,
-                                                     sy,
-                                                     (sy - 1 + vertical * (sx - 1)) * 0.5}
-                                         : map;
-        warp_coverage_ = document.selection.transformed_mask(mask_map, bounds);
+        warp_coverage_ = document.selection.transformed_mask(map, bounds);
     }
     warp_original_ = document.selection;
     warp_whole_image_ = !document.selection.active;
@@ -298,6 +320,9 @@ void Editor::poll_warp() {
                     publish_stamp_preview();
                 } else if (compile) {
                     warp_field_ = std::move(result.field);
+                    if (warp_mode_ == WarpMode::rotation) {
+                        update_transform_preview();
+                    }
                 } else if (!(warp_commit_ && (result.task == WarpTask::PreviewMesh ||
                                               result.task == WarpTask::PreviewRotation))) {
                     bool committed = result.task == WarpTask::Transform ||
@@ -414,6 +439,10 @@ void Editor::publish_stamp_preview() {
     stamp_image_ = result.image;
 }
 void Editor::reset_stamp() {
+    if (stamp_view_image_.value && window()) {
+        static_cast<void>((*window()).remove_image(stamp_view_image_));
+    }
+    stamp_view_image_ = {};
     if (stamp_image_.value != 0 && window()) {
         static_cast<void>((*window()).remove_image(stamp_image_));
     }
@@ -617,6 +646,64 @@ bool Editor::warp_pointer(const gf::PointerEvent& event, Point point) {
     }
     return warp_active();
 }
+void Editor::paint_stamp_view(gf::Painter& painter, Point origin) {
+    if (stamp_preview_.pixels.empty() || !window()) {
+        return;
+    }
+    if (!stamp_view_generation_ || stamp_view_generation_ != stamp_generation_) {
+        begin_transform_preview(true);
+        stamp_view_generation_ = stamp_generation_;
+    }
+    const gf::Rect destination = gf::Rect::intersection(
+        canvas().client_rectangle(),
+        canvas().bitmap_to_client({static_cast<int>(origin.x), static_cast<int>(origin.y),
+                                   stamp_preview_.width, stamp_preview_.height}));
+    if (destination.empty()) {
+        return;
+    }
+    const int width = static_cast<int>(std::ceil(destination.width)),
+              height = static_cast<int>(std::ceil(destination.height));
+    Image image;
+    if (transform_preview_field_) {
+        const double c = std::cos(canvas().view_angle) * canvas().zoom(),
+                     s = std::sin(canvas().view_angle) * canvas().zoom();
+        const gf::Point first = screen({origin.x + 0.5, origin.y + 0.5});
+        const AffineMap map{c, -s, first.x - destination.x - 0.5, s, c, first.y - destination.y - 0.5};
+        render_affine(*transform_preview_field_, map, width, height, image, WarpSampling::Point);
+    } else {
+        image.reset(width, height, {0, 0, 0, 0});
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const gui_drawing::PointF point =
+                    canvas().client_to_bitmap({destination.x + x + 0.5, destination.y + y + 0.5});
+                image.set(x, y,
+                          stamp_preview_.get(static_cast<int>(std::floor(point.x - origin.x)),
+                                             static_cast<int>(std::floor(point.y - origin.y))));
+            }
+        }
+    }
+    std::vector<std::byte> pixels(image.pixels.size() * 4);
+    for (std::size_t i = 0; i < image.pixels.size(); ++i) {
+        const Color color = image.pixels[i];
+        pixels[i * 4] = static_cast<std::byte>((color.b * color.a + 127) / 255);
+        pixels[i * 4 + 1] = static_cast<std::byte>((color.g * color.a + 127) / 255);
+        pixels[i * 4 + 2] = static_cast<std::byte>((color.r * color.a + 127) / 255);
+        pixels[i * 4 + 3] = static_cast<std::byte>(color.a);
+    }
+    const gf::ImageLoadResult result =
+        stamp_view_image_.value ? (*window()).replace_bgra32_premultiplied(stamp_view_image_, width, height,
+                                                                           width * 4, pixels, canvas())
+                                : (*window()).load_bgra32_premultiplied(width, height, width * 4, pixels);
+    if (result) {
+        stamp_view_image_ = result.image;
+    }
+    if (stamp_view_image_.value) {
+        painter.draw_image(
+            stamp_view_image_,
+            {destination.x, destination.y, static_cast<double>(width), static_cast<double>(height)},
+            adding_stamp_material_ ? 0.5 : 0.65);
+    }
+}
 void Editor::paint_warp_overlay(gf::Painter& painter) {
     const gf::Color blue = gf::Color::rgba(30, 100, 190), white = gf::Color::rgba(255, 255, 255);
     if (document.tool == Tool::Stamp && cursor_client_) {
@@ -629,8 +716,15 @@ void Editor::paint_warp_overlay(gf::Painter& painter) {
         width *= (*canvas_).zoom();
         height *= (*canvas_).zoom();
         gf::Rect bounds{(*cursor_client_).x - width / 2, (*cursor_client_).y - height / 2, width, height};
+        const gui_drawing::PointF center = canvas().client_to_bitmap(*cursor_client_);
+        const Point image_origin{std::round(center.x - width / (2 * canvas().zoom())),
+                                 std::round(center.y - height / (2 * canvas().zoom()))};
         if (stamp_image_.value != 0) {
-            painter.draw_image(stamp_image_, bounds, adding_stamp_material_ ? 0.5 : 0.65);
+            if (std::abs(canvas().view_angle) > 1e-10) {
+                paint_stamp_view(painter, image_origin);
+            } else {
+                painter.draw_image(stamp_image_, bounds, adding_stamp_material_ ? 0.5 : 0.65);
+            }
         }
         double scale = (*canvas_).zoom();
         if (stamp_preview_.pixels.empty()) {
@@ -641,16 +735,16 @@ void Editor::paint_warp_overlay(gf::Painter& painter) {
             std::size_t edges = outline.size() - (open ? 1 : 0);
             for (std::size_t i = 0; i < edges; ++i) {
                 Point first = outline[i], last = outline[(i + 1) % outline.size()];
-                gf::Point a{bounds.x + first.x * scale, bounds.y + first.y * scale};
-                gf::Point b{bounds.x + last.x * scale, bounds.y + last.y * scale};
+                gf::Point a = screen({image_origin.x + first.x, image_origin.y + first.y});
+                gf::Point b = screen({image_origin.x + last.x, image_origin.y + last.y});
                 painter.draw_line(a, b, white, open ? 3 * scale + 2 : 3);
                 painter.draw_line(a, b, blue, open ? 3 * scale : 1);
             }
         } else {
             for (std::size_t i = 0; i + 1 < stamp_boundary_.size(); i += 2) {
                 Point first = stamp_boundary_[i], last = stamp_boundary_[i + 1];
-                painter.draw_line({bounds.x + first.x * scale, bounds.y + first.y * scale},
-                                  {bounds.x + last.x * scale, bounds.y + last.y * scale}, blue, 1);
+                painter.draw_line(screen({image_origin.x + first.x, image_origin.y + first.y}),
+                                  screen({image_origin.x + last.x, image_origin.y + last.y}), blue, 1);
             }
         }
     }
@@ -670,8 +764,8 @@ void Editor::paint_warp_overlay(gf::Painter& painter) {
             painter.fill_rect({point.x - 4, point.y - 4, 8, 8}, white);
             painter.stroke_rect({point.x - 4, point.y - 4, 8, 8}, blue, 2);
         }
-    } else if (document.selection.active &&
-               (!document.selection.on_canvas || document.tool == Tool::Select || document.tool == Tool::Lasso)) {
+    } else if (document.selection.active && (!document.selection.on_canvas || document.tool == Tool::Select ||
+                                             document.tool == Tool::Lasso)) {
         gf::Point handle = rotation_handle();
         painter.fill_rect({handle.x - 10, handle.y - 10, 20, 20}, white);
         painter.stroke_rect({handle.x - 10, handle.y - 10, 20, 20}, blue, 1);

@@ -23,6 +23,22 @@ class Editor;
 class PaintCanvas final : public gui_forms::RasterCanvas {
   public:
     PaintCanvas(gui_forms::StableId id, std::weak_ptr<Editor> editor);
+    ~PaintCanvas() override;
+    void publish_source(const Image& source, Rect damage);
+    void poll_view();
+    bool view_busy() const;
+    std::string view_error;
+
+    double view_angle = 0;
+    gui_drawing::PointF document_point(gui_drawing::PointF point) const noexcept;
+    gui_forms::Rect view_bounds() const noexcept;
+    gui_forms::Point rotation_handle() const noexcept;
+    void stroke_outline(gui_forms::Painter& painter, gui_drawing::RectI pixels, gui_forms::Color color,
+                        double width) const;
+
+    gui_forms::Rect bitmap_to_client(gui_drawing::RectI pixels) const noexcept;
+    gui_drawing::PointF client_to_bitmap(gui_forms::Point client) const noexcept;
+    gui_drawing::PointF view_point(gui_drawing::PointF point) const noexcept;
     void on_pointer(gui_forms::PointerEvent& event) override;
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
 
@@ -41,7 +57,19 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
 
   private:
     std::weak_ptr<Editor> editor_;
-    gui_forms::ImageId backing_, repeated_, reference_;
+    gui_forms::ImageId backing_, repeated_, reference_, rotated_;
+    Image view_source_;
+    WarpWorker view_worker_;
+    std::shared_ptr<const ConvWarpField> view_field_;
+    std::uint64_t source_generation_ = 1, prepared_generation_ = 0, rendered_generation_ = 0,
+                  rendered_revision_ = 0;
+    double rendered_angle_ = 0, rendered_zoom_ = 0;
+    gui_drawing::PointF rendered_origin_;
+    gui_forms::Size rendered_size_;
+    bool view_worker_initialized_ = false;
+    void paint_rotated(gui_forms::Painter& painter, const Editor& editor);
+    void prepare_view();
+
     CanvasBacking loaded_backing_ = CanvasBacking::Count;
     void update_backing();
     std::uint64_t atlas_revision_ = 0;
@@ -54,6 +82,7 @@ class Editor final : public gui_forms::Control {
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
     void poll_warp();
+    void poll_transform_preview();
     void start_reshape();
     void request_rotation(double degrees);
     void request_skew(int width, int height, bool scale, double horizontal, double vertical);
@@ -129,7 +158,8 @@ class Editor final : public gui_forms::Control {
     void save_path(const std::string& path);
     std::string pending_save_path, deferred_command, deferred_open_path;
     void complete_deferred_save();
-    gui_forms::RasterCanvas& canvas();
+    PaintCanvas& canvas();
+    void rotate_view(double radians);
     void pointer(const gui_forms::PointerEvent& event);
 
   private:
@@ -140,7 +170,16 @@ class Editor final : public gui_forms::Control {
     bool path_preview_point(Point& point) const;
     void publish_path_preview();
     gui_forms::AcceleratorToken help_accelerator_;
-    WarpWorker warp_worker_;
+    WarpWorker warp_worker_, transform_preview_worker_;
+    std::shared_ptr<const ConvWarpField> transform_preview_field_;
+    Image transform_preview_source_;
+    std::uint64_t transform_preview_generation_ = 1;
+    bool transform_preview_pending_ = false, transform_preview_stamp_ = false;
+    std::uint64_t stamp_view_generation_ = 0;
+    gui_forms::ImageId stamp_view_image_;
+    void paint_stamp_view(gui_forms::Painter& painter, Point origin);
+    void begin_transform_preview(bool stamp = false);
+    void end_transform_preview();
     enum class WarpMode { none, mesh, rotation, transform };
     WarpMode warp_mode_ = WarpMode::none;
     FloatingSelection warp_original_;
@@ -164,9 +203,9 @@ class Editor final : public gui_forms::Control {
     bool warp_pointer(const gui_forms::PointerEvent& event, Point point);
     void paint_warp_overlay(gui_forms::Painter& painter);
     void stamp_at(Point point, bool checkpoint = true);
-    std::shared_ptr<gui_forms::RasterCanvas> canvas_;
+    std::shared_ptr<PaintCanvas> canvas_;
     std::shared_ptr<gui_forms::Label> status_, cursor_status_, dimensions_status_, selection_status_;
-    std::shared_ptr<gui_forms::Button> zoom_out_, zoom_in_, zoom_reset_;
+    std::shared_ptr<gui_forms::Button> zoom_out_, zoom_in_, zoom_reset_, tool_size_status_;
     std::shared_ptr<gui_forms::TrackBar> zoom_slider_;
     std::optional<gui_forms::Point> cursor_client_;
     bool synchronizing_zoom_ = false;
@@ -232,6 +271,11 @@ class Editor final : public gui_forms::Control {
     Ink gesture_ink_, gesture_fill_ink_;
     bool dragging_ = false, moving_selection_ = false, preview_active_ = false, panning_ = false;
     bool handle_checkpoint_ = false;
+    bool rotating_view_ = false;
+    double rotation_grab_angle_ = 0, rotation_start_angle_ = 0;
+    gui_forms::Point rotation_pivot_;
+    gui_drawing::PointF rotation_document_pivot_;
+    bool picker_pending_ = false, picker_secondary_ = false;
     bool placing_shape_ = false;
     gui_forms::PointerButton placement_button_ = gui_forms::PointerButton::primary;
     int curve_handle_ = -1;

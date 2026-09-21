@@ -31,9 +31,11 @@ struct Fixture {
         (*window).perform_layout();
     }
     gf::Point position(double x, double y) {
-        gf::RasterCanvas& canvas = (*editor).canvas();
+        paint::forms::PaintCanvas& canvas = (*editor).canvas();
         gui_drawing::PointF origin = canvas.view_origin();
-        return canvas.point_to_window({(x - origin.x) * canvas.zoom(), (y - origin.y) * canvas.zoom()});
+        const gui_drawing::PointF point = canvas.view_point({x, y});
+        return canvas.point_to_window(
+            {(point.x - origin.x) * canvas.zoom(), (point.y - origin.y) * canvas.zoom()});
     }
     bool pointer(gf::PointerAction action, double x, double y,
                  gf::PointerButton button = gf::PointerButton::primary,
@@ -856,7 +858,7 @@ void background_rotation_mesh_and_stamp() {
     map.tx -= bounds.x;
     map.ty -= bounds.y;
     paint::Image expected;
-    paint::render_affine(field, map, bounds.w, bounds.h, expected);
+    paint::render_affine(field, map, bounds.w, bounds.h, expected, paint::WarpSampling::Area);
     require(editor.document.selection.image.pixels.size() == expected.pixels.size() &&
                 std::memcmp(editor.document.selection.image.pixels.data(), expected.pixels.data(),
                             expected.pixels.size() * sizeof(paint::Color)) == 0,
@@ -1214,7 +1216,9 @@ void text_caret_deadlines_damage_only_the_transformed_caret() {
         require(!overlay.text_caret_points.empty(), "active text paints a caret");
         PreviewPainter initial;
         const std::optional<gf::PaintReceipt> receipt = window.paint(initial);
-        if (receipt) static_cast<void>(window.notify_presented(*receipt));
+        if (receipt) {
+            static_cast<void>(window.notify_presented(*receipt));
+        }
         static_cast<void>(window.take_damage());
         const gf::FramePollResult frame =
             window.poll_frame_schedule(gf::FrameClock::now() + std::chrono::milliseconds(600));
@@ -1224,8 +1228,8 @@ void text_caret_deadlines_damage_only_the_transformed_caret() {
                 "caret deadline does not invalidate the canvas or whole window");
         for (const gf::Point point : overlay.text_caret_points) {
             const gf::Point native = editor.canvas().point_to_window(point);
-            require(native.x >= damage.x && native.x <= damage.x + damage.width &&
-                        native.y >= damage.y && native.y <= damage.y + damage.height,
+            require(native.x >= damage.x && native.x <= damage.x + damage.width && native.y >= damage.y &&
+                        native.y <= damage.y + damage.height,
                     "caret damage covers every transformed painted segment");
         }
         PreviewPainter hidden;
@@ -1258,7 +1262,7 @@ void transforms_preview_before_release() {
             "selection contraction updates visible pixels while dragging");
     fixture.pointer(gf::PointerAction::up, 45, 40);
     paint::Image expected;
-    paint::conv_resize(original, 25, 20, expected);
+    paint::conv_resize_area(original, 25, 20, expected);
     require(editor.document.selection.image.pixels.size() == expected.pixels.size() &&
                 std::memcmp(expected.pixels.data(), editor.document.selection.image.pixels.data(),
                             expected.pixels.size() * sizeof(paint::Color)) == 0,
@@ -1305,7 +1309,9 @@ void selection_handles_repaint_during_capture() {
         editor.refresh();
         PreviewPainter initial;
         std::optional<gf::PaintReceipt> receipt = window.paint(initial);
-        if (receipt) static_cast<void>(window.notify_presented(*receipt));
+        if (receipt) {
+            static_cast<void>(window.notify_presented(*receipt));
+        }
         double x = 30 + handles[handle][0] * 40, y = 25 + handles[handle][1] * 30;
         fixture.pointer(gf::PointerAction::down, x, y);
         std::uint64_t prior = 0;
@@ -1849,8 +1855,8 @@ void independent_color_materials_and_no_color() {
             "Alt carries body fills with Alt independently of Primary's pattern");
     routed_button(window, "material-edge");
     routed_button(window, "r-pattern-0");
-    require(paint::solid_material(editor.document.ink) &&
-                (*window.find("material-fill")).enabled() && (*window.find("alt-carries-body")).enabled(),
+    require(paint::solid_material(editor.document.ink) && (*window.find("material-fill")).enabled() &&
+                (*window.find("alt-carries-body")).enabled(),
             "Solid clears Primary texture without disabling Alt or body assignment");
     fixture.drag(10, 50, 110, 85);
     require(paint::equal(editor.document.image.get(40, 65), editor.document.ink.secondary),
@@ -2035,6 +2041,130 @@ void stamp_scrubs_one_undo_gesture() {
         require(white(editor.document.image.get(x, 40)), "one undo removes the entire scrub");
     }
     require(!white(editor.document.image.get(8, 8)), "stamp scrub and undo preserve original sample");
+}
+void freehand_wand_picker_and_size() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.choose_tool(paint::Tool::Freehand);
+    editor.document.shape_fill = true;
+    editor.document.shape_outline = false;
+    editor.document.ink.primary = {34, 126, 55, 255};
+    editor.document.ink.secondary = {220, 80, 24, 255};
+    editor.document.alt_carries_body = true;
+    fixture.pointer(gf::PointerAction::down, 20, 20);
+    fixture.pointer(gf::PointerAction::move, 75, 20);
+    fixture.pointer(gf::PointerAction::move, 55, 70);
+    fixture.pointer(gf::PointerAction::up, 20, 20);
+    require(paint::equal(editor.document.image.get(45, 35), editor.document.ink.secondary),
+            "freehand closes on release and uses alternate body material");
+    require(white(editor.document.image.get(90, 70)), "freehand leaves outside untouched");
+    editor.execute("undo");
+    require(white(editor.document.image.get(45, 35)), "one undo removes a freehand body");
+    editor.document.image.set(20, 20, {34, 126, 55, 255});
+    editor.document.image.set(100, 70, {34, 126, 55, 255});
+    editor.refresh();
+    editor.lasso_mode = paint::LassoMode::Wand;
+    editor.choose_tool(paint::Tool::Lasso);
+    fixture.click(20, 20);
+    require(editor.document.selection.active && editor.document.selection.image.width == 81 &&
+                editor.document.selection.image.height == 51,
+            "wand includes disconnected equal colors");
+    editor.choose_tool(paint::Tool::Pencil);
+    editor.document.ink.primary = {99, 11, 190, 255};
+    fixture.drag(20, 20, 100, 70);
+    require(paint::equal(editor.document.image.get(100, 70), {99, 11, 190, 255}) &&
+                white(editor.document.image.get(60, 45)),
+            "wand remains a painting mask between disconnected islands");
+    editor.document.commit_selection();
+    editor.choose_tool(paint::Tool::Picker);
+    fixture.click(100, 70);
+    require(paint::equal(editor.document.ink.primary, {99, 11, 190, 255}), "picker click samples primary");
+    const paint::Color before = editor.document.ink.primary;
+    const gui_drawing::PointF origin = editor.canvas().view_origin();
+    fixture.pointer(gf::PointerAction::down, 40, 40);
+    const gf::Point start = fixture.position(40, 40);
+    window.dispatch_pointer(
+        {gf::PointerAction::move, gf::PointerButton::primary, {start.x + 25, start.y + 10}});
+    window.dispatch_pointer(
+        {gf::PointerAction::up, gf::PointerButton::primary, {start.x + 25, start.y + 10}});
+    require(paint::equal(before, editor.document.ink.primary) &&
+                editor.canvas().view_origin().x == origin.x - 25,
+            "picker drag pans without sampling a new color");
+    const gui_drawing::PointF panned = editor.canvas().view_origin();
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::right});
+    require(editor.canvas().view_origin().x == panned.x + 32, "right arrow pans screen pixels");
+    routed_button(window, "status-tool-size");
+    const std::shared_ptr<gf::NumericUpDown> size =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("custom-tool-size"));
+    require(static_cast<bool>(size), "status size opens custom size popup");
+    (*size).set_value(173);
+    routed_button(window, "dialog-ok");
+    require(editor.document.ink.size == 173, "custom size exceeds the old 64 pixel limit");
+}
+void working_view_coordinates_and_reset() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    require(!editor.settings.rotate_view, "rotation handle defaults off");
+    editor.settings.rotate_view = true;
+    editor.refresh();
+    editor.execute("fit");
+    const std::vector<paint::Color> before = editor.document.image.pixels;
+    const std::uint64_t revision = editor.document.revision;
+    for (double angle : {0.2, 1.5707963267948966, -1.9, 3.141592653589793}) {
+        editor.rotate_view(angle);
+        const gf::Point position = fixture.position(30.25, 45.75);
+        const gui_drawing::PointF actual =
+            editor.canvas().client_to_bitmap(editor.canvas().point_from_window(position));
+        require(std::abs(actual.x - 30.25) < 1e-9 && std::abs(actual.y - 45.75) < 1e-9,
+                "arbitrary view rotations preserve inverse pointer mapping");
+    }
+    require(std::memcmp(before.data(), editor.document.image.pixels.data(),
+                        before.size() * sizeof(paint::Color)) == 0 &&
+                editor.document.revision == revision,
+            "rotating the view never edits pixels or history");
+    editor.rotate_view(0);
+    const gf::Point grip = editor.canvas().point_to_window(editor.canvas().rotation_handle());
+    const gf::Point pivot =
+        fixture.position(editor.document.image.width / 2.0, editor.document.image.height / 2.0);
+    const double dx = grip.x - pivot.x, dy = grip.y - pivot.y;
+    const gf::Point turned{pivot.x + std::cos(0.3) * dx - std::sin(0.3) * dy,
+                           pivot.y + std::sin(0.3) * dx + std::cos(0.3) * dy};
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, grip});
+    require(editor.canvas().has_pointer_capture(), "rotation grip captures the drag");
+    window.dispatch_pointer({gf::PointerAction::move, gf::PointerButton::primary, turned});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, turned});
+    require(std::abs(editor.canvas().view_angle - 0.3) < 1e-9 && !editor.canvas().has_pointer_capture() &&
+                editor.document.revision == revision,
+            "drag rotates only the working view and releases capture");
+    editor.rotate_view(0.55);
+    editor.choose_tool(paint::Tool::Pencil);
+    fixture.drag(25.5, 25.5, 70.5, 45.5);
+    require(!white(editor.document.image.get(25, 25)) && !white(editor.document.image.get(70, 45)),
+            "painting in rotated view writes the original document coordinates");
+    const std::vector<paint::Color> painted = editor.document.image.pixels;
+    const std::uint64_t painted_revision = editor.document.revision;
+    const gf::Point handle = editor.canvas().point_to_window(editor.canvas().rotation_handle());
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::secondary, handle});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::secondary, handle});
+    require(editor.canvas().view_angle == 0 && editor.document.revision == painted_revision &&
+                std::memcmp(painted.data(), editor.document.image.pixels.data(),
+                            painted.size() * sizeof(paint::Color)) == 0,
+            "right-click grip restores the unresampled canvas without an undo entry");
+    paint::Image pasted;
+    pasted.reset(8, 6, {240, 100, 30, 255});
+    editor.document.paste(pasted, 45, 30);
+    editor.rotate_view(-0.4);
+    const std::uint64_t floating_revision = editor.document.revision;
+    const gf::Point reset = editor.canvas().point_to_window(editor.canvas().rotation_handle());
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::secondary, reset});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::secondary, reset});
+    require(editor.canvas().view_angle == 0 && editor.document.selection.active &&
+                editor.document.selection.x == 45 && editor.document.selection.y == 30 &&
+                editor.document.revision == floating_revision &&
+                paint::equal(editor.document.selection.image.get(0, 0), pasted.get(0, 0)),
+            "right-click view reset preserves floating pixels, placement and history");
 }
 void scroll_distance_bounds_and_settings() {
     Fixture fixture;
@@ -2580,6 +2710,8 @@ void zoom_anchors_the_point() {
 } // namespace
 int main() {
     try {
+        freehand_wand_picker_and_size();
+        working_view_coordinates_and_reset();
         persistent_selection_painting();
         selection_holes_flood_and_floating_paste();
         selection_text_path_carpet_and_move();

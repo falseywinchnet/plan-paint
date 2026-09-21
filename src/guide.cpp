@@ -109,6 +109,32 @@ std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width
     }
     return largest;
 }
+SelectionMask similar_colors(const Image& image, Point seed, double tolerance) {
+    if (!std::isfinite(seed.x) || !std::isfinite(seed.y) || seed.x < 0 || seed.y < 0 ||
+        seed.x >= image.width || seed.y >= image.height) {
+        return {};
+    }
+    const int sx = static_cast<int>(std::floor(seed.x)), sy = static_cast<int>(std::floor(seed.y));
+    if (!image.contains(sx, sy) || !std::isfinite(tolerance)) {
+        return {};
+    }
+    const Color target = image.get(sx, sy);
+    const Lab reference = to_oklab(target);
+    tolerance = std::clamp(tolerance, 0.002, 0.25);
+    SelectionMask result;
+    result.bounds = {0, 0, image.width, image.height};
+    result.coverage.resize(image.pixels.size());
+    for (std::size_t i = 0; i < image.pixels.size(); ++i) {
+        const Color color = image.pixels[i];
+        const double alpha = (static_cast<int>(color.a) - target.a) / 255.0;
+        const double distance = std::sqrt(
+            (color.a || target.a ? distance_squared(to_oklab(color), reference) : 0) + 0.25 * alpha * alpha);
+        result.coverage[i] = static_cast<std::uint8_t>(
+            std::clamp((tolerance * 1.5 - distance) / (tolerance * 0.5), 0.0, 1.0) * 255);
+    }
+    trim_selection_mask(result);
+    return result;
+}
 void trim_selection_mask(SelectionMask& mask) {
     if (mask.bounds.w < 1 || mask.bounds.h < 1 ||
         mask.coverage.size() != static_cast<std::size_t>(mask.bounds.w) * mask.bounds.h) {

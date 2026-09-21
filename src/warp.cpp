@@ -866,19 +866,48 @@ struct AtlasBuilder {
 };
 } // namespace
 
-void ConvWarpField::compile(const Image& source) {
+void ConvWarpField::compile(const Image& source, const std::atomic<bool>* cancelled) {
     if (source.width < 1 || source.height < 1 || source.width > 32768 || source.height > 32768 ||
         source.pixels.size() != static_cast<std::size_t>(source.width) * source.height) {
         throw std::invalid_argument("Invalid CONV source image.");
     }
+    if (cancelled && (*cancelled).load(std::memory_order_relaxed)) {
+        throw std::runtime_error("CONV preparation superseded.");
+    }
+    const Color first = source.pixels.front();
+    bool constant = true;
+    for (const Color color : source.pixels) {
+        if (!equal(color, first)) {
+            constant = false;
+            break;
+        }
+    }
+    if (constant) {
+        const double alpha = first.a / 255.0;
+        constant_value_ = {first.r / 255.0 * alpha, first.g / 255.0 * alpha, first.b / 255.0 * alpha, alpha};
+        constant_ = true;
+        controls_ = {};
+        controls_.shrink_to_fit();
+        width_ = source.width;
+        height_ = source.height;
+        lattice_width_ = 0;
+        return;
+    }
+    if (cancelled && (*cancelled).load(std::memory_order_relaxed)) {
+        throw std::runtime_error("CONV preparation superseded.");
+    }
     AtlasBuilder builder(source);
     while (builder.build_phase < 12) {
+        if (cancelled && (*cancelled).load(std::memory_order_relaxed)) {
+            throw std::runtime_error("CONV preparation superseded.");
+        }
         int status = builder.build_native_step(64);
         if (status < 0) {
             throw std::runtime_error("CONV signed-current projection failed.");
         }
     }
     controls_.swap(builder.native_control);
+    constant_ = false;
     width_ = source.width;
     height_ = source.height;
     lattice_width_ = builder.lw;
@@ -890,8 +919,11 @@ std::size_t ConvWarpField::storage_bytes() const {
 WarpSample ConvWarpField::sample_components(Point position) const {
     WarpSample sample;
     if (!std::isfinite(position.x) || !std::isfinite(position.y) || position.x < -0.5 || position.y < -0.5 ||
-        position.x >= width_ - 0.5 || position.y >= height_ - 0.5 || controls_.empty()) {
+        position.x >= width_ - 0.5 || position.y >= height_ - 0.5 || (!constant_ && controls_.empty())) {
         return sample;
+    }
+    if (constant_) {
+        return constant_value_;
     }
     double x = std::clamp(position.x, 0.0, static_cast<double>(width_ - 1));
     double y = std::clamp(position.y, 0.0, static_cast<double>(height_ - 1));
@@ -1016,6 +1048,106 @@ static void add_weighted(WarpSample& sum, WarpSample value, double weight) {
     sum.b += value.b * weight;
     sum.a += value.a * weight;
 }
+// A committed destination pixel is a parallelogram in source coordinates.
+// Clip it at every source-cell boundary before quadrature: a single fixed
+// target stencil can miss arbitrarily many thin cells under strong reduction.
+struct FootprintPolygon {
+    std::array<Point, 12> points = {};
+    int count = 0;
+};
+static FootprintPolygon clip_footprint(const FootprintPolygon& input, int axis, double boundary,
+                                       bool greater) {
+    FootprintPolygon output;
+    if (!input.count) {
+        return output;
+    }
+    Point previous = input.points[input.count - 1];
+    double pv = axis == 0 ? previous.x : previous.y;
+    bool previous_inside = greater ? pv >= boundary : pv <= boundary;
+    for (int i = 0; i < input.count; ++i) {
+        const Point current = input.points[i];
+        const double cv = axis == 0 ? current.x : current.y;
+        const bool inside = greater ? cv >= boundary : cv <= boundary;
+        if (inside != previous_inside) {
+            const double t = (boundary - pv) / (cv - pv);
+            output.points[output.count++] = {previous.x + t * (current.x - previous.x),
+                                             previous.y + t * (current.y - previous.y)};
+        }
+        if (inside) {
+            output.points[output.count++] = current;
+        }
+        previous = current;
+        pv = cv;
+        previous_inside = inside;
+    }
+    return output;
+}
+static WarpSample integrate_footprint(const ConvWarpField& field, const FootprintPolygon& footprint,
+                                      double density) {
+    double left = 1e30, top = 1e30, right = -1e30, bottom = -1e30;
+    for (int i = 0; i < footprint.count; ++i) {
+        const Point point = footprint.points[i];
+        left = std::min(left, point.x);
+        right = std::max(right, point.x);
+        top = std::min(top, point.y);
+        bottom = std::max(bottom, point.y);
+    }
+    WarpSample total;
+    if (right <= -0.5 || bottom <= -0.5 || left >= field.width() - 0.5 || top >= field.height() - 0.5) {
+        return total;
+    }
+    const int first_x = static_cast<int>(std::floor(std::max(-0.5, left)));
+    const int first_y = static_cast<int>(std::floor(std::max(-0.5, top)));
+    const int last_x = static_cast<int>(std::floor(std::min(field.width() - 0.5, right)));
+    const int last_y = static_cast<int>(std::floor(std::min(field.height() - 0.5, bottom)));
+    // Six-point Gauss-Legendre on each Duffy coordinate integrates a tensor
+    // quintic on a triangle exactly in real arithmetic (including its Jacobian).
+    // Physical RGBA projection within a patch is piecewise polynomial; that
+    // projection retains positive quadrature and is not claimed algebraically exact.
+    constexpr double nodes[6] = {0.033765242898423975, 0.16939530676686774, 0.38069040695840156,
+                                 0.61930959304159844,  0.83060469323313226, 0.96623475710157603};
+    constexpr double weights[6] = {0.08566224618958517, 0.1803807865240693, 0.23395696728634552,
+                                   0.23395696728634552, 0.1803807865240693, 0.08566224618958517};
+    for (int y = first_y; y <= last_y; ++y) {
+        FootprintPolygon row = clip_footprint(footprint, 1, std::max(-0.5, static_cast<double>(y)), true);
+        row = clip_footprint(row, 1, std::min(field.height() - 0.5, y + 1.0), false);
+        if (row.count < 3) {
+            continue;
+        }
+        for (int x = first_x; x <= last_x; ++x) {
+            FootprintPolygon cell = clip_footprint(row, 0, std::max(-0.5, static_cast<double>(x)), true);
+            cell = clip_footprint(cell, 0, std::min(field.width() - 0.5, x + 1.0), false);
+            for (int triangle = 1; triangle + 1 < cell.count; ++triangle) {
+                const Point a = cell.points[0], b = cell.points[triangle], c = cell.points[triangle + 1];
+                const double determinant = std::abs((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+                if (determinant < 1e-24) {
+                    continue;
+                }
+                for (int j = 0; j < 6; ++j) {
+                    for (int i = 0; i < 6; ++i) {
+                        const double u = nodes[i], v = (1 - u) * nodes[j];
+                        const Point point{a.x + u * (b.x - a.x) + v * (c.x - a.x),
+                                          a.y + u * (b.y - a.y) + v * (c.y - a.y)};
+                        add_weighted(total, field.sample_premultiplied(point),
+                                     density * determinant * (1 - u) * weights[i] * weights[j]);
+                    }
+                }
+            }
+        }
+    }
+    return total;
+}
+static WarpSample integrate_affine_pixel(const ConvWarpField& field, const AffineMap& inverse, Point center) {
+    FootprintPolygon footprint;
+    footprint.count = 4;
+    constexpr double dx[4] = {-0.5, 0.5, 0.5, -0.5}, dy[4] = {-0.5, -0.5, 0.5, 0.5};
+    for (int i = 0; i < 4; ++i) {
+        footprint.points[i] = {center.x + inverse.xx * dx[i] + inverse.xy * dy[i],
+                               center.y + inverse.yx * dx[i] + inverse.yy * dy[i]};
+    }
+    return integrate_footprint(field, footprint,
+                               1.0 / std::abs(inverse.xx * inverse.yy - inverse.xy * inverse.yx));
+}
 struct AffineStencil {
     int count = 1;
     Point offsets[64] = {};
@@ -1039,6 +1171,7 @@ struct AffineJob {
     const AffineMap& inverse;
     const AffineStencil& stencil;
     Image& output;
+    bool area = false;
     std::atomic<int> next_row{0};
 };
 static void affine_worker(AffineJob& job) {
@@ -1058,7 +1191,10 @@ static void affine_worker(AffineJob& job) {
         for (int x = 0; x < width; ++x) {
             Point centre{row_x + inverse.xx * x, row_y + inverse.yx * x};
             WarpSample total;
-            for (int i = 0; i < stencil.count; ++i) {
+            if (job.area) {
+                total = integrate_affine_pixel(field, inverse, centre);
+            }
+            for (int i = 0; i < (job.area ? 0 : stencil.count); ++i) {
                 Point position{centre.x + stencil.offsets[i].x, centre.y + stencil.offsets[i].y};
                 WarpSample value = field.sample_premultiplied(position);
                 add_weighted(total, value, stencil.weights[i]);
@@ -1142,7 +1278,7 @@ void render_affine(const ConvWarpField& field, const AffineMap& map, int width, 
     output.reset(width, height, {0, 0, 0, 0});
     SampleRule rule = sample_rule(map_footprint(inverse), sampling);
     AffineStencil stencil = prepare_affine_stencil(inverse, rule);
-    AffineJob job{field, inverse, stencil, output};
+    AffineJob job{field, inverse, stencil, output, sampling == WarpSampling::Area};
     unsigned count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
     if (output.pixels.size() < 65536) {
         count = 1;
@@ -1522,6 +1658,28 @@ void render_mesh(const ConvWarpField& field, const ReshapeMesh& mesh, int width,
         for (int y = top; y <= bottom; ++y) {
             for (int x = left; x <= right; ++x) {
                 std::size_t pixel = static_cast<std::size_t>(y) * width + x;
+                if (sampling == WarpSampling::Area) {
+                    FootprintPolygon polygon;
+                    polygon.count = 3;
+                    polygon.points[0] = a.target;
+                    polygon.points[1] = b.target;
+                    polygon.points[2] = c.target;
+                    polygon = clip_footprint(polygon, 0, x - 0.5, true);
+                    polygon = clip_footprint(polygon, 0, x + 0.5, false);
+                    polygon = clip_footprint(polygon, 1, y - 0.5, true);
+                    polygon = clip_footprint(polygon, 1, y + 0.5, false);
+                    if (polygon.count >= 3) {
+                        for (int i = 0; i < polygon.count; ++i) {
+                            polygon.points[i] = transformed(polygon.points[i], inverse);
+                        }
+                        add_weighted(totals[pixel],
+                                     integrate_footprint(
+                                         field, polygon,
+                                         1.0 / std::abs(inverse.xx * inverse.yy - inverse.xy * inverse.yx)),
+                                     1.0);
+                    }
+                    continue;
+                }
                 for (int j = 0; j < rule.count; ++j) {
                     for (int i = 0; i < rule.count; ++i) {
                         std::uint64_t bit = std::uint64_t{1} << (j * rule.count + i);

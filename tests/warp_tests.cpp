@@ -367,10 +367,10 @@ void benchmark(int side) {
     std::chrono::steady_clock::time_point compiled = std::chrono::steady_clock::now();
     paint::Image output;
     paint::AffineMap map{0.98, -0.12, side * 0.06, 0.12, 0.98, -side * 0.05};
-    paint::render_affine(field, map, side, side, output);
+    paint::render_affine(field, map, side, side, output, paint::WarpSampling::Point);
     std::chrono::steady_clock::time_point rendered = std::chrono::steady_clock::now();
     std::cout << side << "x" << side << " compile " << std::chrono::duration<double>(compiled - start).count()
-              << " s; render " << std::chrono::duration<double>(rendered - compiled).count()
+              << " s; point render " << std::chrono::duration<double>(rendered - compiled).count()
               << " s; retained " << field.storage_bytes() << " bytes\n";
 }
 } // namespace

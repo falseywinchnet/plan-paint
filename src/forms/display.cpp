@@ -1,21 +1,23 @@
 #include "forms/display.hpp"
+#include "forms/editor.hpp"
 #include <algorithm>
 #include <stdexcept>
 namespace paint::forms {
-void publish_image(const Image& source, gui_forms::RasterCanvas& canvas, Rect damage) {
+static void publish_pixels(const Image& source, gui_forms::RasterCanvas& canvas, Rect damage) {
+    const int width = source.width, height = source.height;
     std::shared_ptr<gui_drawing::Bitmap> bitmap = canvas.bitmap();
-    bool replacement = !bitmap || (*bitmap).width() != static_cast<unsigned>(source.width) ||
-                       (*bitmap).height() != static_cast<unsigned>(source.height);
+    bool replacement = !bitmap || (*bitmap).width() != static_cast<unsigned>(width) ||
+                       (*bitmap).height() != static_cast<unsigned>(height);
     if (replacement) {
-        bitmap = std::make_shared<gui_drawing::Bitmap>(source.width, source.height);
+        bitmap = std::make_shared<gui_drawing::Bitmap>(width, height);
     }
     if (replacement || damage.w <= 0 || damage.h <= 0) {
-        damage = {0, 0, source.width, source.height};
+        damage = {0, 0, width, height};
     }
-    int right = std::clamp(damage.x + damage.w, 0, source.width);
-    int bottom = std::clamp(damage.y + damage.h, 0, source.height);
-    damage.x = std::clamp(damage.x, 0, source.width);
-    damage.y = std::clamp(damage.y, 0, source.height);
+    int right = std::clamp(damage.x + damage.w, 0, width);
+    int bottom = std::clamp(damage.y + damage.h, 0, height);
+    damage.x = std::clamp(damage.x, 0, width);
+    damage.y = std::clamp(damage.y, 0, height);
     damage.w = right - damage.x;
     damage.h = bottom - damage.y;
     if (damage.w <= 0 || damage.h <= 0) {
@@ -25,7 +27,9 @@ void publish_image(const Image& source, gui_forms::RasterCanvas& canvas, Rect da
     for (int y = 0; y < damage.h; ++y) {
         std::byte* row = edit.writable_data + static_cast<std::size_t>(y) * edit.row_bytes;
         for (int x = 0; x < damage.w; ++x) {
-            Color color = source.pixels[static_cast<std::size_t>(y + damage.y) * source.width + x + damage.x];
+            const int sx = x + damage.x;
+            const int sy = y + damage.y;
+            Color color = source.pixels[static_cast<std::size_t>(sy) * source.width + sx];
             // Rounded premultiplication p = (channel * alpha + 127) / 255.
             row[x * 4] = static_cast<std::byte>((color.b * color.a + 127U) / 255U);
             row[x * 4 + 1] = static_cast<std::byte>((color.g * color.a + 127U) / 255U);
@@ -42,5 +46,12 @@ void publish_image(const Image& source, gui_forms::RasterCanvas& canvas, Rect da
     } else if (!canvas.synchronize_bitmap()) {
         throw std::runtime_error("Canvas resource synchronization failed");
     }
+}
+void publish_image(const Image& source, gui_forms::RasterCanvas& canvas, Rect damage) {
+    publish_pixels(source, canvas, damage);
+}
+void publish_image(const Image& source, PaintCanvas& canvas, Rect damage) {
+    publish_pixels(source, canvas, damage);
+    canvas.publish_source(source, damage);
 }
 } // namespace paint::forms

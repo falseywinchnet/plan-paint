@@ -358,6 +358,47 @@ void test_conv() {
         require(paint::equal(pixel, {20, 40, 60, 255}), "short line failed");
     }
 }
+void test_conv_area() {
+    paint::Image source, output;
+    source.reset(13, 9, {37, 141, 215, 137});
+    const int sizes[][2] = {{3, 2}, {26, 18}, {1, 1}, {13, 9}};
+    for (const int (&size)[2] : sizes) {
+        paint::conv_resize_area(source, size[0], size[1], output);
+        for (paint::Color color : output.pixels) {
+            require(paint::equal(color, source.get(0, 0)), "area resize preserves constant RGBA");
+        }
+    }
+    source.reset(12, 1);
+    for (int x = 0; x < source.width; ++x) {
+        source.set(x, 0, {static_cast<std::uint8_t>(20 + x * x), 0, 0, 255});
+    }
+    paint::conv_resize_area(source, 24, 1, output);
+    for (int x = 3; x < 21; ++x) {
+        const double left = x * 0.5 - 0.5, right = left + 0.5;
+        const int expected =
+            static_cast<int>(std::lround(20 + (left * left + left * right + right * right) / 3));
+        require(std::abs(static_cast<int>(output.get(x, 0).r) - expected) <= 1,
+                "area enlargement matches the analytic quadratic pixel integral");
+    }
+    const paint::Image original = source;
+    paint::conv_resize_area(source, source.width, source.height, source);
+    require(std::memcmp(source.pixels.data(), original.pixels.data(),
+                        source.pixels.size() * sizeof(paint::Color)) == 0,
+            "no-op area resize is byte exact and supports aliasing");
+    source.reset(2, 1, {0, 0, 0, 255});
+    source.set(1, 0, {255, 255, 255, 255});
+    paint::conv_resize_area(source, 4, 1, output);
+    const int expected[4] = {0, 64, 191, 255};
+    for (int x = 0; x < 4; ++x) {
+        require(output.get(x, 0).r == expected[x],
+                "short-line areas include constant half-pixel edge strips");
+    }
+    source.set(0, 0, {255, 0, 0, 255});
+    source.set(1, 0, {0, 0, 255, 0});
+    paint::conv_resize_area(source, 1, 1, output);
+    require(paint::equal(output.get(0, 0), {255, 0, 0, 128}),
+            "area resize averages premultiplied opacity without hidden-color bleed");
+}
 void test_conv_reference() {
     for (const fixtures::Case& fixture : fixtures::cases) {
         paint::Image input, output;
@@ -1099,6 +1140,7 @@ void test_canvas_backing_settings() {
         settings.storage_path = path.string();
         settings.scroll_distance = 2.5;
         settings.drag_shapes = index % 2 != 0;
+        settings.rotate_view = index % 2 == 0;
         settings.canvas_backing = static_cast<paint::CanvasBacking>(index);
         settings.solid_transparency = true;
         settings.transparency_color = {235, 131, 190, 255};
@@ -1107,7 +1149,8 @@ void test_canvas_backing_settings() {
         loaded.storage_path = settings.storage_path;
         loaded.load();
         require(loaded.canvas_backing == settings.canvas_backing && loaded.scroll_distance == 2.5 &&
-                    loaded.drag_shapes == settings.drag_shapes && loaded.solid_transparency &&
+                    loaded.drag_shapes == settings.drag_shapes &&
+                    loaded.rotate_view == settings.rotate_view && loaded.solid_transparency &&
                     paint::equal(loaded.transparency_color, settings.transparency_color),
                 "every backing survives a preference round trip with scroll and transparency settings");
     }
@@ -1121,7 +1164,7 @@ void test_canvas_backing_settings() {
         loaded.load();
         require(loaded.canvas_backing == (index == 1 || index == 2 ? paint::CanvasBacking::MossFelt
                                                                    : paint::CanvasBacking::PaleFelt) &&
-                    loaded.scroll_distance == 3.5 && !loaded.drag_shapes,
+                    loaded.scroll_distance == 3.5 && !loaded.drag_shapes && !loaded.rotate_view,
                 "old felt preferences migrate and unknown backing values fall back safely");
         if (index == 2) {
             require(loaded.solid_transparency &&
@@ -1245,6 +1288,7 @@ int main() {
         test_material_collections_and_dry_contact();
         test_conv();
         test_conv_reference();
+        test_conv_area();
         test_editing();
         test_materials_and_shapes();
         test_eraser_and_pixel_target();

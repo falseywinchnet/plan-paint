@@ -321,6 +321,24 @@ void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
                       gf::Color::rgba(25, 40, 55, 50), 1);
 }
 namespace {
+class PickerHandButton final : public gf::Button {
+  public:
+    explicit PickerHandButton(gf::StableId id) : Button(std::move(id), "") {}
+    void on_paint(gf::Painter& painter, gf::Rect damage) override {
+        Button::on_paint(painter, damage);
+        const gf::Rect box = client_rectangle();
+        const double x = box.width / 2 - 9, y = box.height / 2 - 9;
+        const gf::Color ink = gf::Color::rgba(44, 65, 89), skin = gf::Color::rgba(241, 207, 158);
+        painter.fill_rounded_rect({x + 8, y + 8, 9, 8}, 3, skin);
+        painter.stroke_rounded_rect({x + 8, y + 8, 9, 8}, 3, ink, 1);
+        painter.draw_line({x + 3, y + 14}, {x + 13, y + 4}, ink, 4);
+        painter.draw_line({x + 3, y + 14}, {x + 13, y + 4}, gf::Color::rgba(219, 239, 251), 2);
+        painter.draw_line({x + 11, y + 3}, {x + 15, y + 7}, ink, 3);
+        painter.fill_rounded_rect({x + 10, y + 9, 7, 3}, 1.5, skin);
+        painter.draw_line({x + 10, y + 12}, {x + 14, y + 12}, ink, 1);
+        painter.fill_rounded_rect({x + 1, y + 16, 2, 2}, 1, gf::Color::rgba(48, 130, 191));
+    }
+};
 class ShapeSwitchButton final : public gf::Button {
   public:
     ShapeSwitchButton(gf::StableId id, bool fill) : Button(std::move(id), ""), fill_(fill) {}
@@ -405,6 +423,8 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
         subscriptions_.push_back((*dropdown).drop_down_close_requested().subscribe(
             *this, gf::Delegate<gf::DropDownButton&>::bind<Ribbon, &Ribbon::dropdown>(*this)));
         result = dropdown;
+    } else if (id == "tool-5") {
+        result = gf::make_control<PickerHandButton>(gf::StableId(id));
     } else if (id.ends_with("-tab")) {
         result = gf::make_control<RibbonTabButton>(gf::StableId(id), text);
     } else if (id == "edge-switch" || id == "fill-switch") {
@@ -468,9 +488,9 @@ void Ribbon::initialize_control_tree() {
     button("tool-3", "", 8, {176, 80, 28, 30});
     std::shared_ptr<gf::Button> text = button("text", "", 9, {208, 80, 28, 30});
     (*text).set_accessible_name("Text");
-    button("tool-4", "", 10, {240, 80, 28, 30});
-    button("tool-5", "", 11, {272, 80, 28, 30});
-    button("tool-6", "", 12, {304, 80, 28, 30});
+    button("tool-4", "", 10, {240, 80, 36, 30}, false, true, true);
+    button("tool-5", "", -1, {278, 80, 28, 30});
+    button("tool-6", "", 12, {310, 80, 28, 30});
     button("brush-menu", "Brushes", 13, {340, 34, 48, 83}, true, true, true);
     button("tool-10", "Stamp", 20, {392, 34, 46, 83}, true, true, true);
     button("tool-9", "Path", 21, {442, 34, 44, 83}, true, true, true);
@@ -629,7 +649,7 @@ void Ribbon::add_options() {
     angle_ = number("grain-angle", "Grain angle", {982, 106, 202, 22}, -180, 180, -20);
     button("new-grain", "New", -1, {1188, 106, 67, 22});
     building_page_ = 8;
-    tool_size_ = number("tool-size", "Size (px)", {12, 36, 204, 25}, 1, 64, 3);
+    tool_size_ = number("tool-size", "Size (px)", {12, 36, 204, 25}, 1, 1024, 3);
     check("soft-eraser", "Soft eraser", {12, 65, 210, 25});
     building_page_ = 12;
     check("smooth-lines", "Smooth lines", {244, 36, 210, 25});
@@ -651,8 +671,8 @@ void Ribbon::add_options() {
     button("context-stamp-clear", "Clear stamp", -1, {242, 36, 135, 30});
     button("context-zoom-in", "Zoom in", 12, {12, 36, 95, 78}, true);
     button("context-zoom-out", "Zoom out", 12, {117, 36, 99, 78}, true);
-    std::shared_ptr<gf::Label> picker =
-        gf::make_control<gf::Label>(gf::StableId("picker-hint"), "Left: Primary\nRight: Alt");
+    std::shared_ptr<gf::Label> picker = gf::make_control<gf::Label>(
+        gf::StableId("picker-hint"), "Click: Primary · right-click: Alt\nDrag: pan the view");
     option(picker, {12, 36, 204, 74});
     picker_mode_ = gf::make_control<gf::ComboBox>(gf::StableId("picker-mode"));
     (*picker_mode_).set_items({"Exact pixel", "Small average (5 × 5)", "Representative (reject flecks)"});
@@ -685,17 +705,6 @@ void Ribbon::add_options() {
             .subscribe(
                 *this,
                 gf::Delegate<std::optional<std::size_t>>::bind<Ribbon, &Ribbon::mix_effect_changed>(*this)));
-    eraser_mode_ = gf::make_control<gf::ComboBox>(gf::StableId("eraser-mode"));
-    (*eraser_mode_).set_items({"Hard eraser", "Soft eraser", "Blur", "Sharpen", "Smudge"});
-    (*eraser_mode_).set_selected_index(0);
-    (*eraser_mode_).set_accessible_name("Eraser operation");
-    option(eraser_mode_, {12, 36, 222, 30});
-    subscriptions_.push_back(
-        (*eraser_mode_)
-            .selected_index_changed()
-            .subscribe(
-                *this,
-                gf::Delegate<std::optional<std::size_t>>::bind<Ribbon, &Ribbon::eraser_mode_changed>(*this)));
     effect_strength_ = number("effect-strength", "Strength", {260, 36, 230, 28}, 0, 1, 0.75, 2);
     effect_scale_ = number("effect-scale", "Scale (px)", {510, 36, 230, 28}, 2, 128, 24);
     effect_phase_ = number("effect-phase", "Phase", {760, 36, 230, 28}, -10, 10, 0, 2);
@@ -714,8 +723,9 @@ void Ribbon::add_options() {
     button("warp-place", "Place", -1, {778, 36, 120, 30});
     button("warp-cancel", "Cancel", -1, {778, 79, 120, 30});
     std::shared_ptr<gf::Label> warp_hint = gf::make_control<gf::Label>(
-        gf::StableId("warp-hint"), "Gold edge handles skew; square handles resize.\nDrag the rotation handle to turn. "
-                                   "Shift snaps to 15°. Escape deselects.");
+        gf::StableId("warp-hint"),
+        "Gold edge handles skew; square handles resize.\nDrag the rotation handle to turn. "
+        "Shift snaps to 15°. Escape deselects.");
     option(warp_hint, {920, 36, 320, 75});
     building_page_ = 16;
     std::vector<std::string> fonts{"Portsmouth", "Portsmouth Mono"};
@@ -842,11 +852,13 @@ void Ribbon::show_page() {
         page_ = tool == Tool::Text ? 16 : 8;
     }
     bool selection = tool == Tool::Select || tool == Tool::Lasso;
-    bool ink = tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
+    bool ink = tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path ||
+               tool == Tool::Freehand;
     if (page_ == 4 && !ink) {
         page_ = 8;
     }
-    bool material = tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
+    bool material =
+        tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());
@@ -893,13 +905,10 @@ void Ribbon::show_page() {
                 visible = false;
             }
             if (id.starts_with("tool-size")) {
-                visible = tool == Tool::Pencil || tool == Tool::Eraser || material;
+                visible = tool == Tool::Pencil || material;
             }
             if (id == "soft-eraser") {
                 visible = false;
-            }
-            if (id == "eraser-mode") {
-                visible = tool == Tool::Eraser;
             }
             if (id == "mix-effect") {
                 visible = tool == Tool::Brush && (*editor).brush_family == BrushFamily::Mix;
@@ -926,7 +935,7 @@ void Ribbon::show_page() {
                 visible = tool == Tool::Path;
             }
             if (id == "outline" || id == "fill") {
-                visible = tool == Tool::Shape || tool == Tool::Path;
+                visible = tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
             }
             if (id == "transparent-selection") {
                 visible = selection;
@@ -953,14 +962,6 @@ void Ribbon::mix_effect_changed(std::optional<std::size_t> index) {
     const std::shared_ptr<Editor> editor = editor_.lock();
     if (!synchronizing_ && editor) {
         (*editor).mix_effect = static_cast<MixEffect>(index.value_or(0));
-        (*editor).refresh();
-    }
-}
-void Ribbon::eraser_mode_changed(std::optional<std::size_t> index) {
-    const std::shared_ptr<Editor> editor = editor_.lock();
-    if (!synchronizing_ && editor) {
-        (*editor).eraser_mode = static_cast<EraserMode>(index.value_or(0));
-        (*editor).eraser_soft = (*editor).eraser_mode == EraserMode::Soft;
         (*editor).refresh();
     }
 }
@@ -1360,9 +1361,10 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
                 continue;
             }
             if (page_ == 8 && i > 0 && !selection) {
-                bool ink =
-                    tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
-                bool material = tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path;
+                bool ink = tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape ||
+                           tool == Tool::Path || tool == Tool::Freehand;
+                bool material = tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path ||
+                                tool == Tool::Freehand;
                 if ((i == 1 && !ink) || (i > 1 && !material)) {
                     continue;
                 }
@@ -1443,6 +1445,7 @@ void Ribbon::synchronize() {
         if (id.starts_with("tool-") && id != "tool-tab") {
             selected = document.tool == ribbon_tools[std::stoi(id.substr(5))] ||
                        (id == "tool-0" && document.tool == Tool::Lasso) ||
+                       (id == "tool-9" && document.tool == Tool::Freehand) ||
                        (id == "tool-11" && editor && (*editor).guide.active());
         }
         if (id.starts_with("shape-")) {
@@ -1506,8 +1509,8 @@ void Ribbon::synchronize() {
         if (id == "tool-tab") {
             const char* names[] = {"Selection", "Selection",    "Pencil",    "Fill",  "Text",
                                    "Eraser",    "Color picker", "Magnifier", "Brush", "Shape",
-                                   "Path",      "Stamp",        "Mesh",      "Guide"};
-            static_assert(std::size(names) == static_cast<std::size_t>(Tool::Guide) + 1);
+                                   "Path",      "Stamp",        "Mesh",      "Guide", "Freehand shape"};
+            static_assert(std::size(names) == static_cast<std::size_t>(Tool::Freehand) + 1);
             control.set_text(page_ == 32 ? "Transform" : names[static_cast<int>(document.tool)]);
             control.set_accessible_name(page_ == 32
                                             ? "Transform tools"
@@ -1549,7 +1552,6 @@ void Ribbon::synchronize() {
     (*heal_correction_).set_value((*editor).heal_correction);
     (*stabilizer_lag_).set_value((*editor).stabilizer_lag);
     (*mix_effect_).set_selected_index(static_cast<std::size_t>((*editor).mix_effect));
-    (*eraser_mode_).set_selected_index(static_cast<std::size_t>((*editor).eraser_mode));
     std::optional<std::size_t> font_index;
     if ((*editor).text.style.face_path.empty()) {
         font_index = (*editor).text.style.mono ? 1 : 0;
@@ -1827,11 +1829,13 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
     } else if (id == "size-menu") {
         const int values[] = {1, 2, 3, 4, 5, 7, 8, 12, 16, 24, 32, 48, 64};
         width = 172;
-        height = 8 + 28 * std::size(values);
+        height = 8 + 28 * (std::size(values) + 1);
         for (std::size_t i = 0; i < std::size(values); ++i) {
             add_popup_button(*panel, "size-" + std::to_string(values[i]), std::to_string(values[i]) + " px",
                              -1, {4, 4 + i * 28.0, width - 8, 27}, document.ink.size == values[i]);
         }
+        add_popup_button(*panel, "custom-size", "Custom size…", -1,
+                         {4, 4 + std::size(values) * 28.0, width - 8, 27});
     } else if (id == "tool-pattern-menu") {
         if (!pattern_previews_) {
             pattern_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{82, 28});
@@ -1870,11 +1874,20 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
     } else {
         std::vector<std::string> ids, texts;
         if (id == "tool-0") {
-            ids = {"tool-0",     "lasso-free",       "lasso-tight",          "lasso-void",
-                   "select-all", "invert-selection", "transparent-selection"};
-            texts = {"Rectangular selection", "Free-form selection", "Tightening lasso",
-                     "Inner-void lasso",      "Select all",          "Invert selection",
+            ids = {"tool-0",     "lasso-free", "lasso-tight",      "lasso-void",
+                   "lasso-wand", "select-all", "invert-selection", "transparent-selection"};
+            texts = {"Rectangular selection",
+                     "Free-form selection",
+                     "Tightening lasso",
+                     "Inner-void lasso",
+                     "Magic wand (all similar colors)",
+                     "Select all",
+                     "Invert selection",
                      "Transparent selection"};
+        }
+        if (id == "tool-4") {
+            ids = {"eraser-0", "eraser-1", "eraser-2", "eraser-3", "eraser-4"};
+            texts = {"Hard eraser", "Soft eraser", "Blur", "Sharpen", "Smudge"};
         }
         if (id == "paste") {
             ids = {"paste", "open"};
@@ -1899,9 +1912,10 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
         }
         if (id == "tool-9") {
             ids = path_swap_menu_ ? std::vector<std::string>{"path-swap-bezier", "path-swap-arc"}
-                                  : std::vector<std::string>{"tool-9", "path-swap"};
-            texts = path_swap_menu_ ? std::vector<std::string>{"Bézier", "Arc"}
-                                    : std::vector<std::string>{"Continue path", "Swap segment ▸"};
+                                  : std::vector<std::string>{"tool-9", "freehand-shape", "path-swap"};
+            texts = path_swap_menu_
+                        ? std::vector<std::string>{"Bézier", "Arc"}
+                        : std::vector<std::string>{"Continue path", "Freehand shape", "Swap segment ▸"};
             path_swap_menu_ = false;
         }
         if (id == "tool-11") {
@@ -2000,6 +2014,7 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
             select_brush(document.alt_ink, static_cast<Brush>(std::stoi(id.substr(11))));
             document.shape_fill_brush = document.alt_ink.brush;
             document.shape_fill = true;
+            (*editor).refresh();
         } else {
             select_brush(document.ink, static_cast<Brush>(std::stoi(id.substr(11))));
             document.shape_outline = true;
@@ -2012,6 +2027,7 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
     } else if (id.starts_with("pattern-")) {
         select_pattern(document.ink, static_cast<Pattern>(std::stoi(id.substr(8))));
         document.shape_fill = true;
+        (*editor).refresh();
     } else if (id == "outline-on" || id == "outline-off") {
         document.shape_outline = id == "outline-on";
         if (document.shape_outline) {
@@ -2039,16 +2055,30 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         return;
     } else if (id == "path-swap-bezier" || id == "path-swap-arc") {
         (*editor).begin_path_swap(id == "path-swap-bezier" ? CurveKind::Bezier : CurveKind::Arc);
+    } else if (id == "custom-size") {
+        (*editor).open_editor_dialog(EditorDialogKind::tool_size);
+    } else if (id == "freehand-shape") {
+        (*editor).choose_tool(Tool::Freehand);
+        document.shape_fill = true;
+        (*editor).refresh();
+    } else if (id.starts_with("eraser-")) {
+        (*editor).eraser_mode = static_cast<EraserMode>(std::stoi(id.substr(7)));
+        (*editor).eraser_soft = (*editor).eraser_mode == EraserMode::Soft;
+        (*editor).choose_tool(Tool::Eraser);
+        if ((*editor).eraser_mode >= EraserMode::Blur) {
+            show_tool_context();
+        }
     } else if (id.starts_with("lasso-")) {
         (*editor).lasso_mode = id == "lasso-free"    ? LassoMode::Free
                                : id == "lasso-tight" ? LassoMode::Tighten
+                               : id == "lasso-wand"  ? LassoMode::Wand
                                                      : LassoMode::InnerVoid;
         (*editor).choose_tool(Tool::Lasso);
     } else if (id.starts_with("family-")) {
         if (id != "family-carpet") {
             (*editor).brush_family = id == "family-additive" ? BrushFamily::Additive
-                                     : id == "family-mix" ? BrushFamily::Mix
-                                                          : BrushFamily::Heal;
+                                     : id == "family-mix"    ? BrushFamily::Mix
+                                                             : BrushFamily::Heal;
         }
         (*editor).choose_tool(Tool::Brush);
         if (id == "family-carpet") {

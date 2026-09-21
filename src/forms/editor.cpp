@@ -156,13 +156,16 @@ void Editor::initialize_control_tree() {
         (*label).set_font({gf::FontRole::control, 12, 400, false, 0.08});
         add_child(label);
     }
+    tool_size_status_ = gf::make_control<gf::Button>(gf::StableId("status-tool-size"), "Size: 3 px");
+    (*tool_size_status_).set_accessible_name("Current tool size; choose custom size");
     zoom_out_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-out"), "−");
     zoom_in_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-in"), "+");
     zoom_reset_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-reset"), "100%");
-    for (const std::shared_ptr<gf::Button>& button : {zoom_out_, zoom_in_, zoom_reset_}) {
+    for (const std::shared_ptr<gf::Button>& button : {zoom_out_, zoom_in_, zoom_reset_, tool_size_status_}) {
         (*button).set_theme_override(ribbon_theme());
         (*button).set_content_padding({2, 1, 2, 1});
-        (*button).set_font({gf::FontRole::control, button == zoom_reset_ ? 12.0 : 18.0, 400, false});
+        (*button).set_font({gf::FontRole::control,
+                            button == zoom_reset_ || button == tool_size_status_ ? 12.0 : 18.0, 400, false});
         subscriptions_.push_back((*button).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<Editor, &Editor::status_clicked>(*this)));
         add_child(button);
@@ -248,19 +251,20 @@ void Editor::arrange(gf::Rect bounds) {
                                std::max(1.0, bounds.height - ribbon_height - ruler - footer)});
     for (const std::shared_ptr<gf::Control>& control : std::vector<std::shared_ptr<gf::Control>>{
              status_, cursor_status_, selection_status_, dimensions_status_, zoom_reset_, zoom_out_,
-             zoom_slider_, zoom_in_}) {
+             zoom_slider_, zoom_in_, tool_size_status_}) {
         (*control).set_visible(show_status);
     }
     double y = bounds.height - 28;
     const double scale = bounds.width / 1280;
     set_child_layout(status_, {12 * scale, y, 230 * scale, 26});
     set_child_layout(cursor_status_, {260 * scale, y, 165 * scale, 26});
-    set_child_layout(selection_status_, {445 * scale, y, 164 * scale, 26});
-    set_child_layout(dimensions_status_, {632 * scale, y, 210 * scale, 26});
+    set_child_layout(tool_size_status_, {442 * scale, y + 1, 120 * scale, 25});
+    set_child_layout(selection_status_, {574 * scale, y, 154 * scale, 26});
+    set_child_layout(dimensions_status_, {740 * scale, y, 147 * scale, 26});
     set_child_layout(zoom_reset_, {898 * scale, y + 1, 65 * scale, 25});
     set_child_layout(zoom_out_, {969 * scale, y + 1, 26 * scale, 25});
-    set_child_layout(zoom_slider_, {1001 * scale, y + 1, 238 * scale, 25});
-    set_child_layout(zoom_in_, {1246 * scale, y + 1, 26 * scale, 25});
+    set_child_layout(zoom_slider_, {1001 * scale, y + 1, 205 * scale, 25});
+    set_child_layout(zoom_in_, {1213 * scale, y + 1, 26 * scale, 25});
     for (const std::shared_ptr<gf::Label>& label :
          {status_, cursor_status_, selection_status_, dimensions_status_}) {
         (*label).set_font({gf::FontRole::control, std::clamp(12 * scale, 10.0, 12.0), 400, false});
@@ -317,15 +321,16 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
     }
     double y = bounds.height - 30;
     painter.draw_line({0, y}, {bounds.width, y}, gf::Color::rgba(172, 193, 214), 1);
-    for (double position : {249.0, 434.0, 621.0, 887.0}) {
+    for (double position : {249.0, 434.0, 565.0, 731.0, 887.0}) {
         const double x = position * bounds.width / 1280;
         painter.draw_line({x, y + 5}, {x, bounds.height - 5}, gf::Color::rgba(193, 208, 224), 1);
     }
 }
 gf::Point Editor::screen(Point point) const {
+    const gui_drawing::PointF mapped = (*canvas_).view_point({point.x, point.y});
     gui_drawing::PointF origin = (*canvas_).view_origin();
     double zoom = (*canvas_).zoom();
-    return {(point.x - origin.x) * zoom, (point.y - origin.y) * zoom};
+    return {(mapped.x - origin.x) * zoom, (mapped.y - origin.y) * zoom};
 }
 void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     painter.save();
@@ -346,15 +351,21 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         painter.draw_line({point.x, point.y - 9}, {point.x, point.y + 9}, gf::Color::rgba(180, 25, 45), 1);
     }
     if (show_grid && (*canvas_).zoom() >= 4) {
-        double scale = (*canvas_).zoom();
-        gui_drawing::PointF origin = (*canvas_).view_origin();
-        gf::Rect area = (*canvas_).committed_arranged_bounds();
+        const gf::Rect area = (*canvas_).client_rectangle();
+        double left_bound = 1e30, top_bound = 1e30, right_bound = -1e30, bottom_bound = -1e30;
+        for (int i = 0; i < 4; ++i) {
+            const gui_drawing::PointF point =
+                canvas().client_to_bitmap({i & 1 ? area.width : 0, i & 2 ? area.height : 0});
+            left_bound = std::min(left_bound, point.x);
+            right_bound = std::max(right_bound, point.x);
+            top_bound = std::min(top_bound, point.y);
+            bottom_bound = std::max(bottom_bound, point.y);
+        }
+        const gui_drawing::PointF origin{left_bound, top_bound};
         int left = std::max(0, static_cast<int>(std::floor(origin.x)));
         int top = std::max(0, static_cast<int>(std::floor(origin.y)));
-        int right =
-            std::min(document.image.width, static_cast<int>(std::ceil(origin.x + area.width / scale)));
-        int bottom =
-            std::min(document.image.height, static_cast<int>(std::ceil(origin.y + area.height / scale)));
+        int right = std::min(document.image.width, static_cast<int>(std::ceil(right_bound)));
+        int bottom = std::min(document.image.height, static_cast<int>(std::ceil(bottom_bound)));
         gf::Color color = gf::Color::rgba(90, 110, 135, 85);
         for (int x = left; x <= right; ++x) {
             painter.draw_line(screen({static_cast<double>(x), static_cast<double>(top)}),
@@ -371,12 +382,12 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
                           ? Rect{document.selection.x, document.selection.y, document.selection.image.width,
                                  document.selection.image.height}
                           : rectangle(start_, current_);
-        gf::Point top = screen({static_cast<double>(bounds.x), static_cast<double>(bounds.y)});
-        painter.stroke_rect({top.x, top.y, bounds.w * (*canvas_).zoom(), bounds.h * (*canvas_).zoom()},
-                            gf::Color::rgba(30, 100, 190), 1);
+        canvas().stroke_outline(painter, {bounds.x, bounds.y, bounds.w, bounds.h},
+                                gf::Color::rgba(30, 100, 190), 1);
     }
     paint_selection_contours(painter);
-    if (dragging_ && document.tool == Tool::Lasso && !moving_selection_) {
+    if (dragging_ && (document.tool == Tool::Lasso || document.tool == Tool::Freehand) &&
+        !moving_selection_) {
         for (std::size_t index = 1; index < lasso_.size(); ++index) {
             painter.draw_line(screen(lasso_[index - 1]), screen(lasso_[index]), gf::Color::rgba(30, 100, 190),
                               1);
@@ -404,6 +415,20 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     paint_warp_overlay(painter);
     paint_text_overlay(painter);
     paint_tool_preview(painter);
+    if (settings.rotate_view) {
+        const gf::Point point = canvas().rotation_handle();
+        painter.fill_rounded_rect({point.x - 12, point.y - 12, 24, 24}, 12,
+                                  gf::Color::rgba(247, 250, 252, 245));
+        painter.stroke_rounded_rect({point.x - 12, point.y - 12, 24, 24}, 12, gf::Color::rgba(79, 102, 125),
+                                    1);
+        const gf::Color ink = gf::Color::rgba(39, 93, 141);
+        painter.draw_line({point.x - 6, point.y + 3}, {point.x - 6, point.y - 5}, ink, 1.5);
+        painter.draw_line({point.x - 6, point.y - 5}, {point.x + 5, point.y - 5}, ink, 1.5);
+        painter.draw_line({point.x + 2, point.y - 8}, {point.x + 5, point.y - 5}, ink, 1.5);
+        painter.draw_line({point.x + 2, point.y - 2}, {point.x + 5, point.y - 5}, ink, 1.5);
+        painter.draw_line({point.x - 9, point.y}, {point.x - 6, point.y + 3}, ink, 1.5);
+        painter.draw_line({point.x - 3, point.y}, {point.x - 6, point.y + 3}, ink, 1.5);
+    }
     painter.restore();
 }
 bool Editor::help_shortcut() {
@@ -439,7 +464,7 @@ void Editor::closing(gf::HostCloseRequest& request) {
         deferred_command = "quit";
     }
 }
-gf::RasterCanvas& Editor::canvas() {
+PaintCanvas& Editor::canvas() {
     return *canvas_;
 }
 void Editor::close_help(gf::ButtonBase&) {
@@ -570,6 +595,8 @@ void Editor::update_status() {
         selection = std::to_string(bounds.w) + " × " + std::to_string(bounds.h) + " px selected";
     }
     (*selection_status_).set_text(selection);
+    (*tool_size_status_)
+        .set_text("Size: " + std::to_string(document.tool == Tool::Pencil ? 1 : document.ink.size) + " px");
     double percent = (*canvas_).zoom() * 100;
     std::ostringstream label;
     label << std::fixed << std::setprecision(percent < 10 ? 2 : 0) << percent << "%";
@@ -578,6 +605,21 @@ void Editor::update_status() {
     (*zoom_slider_).set_value(std::log2((*canvas_).zoom()));
     synchronizing_zoom_ = false;
     update_cursor_status();
+}
+void Editor::rotate_view(double radians) {
+    if (!std::isfinite(radians)) {
+        return;
+    }
+    const gf::Rect viewport = canvas().client_rectangle();
+    const gui_drawing::PointF center = canvas().client_to_bitmap({viewport.width / 2, viewport.height / 2});
+    canvas().view_angle = std::remainder(radians, 2 * std::numbers::pi);
+    const gui_drawing::PointF mapped = canvas().view_point(center);
+    canvas().set_view_origin({mapped.x - viewport.width / (2 * canvas().zoom()),
+                              mapped.y - viewport.height / (2 * canvas().zoom())});
+    refresh();
+    if (warp_active() || resize_handle_ >= 0) {
+        update_transform_preview();
+    }
 }
 void Editor::zoom_slider_changed(double value) {
     if (synchronizing_zoom_) {
@@ -588,6 +630,10 @@ void Editor::zoom_slider_changed(double value) {
 }
 void Editor::status_clicked(gf::ButtonBase& button) {
     std::string_view id = button.stable_id().value();
+    if (id == "status-tool-size") {
+        open_editor_dialog(EditorDialogKind::tool_size);
+        return;
+    }
     if (id == "status-zoom-reset") {
         execute("actual-size");
         return;
@@ -599,13 +645,16 @@ void Editor::command_invoked(const gf::CommandInvocation& invocation) {
     execute(invocation.command_id);
 }
 void Editor::release_gesture() {
+    end_transform_preview();
     if (placing_shape_ && document.curve.base && !document.curve.line_set) {
         document.curve = {};
     }
     clear_transform_preview();
+    rotating_view_ = false;
     dragging_ = false;
     placing_shape_ = false;
     panning_ = false;
+    picker_pending_ = false;
     moving_selection_ = false;
     preview_active_ = false;
     curve_handle_ = -1;
@@ -688,6 +737,58 @@ void Editor::pointer(const gf::PointerEvent& event) {
         control_ = gf::has_modifier(event.modifiers, gf::Modifier::control);
         alt_ = gf::has_modifier(event.modifiers, gf::Modifier::alt);
         gf::Point client = (*canvas_).point_from_window(event.position);
+        if (settings.rotate_view) {
+            const gf::Point handle = canvas().rotation_handle();
+            const bool hit = std::hypot(client.x - handle.x, client.y - handle.y) <= 14;
+            if (!rotating_view_ && hit && event.action == gf::PointerAction::move &&
+                !canvas().has_pointer_capture()) {
+                canvas().set_cursor(gf::CursorKind::hand);
+                canvas().invalidate(gf::Dirty::paint);
+                return;
+            }
+            if (!rotating_view_ && hit && event.action == gf::PointerAction::down) {
+                if (event.button == gf::PointerButton::secondary) {
+                    rotate_view(0);
+                    refresh();
+                    return;
+                }
+                if (event.button == gf::PointerButton::primary) {
+                    finish_controls(true);
+                    rotation_document_pivot_ = {document.image.width / 2.0, document.image.height / 2.0};
+                    rotation_pivot_ = screen({rotation_document_pivot_.x, rotation_document_pivot_.y});
+                    rotation_grab_angle_ =
+                        std::atan2(client.y - rotation_pivot_.y, client.x - rotation_pivot_.x);
+                    rotation_start_angle_ = canvas().view_angle;
+                    rotating_view_ = true;
+                    canvas().set_pointer_capture(true);
+                    refresh();
+                    return;
+                }
+            }
+            if (rotating_view_) {
+                if (event.action == gf::PointerAction::move || event.action == gf::PointerAction::up) {
+                    if (std::hypot(client.x - rotation_pivot_.x, client.y - rotation_pivot_.y) > 2) {
+                        const bool first_rotation = std::abs(canvas().view_angle) < 1e-10;
+                        canvas().view_angle = std::remainder(
+                            rotation_start_angle_ +
+                                std::atan2(client.y - rotation_pivot_.y, client.x - rotation_pivot_.x) -
+                                rotation_grab_angle_,
+                            2 * std::numbers::pi);
+                        const gui_drawing::PointF point = canvas().view_point(rotation_document_pivot_);
+                        canvas().set_view_origin({point.x - rotation_pivot_.x / canvas().zoom(),
+                                                  point.y - rotation_pivot_.y / canvas().zoom()});
+                        if (first_rotation) {
+                            canvas().publish_source(document.visible_image(), {});
+                        }
+                        canvas().invalidate(gf::Dirty::paint);
+                    }
+                    if (event.action == gf::PointerAction::up) {
+                        release_gesture();
+                    }
+                }
+                return;
+            }
+        }
         gui_drawing::PointF mapped = (*canvas_).client_to_bitmap(client);
         Point point{mapped.x, mapped.y};
         if (event.action == gf::PointerAction::leave && !(*canvas_).has_pointer_capture()) {
@@ -715,10 +816,11 @@ void Editor::pointer(const gf::PointerEvent& event) {
                 const gf::Rect viewport = (*canvas_).committed_arranged_bounds();
                 const double half_width = viewport.width / (2 * scale);
                 const double half_height = viewport.height / (2 * scale);
+                const gf::Rect view = canvas().view_bounds();
                 origin.x = std::clamp(origin.x - event.wheel_delta.x * settings.scroll_distance / scale,
-                                      -half_width, document.image.width - half_width);
+                                      view.x - half_width, view.x + view.width - half_width);
                 origin.y = std::clamp(origin.y - event.wheel_delta.y * settings.scroll_distance / scale,
-                                      -half_height, document.image.height - half_height);
+                                      view.y - half_height, view.y + view.height - half_height);
                 (*canvas_).set_view_origin(origin);
                 if (warp_mode_ == WarpMode::rotation || (resize_handle_ >= 0 && resize_selection_)) {
                     update_transform_preview();
@@ -734,6 +836,39 @@ void Editor::pointer(const gf::PointerEvent& event) {
                                  static_cast<int>(std::floor(point.y)));
             pick_hotspot = false;
             refresh();
+            return;
+        }
+        if (document.tool == Tool::Picker && event.button != gf::PointerButton::middle &&
+            (picker_pending_ || panning_ || event.action == gf::PointerAction::down)) {
+            if (event.action == gf::PointerAction::down && !picker_pending_ && !panning_) {
+                picker_pending_ = true;
+                picker_secondary_ = event.button == gf::PointerButton::secondary;
+                pan_start_ = client;
+                pan_origin_ = (*canvas_).view_origin();
+                (*canvas_).set_pointer_capture(true);
+                if (window()) {
+                    static_cast<void>((*window()).request_focus(canvas_));
+                }
+            } else if (event.action == gf::PointerAction::move) {
+                if (std::hypot(client.x - pan_start_.x, client.y - pan_start_.y) >= 4) {
+                    panning_ = true;
+                    picker_pending_ = false;
+                }
+                if (panning_) {
+                    (*canvas_).set_view_origin(
+                        {pan_origin_.x - (client.x - pan_start_.x) / (*canvas_).zoom(),
+                         pan_origin_.y - (client.y - pan_start_.y) / (*canvas_).zoom()});
+                    update_cursor_status();
+                    invalidate(gf::Dirty::paint);
+                }
+            } else if (event.action == gf::PointerAction::up) {
+                const bool sample = picker_pending_;
+                const bool secondary = picker_secondary_;
+                release_gesture();
+                if (sample) {
+                    begin(point, secondary);
+                }
+            }
             return;
         }
         // Between placement clicks the preview follows hover without retaining
@@ -904,6 +1039,21 @@ void Editor::begin(Point point, bool secondary) {
         document.tool = Tool::Path;
         document.continuous_path = false;
     }
+    if (document.tool == Tool::Lasso && lasso_mode == LassoMode::Wand) {
+        document.commit_selection();
+        document.select_mask(similar_colors(document.image, point, lasso_tolerance));
+        (*ribbon_).show_tool_context();
+        refresh();
+        return;
+    }
+    if (document.tool == Tool::Freehand) {
+        document.settle_selection();
+        paint_base_ = document.image;
+        lasso_ = {point};
+        dragging_ = true;
+        (*canvas_).set_pointer_capture(true);
+        return;
+    }
     if (document.tool == Tool::Path) {
         int node = hit_path_node(point);
         point = snap_path_point(point);
@@ -1032,6 +1182,14 @@ void Editor::move(Point point) {
         if (document.tool == Tool::Lasso) {
             lasso_.push_back(point);
         }
+    } else if (document.tool == Tool::Freehand) {
+        if (lasso_.empty() || std::hypot(point.x - lasso_.back().x, point.y - lasso_.back().y) >= 0.5) {
+            lasso_.push_back(point);
+        }
+        last_ = point;
+        canvas().invalidate(gf::Dirty::paint);
+        update_status();
+        return;
     } else if (document.tool == Tool::Shape) {
         if (document.curve.base) {
             preview_ = document.curve_image(&point);
@@ -1125,6 +1283,16 @@ void Editor::end(Point point) {
                     document.select(bounds, document.tool == Tool::Lasso ? lasso_ : std::vector<Point>{});
                 }
             }
+        } else if (document.tool == Tool::Freehand) {
+            if (lasso_.size() >= 3 && (document.shape_outline || document.shape_fill)) {
+                preview_ = paint_base_;
+                polygon(preview_, lasso_, gesture_ink_, document.shape_outline, document.shape_fill, true,
+                        gesture_fill_ink_.brush, &gesture_fill_ink_);
+                constrain_paint(preview_, paint_base_, guide, atlas_painting() && atlas_preserve_alpha);
+                document.constrain_selection(preview_, paint_base_);
+                document.checkpoint();
+                document.image = std::move(preview_);
+            }
         } else if (document.tool == Tool::Shape) {
             if (document.curve.base) {
                 static_cast<void>(document.establish_curve(point));
@@ -1147,7 +1315,7 @@ void Editor::end(Point point) {
     }
 }
 void Editor::zoom(double factor, gf::Point anchor) {
-    gui_drawing::PointF before = (*canvas_).client_to_bitmap(anchor);
+    gui_drawing::PointF before = (*canvas_).RasterCanvas::client_to_bitmap(anchor);
     double value = std::clamp((*canvas_).zoom() * factor, 0.0625, 32.0);
     gf::Point translation{anchor.x - before.x * value, anchor.y - before.y * value};
     if (factor < 1) {
@@ -1155,12 +1323,16 @@ void Editor::zoom(double factor, gf::Point anchor) {
         // t' = (V - Wz') / 2 when Wz' <= V, otherwise clamp(t~, V - Wz', 0).
         // There is no additional centerward interpolation.
         gf::Rect viewport = (*canvas_).client_rectangle();
-        double width = document.image.width * value;
-        double height = document.image.height * value;
+        const gf::Rect view = canvas().view_bounds();
+        double width = view.width * value, height = view.height * value;
+        translation.x += view.x * value;
+        translation.y += view.y * value;
         translation.x = width <= viewport.width ? (viewport.width - width) / 2
                                                 : std::clamp(translation.x, viewport.width - width, 0.0);
         translation.y = height <= viewport.height ? (viewport.height - height) / 2
                                                   : std::clamp(translation.y, viewport.height - height, 0.0);
+        translation.x -= view.x * value;
+        translation.y -= view.y * value;
     }
     (*canvas_).set_view(value, {-translation.x / value, -translation.y / value});
     refresh();
@@ -1252,6 +1424,33 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
         } else if (event.physical_key == gf::PhysicalKey::delete_forward ||
                    event.physical_key == gf::PhysicalKey::backspace) {
             action = "delete";
+        } else if (!gf::has_modifier(event.modifiers, gf::Modifier::alt) &&
+                   (event.physical_key == gf::PhysicalKey::left ||
+                    event.physical_key == gf::PhysicalKey::right ||
+                    event.physical_key == gf::PhysicalKey::up ||
+                    event.physical_key == gf::PhysicalKey::down)) {
+            gui_drawing::PointF origin = canvas().view_origin();
+            const double step = (shift ? 128.0 : 32.0) / canvas().zoom();
+            if (event.physical_key == gf::PhysicalKey::left) {
+                origin.x -= step;
+            }
+            if (event.physical_key == gf::PhysicalKey::right) {
+                origin.x += step;
+            }
+            if (event.physical_key == gf::PhysicalKey::up) {
+                origin.y -= step;
+            }
+            if (event.physical_key == gf::PhysicalKey::down) {
+                origin.y += step;
+            }
+            canvas().set_view_origin(origin);
+            update_cursor_status();
+            if (warp_active() || resize_handle_ >= 0) {
+                update_transform_preview();
+            }
+            invalidate(gf::Dirty::paint);
+            event.handled = true;
+            return;
         } else if (document.atlas.kind != AtlasKind::None && !document.selection.active && !warp_active() &&
                    !dragging_ &&
                    (event.physical_key == gf::PhysicalKey::left ||
@@ -1274,8 +1473,10 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
             event.handled = true;
             return;
         } else if (document.selection.active && !warp_active() &&
-                   (event.physical_key == gf::PhysicalKey::left || event.physical_key == gf::PhysicalKey::right ||
-                    event.physical_key == gf::PhysicalKey::up || event.physical_key == gf::PhysicalKey::down)) {
+                   (event.physical_key == gf::PhysicalKey::left ||
+                    event.physical_key == gf::PhysicalKey::right ||
+                    event.physical_key == gf::PhysicalKey::up ||
+                    event.physical_key == gf::PhysicalKey::down)) {
             document.lift_selection();
             int step = shift ? 10 : 1;
             if (event.physical_key == gf::PhysicalKey::left) {
@@ -1847,11 +2048,12 @@ void Editor::execute(const std::string& command) {
             zoom(1 / (*canvas_).zoom(), {bounds.width / 2, bounds.height / 2});
         } else if (command == "fit") {
             gf::Rect bounds = (*canvas_).committed_arranged_bounds();
-            double scale = std::clamp(std::min((bounds.width - 32) / document.image.width,
-                                               (bounds.height - 32) / document.image.height),
+            const gf::Rect view = canvas().view_bounds();
+            const double width = view.width, height = view.height;
+            double scale = std::clamp(std::min((bounds.width - 32) / width, (bounds.height - 32) / height),
                                       0.0625, 32.0);
-            (*canvas_).set_view(scale, {(document.image.width - bounds.width / scale) / 2,
-                                        (document.image.height - bounds.height / scale) / 2});
+            (*canvas_).set_view(scale, {view.x + (width - bounds.width / scale) / 2,
+                                        view.y + (height - bounds.height / scale) / 2});
         } else if (command == "help") {
             show_help = !show_help;
             invalidate(gf::Dirty::layout | gf::Dirty::paint);

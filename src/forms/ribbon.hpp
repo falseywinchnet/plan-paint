@@ -76,7 +76,6 @@ class Ribbon final : public gui_forms::Control {
     std::shared_ptr<gui_forms::NumericUpDown> effect_strength_, effect_scale_, effect_phase_, heal_hardness_,
         heal_correction_, stabilizer_lag_, stamp_hardness_;
     void mix_effect_changed(std::optional<std::size_t> index);
-    void eraser_mode_changed(std::optional<std::size_t> index);
     void word_art_changed(std::optional<std::size_t> index);
     std::shared_ptr<gui_forms::NumericUpDown> text_skew_, text_perspective_, text_warp_, text_outline_;
     void picker_mode_changed(std::optional<std::size_t> index);

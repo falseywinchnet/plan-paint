@@ -291,6 +291,51 @@ struct LineWorkspace {
         }
     }
 
+    static void build_pixel_area_plan(resample_plan& plan, u32 source_length, u32 target_length) {
+        plan.source_length = source_length;
+        plan.target_length = target_length;
+        plan.offsets.resize(target_length + 1);
+        const double step = static_cast<double>(source_length) / target_length;
+        constexpr double nodes[3] = {-0.7745966692414834, 0, 0.7745966692414834};
+        constexpr double weights[3] = {5.0 / 9, 8.0 / 9, 5.0 / 9};
+        for (u32 target = 0; target < target_length; ++target) {
+            plan.offsets[target] = static_cast<u32>(plan.cells.size());
+            const double left = target * step - 0.5, right = (target + 1) * step - 0.5;
+            const int first = std::max(-1, static_cast<int>(std::floor(left)));
+            const int last =
+                std::min(static_cast<int>(source_length) - 1, static_cast<int>(std::floor(right)));
+            for (int segment = first; segment <= last; ++segment) {
+                const double low = std::max(left, static_cast<double>(segment));
+                const double high = std::min(right, segment + 1.0);
+                if (high <= low) {
+                    continue;
+                }
+                const u32 cell =
+                    static_cast<u32>(std::clamp(segment, 0, static_cast<int>(source_length) - 2));
+                const bool edge = segment < 0 || segment == static_cast<int>(source_length) - 1;
+                plan.cells.push_back(cell);
+                plan.anchor_nodes.push_back(segment < 0 ? 0 : static_cast<u32>(segment));
+                plan.anchor_weights.push_back((high - low) / step);
+                double integrated[5] = {};
+                if (!edge) {
+                    const double middle = (low + high) * 0.5, half = (high - low) * 0.5;
+                    for (int node = 0; node < 3; ++node) {
+                        double tail[5];
+                        tail_weights(middle + half * nodes[node] - cell, tail);
+                        for (int i = 0; i < 5; ++i) {
+                            integrated[i] += half * weights[node] / step * tail[i];
+                        }
+                    }
+                }
+                for (double weight : integrated) {
+                    plan.current_weights.push_back(weight);
+                }
+            }
+        }
+        plan.segment_count = static_cast<u32>(plan.cells.size());
+        plan.offsets[target_length] = plan.segment_count;
+    }
+
     static i32 build_resample_plan(resample_plan& plan, u32 source_length, u32 target_length) {
         const double nodes[3] = {-0.7745966692414834, 0.0, 0.7745966692414834};
         const double quadrature_weights[3] = {5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0};
@@ -487,12 +532,38 @@ static void short_line(const std::vector<double>& source, int offset, int stride
         }
     }
 }
+static void short_area_line(const std::vector<double>& source, int offset, int stride, int length,
+                            std::vector<double>& destination, int out_offset, int out_stride, int target) {
+    const double step = static_cast<double>(length) / target;
+    for (int i = 0; i < target; ++i) {
+        const double left = i * step - 0.5, right = (i + 1) * step - 0.5;
+        for (int channel = 0; channel < 4; ++channel) {
+            double integral = 0;
+            if (left < 0) {
+                integral += (std::min(right, 0.0) - left) * source[offset + channel];
+            }
+            if (right > length - 1) {
+                integral +=
+                    (right - std::max(left, length - 1.0)) * source[offset + (length - 1) * stride + channel];
+            }
+            for (int cell = std::max(0, static_cast<int>(std::floor(left)));
+                 cell < length - 1 && cell < right; ++cell) {
+                const double a = std::max(left, static_cast<double>(cell)) - cell;
+                const double b = std::min(right, cell + 1.0) - cell;
+                const double base = source[offset + cell * stride + channel];
+                const double slope = source[offset + (cell + 1) * stride + channel] - base;
+                integral += base * (b - a) + 0.5 * slope * (b * b - a * a);
+            }
+            destination[out_offset + i * out_stride + channel] = integral / step;
+        }
+    }
+}
 struct AxisJob {
     const std::vector<double>& input;
     std::vector<double>& output;
     const resample_plan& plan;
     int width, height, target;
-    bool vertical;
+    bool vertical, area;
     std::atomic<int> next{0};
     std::atomic<bool> failed{false};
 };
@@ -509,7 +580,10 @@ static void axis_worker(AxisJob& job) {
         int source_stride = job.vertical ? job.width * 4 : 4;
         int destination_offset = job.vertical ? line * 4 : line * job.target * 4;
         int destination_stride = job.vertical ? job.width * 4 : 4;
-        if (length < 5) {
+        if (length < 5 && job.area) {
+            short_area_line(job.input, source_offset, source_stride, length, job.output, destination_offset,
+                            destination_stride, job.target);
+        } else if (length < 5) {
             short_line(job.input, source_offset, source_stride, length, job.output, destination_offset,
                        destination_stride, job.target);
         } else {
@@ -522,15 +596,19 @@ static void axis_worker(AxisJob& job) {
     }
 }
 static void resize_axis(const std::vector<double>& input, int width, int height, int target, bool vertical,
-                        std::vector<double>& output) {
+                        std::vector<double>& output, bool area) {
     int length = vertical ? height : width;
     int lines = vertical ? width : height;
     output.resize(static_cast<std::size_t>(lines) * target * 4);
     resample_plan plan;
     if (length >= 5) {
-        LineWorkspace::build_resample_plan(plan, length, target);
+        if (area) {
+            LineWorkspace::build_pixel_area_plan(plan, length, target);
+        } else {
+            LineWorkspace::build_resample_plan(plan, length, target);
+        }
     }
-    AxisJob job{input, output, plan, width, height, target, vertical};
+    AxisJob job{input, output, plan, width, height, target, vertical, area};
     unsigned count = std::min(8u, std::max(1u, std::thread::hardware_concurrency()));
     if (static_cast<std::size_t>(width) * height < 65536) {
         count = 1;
@@ -552,7 +630,7 @@ static void resize_axis(const std::vector<double>& input, int width, int height,
     }
 }
 } // namespace
-void conv_resize(const Image& source, int width, int height, Image& destination) {
+static void resize_image(const Image& source, int width, int height, Image& destination, bool area) {
     if (source.width < 1 || source.height < 1) {
         throw std::invalid_argument("Cannot resize an empty image.");
     }
@@ -573,15 +651,15 @@ void conv_resize(const Image& source, int width, int height, Image& destination)
     }
     std::vector<double> middle, output;
     if (width == source.width) {
-        resize_axis(input, source.width, source.height, height, true, output);
+        resize_axis(input, source.width, source.height, height, true, output, area);
     } else if (height == source.height) {
-        resize_axis(input, source.width, source.height, width, false, output);
+        resize_axis(input, source.width, source.height, width, false, output, area);
     } else if (height < source.height) {
-        resize_axis(input, source.width, source.height, height, true, middle);
-        resize_axis(middle, source.width, height, width, false, output);
+        resize_axis(input, source.width, source.height, height, true, middle, area);
+        resize_axis(middle, source.width, height, width, false, output, area);
     } else {
-        resize_axis(input, source.width, source.height, width, false, middle);
-        resize_axis(middle, width, source.height, height, true, output);
+        resize_axis(input, source.width, source.height, width, false, middle, area);
+        resize_axis(middle, width, source.height, height, true, output, area);
     }
     for (std::size_t i = 0; i < result.pixels.size(); ++i) {
         double alpha = std::clamp(output[i * 4 + 3], 0.0, 1.0);
@@ -593,5 +671,11 @@ void conv_resize(const Image& source, int width, int height, Image& destination)
         result.pixels[i] = color;
     }
     destination = std::move(result);
+}
+void conv_resize(const Image& source, int width, int height, Image& destination) {
+    resize_image(source, width, height, destination, false);
+}
+void conv_resize_area(const Image& source, int width, int height, Image& destination) {
+    resize_image(source, width, height, destination, true);
 }
 } // namespace paint

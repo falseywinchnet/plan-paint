@@ -4,6 +4,86 @@
 #include <cmath>
 namespace paint::forms {
 namespace gf = gui_forms;
+gui_drawing::PointF PaintCanvas::view_point(gui_drawing::PointF point) const noexcept {
+    const double c = std::cos(view_angle), s = std::sin(view_angle);
+    return {c * point.x - s * point.y, s * point.x + c * point.y};
+}
+gui_drawing::PointF PaintCanvas::document_point(gui_drawing::PointF point) const noexcept {
+    const double c = std::cos(view_angle), s = std::sin(view_angle);
+    return {c * point.x + s * point.y, -s * point.x + c * point.y};
+}
+gui_drawing::PointF PaintCanvas::client_to_bitmap(gf::Point client) const noexcept {
+    return document_point(RasterCanvas::client_to_bitmap(client));
+}
+gf::Rect PaintCanvas::bitmap_to_client(gui_drawing::RectI pixels) const noexcept {
+    const gui_drawing::PointF origin = view_origin();
+    double left = 1e30, top = 1e30, right = -1e30, bottom = -1e30;
+    for (int i = 0; i < 4; ++i) {
+        const gui_drawing::PointF point =
+            view_point({static_cast<double>(pixels.x + (i & 1 ? pixels.width : 0)),
+                        static_cast<double>(pixels.y + (i & 2 ? pixels.height : 0))});
+        left = std::min(left, point.x);
+        right = std::max(right, point.x);
+        top = std::min(top, point.y);
+        bottom = std::max(bottom, point.y);
+    }
+    return {(left - origin.x) * zoom(), (top - origin.y) * zoom(), (right - left) * zoom(),
+            (bottom - top) * zoom()};
+}
+gf::Rect PaintCanvas::view_bounds() const noexcept {
+    const std::shared_ptr<gui_drawing::Bitmap> image = bitmap();
+    if (!image) {
+        return {};
+    }
+    const gf::Rect bounds =
+        bitmap_to_client({0, 0, static_cast<int>((*image).width()), static_cast<int>((*image).height())});
+    return {bounds.x / zoom() + view_origin().x, bounds.y / zoom() + view_origin().y, bounds.width / zoom(),
+            bounds.height / zoom()};
+}
+gf::Point PaintCanvas::rotation_handle() const noexcept {
+    const std::shared_ptr<gui_drawing::Bitmap> image = bitmap();
+    if (!image) {
+        return {-100, -100};
+    }
+    const gf::Rect viewport = client_rectangle();
+    const double width = (*image).width(), height = (*image).height();
+    // Prefer the upper-right corner, then another visible corner. Never cover
+    // artwork when panning puts that corner beyond the viewport.
+    for (int corner = 0; corner < 4; ++corner) {
+        const bool right = corner == 0 || corner == 3, bottom = corner >= 2;
+        const gui_drawing::PointF point = view_point({right ? width : 0, bottom ? height : 0});
+        const gui_drawing::PointF offset = view_point({right ? 20.0 : -20.0, bottom ? 20.0 : -20.0});
+        const gf::Point candidate{std::clamp((point.x - view_origin().x) * zoom() + offset.x, 14.0,
+                                             std::max(14.0, viewport.width - 14)),
+                                  std::clamp((point.y - view_origin().y) * zoom() + offset.y, 14.0,
+                                             std::max(14.0, viewport.height - 14))};
+        const gui_drawing::PointF document = client_to_bitmap(candidate);
+        const double dx = std::max({-document.x, document.x - width, 0.0});
+        const double dy = std::max({-document.y, document.y - height, 0.0});
+        if (std::hypot(dx, dy) * zoom() >= 14) {
+            return candidate;
+        }
+    }
+    // There is no surround to host the grip when artwork fills the viewport.
+    return {-100, -100};
+}
+void PaintCanvas::stroke_outline(gf::Painter& painter, gui_drawing::RectI pixels, gf::Color color,
+                                 double width) const {
+    if (std::abs(view_angle) < 1e-10) {
+        painter.stroke_rect(bitmap_to_client(pixels), color, width);
+        return;
+    }
+    gf::Point points[4];
+    for (int i = 0; i < 4; ++i) {
+        const gui_drawing::PointF point =
+            view_point({static_cast<double>(pixels.x + (i == 1 || i == 2 ? pixels.width : 0)),
+                        static_cast<double>(pixels.y + (i >= 2 ? pixels.height : 0))});
+        points[i] = {(point.x - view_origin().x) * zoom(), (point.y - view_origin().y) * zoom()};
+    }
+    for (int i = 0; i < 4; ++i) {
+        painter.draw_line(points[i], points[(i + 1) % 4], color, width);
+    }
+}
 void PaintCanvas::on_attached_to_window() {
     RasterCanvas::on_attached_to_window();
     update_backing();
@@ -45,6 +125,12 @@ void PaintCanvas::on_detaching_from_window(gf::Window& former_window) noexcept {
     if (reference_.value) {
         static_cast<void>(former_window.remove_image(reference_));
     }
+    if (rotated_.value && attached_window()) {
+        static_cast<void>((*attached_window()).remove_image(rotated_));
+    }
+    rotated_ = {};
+    view_field_.reset();
+    prepared_generation_ = rendered_generation_ = 0;
     repeated_ = {};
     reference_ = {};
     atlas_revision_ = 0;
@@ -62,6 +148,12 @@ void PaintCanvas::on_dispose() noexcept {
     if (window() && reference_.value) {
         static_cast<void>((*window()).remove_image(reference_));
     }
+    if (rotated_.value && attached_window()) {
+        static_cast<void>((*attached_window()).remove_image(rotated_));
+    }
+    rotated_ = {};
+    view_field_.reset();
+    prepared_generation_ = rendered_generation_ = 0;
     repeated_ = {};
     reference_ = {};
     atlas_revision_ = 0;
@@ -83,10 +175,14 @@ void PaintCanvas::on_paint(gf::Painter& painter, gf::Rect damage) {
     const gf::GradientStop light[] = {{0, gf::Color::rgba(255, 255, 255, 22)},
                                       {1, gf::Color::rgba(60, 77, 95, 15)}};
     painter.fill_linear_gradient(bounds, {0, 0}, {0, bounds.height}, light);
+    if (editor && std::abs(view_angle) > 1e-10) {
+        paint_rotated(painter, *editor);
+        return;
+    }
     std::shared_ptr<gui_drawing::Bitmap> image = bitmap();
     if (image) {
-        gf::Rect sheet =
-            bitmap_to_client({0, 0, static_cast<int>((*image).width()), static_cast<int>((*image).height())});
+        gf::Rect sheet = RasterCanvas::bitmap_to_client(
+            {0, 0, static_cast<int>((*image).width()), static_cast<int>((*image).height())});
         painter.draw_box_shadow(sheet, 0, {1.5, 2.5}, 6, 0, gf::Color::rgba(42, 53, 67, 75));
         painter.stroke_rect({sheet.x - 0.5, sheet.y - 0.5, sheet.width + 1, sheet.height + 1},
                             gf::Color::rgba(93, 111, 130, 155), 1);
@@ -108,15 +204,17 @@ gf::ImageId update_atlas_image(gf::Window& window, gf::Control& owner, gf::Image
     std::vector<std::byte> pixels(image.pixels.size() * 4);
     for (std::size_t index = 0; index < image.pixels.size(); ++index) {
         const Color color = image.pixels[index];
-        pixels[index * 4] = static_cast<std::byte>((color.b * color.a + 127) / 255);
-        pixels[index * 4 + 1] = static_cast<std::byte>((color.g * color.a + 127) / 255);
-        pixels[index * 4 + 2] = static_cast<std::byte>((color.r * color.a + 127) / 255);
-        pixels[index * 4 + 3] = static_cast<std::byte>(color.a);
+        const std::size_t output = index;
+        pixels[output * 4] = static_cast<std::byte>((color.b * color.a + 127) / 255);
+        pixels[output * 4 + 1] = static_cast<std::byte>((color.g * color.a + 127) / 255);
+        pixels[output * 4 + 2] = static_cast<std::byte>((color.r * color.a + 127) / 255);
+        pixels[output * 4 + 3] = static_cast<std::byte>(color.a);
     }
+    const int width = image.width, height = image.height;
     const gf::ImageLoadResult result =
-        previous.value ? window.replace_bgra32_premultiplied(previous, image.width, image.height,
-                                                             image.width * 4, pixels, owner)
-                       : window.load_bgra32_premultiplied(image.width, image.height, image.width * 4, pixels);
+        previous.value
+            ? window.replace_bgra32_premultiplied(previous, width, height, width * 4, pixels, owner)
+            : window.load_bgra32_premultiplied(width, height, width * 4, pixels);
     return result ? result.image : previous;
 }
 } // namespace
@@ -189,14 +287,17 @@ void Editor::paint_tool_preview(gf::Painter& painter) {
         // including edge pixels, without an off-center rectangular lens.
         for (int row = -64; row < 64; ++row) {
             const double half = std::sqrt(radius * radius - (row + 0.5) * (row + 0.5));
-            const int py = static_cast<int>(std::floor(point.y + (row + 0.5) / 8));
+
             for (int column = -64; column < 64; column += 1) {
                 const double left = std::max(static_cast<double>(column), -half);
                 const double right = std::min(static_cast<double>(column + 1), half);
                 if (right <= left) {
                     continue;
                 }
-                const int px = static_cast<int>(std::floor(point.x + (column + 0.5) / 8));
+                const gui_drawing::PointF offset =
+                    canvas().document_point({(column + 0.5) / 8, (row + 0.5) / 8});
+                const int px = static_cast<int>(std::floor(point.x + offset.x));
+                const int py = static_cast<int>(std::floor(point.y + offset.y));
                 Color color = document.image.get(px, py);
                 const int checker = ((px / 4 + py / 4) & 1) ? 225 : 255;
                 const double alpha = color.a / 255.0;
@@ -234,11 +335,12 @@ void Editor::paint_tool_preview(gf::Painter& painter) {
     if (document.tool == Tool::Pencil && !dragging_) {
         Color color = patterned(pencil_ink(document.primary_ink()), x, y);
         gf::Rect pixel = (*canvas_).bitmap_to_client({x, y, 1, 1});
-        painter.fill_rect(pixel, gf::Color::rgba(color.r, color.g, color.b, color.a));
+        if (std::abs(canvas().view_angle) < 1e-10) {
+            painter.fill_rect(pixel, gf::Color::rgba(color.r, color.g, color.b, color.a));
+        }
         if (scale >= 4) {
-            painter.stroke_rect(pixel, gf::Color::rgba(255, 255, 255, 230), 1);
-            painter.stroke_rect({pixel.x - 1, pixel.y - 1, pixel.width + 2, pixel.height + 2},
-                                gf::Color::rgba(30, 30, 30, 220), 1);
+            canvas().stroke_outline(painter, {x, y, 1, 1}, gf::Color::rgba(30, 30, 30, 220), 3);
+            canvas().stroke_outline(painter, {x, y, 1, 1}, gf::Color::rgba(255, 255, 255, 230), 1);
         }
     } else if (document.tool == Tool::Eraser) {
         double radius = std::max(0.5, document.ink.size * 0.5) * scale;
@@ -261,5 +363,221 @@ void Editor::paint_tool_preview(gf::Painter& painter) {
         painter.stroke_rounded_rect(circle, radius, gf::Color::rgba(199, 37, 89, 220), 1.25);
     }
     painter.restore();
+}
+} // namespace paint::forms
+
+namespace paint::forms {
+namespace {
+struct ViewDelivery {
+    std::weak_ptr<PaintCanvas> canvas;
+    void operator()() const {
+        const std::shared_ptr<PaintCanvas> owner = canvas.lock();
+        if (owner) {
+            (*owner).poll_view();
+        }
+    }
+};
+struct ViewCompletion {
+    PaintCanvas* canvas;
+    std::weak_ptr<PaintCanvas> owner;
+    void operator()() const {
+        static_cast<void>((*canvas).begin_invoke(ViewDelivery{owner}));
+    }
+};
+} // namespace
+PaintCanvas::~PaintCanvas() {
+    view_worker_.cancel();
+    view_worker_.wait();
+}
+bool PaintCanvas::view_busy() const {
+    return view_worker_.busy();
+}
+void PaintCanvas::publish_source(const Image& source, Rect damage) {
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    if (!editor || !(*editor).settings.rotate_view || std::abs(view_angle) < 1e-10) {
+        view_worker_.cancel();
+        if (rotated_.value && window()) {
+            static_cast<void>((*window()).remove_image(rotated_));
+        }
+        rotated_ = {};
+        view_source_ = {};
+        view_field_.reset();
+        ++source_generation_;
+        return;
+    }
+    bool changed = source.width != view_source_.width || source.height != view_source_.height;
+    if (changed) {
+        view_source_ = source;
+    } else {
+        if (damage.w <= 0 || damage.h <= 0) {
+            damage = {0, 0, source.width, source.height};
+        }
+        const int right = std::min(source.width, damage.x + damage.w),
+                  bottom = std::min(source.height, damage.y + damage.h);
+        for (int y = std::max(0, damage.y); y < bottom; ++y) {
+            for (int x = std::max(0, damage.x); x < right; ++x) {
+                const std::size_t i = static_cast<std::size_t>(y) * source.width + x;
+                if (!equal(source.pixels[i], view_source_.pixels[i])) {
+                    view_source_.pixels[i] = source.pixels[i];
+                    changed = true;
+                }
+            }
+        }
+    }
+    if (changed) {
+        ++source_generation_;
+        view_error.clear();
+        view_worker_.cancel();
+    }
+    prepare_view();
+}
+void PaintCanvas::prepare_view() {
+    if (std::abs(view_angle) < 1e-10 || !attached_window() || view_worker_.busy() ||
+        view_source_.pixels.empty() || prepared_generation_ == source_generation_ || !view_error.empty()) {
+        return;
+    }
+    if (!view_worker_initialized_) {
+        view_worker_.set_completion(
+            ViewCompletion{this, std::static_pointer_cast<PaintCanvas>(shared_from_this())});
+        view_worker_initialized_ = true;
+    }
+    view_worker_.compile(WarpTask::CompileRotation, view_source_, source_generation_);
+}
+void PaintCanvas::poll_view() {
+    WarpResult result;
+    if (!view_worker_.take(result)) {
+        return;
+    }
+    if (result.generation == source_generation_) {
+        if (result.error.empty()) {
+            view_field_ = std::move(result.field);
+            prepared_generation_ = result.generation;
+            rendered_generation_ = 0;
+        } else {
+            view_error = result.error;
+        }
+    }
+    prepare_view();
+    invalidate(gf::Dirty::paint);
+}
+void PaintCanvas::paint_rotated(gf::Painter& painter, const Editor& editor) {
+    prepare_view();
+    const gf::Rect viewport = client_rectangle();
+    const gui_drawing::PointF origin = view_origin();
+    const int width = std::max(1, static_cast<int>(std::ceil(viewport.width)));
+    const int height = std::max(1, static_cast<int>(std::ceil(viewport.height)));
+    const std::uint64_t generation =
+        source_generation_ * 2 + (prepared_generation_ == source_generation_ ? 1 : 0);
+    if (!rotated_.value || rendered_generation_ != generation ||
+        rendered_revision_ != editor.canvas_revision || rendered_angle_ != view_angle ||
+        rendered_zoom_ != zoom() || rendered_origin_.x != origin.x || rendered_origin_.y != origin.y ||
+        rendered_size_.width != width || rendered_size_.height != height) {
+        Image result;
+        const double c = std::cos(view_angle), s = std::sin(view_angle), scale = zoom();
+        const bool prepared = view_field_ && prepared_generation_ == source_generation_;
+        if (prepared) {
+            // Image-field coordinates address pixel centres; canvas coordinates address pixel edges.
+            const AffineMap map{c * scale, -s * scale, (0.5 * c - 0.5 * s - origin.x) * scale - 0.5,
+                                s * scale, c * scale,  (0.5 * s + 0.5 * c - origin.y) * scale - 0.5};
+            render_affine(*view_field_, map, width, height, result, WarpSampling::Point);
+        } else {
+            result.reset(width, height, {0, 0, 0, 0});
+        }
+        std::vector<std::byte> pixels(static_cast<std::size_t>(width) * height * 4);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                const gui_drawing::PointF point = client_to_bitmap({x + 0.5, y + 0.5});
+                const int sx = static_cast<int>(std::floor(point.x)),
+                          sy = static_cast<int>(std::floor(point.y));
+                const std::size_t index = static_cast<std::size_t>(y) * width + x;
+                Color color = result.pixels[index];
+                const bool inside = view_source_.contains(sx, sy);
+                const bool wrapped = !inside && editor.atlas_wrap && editor.document.atlas.active >= 0 &&
+                                     sx >= -view_source_.width && sx < 2 * view_source_.width &&
+                                     sy >= -view_source_.height && sy < 2 * view_source_.height;
+                if (inside || wrapped) {
+                    // Source edits appear at once while the new CONV field prepares in the worker.
+                    if (wrapped) {
+                        color = editor.document.image.get(
+                            (sx % view_source_.width + view_source_.width) % view_source_.width,
+                            (sy % view_source_.height + view_source_.height) % view_source_.height);
+                    } else if (!prepared) {
+                        color = view_source_.get(sx, sy);
+                    }
+                    const int grid = ((static_cast<int>(std::floor(point.x * scale / 12)) +
+                                       static_cast<int>(std::floor(point.y * scale / 12))) &
+                                      1)
+                                         ? 240
+                                         : 255;
+                    const Color background =
+                        editor.settings.solid_transparency
+                            ? editor.settings.transparency_color
+                            : Color{static_cast<std::uint8_t>(grid), static_cast<std::uint8_t>(grid),
+                                    static_cast<std::uint8_t>(grid), 255};
+                    color.r = static_cast<std::uint8_t>(
+                        (color.r * color.a + background.r * (255 - color.a) + 127) / 255);
+                    color.g = static_cast<std::uint8_t>(
+                        (color.g * color.a + background.g * (255 - color.a) + 127) / 255);
+                    color.b = static_cast<std::uint8_t>(
+                        (color.b * color.a + background.b * (255 - color.a) + 127) / 255);
+                    color.a = 255;
+                    if (inside && editor.document.atlas.active >= 0) {
+                        const Color reference = editor.atlas_reference.get(sx, sy);
+                        const double alpha = reference.a / 510.0;
+                        color.r = static_cast<std::uint8_t>(
+                            std::lround(color.r * (1 - alpha) + reference.r * alpha));
+                        color.g = static_cast<std::uint8_t>(
+                            std::lround(color.g * (1 - alpha) + reference.g * alpha));
+                        color.b = static_cast<std::uint8_t>(
+                            std::lround(color.b * (1 - alpha) + reference.b * alpha));
+                        if (editor.document.atlas.kind == AtlasKind::Icon ||
+                            editor.document.atlas.kind == AtlasKind::Cursor) {
+                            const IconFrame& frame =
+                                editor.document.atlas.icons[editor.document.atlas.active];
+                            const std::size_t pixel = static_cast<std::size_t>(sy) * view_source_.width + sx;
+                            if (frame.image.width == view_source_.width &&
+                                frame.image.height == view_source_.height &&
+                                pixel < frame.xor_pixels.size() && legacy_xor_pixel(frame, pixel) &&
+                                equal(editor.document.image.get(sx, sy), {255, 255, 255, 0})) {
+                                const Color mask = frame.xor_pixels[pixel];
+                                color.r ^= mask.r;
+                                color.g ^= mask.g;
+                                color.b ^= mask.b;
+                            }
+                        }
+                    }
+                }
+                pixels[index * 4] = static_cast<std::byte>(color.b * color.a / 255);
+                pixels[index * 4 + 1] = static_cast<std::byte>(color.g * color.a / 255);
+                pixels[index * 4 + 2] = static_cast<std::byte>(color.r * color.a / 255);
+                pixels[index * 4 + 3] = static_cast<std::byte>(color.a);
+            }
+        }
+        const gf::ImageLoadResult uploaded =
+            rotated_.value
+                ? (*window()).replace_bgra32_premultiplied(rotated_, width, height, width * 4, pixels, *this)
+                : (*window()).load_bgra32_premultiplied(width, height, width * 4, pixels);
+        if (!uploaded) {
+            view_error = "Unable to allocate the rotated view.";
+            return;
+        }
+        rotated_ = uploaded.image;
+        rendered_generation_ = generation;
+        rendered_revision_ = editor.canvas_revision;
+        rendered_angle_ = view_angle;
+        rendered_zoom_ = zoom();
+        rendered_origin_ = origin;
+        rendered_size_ = {static_cast<double>(width), static_cast<double>(height)};
+    }
+    if (rotated_.value) {
+        painter.draw_image(rotated_, {0, 0, static_cast<double>(width), static_cast<double>(height)});
+    }
+    stroke_outline(painter, {0, 0, view_source_.width, view_source_.height},
+                   gf::Color::rgba(93, 111, 130, 155), 1);
+    if (view_worker_.busy() || !view_error.empty()) {
+        painter.draw_text_utf8({12, viewport.height - 14},
+                               view_error.empty() ? "Preparing CONV view…" : view_error,
+                               {gf::FontRole::control, 12, 400, false}, gf::Color::rgba(45, 63, 81));
+    }
 }
 } // namespace paint::forms

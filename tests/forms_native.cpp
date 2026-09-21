@@ -14,7 +14,7 @@ namespace gf = gui_forms;
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
-         materials = false, interface_review = false;
+         materials = false, interface_review = false, view_review = false;
     int backing = 0;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -264,6 +264,26 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (view_review) {
+            document.new_image(480, 300);
+            document.ink.primary = {30, 90, 150, 255};
+            document.ink.secondary = {221, 160, 50, 255};
+            paint::draw_shape(document.image, paint::Shape::Star5, {30, 25}, {160, 150}, document.ink, true,
+                              true);
+            paint::draw_shape(document.image, paint::Shape::RoundedRectangle, {200, 40}, {410, 160},
+                              document.ink, true, false);
+            paint::TextStyle style;
+            style.size = 28;
+            paint::draw_text(document.image, {40, 210}, "Original pixel coordinates", style,
+                             {40, 60, 85, 255}, {}, "");
+            (*editor).settings.rotate_view = true;
+            (*editor).rotate_view(0.42);
+            (*editor).execute("fit");
+            (*editor).choose_tool(paint::Tool::Pencil);
+            window.perform_layout();
+            entered = true;
+            return;
+        }
         if (interface_review) {
             interface_gallery(window);
             return;
@@ -361,6 +381,7 @@ int main(int argc, char** argv) {
             exercise.backing = std::clamp(std::stoi(argv[2]), 0, paint::canvas_backing_count - 1);
         }
         exercise.materials = argc > 1 && std::string(argv[1]) == "--materials";
+        exercise.view_review = argc > 1 && std::string(argv[1]) == "--view";
         exercise.bugs = argc > 1 && std::string(argv[1]) == "--bugs";
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));

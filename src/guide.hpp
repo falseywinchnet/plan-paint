@@ -2,7 +2,7 @@
 #include "curve.hpp"
 #include "raster.hpp"
 namespace paint {
-enum class LassoMode { Free, Tighten, InnerVoid };
+enum class LassoMode { Free, Tighten, InnerVoid, Wand };
 struct SelectionMask {
     Rect bounds;
     std::vector<std::uint8_t> coverage;
@@ -10,6 +10,7 @@ struct SelectionMask {
 };
 SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygon, bool inner_void,
                             double tolerance = 0.025);
+SelectionMask similar_colors(const Image& image, Point seed, double tolerance = 0.025);
 void trim_selection_mask(SelectionMask& mask);
 std::vector<std::vector<Point>> mask_contours(const std::vector<std::uint8_t>& mask, int width, int height);
 std::vector<Point> mask_outline(const std::vector<std::uint8_t>& mask, int width, int height);
