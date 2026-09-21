@@ -16,14 +16,26 @@ Actual packaged Rainstar Paint 0.3.2 on Apple Silicon Mac. The specimen was pain
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/rainstar-paint-0.3.5-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/rainstar-paint-0.3.5-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/rainstar-paint-0.3.5-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/rainstar-paint-0.3.5-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/rainstar-paint-0.3.6-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/rainstar-paint-0.3.6-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/rainstar-paint-0.3.6-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/rainstar-paint-0.3.6-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.5/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
+
+## New in 0.3.6
+
+- **Freehand shape** in the Path menu closes and paints a drawn outline on release, using Edge, Fill, Primary and Alt materials.
+- **Magic wand** selects similar colors across the whole canvas, including disconnected islands.
+- **Optional working-view rotation** is off by default. Enable its canvas-corner grip in Settings, drag to rotate, and right-click to return to the original pixel view. Drawing stays in original document coordinates; view rotation adds no image-history step.
+- Arrow keys pan; Shift pans farther. Alt+arrows retain selection nudging and atlas navigation. The hand-held color picker sets Primary or Alt on click and pans when dragged.
+- The Eraser icon contains its operation menu; the Eraser tab retains effect controls. Custom size follows 64 px in the size menu, accepts 1–1024 px, and is also available from the status bar.
+- Prepared transform previews use CONV point synthesis; committed affine and mesh transforms integrate destination pixel areas. Resizing integrates each changed axis while preserving unchanged dimensions.
+- Rotated-view images publish before native painting to prevent flashing. View updates are batched, CONV preparation waits for release or a short pause, workers are reused, and stamp preparation survives repeated placement.
+
+The optional rotated view still uses a large CONV preparation cache. Nonconstant sources above its one-million-pixel limit, and images awaiting preparation, use direct pixel feedback. The original canvas pixels are never replaced by the rotated view.
 
 ## New in 0.3.5
 
