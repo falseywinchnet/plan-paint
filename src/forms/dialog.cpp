@@ -190,7 +190,7 @@ void EditorDialog::label(const std::string& id, const std::string& text, gf::Rec
     (*control).set_font({gf::FontRole::control, heading ? 14.0 : 13.0,
                          static_cast<std::uint16_t>(heading ? 600 : 400), false, 0.05});
     (*control).set_foreground(gf::Color::rgba(45, 66, 88));
-    if (current_language().right_to_left) { (*control).set_alignment(gf::HorizontalAlignment::far); }
+    if (current_language().right_to_left && kind_ != EditorDialogKind::english_help) { (*control).set_alignment(gf::HorizontalAlignment::far); }
     put(control, bounds);
 }
 std::shared_ptr<gf::Button> EditorDialog::button(const std::string& id, const std::string& text,
@@ -266,7 +266,14 @@ void EditorDialog::initialize_control_tree() {
         (*close).set_default_button(true);
         return;
     }
-    if (kind_ == EditorDialogKind::dither) {
+    if (kind_ == EditorDialogKind::english_help) {
+        panel_ = {0, 0, 470, 245};
+        label("english-help-question", "Is English your language?", {24, 56, 422, 30}, true);
+        label("english-help-instructions",
+              "Click OK to use English, then restart Plan Paint.\nYour picture stays open so you can save it first.",
+              {24, 96, 422, 62});
+        (*std::static_pointer_cast<gf::Label>(controls_.back())).set_text_wrapping(gf::TextWrapping::word);
+    } else if (kind_ == EditorDialogKind::dither) {
         initialize_dither();
     } else if (kind_ == EditorDialogKind::tool_size) {
         panel_ = {0, 0, 360, 210};
@@ -356,6 +363,8 @@ void EditorDialog::initialize_control_tree() {
         label("settings-language-label", tr("Language"), {530, 58, 216, 28}, true);
         language_ = gf::make_control<gf::ComboBox>(gf::StableId("settings-language"));
         (*language_).set_accessible_name(tr("Language"));
+        (*language_).set_maximum_drop_down_items(64);
+        (*language_).set_drop_down_width(300);
         (*language_).add_item(tr("Use system language"));
         std::size_t language_index = 0;
         const std::vector<LanguageInfo>& choices = available_languages();
@@ -590,7 +599,8 @@ void EditorDialog::initialize_control_tree() {
          (kind_ == EditorDialogKind::color || kind_ == EditorDialogKind::gradient_color) ? 25.0 : 36.0});
     std::shared_ptr<gf::Button> ok =
         button("dialog-ok",
-               kind_ == EditorDialogKind::atlas_gallery || kind_ == EditorDialogKind::print_preview ? tr("Close")
+               kind_ == EditorDialogKind::english_help ? "OK"
+               : kind_ == EditorDialogKind::atlas_gallery || kind_ == EditorDialogKind::print_preview ? tr("Close")
                : kind_ == EditorDialogKind::linux_print                                             ? tr("Print")
                                                                                                     : tr("OK"),
                {panel_.width - 212, panel_.height - 41, 90, 28});
@@ -599,7 +609,7 @@ void EditorDialog::initialize_control_tree() {
         atlas_changed(0);
     }
     if (kind_ != EditorDialogKind::atlas_gallery && kind_ != EditorDialogKind::print_preview) {
-        button("dialog-cancel", tr("Cancel"), {panel_.width - 110, panel_.height - 41, 90, 28});
+        button("dialog-cancel", kind_ == EditorDialogKind::english_help ? "Cancel" : tr("Cancel"), {panel_.width - 110, panel_.height - 41, 90, 28});
     }
 }
 void EditorDialog::arrange(gf::Rect bounds) {
@@ -686,6 +696,8 @@ gf::SemanticDescriptor EditorDialog::semantic_descriptor() const {
 }
 std::string EditorDialog::title() const {
     switch (kind_) {
+    case EditorDialogKind::english_help:
+        return "Help! English!";
     case EditorDialogKind::dither:
         return tr("Dither / posterize");
     case EditorDialogKind::tool_size:
@@ -1012,6 +1024,12 @@ void EditorDialog::accept() {
             (*editor).document.sync_path();
         } else if (kind_ == EditorDialogKind::tool_size) {
             (*editor).document.ink.size = static_cast<int>((*width_).value());
+        } else if (kind_ == EditorDialogKind::english_help) {
+            EditorSettings settings = (*editor).settings;
+            settings.language = "en-us";
+            settings.save();
+            (*editor).settings = settings;
+            (*editor).close_editor_dialog();
         } else if (kind_ == EditorDialogKind::settings) {
             EditorSettings settings = (*editor).settings;
             settings.scroll_distance = (*atlas_numbers_[0]).value();

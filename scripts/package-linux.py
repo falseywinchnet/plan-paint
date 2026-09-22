@@ -20,6 +20,7 @@ def main():
     parser.add_argument("--output", default="dist")
     parser.add_argument("--gui-forms-sdk", type=Path, required=True)
     parser.add_argument("--version", default=project_version())
+    parser.add_argument("--strip", default="strip", help="Target GNU strip; removes unneeded symbols from packaged copies")
     args = parser.parse_args()
     build = (ROOT / args.build).resolve()
     sdk = args.gui_forms_sdk.resolve()
@@ -53,6 +54,8 @@ def main():
         if library.name.startswith(("libc.musl", "ld-musl")):
             continue
         subprocess.run(["patchelf", "--set-rpath", "$ORIGIN", str(library)], check=True)
+    for binary in [executable] + sorted((bundle / "lib").iterdir()):
+        subprocess.run([args.strip, "--strip-unneeded", str(binary)], check=True)
     copy_fonts(sdk, bundle / "bin/fonts")
     shutil.copytree(ROOT / "languages", bundle / "bin/languages", ignore=shutil.ignore_patterns("*.md"))
     locale = Path("/usr/share/X11/locale")

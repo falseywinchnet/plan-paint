@@ -43,7 +43,7 @@ def main():
     source_app = ROOT / build / (binary_name + ".app")
     shutil.copytree(source_app, app)
     executable = app / "Contents/MacOS" / binary_name
-    subprocess.check_call(["strip", "-S", str(executable)])
+    subprocess.check_call(["strip", "-S", "-x", str(executable)])
     frameworks = app / "Contents/Frameworks"
     resources = app / "Contents/Resources"
     plist_path = app / "Contents/Info.plist"
@@ -145,13 +145,14 @@ def main():
             if not resolved.is_file():
                 raise RuntimeError(f"Bundled dependency is missing: {resolved}")
     for library in frameworks.iterdir():
+        run(["strip", "-S", "-x", str(library)])
         run(["codesign", "--force", "--sign", "-", str(library)])
     run(["codesign", "--force", "--deep", "--sign", "-", str(app)])
     run(["codesign", "--verify", "--deep", "--strict", str(app)])
     architecture = run(["uname", "-m"])
     package_name = "plan-paint"
     package = distribution / f"{package_name}-{args.version}-macos-{architecture}.pkg"
-    run(["pkgbuild", "--component", str(app), "--install-location", "/Applications", "--identifier", "org.rainstar.paint", "--version", args.version, str(package)])
+    run(["pkgbuild", "--component", str(app), "--install-location", "/Applications", "--identifier", "org.rainstar.paint", "--version", args.version, "--compression", "latest", "--min-os-version", plist["LSMinimumSystemVersion"], str(package)])
     (distribution / "macos-bundle-receipt.json").write_text(json.dumps({"package": package.name, "architecture": architecture, "dependencies": bundled, "signature": "ad-hoc; not Developer ID notarized"}, indent=2) + "\n")
     print(package)
 

@@ -25,6 +25,7 @@ def main():
     parser.add_argument("--gui-forms-sdk", type=Path, required=True)
     parser.add_argument("--runtime-dir", type=Path, action="append", default=[])
     parser.add_argument("--objdump", default="objdump")
+    parser.add_argument("--strip", default="strip", help="Target GNU strip; removes unneeded symbols from packaged copies")
     parser.add_argument("--output", type=Path, default=ROOT / "dist")
     parser.add_argument("--version", default=project_version())
     args = parser.parse_args()
@@ -53,6 +54,8 @@ def main():
             destination = bundle / name
             if not destination.exists(): shutil.copy2(candidates[key], destination)
             pending.append(destination)
+    for binary in [executable] + sorted(bundle.glob("*.dll")):
+        subprocess.run([args.strip, "--strip-unneeded", str(binary)], check=True)
     copy_fonts(args.gui_forms_sdk, bundle / "fonts")
     shutil.copytree(ROOT / "languages", bundle / "languages", ignore=shutil.ignore_patterns("*.md"))
     for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"): shutil.copy2(ROOT / name, bundle)
@@ -64,7 +67,7 @@ def main():
                           for path in sorted(bundle.rglob("*")) if path.is_file()}}
     (bundle / "package-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     archive = args.output / f"plan-paint-{args.version}-windows-x64.zip"
-    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as output:
         for path in sorted(bundle.rglob("*")):
             if path.is_file(): output.write(path, "PlanPaint/" + path.relative_to(bundle).as_posix())
     print(archive)

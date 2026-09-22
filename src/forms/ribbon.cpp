@@ -471,6 +471,10 @@ void Ribbon::initialize_control_tree() {
     atlas_ = gf::make_control<AtlasPanel>(gf::StableId("atlas-panel"), editor_);
     add_child(atlas_);
     button("help", "?", -1, {1164, 0, 32, 27});
+    // This escape hatch must remain recognizable in every non-English UI.
+    if (current_language().tag != "en-us") {
+        button("help-english", "Help! English!", -1, {1048, 0, 112, 27});
+    }
     building_page_ = 1;
     button("save", tr("Save"), 14, {5, 35, 64, 34});
     button("undo", "", 15, {5, 81, 31, 30});
@@ -1305,6 +1309,10 @@ void Ribbon::arrange(gf::Rect bounds) {
         rectangle.width *= button_scale;
         gf::Button& control = *buttons_[i];
         const std::string id(control.stable_id().value());
+        if (id == "help-english") {
+            rectangle.width = 116;
+            rectangle.x = bounds.width - 150;
+        }
         if (id == "help") {
             rectangle.width = 30;
             rectangle.x = bounds.width - rectangle.width;
