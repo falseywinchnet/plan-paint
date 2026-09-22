@@ -1,4 +1,5 @@
 #include "codecs.hpp"
+#include "cursors/tool_cursors.hpp"
 #include "conv.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
@@ -53,6 +54,38 @@ struct Fixture {
         drag(x, y, x, y);
     }
 };
+void tool_cursor_routes() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    for (int i = 0; i <= static_cast<int>(paint::Tool::Spirograph); ++i) {
+        editor.document.tool = static_cast<paint::Tool>(i);
+        fixture.pointer(gf::PointerAction::move, 64, 48, gf::PointerButton::none);
+        if (editor.document.tool == paint::Tool::Stamp && editor.document.stamp.pixels.empty()) {
+            require(!editor.canvas().effective_cursor_images(), "empty stamp keeps a visible stock cursor");
+            continue;
+        }
+        require(editor.canvas().effective_cursor_images() ==
+                    paint::forms::tool_cursor_images(editor.document.tool),
+                "pointer route projects the current tool cursor");
+    }
+    editor.document.tool = paint::Tool::Pencil;
+    fixture.pointer(gf::PointerAction::move, 128, 96, gf::PointerButton::none);
+    require(!editor.canvas().effective_cursor_images() &&
+                editor.canvas().effective_cursor() == gf::CursorKind::resize_diagonal_down,
+            "canvas corner uses native resize cursor");
+    fixture.pointer(gf::PointerAction::move, 64, 48, gf::PointerButton::none);
+    require(editor.canvas().effective_cursor_images() == paint::forms::tool_cursor_images(paint::Tool::Pencil),
+            "leaving resize handle restores pencil tip");
+    editor.document.tool = paint::Tool::Picker;
+    fixture.pointer(gf::PointerAction::down, 50, 40);
+    fixture.pointer(gf::PointerAction::move, 70, 60);
+    require(!editor.canvas().effective_cursor_images() &&
+                editor.canvas().effective_cursor() == gf::CursorKind::hand,
+            "picker drag communicates panning with a hand");
+    fixture.pointer(gf::PointerAction::up, 70, 60);
+    require(editor.canvas().effective_cursor_images() == paint::forms::tool_cursor_images(paint::Tool::Picker),
+            "ending pan restores the dropper tip");
+}
 void await_background(Fixture& fixture) {
     const std::chrono::steady_clock::time_point deadline =
         std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -3120,6 +3153,7 @@ void custom_pattern_canvas_is_independent() {
 int main() {
     try {
         custom_pattern_canvas_is_independent();
+        tool_cursor_routes();
         freehand_wand_picker_and_size();
         working_view_coordinates_and_reset();
         rotated_frames_use_published_images();

@@ -9,6 +9,11 @@
       "file": "third_party/gui-forms-patches/nested-popup-focus.patch",
       "sha256": "d3cb3e464622209400373c8e048b9757d099a837a9a99acd6638d21782d22b8a",
       "upstream_commit": "f47893be9f8c1b1079a24b7d3641b3ae9184ccea"
+    },
+    {
+      "file": "third_party/gui-forms-patches/custom-cursors.patch",
+      "sha256": "75a6812dc5e869c0390da1aacca011f3a7bfc4f098e6aadbc4e9173a74b41127",
+      "upstream_commit": "dd061741d6f4633ace4dea2fa04cc5f88f251e07"
     }
   ]
 }
