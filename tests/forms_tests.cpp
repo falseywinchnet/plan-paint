@@ -2257,6 +2257,11 @@ void about_reports_build_version() {
     require((*window.find("about-dedication")).absolute_bounds().bottom() <
                 (*window.find("about-credits")).absolute_bounds().y,
             "About dedication precedes the credits");
+    require((*window.find("about-verse")).absolute_bounds().bottom() <
+                (*window.find("about-credits")).absolute_bounds().y &&
+                (*window.find("dialog-ok")).absolute_bounds().y >
+                (*window.find("about-trademarks")).absolute_bounds().bottom(),
+            "About verse and Close have their own space without covering documentation");
     routed_button(window, "dialog-ok");
     require(!window.find("editor-dialog"), "Close dismisses the in-house About dialog");
     (*fixture.editor).execute("about");

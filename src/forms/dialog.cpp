@@ -233,7 +233,7 @@ void EditorDialog::initialize_control_tree() {
                 (*text).set_text_wrapping(gf::TextWrapping::word);
             }
         }
-        std::shared_ptr<gf::Button> close = button("dialog-ok", "Close", {480, 419, 90, 28});
+        std::shared_ptr<gf::Button> close = button("dialog-ok", "Close", {480, panel_.height - 41, 90, 28});
         (*close).set_default_button(true);
         return;
     }
