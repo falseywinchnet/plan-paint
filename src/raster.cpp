@@ -7,7 +7,8 @@ namespace paint {
 const char* pattern_names[pattern_count] = {
     "Solid",        "Dither 12.5%", "Dither 25%", "Dither 37.5%", "Dither 50%", "Dither 62.5%", "Dither 75%",
     "Dither 87.5%", "Horizontal",   "Vertical",   "Diagonal",     "Crosshatch", "Checkerboard", "Bricks",
-    "Woven cloth",  "Houndstooth",  "Polka dots", "Waves",        "No color"};
+    "Woven cloth",  "Houndstooth",  "Polka dots", "Waves",        "No color",
+    "Buttons", "Cargo Net", "Circuits", "Cobblestones", "Straw Mat", "Custom pattern"};
 const char* brush_names[brush_count] = {
     "Brush",  "Calligraphy brush 1", "Calligraphy brush 2", "Airbrush",      "Oil brush",   "Crayon",
     "Marker", "Natural pencil",      "Watercolor brush",    "Bristle brush", "Soft pastel", "Charcoal",
@@ -118,6 +119,36 @@ Color patterned(const Ink& ink, int x, int y) {
         }
         case Pattern::Dots:
             front = (px - 3) * (px - 3) + (py - 3) * (py - 3) <= 3;
+            break;
+        case Pattern::Buttons:
+            front = px == 6 || py == 6 || ((px == 1 || py == 1) && px > 0 && py > 0 && px < 6 && py < 6);
+            break;
+        case Pattern::CargoNet:
+            front = ((x + y) & 15) < 2 || ((x - y) & 15) < 2;
+            break;
+        case Pattern::Circuits: {
+            const unsigned rows[16] = {0x0000, 0x003c, 0x0024, 0xffe4, 0x8004, 0x8007, 0x8004, 0x8004,
+                                       0x8004, 0x8fe4, 0x8824, 0x883c, 0x8800, 0x0ffc, 0x0000, 0x0000};
+            front = (rows[y & 15] & (1u << (x & 15))) != 0;
+            break;
+        }
+        case Pattern::Cobblestones: {
+            const unsigned rows[16] = {0x7fff, 0xc081, 0x8081, 0x8101, 0xc102, 0x7ffe, 0x0823, 0x0821,
+                                       0x1041, 0x1041, 0x1ffe, 0xf083, 0x8081, 0x8101, 0x8101, 0xc102};
+            front = (rows[y & 15] & (1u << (x & 15))) != 0;
+            break;
+        }
+        case Pattern::StrawMat:
+            front = ((x / 8 + y / 8) & 1) == 0 ? (px == 0 || (py & 1) == 0)
+                                                       : (py == 0 || (px & 1) == 0);
+            break;
+        case Pattern::Custom:
+            front = false;
+            if (ink.custom_pattern && (*ink.custom_pattern).width > 0 && (*ink.custom_pattern).height > 0) {
+                const Image& tile = *ink.custom_pattern;
+                front = tile.get((x % tile.width + tile.width) % tile.width,
+                                 (y % tile.height + tile.height) % tile.height).r < 128;
+            }
             break;
         case Pattern::Waves:
             front = (py == ((px < 4 ? px : 7 - px) + 2));

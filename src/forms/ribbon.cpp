@@ -251,6 +251,8 @@ void SwatchButton::set_color(Color color) {
 static bool same_material(const Ink& left, const Ink& right) {
     return equal(left.primary, right.primary) && equal(left.secondary, right.secondary) &&
            left.pattern == right.pattern && left.brush == right.brush &&
+           (left.pattern != Pattern::Custom || (left.custom_pattern == right.custom_pattern &&
+                                               left.custom_pattern_revision == right.custom_pattern_revision)) &&
            left.transparent_pattern == right.transparent_pattern && left.noise == right.noise &&
            left.grain_scale == right.grain_scale && left.paper_roughness == right.paper_roughness &&
            left.pigment_load == right.pigment_load && left.material_angle == right.material_angle &&
@@ -524,13 +526,14 @@ void Ribbon::initialize_control_tree() {
 namespace {
 class PatternButton final : public gf::Button {
   public:
-    PatternButton(gf::StableId id, int pattern) : Button(std::move(id)), pattern_(pattern) {
+    PatternButton(gf::StableId id, int pattern, std::shared_ptr<Image> tile) : Button(std::move(id)), pattern_(pattern), tile_(std::move(tile)) {
         set_theme_override(gallery_theme());
     }
     void on_paint(gf::Painter& painter, gf::Rect damage) override {
         Button::on_paint(painter, damage);
         Ink ink;
         ink.pattern = static_cast<Pattern>(pattern_);
+        ink.custom_pattern = tile_;
         if (ink.pattern == Pattern::None) {
             painter.fill_rect({3, 3, 20, 18}, gf::Color::rgba(255, 255, 255));
             painter.draw_line({4, 20}, {22, 4}, gf::Color::rgba(210, 35, 40), 2.5);
@@ -548,6 +551,7 @@ class PatternButton final : public gf::Button {
 
   private:
     int pattern_;
+    std::shared_ptr<Image> tile_;
 };
 } // namespace
 void Ribbon::option(std::shared_ptr<gf::Control> control, gf::Rect bounds) {
@@ -663,8 +667,8 @@ void Ribbon::add_options() {
     }
     for (int i = 0; i < pattern_count; ++i) {
         std::shared_ptr<gf::Button> swatch =
-            gf::make_control<PatternButton>(gf::StableId("r-pattern-" + std::to_string(i)), i);
-        (*swatch).set_requested_bounds({670.0 + (i % 9) * 33, 36.0 + (i / 9) * 32, 29, 28});
+            gf::make_control<PatternButton>(gf::StableId("r-pattern-" + std::to_string(i)), i, (*editor_.lock()).custom_pattern);
+        (*swatch).set_requested_bounds({670.0 + (i % 9) * 33, 36.0 + (i / 9) * 25, 29, 24});
         if (i == 0 || i == static_cast<int>(Pattern::None)) {
             (*swatch).set_requested_bounds({10, i == 0 ? 84.0 : 109.0, 114, 22});
             (*swatch).set_text(i == 0 ? "Solid" : "No color");
@@ -678,6 +682,7 @@ void Ribbon::add_options() {
         add_child(swatch);
     }
 
+    button("edit-custom-pattern", "Edit custom pattern…", -1, {670, 112, 293, 22});
     building_page_ = 4;
     grain_ = number("grain-scale", "Grain scale", {982, 34, 273, 22}, 0.3, 4, 1, 2);
     tooth_ = number("paper-tooth", "Paper tooth", {982, 58, 273, 22}, 0, 1, 0.65, 2);
@@ -1789,6 +1794,7 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         return;
     }
     std::string id(button.stable_id().value());
+    if (id == "edit-custom-pattern") { (*editor).toggle_pattern_canvas(); return; }
     if (popup_owner_.get() == &button) {
         close_popup();
         return;
@@ -2034,40 +2040,38 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
         add_popup_button(*panel, "custom-size", "Custom size…", -1,
                          {4, 4 + std::size(values) * 28.0, width - 8, 27});
     } else if (id == "tool-pattern-menu") {
-        if (!pattern_previews_) {
-            pattern_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{82, 28});
-            for (int i = 0; i < 18; ++i) {
-                Image sample;
-                sample.reset(164, 56, {255, 255, 255, 255});
-                Ink ink;
-                ink.primary = {47, 73, 103, 255};
-                ink.pattern = static_cast<Pattern>(i);
-                for (int y = 0; y < sample.height; ++y) {
-                    for (int x = 0; x < sample.width; ++x) {
-                        sample.set(x, y, patterned(ink, x / 2, y / 2));
-                    }
-                }
-                std::vector<std::uint8_t> png = encode_png(sample);
-                static_cast<void>(
-                    (*pattern_previews_).add_png(std::to_string(i), std::as_bytes(std::span(png)), 2));
+        pattern_previews_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{82, 28});
+        width = 440;
+        const int rows = (pattern_count - 1 + 3) / 4;
+        height = 8 + rows * 62 + 90;
+        int slot = 0;
+        for (int i = 0; i < pattern_count; ++i) {
+            if (i == static_cast<int>(Pattern::None)) { continue; }
+            Image sample;
+            sample.reset(164, 56);
+            Ink ink;
+            ink.primary = {47, 73, 103, 255};
+            ink.pattern = static_cast<Pattern>(i);
+            ink.custom_pattern = (*editor).custom_pattern;
+            for (int y = 0; y < sample.height; ++y) {
+                for (int x = 0; x < sample.width; ++x) { sample.set(x, y, patterned(ink, x / 2, y / 2)); }
             }
-        }
-        width = 330;
-        height = 8 + 62 * 6 + 62;
-        for (int i = 0; i < 18; ++i) {
-            std::shared_ptr<gf::Button> item =
-                add_popup_button(*panel, "pattern-" + std::to_string(i), pattern_names[i], -1,
-                                 {5.0 + (i % 3) * 107, 4.0 + (i / 3) * 62, 105, 60},
-                                 static_cast<int>(document.ink.pattern) == i);
+            const std::vector<std::uint8_t> png = encode_png(sample);
+            static_cast<void>((*pattern_previews_).add_png(std::to_string(i), std::as_bytes(std::span(png)), 2));
+            const std::shared_ptr<gf::Button> item = add_popup_button(*panel, "pattern-" + std::to_string(i), pattern_names[i], -1,
+                {5.0 + (slot % 4) * 107, 4.0 + (slot / 4) * 62, 105, 60}, static_cast<int>(document.ink.pattern) == i);
             (*item).set_font({gf::FontRole::control, 12, 400, false});
             (*item).set_image_list(pattern_previews_);
             (*item).set_image_key(std::to_string(i));
             (*item).set_text_image_relation(gf::TextImageRelation::image_above_text);
             (*item).set_text_alignment(gf::ContentAlignment::middle_center);
+            ++slot;
         }
-        add_popup_button(*panel, "fill-off", "No fill", -1, {5, 380, width - 10, 27}, !document.shape_fill);
+        const double bottom = 8 + rows * 62;
+        add_popup_button(*panel, "edit-custom-pattern", "Edit custom pattern…", -1, {5, bottom, width - 10, 27});
+        add_popup_button(*panel, "fill-off", "No fill", -1, {5, bottom + 29, width - 10, 27}, !document.shape_fill);
         add_popup_button(*panel, "transparent-pattern", "Transparent second color", -1,
-                         {5, 410, width - 10, 27}, document.ink.transparent_pattern);
+                         {5, bottom + 58, width - 10, 27}, document.ink.transparent_pattern);
     } else {
         std::vector<std::string> ids, texts;
         if (id == "tool-0") {
@@ -2201,6 +2205,7 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         return;
     }
     close_popup();
+    if (id == "edit-custom-pattern") { (*editor).toggle_pattern_canvas(); return; }
     if (id.starts_with("peg-brush-")) {
         (*editor).spiro.assign_brush(static_cast<Brush>(std::stoi(id.substr(10))));
         (*editor).refresh();

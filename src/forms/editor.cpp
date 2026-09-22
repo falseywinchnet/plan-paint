@@ -237,6 +237,7 @@ void Editor::rebuild_file_menu() {
 }
 void Editor::arrange(gf::Rect bounds) {
     arrange_self(bounds);
+    if (pattern_canvas_) { set_child_layout(pattern_canvas_, {0, 0, bounds.width, bounds.height}); }
     double ribbon_height = (*ribbon_).ribbon_height();
     const double previous_ribbon_height = (*ribbon_).committed_arranged_bounds().height;
     if (previous_ribbon_height > 0 && previous_ribbon_height != ribbon_height) {
@@ -249,7 +250,7 @@ void Editor::arrange(gf::Rect bounds) {
     double ruler = show_rulers ? 20 : 0;
     double footer = show_status ? 30 : 0;
     double sidebar = show_help ? std::min(370.0, bounds.width * 0.38) : 0;
-    (*help_).set_visible(show_help);
+    (*help_).set_visible(show_help && !pattern_editing);
     set_child_layout(
         help_, {bounds.width - sidebar, ribbon_height, sidebar, bounds.height - ribbon_height - footer});
     set_child_layout(canvas_, {ruler, ribbon_height + ruler, bounds.width - ruler - sidebar,
@@ -257,7 +258,7 @@ void Editor::arrange(gf::Rect bounds) {
     for (const std::shared_ptr<gf::Control>& control : std::vector<std::shared_ptr<gf::Control>>{
              status_, cursor_status_, selection_status_, dimensions_status_, zoom_reset_, zoom_out_,
              zoom_slider_, zoom_in_, tool_size_status_}) {
-        (*control).set_visible(show_status);
+        (*control).set_visible(show_status && !pattern_editing);
     }
     double y = bounds.height - 28;
     const double scale = bounds.width / 1280;
@@ -458,6 +459,7 @@ void Editor::on_detaching_from_window(gf::Window& former_window) noexcept {
 }
 void Editor::ready(gf::Window&, gf::ApplicationWindowHandle handle, const std::string& initial_path) {
     handle_ = handle;
+    load_custom_pattern();
     rebuild_file_menu();
     refresh();
     if (!initial_path.empty()) {
@@ -518,6 +520,12 @@ void Editor::publish_path_preview() {
     publish_image(composed, *canvas_);
 }
 void Editor::refresh() {
+    if ((*custom_pattern).pixels.empty()) { (*custom_pattern).reset(8, 8); }
+    document.ink.custom_pattern_revision = custom_pattern_revision;
+    document.alt_ink.custom_pattern_revision = custom_pattern_revision;
+    document.ink.custom_pattern = custom_pattern;
+    document.alt_ink.custom_pattern = custom_pattern;
+    for (SpiroPeg& peg : spiro.pegs) { peg.effect.custom_pattern = custom_pattern; }
     ++canvas_revision;
     update_selection_contours();
     const Color alpha = settings.transparency_color;
@@ -1354,6 +1362,7 @@ void Editor::zoom(double factor, gf::Point anchor) {
     refresh();
 }
 void Editor::on_key_preview(gf::KeyEvent& event) {
+    if (pattern_editing) { return; }
     if (event.action != gf::KeyAction::down || (*menu_).is_open() || editor_dialog_) {
         return;
     }
@@ -1716,6 +1725,7 @@ void Editor::complete_deferred_save() {
     }
 }
 void Editor::on_drag(gf::DragEvent& event) {
+    if (pattern_editing) { return; }
     if (editor_dialog_ || !gf::has_drag_effect(event.allowed_effects, gf::DragEffect::copy)) {
         return;
     }
@@ -1754,6 +1764,10 @@ void Editor::edit_color(bool secondary) {
 }
 
 void Editor::execute(const std::string& command) {
+    if (pattern_editing && command != "quit") {
+        if (command == "undo" || command == "redo") { (*pattern_canvas_).undo(command == "redo"); }
+        return;
+    }
     try {
         if (command == "guide-edit") {
             edit_guide();

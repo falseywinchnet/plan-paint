@@ -1,5 +1,6 @@
 #pragma once
 #include "carpet.hpp"
+#include "forms/pattern_canvas.hpp"
 #include "color_tools.hpp"
 #include "desktop.hpp"
 #include "document.hpp"
@@ -139,6 +140,12 @@ class Editor final : public gui_forms::Control {
     double lasso_tolerance = 0.025;
     bool pick_hotspot = false, show_hotspot = false;
     Document document;
+    std::shared_ptr<Image> custom_pattern = std::make_shared<Image>();
+    std::uint64_t custom_pattern_revision = 1;
+    bool pattern_editing = false;
+    void toggle_pattern_canvas();
+    void store_custom_pattern();
+    void load_custom_pattern();
     CustomColors custom_colors;
     EditorSettings settings;
     RecentFiles recent;
@@ -190,6 +197,8 @@ class Editor final : public gui_forms::Control {
     void pointer(const gui_forms::PointerEvent& event);
 
   private:
+    std::shared_ptr<PatternCanvas> pattern_canvas_;
+    std::string pattern_storage_path_;
     bool help_shortcut();
     void close_help(gui_forms::ButtonBase& button);
     int hit_path_node(Point point) const;

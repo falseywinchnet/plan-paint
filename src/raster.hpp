@@ -34,9 +34,15 @@ enum class Pattern {
     Houndstooth,
     Dots,
     Waves,
-    None
+    None,
+    Buttons,
+    CargoNet,
+    Circuits,
+    Cobblestones,
+    StrawMat,
+    Custom
 };
-inline constexpr int pattern_count = 19;
+inline constexpr int pattern_count = 25;
 enum class Brush {
     Round,
     Calligraphy,
@@ -146,6 +152,8 @@ struct Ink {
     std::shared_ptr<const Ink> alternate;
     Color primary{0, 0, 0, 255};
     Color secondary{255, 255, 255, 255};
+    std::shared_ptr<Image> custom_pattern;
+    std::uint64_t custom_pattern_revision = 0;
     Pattern pattern = Pattern::Solid;
     Brush brush = Brush::Round;
     int size = 3;

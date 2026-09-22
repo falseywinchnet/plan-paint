@@ -3014,8 +3014,71 @@ void zoom_anchors_the_point() {
             "zoom anchors image point under pointer");
 }
 } // namespace
+void custom_pattern_canvas_is_independent() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.image.set(9, 9, {55, 99, 123, 255});
+    const std::vector<paint::Color> original = editor.document.image.pixels;
+    const std::uint64_t revision = editor.document.revision;
+    const double zoom = editor.canvas().zoom();
+    editor.toggle_pattern_canvas();
+    window.perform_layout();
+    const std::shared_ptr<paint::forms::PatternCanvas> pattern =
+        std::dynamic_pointer_cast<paint::forms::PatternCanvas>(window.find("custom-pattern-canvas"));
+    require(pattern && editor.pattern_editing, "custom pattern canvas opens");
+    require((*editor.custom_pattern).width == 8 && (*editor.custom_pattern).height == 8,
+            "custom pattern starts at eight square pixels");
+    const gf::Rect bounds = (*pattern).tile_bounds();
+    const gf::Point start = (*pattern).point_to_window({bounds.x + bounds.width / 16, bounds.y + bounds.height / 16});
+    const gf::Point end = (*pattern).point_to_window({bounds.x + bounds.width * 15 / 16, bounds.y + bounds.height / 16});
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, start});
+    window.dispatch_pointer({gf::PointerAction::move, gf::PointerButton::primary, end});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, end});
+    for (int x = 0; x < 8; ++x) { require((*editor.custom_pattern).get(x, 0).r == 0, "sparse pencil motion fills every crossed pixel"); }
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::secondary, start});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::secondary, start});
+    require(white((*editor.custom_pattern).get(0, 0)), "right pencil is white");
+    editor.execute("undo");
+    require((*editor.custom_pattern).get(0, 0).r == 0, "pattern undo affects pattern only");
+    (*pattern).resize_tile(11, 5);
+    require((*editor.custom_pattern).width == 11 && (*editor.custom_pattern).height == 5 &&
+            white((*editor.custom_pattern).get(10, 0)) && (*editor.custom_pattern).get(7, 0).r == 0,
+            "resize preserves overlap and fills new area white");
+    (*pattern).undo();
+    require((*editor.custom_pattern).width == 8, "pattern resize is undoable");
+    editor.execute("new");
+    require(editor.document.image.width == 128, "main document commands cannot leak into pattern editing");
+    editor.toggle_pattern_canvas();
+    window.perform_layout();
+    require(!editor.pattern_editing && editor.canvas().zoom() == zoom && editor.document.revision == revision,
+            "return preserves view and document history");
+    require(std::memcmp(original.data(), editor.document.image.pixels.data(), original.size() * sizeof(paint::Color)) == 0,
+            "pattern editing never changes main pixels");
+    paint::Ink ink = editor.document.ink;
+    ink.pattern = paint::Pattern::Custom;
+    ink.primary = {123, 22, 33, 255};
+    ink.secondary = {77, 88, 99, 255};
+    require(paint::equal(paint::patterned(ink, -1, 0), ink.primary) &&
+            paint::equal(paint::patterned(ink, 8, 1), ink.secondary), "custom mask repeats in both coordinate directions using material colors");
+    editor.toggle_pattern_canvas();
+    require((*editor.custom_pattern).get(7, 0).r == 0, "tile survives canvas switches");
+    for (int i = static_cast<int>(paint::Pattern::Buttons); i < static_cast<int>(paint::Pattern::Custom); ++i) {
+        ink.pattern = static_cast<paint::Pattern>(i);
+        int foreground = 0;
+        for (int y = 0; y < 16; ++y) {
+            for (int x = 0; x < 16; ++x) {
+                const paint::Color c = paint::patterned(ink, x, y);
+                foreground += paint::equal(c, ink.primary) ? 1 : 0;
+                require(paint::equal(c, paint::patterned(ink, x + 16, y + 16)), "classic tiles repeat seamlessly");
+            }
+        }
+        require(foreground > 0 && foreground < 256, "each classic tile contains both materials");
+    }
+}
 int main() {
     try {
+        custom_pattern_canvas_is_independent();
         freehand_wand_picker_and_size();
         working_view_coordinates_and_reset();
         rotated_frames_use_published_images();
