@@ -17,22 +17,52 @@ preserved; unselected pixels and fully transparent pixels are left byte-identica
 - Drift changes the finer weave allocation over larger regions.
 - Posterize chooses the nearest palette color without a spatial pattern.
 
-The automatic palette uses OKLab distance and a Student-t similarity with two
-degrees of freedom. Sampled local color entropy and global color-family rarity
-protect less common families. Candidate colors come from the selected source.
-Linear RGB determines nonnegative mixtures of at most four accepted colors;
-Walsh ranks select one whole color at each pixel. Each complete constant-mixture
-64×64 tile has balanced ranks, with palette counts within one pixel of the
-requested proportions. This is a practical allocator, not an optimal palette or
-a promise that every photograph improves perceptually at every color count.
+## Color reduction in 0.4.0
 
-Native processing samples at most 4096 selected visible pixels, builds at most
-192 candidate colors, uses 5×5 local entropy neighborhoods and fixed OKLab bins,
-and greedily consolidates the candidate set. This bounded runtime allocator is a
-native adaptation of the research experiments, not their larger offline proposal
-pool. Palette geometry uses small active convex hulls; the repeated-RGB mixture
-cache is bounded at 32768 entries. Crosswind uses two error rows. Cancellation is
-checked during sample collection, palette construction, and row processing.
+Both palette construction and color assignment use OKLab. Posterize first splits
+sampled colors where doing so removes the most squared perceptual error, then
+refines the representatives by assigning samples to their nearest center and
+recomputing each center. It uses the resulting palette directly, without a pattern.
+
+Dithering fits a different problem: the available colors must also mix well.
+For each source color **s**, palette colors **pᵢ** receive nonnegative weights
+**wᵢ** summing to one. The mixture minimizes
+
+`|Σ wᵢ pᵢ − s|² + 0.08 Σ wᵢ |pᵢ − s|²`.
+
+The first term preserves the local average in OKLab; the second discourages
+visible spread between contributors. Without that second term, a good average
+can conceal harsh bright or differently colored speckles. At most four colors
+contribute to one pixel's mixture. These are perceptual mixtures, not a claim
+of exact linear-light energy reproduction when pixels are optically averaged.
+
+The dither palette alternates this mixture fit with a small least-squares solve
+for its colors. It compares two starting palettes: refined representatives with
+modestly expanded endpoints, and colors spread across the source's range. The
+better sampled objective wins. Each iteration is evaluated after conversion to
+actual 8-bit RGB; a worse clipped or rounded iterate is discarded. This improves
+coverage of shadows, highlights and small color accents without an external
+numerical library or a whole-image decomposition.
+
+Weave, Scrambled and Drift place those mixtures with their existing Walsh ranks.
+Each complete constant-mixture 64×64 tile has balanced ranks, with palette counts
+within one pixel of the requested proportions. Crosswind diffuses the remaining
+error from the representable mixture; an impossible out-of-palette component
+cannot accumulate into colored fringes. No mode swaps pixels after placement.
+
+Small existing palettes are preserved exactly when their RGB color count is at
+or below the requested count. Otherwise, deterministic jittered strata provide
+at most 16384 selected visible observations, weighted by alpha. They avoid the
+aliasing of regularly spaced samples. Representative refinement takes at most
+32 iterations. Mixture refinement uses at most 4096 of those observations and
+12 updates per start; its normal matrix is at most 32×32. The exact-RGB mixture
+cache replaces entries within 65536 fixed slots. Crosswind uses two error rows.
+Cancellation is checked during sampling, refinement and rendering.
+
+Two or four colors still impose a severe limit on a photograph. Posterization
+intentionally produces flat regions; dithering exchanges some fine texture for
+more intermediate tone. The allocator is a bounded approximation, not a globally
+optimal palette or a guarantee that every image improves at every color count.
 
 ## Dithering brush
 

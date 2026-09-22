@@ -756,7 +756,7 @@ void Ribbon::add_options() {
     check("stroke-stabilize", "Stabilizer", {12, 79, 150, 28});
     stabilizer_lag_ = number("stroke-lag", "Lag (px)", {180, 79, 220, 28}, 0.1, 50, 5, 1);
     check("spray-glitter", "Fine glitter", {920, 79, 200, 28});
-    check("dither-brush-noise", "Brightness / saturation noise", {260, 79, 310, 28});
+    check("dither-brush-noise", "Brightness / saturation noise", {430, 79, 310, 28});
     building_page_ = 40;
     rotation_ = number("rotation-degrees", "Angle (°)", {242, 36, 240, 28}, -360, 360, 15, 1);
     button("rotate-custom", "Apply rotation", 6, {242, 79, 240, 30});

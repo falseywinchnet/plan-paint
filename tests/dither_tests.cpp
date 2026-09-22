@@ -23,6 +23,63 @@ bool identical(const paint::Image& a, const paint::Image& b) {
     }
     return true;
 }
+double color_error(paint::Color a, paint::Color b) {
+    paint::Lab x = paint::to_oklab(a), y = paint::to_oklab(b);
+    return (x.l - y.l) * (x.l - y.l) + (x.a - y.a) * (x.a - y.a) + (x.b - y.b) * (x.b - y.b);
+}
+void palette_regressions() {
+    using namespace paint;
+    // A fixed-stride sampler used to miss narrow repeating colors completely.
+    Image stripes;
+    stripes.reset(512, 256, {20, 24, 30, 255});
+    for (int y = 0; y < stripes.height; ++y) {
+        stripes.set(1, y, {242, 87, 34, 255});
+        stripes.set(3, y, {18, 210, 170, 128});
+    }
+    stripes.set(511, 255, {240, 248, 253, 255});
+    for (DitherPattern mode : {DitherPattern::Crosswind, DitherPattern::Weave, DitherPattern::Scrambled,
+                               DitherPattern::Drift, DitherPattern::Posterize}) {
+        require(identical(stripes, dithered(stripes, {}, {4, mode})),
+                "An existing four-color image retains even rare and periodic colors exactly");
+    }
+    Image ramp;
+    ramp.reset(256, 64);
+    for (int y = 0; y < ramp.height; ++y) {
+        for (int x = 0; x < ramp.width; ++x) {
+            std::uint8_t value = static_cast<std::uint8_t>(x);
+            ramp.set(x, y, {value, value, value, 255});
+        }
+    }
+    double previous = 1;
+    for (int count : {2, 4, 8, 16, 32}) {
+        Image poster = dithered(ramp, {}, {count, DitherPattern::Posterize});
+        double error = 0;
+        for (std::size_t i = 0; i < ramp.pixels.size(); ++i) {
+            error += color_error(ramp.pixels[i], poster.pixels[i]) / ramp.pixels.size();
+        }
+        require(error < previous * .4, "Additional poster colors resolve a grayscale ramp");
+        previous = error;
+    }
+    require(previous < .0001, "Posterization retains fine tonal resolution at 32 colors");
+    for (DitherPattern mode :
+         {DitherPattern::Crosswind, DitherPattern::Weave, DitherPattern::Scrambled, DitherPattern::Drift}) {
+        Image output = dithered(ramp, {}, {8, mode});
+        double squared = 0;
+        for (int x = 0; x < 256; x += 16) {
+            double difference = 0;
+            for (int y = 0; y < 64; ++y) {
+                for (int xx = x; xx < x + 16; ++xx) {
+                    Lab before = to_oklab(ramp.get(xx, y)), after = to_oklab(output.get(xx, y));
+                    difference += (before.l - after.l) / 1024;
+                    require(std::abs(after.a) < .002 && std::abs(after.b) < .002,
+                            "Neutral artwork does not acquire colored dither noise");
+                }
+            }
+            squared += difference * difference / 16;
+        }
+        require(std::sqrt(squared) < .018, "Dither preserves local perceived tone across a ramp");
+    }
+}
 void checks() {
     using namespace paint;
     for (DitherPattern pattern : {DitherPattern::Weave, DitherPattern::Scrambled, DitherPattern::Drift}) {
@@ -142,6 +199,7 @@ void checks() {
 int main(int argc, char** argv) {
     try {
         checks();
+        palette_regressions();
         if (argc == 3) {
             paint::Image source = paint::load_image(argv[1]);
             for (int mode = 0; mode < 5; ++mode) {

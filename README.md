@@ -16,14 +16,21 @@ Actual packaged Rainstar Paint 0.3.2 on Apple Silicon Mac. The specimen was pain
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/rainstar-paint-0.3.9-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/rainstar-paint-0.3.9-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/rainstar-paint-0.3.9-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/rainstar-paint-0.3.9-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/rainstar-paint-0.4.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/rainstar-paint-0.4.0-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/rainstar-paint-0.4.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/rainstar-paint-0.4.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
+
+## New in 0.4.0
+
+- Selection dithering and posterization use refined OKLab palettes. Dithering also fits how palette colors mix, preserving more tonal range while discouraging harsh, unrelated color speckles.
+- Crosswind transports only color error the palette can represent, preventing accumulated fringes and ripples. Weave, Scrambled and Drift retain their distinct lattice patterns.
+- Existing artwork with no more colors than requested stays exact, including rare and narrow repeating colors. Palette sampling no longer uses a fixed stride through the source image.
+- The dithering brush's brightness/saturation switch no longer overlaps the stabilizer field. Its drawing behavior is unchanged.
 
 ## New in 0.3.9
 
