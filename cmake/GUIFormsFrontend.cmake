@@ -36,6 +36,13 @@ check_cxx_source_compiles("#include <gui_forms/host.hpp>
 static_assert(std::is_same_v<decltype(std::declval<gui_forms::HostServices&>().read_clipboard_files()),
                              gui_forms::HostClipboardFilesResult>);
 int main() { return 0; }" RAINSTAR_CLIPBOARD_FILES)
+check_cxx_source_compiles("#include <gui_forms/control.hpp>
+int main() { gui_forms::Control probe(gui_forms::StableId(\"probe\"));
+probe.set_custom_cursor({}, gui_forms::CursorKind::crosshair); return 0; }
+" RAINSTAR_CUSTOM_CURSORS)
+if(NOT RAINSTAR_CUSTOM_CURSORS)
+  message(FATAL_ERROR "Rainstar Paint requires the GUI.Forms custom cursor extension. See docs/CUSTOM_CURSORS.md.")
+endif()
 unset(CMAKE_REQUIRED_LIBRARIES)
 if(NOT RAINSTAR_CLIPBOARD_FILES)
   message(FATAL_ERROR "Rainstar Paint requires the GUI.Forms file-reference clipboard service. Fetch the pinned SDK from third_party/gui-forms.lock.json.")
@@ -49,7 +56,7 @@ endif()
 if(NOT RAINSTAR_SCROLLING_LAYOUT)
   message(FATAL_ERROR "Rainstar Paint requires the GUI.Forms scrolling-layout, keyboard, and diagonal-cursor extensions. See docs/GUI_FORMS_PORT.md.")
 endif()
-add_library(paint_forms STATIC src/forms/editor.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/carpet_dialog.cpp src/forms/text.cpp src/forms/warp.cpp src/forms/atlas.cpp src/forms/selection.cpp src/forms/help.cpp src/forms/surface.cpp src/forms/guide.cpp src/forms/spirograph.cpp)
+add_library(paint_forms STATIC src/cursors/tool_cursors.cpp src/forms/editor.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/carpet_dialog.cpp src/forms/text.cpp src/forms/warp.cpp src/forms/atlas.cpp src/forms/selection.cpp src/forms/help.cpp src/forms/surface.cpp src/forms/guide.cpp src/forms/spirograph.cpp)
 target_link_libraries(paint_forms PUBLIC paint_core GUIForms::Application)
 target_include_directories(paint_forms PUBLIC src)
 target_compile_definitions(paint_forms PUBLIC RAINSTAR_VERSION="${PROJECT_VERSION}")
@@ -106,6 +113,9 @@ endif()
 if(NOT MSVC)
   target_compile_options(paint_forms PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+add_executable(paint-cursor-tests tests/cursor_tests.cpp)
+target_link_libraries(paint-cursor-tests PRIVATE paint_forms)
+add_test(NAME paint-cursors COMMAND paint-cursor-tests)
 add_executable(paint-forms-tests tests/forms_tests.cpp)
 target_link_libraries(paint-forms-tests PRIVATE paint_forms)
 add_test(NAME paint-forms COMMAND paint-forms-tests)

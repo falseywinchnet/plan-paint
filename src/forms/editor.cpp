@@ -3,6 +3,7 @@
 #include "forms/atlas.hpp"
 #include "forms/display.hpp"
 #include "platform.hpp"
+#include "cursors/tool_cursors.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -742,10 +743,16 @@ void Editor::choose_tool(Tool tool) {
         finish_controls(false);
     }
     document.tool = tool;
+    apply_tool_cursor(canvas(), tool);
     refresh();
 }
 void Editor::pointer(const gf::PointerEvent& event) {
     try {
+        if (panning_ && event.action != gf::PointerAction::up) {
+            canvas().set_cursor(gf::CursorKind::hand);
+        } else {
+            apply_tool_cursor(canvas(), document.tool);
+        }
         shift_ = gf::has_modifier(event.modifiers, gf::Modifier::shift);
         control_ = gf::has_modifier(event.modifiers, gf::Modifier::control);
         alt_ = gf::has_modifier(event.modifiers, gf::Modifier::alt);
@@ -865,6 +872,7 @@ void Editor::pointer(const gf::PointerEvent& event) {
             } else if (event.action == gf::PointerAction::move) {
                 if (std::hypot(client.x - pan_start_.x, client.y - pan_start_.y) >= 4) {
                     panning_ = true;
+                    canvas().set_cursor(gf::CursorKind::hand);
                     picker_pending_ = false;
                 }
                 if (panning_) {
@@ -927,6 +935,7 @@ void Editor::pointer(const gf::PointerEvent& event) {
             }
             if (event.button == gf::PointerButton::middle) {
                 panning_ = true;
+                canvas().set_cursor(gf::CursorKind::hand);
                 pan_start_ = client;
                 pan_origin_ = (*canvas_).view_origin();
                 (*canvas_).set_pointer_capture(true);
