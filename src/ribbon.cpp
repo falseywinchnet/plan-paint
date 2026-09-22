@@ -475,7 +475,7 @@ void Application::ribbon(float width) {
         }
         command_menu("Properties", "Ctrl+E", *this, Command::Properties);
         ImGui::Separator();
-        command_menu("About Rainstar Paint", nullptr, *this, Command::About);
+        command_menu("About Plan Paint", nullptr, *this, Command::About);
         command_menu("Exit", nullptr, *this, Command::Quit);
     }
     if (atlas_tab) {

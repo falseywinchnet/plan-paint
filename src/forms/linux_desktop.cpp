@@ -183,7 +183,7 @@ void write_print_postscript(const Image& image, const LinuxPrintSettings& settin
     const double width = settings.width_mm * 72 / 25.4, height = settings.height_mm * 72 / 25.4,
                  margin = settings.margin_mm * 72 / 25.4;
     const double scale = std::min((width - 2 * margin) / image.width, (height - 2 * margin) / image.height);
-    file << "%!PS-Adobe-3.0\n%%Title: Rainstar Paint picture\n%%Pages: 1\n%%BoundingBox: 0 0 "
+    file << "%!PS-Adobe-3.0\n%%Title: Plan Paint picture\n%%Pages: 1\n%%BoundingBox: 0 0 "
          << std::ceil(width) << ' ' << std::ceil(height) << "\n%%EndComments\n<< /PageSize [" << width << ' '
          << height << "] >> setpagedevice\n%%Page: 1 1\ngsave\n"
          << (width - image.width * scale) / 2 << ' ' << (height - image.height * scale) / 2 << " translate\n"
@@ -214,7 +214,7 @@ void write_print_postscript(const Image& image, const LinuxPrintSettings& settin
 void linux_print_image(const Image& image, const LinuxPrintSettings& settings) {
     TemporaryFile file;
     write_print_postscript(image, settings, file.path);
-    std::vector<std::string> arguments = {"lp", "-t", "Rainstar Paint picture", "-n",
+    std::vector<std::string> arguments = {"lp", "-t", "Plan Paint picture", "-n",
                                           std::to_string(settings.copies)};
     if (!settings.printer.empty()) {
         arguments.push_back("-d");

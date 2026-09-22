@@ -39,16 +39,16 @@ jobs:
           sudo apt-get install -y xvfb
           test ! -e /lib/ld-musl-${{ matrix.musl }}.so.1
           set +e
-          xvfb-run -a timeout 3 'dist/RainstarPaint/Rainstar Paint'
+          xvfb-run -a timeout 3 'dist/PlanPaint/Plan Paint'
           result=$?
           set -e
           test "$result" = 124
-          GUI_FORMS_FONT_DIR="$PWD/dist/RainstarPaint/bin/fonts" xvfb-run -a \
-            "$PWD/dist/RainstarPaint/lib/ld-musl-${{ matrix.musl }}.so.1" \
-            --library-path "$PWD/dist/RainstarPaint/lib" "$PWD/build-linux/paint-forms-native-tests"
+          GUI_FORMS_FONT_DIR="$PWD/dist/PlanPaint/bin/fonts" xvfb-run -a \
+            "$PWD/dist/PlanPaint/lib/ld-musl-${{ matrix.musl }}.so.1" \
+            --library-path "$PWD/dist/PlanPaint/lib" "$PWD/build-linux/paint-forms-native-tests"
       - uses: actions/upload-artifact@v4
         with:
-          name: rainstar-paint-linux-${{ matrix.arch }}
+          name: plan-paint-linux-${{ matrix.arch }}
           path: dist/*.tar.gz
   windows:
     runs-on: windows-2022
@@ -73,5 +73,5 @@ jobs:
         run: sh scripts/ci-windows.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: rainstar-paint-windows-x64
+          name: plan-paint-windows-x64
           path: dist/*.zip

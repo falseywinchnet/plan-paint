@@ -17,9 +17,9 @@ void Application::help(float x, float y, float width, float height) {
     ImGui::PushStyleColor(ImGuiCol_Header, IM_COL32(238, 234, 168, 255));
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, IM_COL32(230, 225, 150, 255));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12, 12));
-    ImGui::BeginChild("Rainstar Paint Help", {width, height}, true, ImGuiWindowFlags_AlwaysUseWindowPadding);
+    ImGui::BeginChild("Plan Paint Help", {width, height}, true, ImGuiWindowFlags_AlwaysUseWindowPadding);
     GuiScope help_scope(GuiEnd::Child, 1, 4);
-    ImGui::TextUnformatted("Rainstar Paint Help");
+    ImGui::TextUnformatted("Plan Paint Help");
     ImGui::Separator();
     ImGui::PushTextWrapPos(0);
     ImGui::TextUnformatted(help_welcome.data());

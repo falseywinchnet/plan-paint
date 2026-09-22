@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-    SDL_Window* window = SDL_CreateWindow("Untitled - Rainstar Paint", 1280, 850,
+    SDL_Window* window = SDL_CreateWindow("Untitled - Plan Paint", 1280, 850,
                                           SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!window) {
         std::cerr << SDL_GetError() << '\n';

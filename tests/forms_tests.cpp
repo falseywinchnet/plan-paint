@@ -2252,7 +2252,7 @@ void about_reports_build_version() {
     window.perform_layout();
     const std::shared_ptr<gf::Label> version =
         std::dynamic_pointer_cast<gf::Label>(window.find("about-version"));
-    require(version && (*version).text() == "Rainstar Paint " RAINSTAR_VERSION && services.message.empty(),
+    require(version && (*version).text() == "Plan Paint " RAINSTAR_VERSION && services.message.empty(),
             "About reports the release version inside the application's own dialog");
     require((*window.find("about-dedication")).absolute_bounds().bottom() <
                 (*window.find("about-credits")).absolute_bounds().y,

@@ -28,11 +28,11 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "dist")
     parser.add_argument("--version", default=project_version())
     args = parser.parse_args()
-    bundle = args.output / "RainstarPaint"
+    bundle = args.output / "PlanPaint"
     if bundle.exists(): shutil.rmtree(bundle)
     bundle.mkdir(parents=True)
-    executable = bundle / "rainstar-paint.exe"
-    shutil.copy2(args.build / "rainstar-paint-forms.exe", executable)
+    executable = bundle / "plan-paint.exe"
+    shutil.copy2(args.build / "plan-paint.exe", executable)
     directories = [args.build, args.gui_forms_sdk / "bin"] + args.runtime_dir
     candidates = {}
     for directory in directories:
@@ -62,10 +62,10 @@ def main():
                 "files": {str(path.relative_to(bundle)): hashlib.sha256(path.read_bytes()).hexdigest()
                           for path in sorted(bundle.rglob("*")) if path.is_file()}}
     (bundle / "package-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    archive = args.output / f"rainstar-paint-{args.version}-windows-x64.zip"
+    archive = args.output / f"plan-paint-{args.version}-windows-x64.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as output:
         for path in sorted(bundle.rglob("*")):
-            if path.is_file(): output.write(path, "RainstarPaint/" + path.relative_to(bundle).as_posix())
+            if path.is_file(): output.write(path, "PlanPaint/" + path.relative_to(bundle).as_posix())
     print(archive)
 
 if __name__ == "__main__": main()

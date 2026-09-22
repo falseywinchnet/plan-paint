@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def project_version():
     source = (ROOT / "CMakeLists.txt").read_text()
-    match = re.search(r"project\(RainstarPaint VERSION ([0-9]+\.[0-9]+\.[0-9]+)", source)
+    match = re.search(r"project\(PlanPaint VERSION ([0-9]+\.[0-9]+\.[0-9]+)", source)
     if match is None:
         raise RuntimeError("CMake project version is missing")
     return match.group(1)

@@ -1,6 +1,6 @@
 # Third-party notices
 
-Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail.com.
+Plan Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail.com.
 
 - Dear ImGui (optional comparison frontend) v1.91.9b, commit f5befd2d29e66809cd1110a152e375a7f1981f06: MIT, Copyright Omar Cornut. See vendor/imgui/LICENSE.txt.
 - stb, commit 2c980bb59875b0d32144a71867fbdebb2f77cd20: MIT option selected. See vendor/stb/LICENSE.
@@ -15,7 +15,7 @@ Rainstar Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail
 - Cairo Unicode dingbat font: freeware by Clark T. Riley, with Unicode mappings by ChristTrekker. Its three original notices are bundled with the unmodified font in `assets/fonts/cairo-unicode/`. Personal distribution must include those notices; commercial distribution requires the author's written permission. Paint's MIT license does not relicense this font.
 - The vendored Dear ImGui source tree also contains Droid Sans under Apache License 2.0; it is not the application interface font.
 
-Microsoft, Windows and Paint names identify the reference application and belong to their respective owner. Rainstar Paint is independent and uses newly drawn icons.
+Microsoft, Windows and Paint names identify the reference application and belong to their respective owner. Plan Paint is independent and uses newly drawn icons.
 
 Binary packages also carry the notices for their bundled codec dependencies. macOS bundles zstd under its BSD option, liblzma under 0BSD, and libjpeg-turbo under the IJG/BSD terms. This software is based in part on the work of the Independent JPEG Group. The native release uses GUI.Forms under its retained MIT license. The GUI.Forms package carries the notices for its Skia, HarfBuzz, FreeType, Unicode, PNG/zlib and bundled font resources. Windows uses the native Win32 CPU renderer. macOS and Linux use the private CPU Skia/text adapter.
 
@@ -29,7 +29,7 @@ The OKHSL conversion in `vendor/ok_color/ok_color.h` is Björn Ottosson's 2021
 reference implementation, used under its included MIT license. Scalar arithmetic
 is promoted to double precision. Source and adaptation notes are in
 `vendor/ok_color/README.md`. The perceptual palette clustering and sampling code
-in Rainstar Paint are original implementations.
+in Plan Paint are original implementations.
 
 ## Poster fonts
 

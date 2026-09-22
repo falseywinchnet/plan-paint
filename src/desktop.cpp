@@ -11,6 +11,7 @@
 #include <sstream>
 #include <stdexcept>
 namespace paint {
+// Retain pre-1.0 storage so Plan Paint finds existing settings and recovery data.
 std::string preference_directory() {
     std::filesystem::path directory;
 #if defined(__APPLE__)

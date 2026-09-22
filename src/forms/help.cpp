@@ -51,7 +51,7 @@ void HelpBook::initialize_control_tree() {
     (*close_).set_font({gf::FontRole::control, 24, 400, false});
     (*close_).set_accessible_name("Close Paint Help");
     add_child(close_);
-    title_ = gf::make_control<gf::Label>(gf::StableId("help-title"), "Rainstar Paint Help");
+    title_ = gf::make_control<gf::Label>(gf::StableId("help-title"), "Plan Paint Help");
     introduction_ = gf::make_control<gf::Label>(gf::StableId("help-welcome"), std::string(help_welcome));
     for (const std::shared_ptr<gf::Label>& label : {title_, introduction_}) {
         (*label).set_font({gf::FontRole::control, 18, 400, false});

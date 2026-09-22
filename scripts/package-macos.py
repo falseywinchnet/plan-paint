@@ -36,10 +36,10 @@ def main():
         raise RuntimeError("Configure an optimized CMake build before packaging (Release or MinSizeRel).")
     distribution = ROOT / (args.output or "dist")
     distribution.mkdir(parents=True, exist_ok=True)
-    app = distribution / "Rainstar Paint.app"
+    app = distribution / "Plan Paint.app"
     if app.exists():
         shutil.rmtree(app)
-    binary_name = "rainstar-paint-forms" if forms else "rainstar-paint"
+    binary_name = "plan-paint" if forms else "plan-paint-legacy"
     source_app = ROOT / build / (binary_name + ".app")
     shutil.copytree(source_app, app)
     executable = app / "Contents/MacOS" / binary_name
@@ -75,7 +75,7 @@ def main():
         if sdk_notices.is_dir():
             shutil.copytree(sdk_notices, notices / "GUIForms", dirs_exist_ok=True)
         (resources / "README-GUIForms.txt").write_text(
-            "Rainstar Paint\n\n"
+            "Plan Paint\n\n"
             "The application uses the native GUI.Forms interface.\n"
             "It includes its toolkit, codec libraries, and fonts.\n"
             "The signature is ad hoc, not Developer ID notarized.\n"
@@ -149,7 +149,7 @@ def main():
     run(["codesign", "--force", "--deep", "--sign", "-", str(app)])
     run(["codesign", "--verify", "--deep", "--strict", str(app)])
     architecture = run(["uname", "-m"])
-    package_name = "rainstar-paint"
+    package_name = "plan-paint"
     package = distribution / f"{package_name}-{args.version}-macos-{architecture}.pkg"
     run(["pkgbuild", "--component", str(app), "--install-location", "/Applications", "--identifier", "org.rainstar.paint", "--version", args.version, str(package)])
     (distribution / "macos-bundle-receipt.json").write_text(json.dumps({"package": package.name, "architecture": architecture, "dependencies": bundled, "signature": "ad-hoc; not Developer ID notarized"}, indent=2) + "\n")

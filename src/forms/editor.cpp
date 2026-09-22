@@ -233,7 +233,7 @@ void Editor::rebuild_file_menu() {
     items.push_back(menu_item("properties", "Properties…"));
     items.push_back(menu_item("recover", "Recover unfinished artwork…"));
     items.push_back(menu_item("settings", "Settings…"));
-    items.push_back(menu_item("about", "About Rainstar Paint"));
+    items.push_back(menu_item("about", "About Plan Paint"));
     items.push_back(menu_item("quit", "Exit"));
     (*menu_).set_items({{"file", "File", std::move(items)}});
 }
@@ -1575,7 +1575,7 @@ void Editor::error(const std::string& message) {
     }
     if (window() && (*window()).host_services()) {
         gf::HostMessageDialogRequest request;
-        request.title = "Rainstar Paint";
+        request.title = "Plan Paint";
         request.message = message;
         request.icon = gf::HostMessageIcon::error;
         try {

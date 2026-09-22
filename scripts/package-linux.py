@@ -23,7 +23,7 @@ def main():
     args = parser.parse_args()
     build = (ROOT / args.build).resolve()
     sdk = args.gui_forms_sdk.resolve()
-    source = build / "rainstar-paint-forms"
+    source = build / "plan-paint"
     dependencies = subprocess.check_output(["ldd", str(source)], text=True)
     if "not found" in dependencies or "Error" in dependencies:
         raise RuntimeError(dependencies)
@@ -35,12 +35,12 @@ def main():
     if architecture is None:
         raise RuntimeError("Unverified package architecture: " + platform.machine())
     distribution = (ROOT / args.output).resolve()
-    bundle = distribution / "RainstarPaint"
+    bundle = distribution / "PlanPaint"
     if bundle.exists():
         shutil.rmtree(bundle)
     (bundle / "bin").mkdir(parents=True)
     (bundle / "lib").mkdir()
-    executable = bundle / "bin/rainstar-paint"
+    executable = bundle / "bin/plan-paint"
     shutil.copy2(source, executable)
     closure = {}
     for soname, filename in re.findall(r"(\S+) => (/\S+)", dependencies):
@@ -58,13 +58,13 @@ def main():
     if not locale.is_dir():
         raise RuntimeError("X11 locale data is required for keyboard input.")
     shutil.copytree(locale, bundle / "share/X11/locale")
-    launcher = bundle / "Rainstar Paint"
+    launcher = bundle / "Plan Paint"
     launcher.write_text(
         '#!/bin/sh\nset -eu\n'
         'app_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\n'
         'export XLOCALEDIR="$app_dir/share/X11/locale"\n'
         'export GUI_FORMS_FONT_DIR="$app_dir/bin/fonts"\n'
-        'exec "$app_dir/lib/' + loader.name + '" --library-path "$app_dir/lib" "$app_dir/bin/rainstar-paint" "$@"\n')
+        'exec "$app_dir/lib/' + loader.name + '" --library-path "$app_dir/lib" "$app_dir/bin/plan-paint" "$@"\n')
     launcher.chmod(0o755)
     for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(ROOT / name, bundle)
@@ -90,9 +90,9 @@ def main():
                   for path in sorted(bundle.rglob("*")) if path.is_file()},
     }
     (bundle / "package-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    archive = distribution / f"rainstar-paint-{args.version}-linux-{architecture}.tar.gz"
+    archive = distribution / f"plan-paint-{args.version}-linux-{architecture}.tar.gz"
     with tarfile.open(archive, "w:gz") as output:
-        output.add(bundle, arcname="RainstarPaint")
+        output.add(bundle, arcname="PlanPaint")
     print(archive)
 
 if __name__ == "__main__":

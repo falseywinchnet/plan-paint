@@ -1,31 +1,33 @@
 To the Holy One, blessed be He, from whom all good things come. We dedicate this work in gratitude for the nourishment that sustains human life, the energy that powers our tools, and the opportunity to weave information into works of use and beauty.
 
-# Rainstar Paint
+# Plan Paint
 
-[![Windows and Linux builds](https://github.com/falseywinchnet/rainstar-paint/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/falseywinchnet/rainstar-paint/actions/workflows/build.yml)
-[![Latest release](https://img.shields.io/github/v/release/falseywinchnet/rainstar-paint)](https://github.com/falseywinchnet/rainstar-paint/releases/latest)
+[![Windows and Linux builds](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/falseywinchnet/plan-paint)](https://github.com/falseywinchnet/plan-paint/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A free drawing application with the familiar Windows 7/10 Paint ribbon, built on native GUI.Forms for Mac, Windows and Linux. Draw, paint, add text and edit pictures, with snapping paths, patterned brushes, reusable stamps and CONV image transforms.
 
 ![Rainstar Paint 0.3.2 with its cobalt ribbon and moss cloth surround](assets/screenshots/macos-home-0.3.2.jpg)
 
-Actual packaged Rainstar Paint 0.3.2 on Apple Silicon Mac. The specimen was painted by the native brush and lettering tools and reopened as a flattened PNG. [Explore the illustrated guide and screenshots](https://paymenottowork.com/rainstar-paint/).
+Rainstar Paint 0.3.2, the predecessor to Plan Paint, shown on Apple Silicon Mac. The specimen was painted by the native brush and lettering tools and reopened as a flattened PNG. [Explore the illustrated guide and screenshots](https://paymenottowork.com/plan-paint/).
 
 ## Download
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/rainstar-paint-0.4.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/rainstar-paint-0.4.0-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/rainstar-paint-0.4.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/rainstar-paint-0.4.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/plan-paint-1.0.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Plan Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/plan-paint-1.0.0-windows-x64.zip) | Extract the folder and run `plan-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/plan-paint-1.0.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Plan Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/plan-paint-1.0.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.4.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/plan-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
-## New in 0.4.0 (unreleased)
+## New in 1.0.0
+
+Plan Paint is the new name of Rainstar Paint. The native GUI.Forms application is the primary and only released frontend. The SDL/ImGui version is deprecated and retained solely for historical comparison. Version 1.0 includes the new application icon, refreshed in-app help, interface hue controls, atomic saving and crash recovery.
 
 - Fill → Use gradient opens a Gradients ribbon with twelve presets, 2–32 draggable color stops, linear angle and circular modes, independent stop colors and transparency. Gradient fills respect connected regions, selections and guides. See [gradient fills](docs/GRADIENTS.md).
 
@@ -90,7 +92,7 @@ See [Carpet textures](docs/CARPET.md) for the controls, renderer and measured op
 
 ## New in 0.3.1
 
-The Royale Cobalt interface adds light raised controls, layered tabs and inset material trays. Collapsing the ribbon keeps the artwork stationary. File > Settings offers moss, brown and tan felt, plus matte slate, clay and ivory backings; the original pale backing remains the default. About Rainstar Paint now uses an in-house dialog. This release also fixes pencil strokes, path and Guide junctions, additive and subtractive lasso regions, stamp material capture, and the color picker.
+The Royale Cobalt interface adds light raised controls, layered tabs and inset material trays. Collapsing the ribbon keeps the artwork stationary. File > Settings offers moss, brown and tan felt, plus matte slate, clay and ivory backings; the original pale backing remains the default. About Plan Paint now uses an in-house dialog. This release also fixes pencil strokes, path and Guide junctions, additive and subtractive lasso regions, stamp material capture, and the color picker.
 
 The source includes the [new painting and lettering tools](docs/PAINTING_TOOLS.md): additive, Mix and Heal brushes; guides and tightening lassos; atlas texture painting; poster lettering; and RGB/OKHSL palettes.
 
@@ -145,9 +147,15 @@ cmake --build build-forms --parallel
 ctest --test-dir build-forms --output-on-failure
 ```
 
-The [build workflow](.github/workflows/build.yml) builds Windows with MinGW and Linux with musl, runs the native tests, and produces portable packages. Linux packages are also launched on a glibc host without an installed musl loader. `RAINSTAR_LEGACY_UI=ON` enables the optional SDL/ImGui comparison frontend; it is off by default. Packaging scripts read the release version from CMake.
+The [build workflow](.github/workflows/build.yml) builds Windows with MinGW and Linux with musl, runs the native tests, and produces portable packages. Linux packages are also launched on a glibc host without an installed musl loader. `RAINSTAR_LEGACY_UI=ON` explicitly builds the deprecated `plan-paint-legacy` frontend; it is off by default and is not supported or packaged for release. Packaging scripts read the release version from CMake.
 
 Tests cover image editing, formats, numerical transforms, transparency, real UI input, display scaling and idle rendering. Run `python3 scripts/check-style.py` before submitting a change. Optional `RAINSTAR_BENCHMARKS=ON` and `RAINSTAR_COMPILER_REPORTS=ON` produce a timing/checksum harness and compiler assembly reports.
+
+## The name
+
+> "For I know the plans I have for you, declares the LORD, plans to prosper you and not to harm you, plans to give you hope and a future."
+
+— Jeremiah 29:11
 
 ## Credits and license
 
@@ -157,6 +165,6 @@ Tests cover image editing, formats, numerical transforms, transparency, real UI 
 
 Original code, documentation and artwork are [MIT licensed](LICENSE), copyright © 2026 joshuah.rainstar@gmail.com. You may use, study, modify and share the software, including commercially. Dependencies retain their [third-party notices](THIRD_PARTY_NOTICES.md).
 
-Rainstar Paint is an independent implementation. Microsoft and Windows are trademarks of Microsoft Corporation; no Microsoft Paint source code or icon assets are included.
+Plan Paint is an independent implementation. Microsoft and Windows are trademarks of Microsoft Corporation; no Microsoft Paint source code or icon assets are included.
 
 The native application is implemented in `src/forms/`; shared image editing and file-format code live in `src/`. The earlier comparison interface remains in `src/app*` and is excluded from the default build. See [resource measurements](docs/PERFORMANCE.md) for package, startup and memory details.

@@ -6,7 +6,7 @@
 #include <cmath>
 namespace paint::forms {
 namespace {
-// Sheet cells are authored in Rainstar Paint. Explicit tool keys prevent a new
+// Sheet cells are authored in Plan Paint. Explicit tool keys prevent a new
 // enum member from silently selecting another tool's artwork. The nib or
 // contact location is stored once and scaled by the toolkit on every platform.
 const std::array<Point, 16> hotspots = {{{3, 3},

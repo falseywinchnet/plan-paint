@@ -59,7 +59,7 @@ bool print_image(const Image& source) {
         std::swap(pixel.r, pixel.b);
     }
     GtkPrintOperation* operation = gtk_print_operation_new();
-    gtk_print_operation_set_job_name(operation, "Rainstar Paint picture");
+    gtk_print_operation_set_job_name(operation, "Plan Paint picture");
     gtk_print_operation_set_n_pages(operation, 1);
     gtk_print_operation_set_allow_async(operation, FALSE);
     if (print_state.setup) {

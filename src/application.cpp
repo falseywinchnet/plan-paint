@@ -1504,12 +1504,12 @@ void Application::dialogs() {
         }
     }
     if (about_dialog) {
-        ImGui::OpenPopup("About Rainstar Paint");
+        ImGui::OpenPopup("About Plan Paint");
         about_dialog = false;
     }
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(16, 14));
     bool show_about =
-        ImGui::BeginPopupModal("About Rainstar Paint", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+        ImGui::BeginPopupModal("About Plan Paint", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::PopStyleVar();
     if (show_about) {
         GuiScope popup_scope(GuiEnd::Popup);
@@ -1522,7 +1522,7 @@ void Application::dialogs() {
         ImGui::Spacing();
         ImGui::Separator();
         ImGui::Spacing();
-        ImGui::TextUnformatted("Rainstar Paint\n\nAuthor: Astra\nSponsor: Rainstar\n\n"
+        ImGui::TextUnformatted("Plan Paint\n\nAuthor: Astra\nSponsor: Rainstar\n\n"
                                "Copyright (c) 2026 joshuah.rainstar@gmail.com\n"
                                "Free and open source under the MIT license.\n"
                                "Anyone may use, study, change, and share this program.\n\n"
@@ -1556,9 +1556,9 @@ void Application::dialogs() {
         }
     }
     if (!error.empty()) {
-        ImGui::OpenPopup("Rainstar Paint message");
+        ImGui::OpenPopup("Plan Paint message");
     }
-    if (ImGui::BeginPopupModal("Rainstar Paint message", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::BeginPopupModal("Plan Paint message", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         GuiScope popup_scope(GuiEnd::Popup);
         ImGui::PushTextWrapPos(440);
         ImGui::TextUnformatted(error.c_str());
@@ -1578,7 +1578,7 @@ void Application::frame() {
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(io.DisplaySize);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-        ImGui::Begin("Rainstar Paint", nullptr,
+        ImGui::Begin("Plan Paint", nullptr,
                      ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
                          ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
         GuiScope root_scope(GuiEnd::Window, 1, 0);
@@ -1624,7 +1624,7 @@ void Application::frame() {
         if ((document.dirty() || (text_active && text_buffer[0]))) {
             title += " *";
         }
-        title += " - Rainstar Paint";
+        title += " - Plan Paint";
         if (title != last_window_title) {
             SDL_SetWindowTitle(window, title.c_str());
             last_window_title = title;

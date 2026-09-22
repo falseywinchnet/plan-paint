@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
         std::unique_ptr<gui_forms::Window> window =
             std::make_unique<gui_forms::Window>(editor, gui_forms::Size{1280, 820});
         gui_forms::ApplicationWindowOptions options;
-        options.title = "Rainstar Paint";
+        options.title = "Plan Paint";
         options.initial_size = {1280, 820};
         options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
         }
         return result.accepted() ? 0 : 1;
     } catch (const std::exception& exception) {
-        std::cerr << "Rainstar Paint: " << exception.what() << '\n';
+        std::cerr << "Plan Paint: " << exception.what() << '\n';
         return 1;
     }
 }

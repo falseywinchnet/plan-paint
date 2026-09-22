@@ -217,7 +217,7 @@ struct NativeExercise {
         document.image.reset(640, 360, {252, 250, 245, 255});
         paint::TextStyle label;
         label.size = 32;
-        paint::draw_text(document.image, {35, 25}, "Rainstar Paint", label, {35, 70, 104, 255}, {}, "");
+        paint::draw_text(document.image, {35, 25}, "Plan Paint", label, {35, 70, 104, 255}, {}, "");
         const paint::Brush brushes[] = {paint::Brush::Round, paint::Brush::Pastel, paint::Brush::Crayon};
         for (int index = 0; index < 3; ++index) {
             paint::Ink ink;
@@ -388,7 +388,7 @@ int main(int argc, char** argv) {
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));
         gf::ApplicationWindowOptions options;
-        options.title = "Rainstar Paint — GUI.Forms native interaction check";
+        options.title = "Plan Paint — GUI.Forms native interaction check";
         options.initial_size = exercise.compact ? gf::Size{800, 600} : gf::Size{1280, 820};
         options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;

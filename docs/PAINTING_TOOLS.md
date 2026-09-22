@@ -82,7 +82,7 @@ The Royale Cobalt ribbon uses darker rear tabs with raised right edges. The sele
 - The Mix family adapts geometric and perceptual color laws from CONV Support Toys 0.4.1 in the [OBS plugin source distribution](https://paymenottowork.com/obs-plugins/). The local brush implementation does not reproduce the full OBS support solver or claim pixel equivalence with that plugin. Its source names the counterflow effect **Wigner counterflow**.
 - The [Fine Glitter Texture demonstration by PrettyWebz Media](https://www.youtube.com/watch?v=wdm7KHKfxxw) informed the combination of fine grain and sparse high-intensity highlights. Rainstar generates its own facets during painting.
 
-Collapsing or reopening the ribbon keeps the artwork at the same screen position and zoom. The expanded workspace reveals the area previously covered by the ribbon. File > About Rainstar Paint displays the version, dedication, credits and license inside a keyboard-accessible application dialog.
+Collapsing or reopening the ribbon keeps the artwork at the same screen position and zoom. The expanded workspace reveals the area previously covered by the ribbon. File > About Plan Paint displays the version, dedication, credits and license inside a keyboard-accessible application dialog.
 
 ## Persistent selections and skew handles
 

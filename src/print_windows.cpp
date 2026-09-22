@@ -72,7 +72,7 @@ bool print_image(const Image& image) {
     HDC context = dialog.hDC;
     DOCINFOW document{};
     document.cbSize = sizeof(document);
-    document.lpszDocName = L"Rainstar Paint picture";
+    document.lpszDocName = L"Plan Paint picture";
     bool success = StartDocW(context, &document) > 0;
     if (success) {
         success = StartPage(context) > 0;

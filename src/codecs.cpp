@@ -133,7 +133,7 @@ int tiff_map(thandle_t, void**, toff_t*) {
 }
 void tiff_unmap(thandle_t, void*, toff_t) {}
 TIFF* open_tiff_memory(TiffMemory& memory, const char* mode) {
-    return TIFFClientOpen("Rainstar Paint memory image", mode, &memory, tiff_read, tiff_write, tiff_seek,
+    return TIFFClientOpen("Plan Paint memory image", mode, &memory, tiff_read, tiff_write, tiff_seek,
                           tiff_close, tiff_size, tiff_map, tiff_unmap);
 }
 } // namespace

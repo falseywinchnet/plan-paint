@@ -1,7 +1,7 @@
 # Tool cursors
 
 The cursor sheet in `assets/cursors/tool-sheet.png` was drawn and filled in
-Rainstar Paint. It is a transparent 128 × 128 PNG, arranged as sixteen 32 × 32
+Plan Paint. It is a transparent 128 × 128 PNG, arranged as sixteen 32 × 32
 cells in `Tool` order. Edit this master in Paint, then run
 `python3 scripts/embed-cursors.py` to regenerate the embedded bytes. No runtime
 asset lookup or image file is required. Embedded decoding failure uses a stock

@@ -1,6 +1,9 @@
-# Native GUI.Forms application
+# Plan Paint native build
 
-Rainstar Paint 0.3.4 uses GUI.Forms by default. The executable links the installed
+GUI.Forms is the primary frontend in Plan Paint 1.0. The SDL/ImGui frontend is deprecated and excluded from release packages.
+
+
+Plan Paint 0.3.4 uses GUI.Forms by default. The executable links the installed
 `GUIForms::Application` target and Paint's document, raster, material, CONV and
 format libraries. It does not link SDL, ImGui or GTK. The optional comparison
 frontend remains available with `RAINSTAR_LEGACY_UI=ON`.
@@ -34,7 +37,7 @@ cmake -S . -B build-forms -DCMAKE_BUILD_TYPE=Release -DRAINSTAR_BUNDLED_TIFF=ON 
   -DCMAKE_PREFIX_PATH=/opt/homebrew
 cmake --build build-forms --parallel 4
 ctest --test-dir build-forms --output-on-failure
-open build-forms/rainstar-paint-forms.app
+open build-forms/plan-paint.app
 python3 scripts/package-macos.py --gui-forms-sdk build-deps/gui-forms-sdk
 ```
 
@@ -62,7 +65,7 @@ scanner/desktop combination have not been verified. Missing optional desktop
 services produce an error rather than reporting success.
 
 Linux archives bundle their musl loader, complete shared-library closure, fonts
-and X11 locale data. Run the top-level `Rainstar Paint` launcher and retain the
+and X11 locale data. Run the top-level `Plan Paint` launcher and retain the
 complete directory. They can start on a glibc system without an installed musl
 loader. No package manager or network connection is needed to draw, use help,
 open or save pictures. The Mac application is signed ad hoc; the installer is

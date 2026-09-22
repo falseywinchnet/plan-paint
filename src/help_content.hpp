@@ -15,7 +15,7 @@ inline constexpr HelpTopic help_topics[] = {
      "Open a sprite sheet and choose Rows and Columns. Filenames containing sprite, sheet, atlas, "
      "tileset, walk or idle offer this setup automatically; use Atlas > Set up grid for any other "
      "image. Margins and spacing handle padded sheets.\n\nClick a sprite in the ribbon to edit it. "
-     "Left / Right steps through frames, even after returning to Home to paint. Ctrl-click several "
+     "Alt+Left / Alt+Right steps through frames, even after returning to Home to paint. Ctrl-click several "
      "sprites to hold a sequence. Expand gallery shows the original rows and columns so a vertical "
      "sequence is easy to select. All frames restores the full sequence. Save writes the complete "
      "sheet. Each sprite is one flat canvas; no layers or animation container are created.\n\nICO "
@@ -56,7 +56,8 @@ inline constexpr HelpTopic help_topics[] = {
      "bristles, pastel and charcoal, plus stripes, checks, woven patterns and dither densities. "
      "Crayon has a dense waxy core and a broken rim; charcoal has a compact core and a wider grainy "
      "powder edge. Grain, paper tooth and paint load adjust the surface.\n\n"
-     "The Brushes arrow selects Additive, Mix, Heal or Carpet. Mix paints local distortions onto existing "
+     "The Brushes arrow selects Additive, Mix, Heal, Carpet or Dithering brush. Mix paints local distortions "
+     "onto existing "
      "pixels; its Tool tab offers effects, strength, scale and phase. Heal first captures a source, "
      "then paints from it with an aligned offset. Hardness 1 copies it; softer settings blend its "
      "detail with local OKLab color correction. Set source chooses another origin. Additive spray "
@@ -76,7 +77,7 @@ inline constexpr HelpTopic help_topics[] = {
     {"3. Fill, erase, pick and magnify",
      "The bucket fills the connected patch you click. A closed outline keeps the color inside; even a "
      "tiny gap lets it reach the outside. Undo if it went farther than you wanted. Patterns use the same "
-     "region, with Color 1 and Color 2 making the design.\n\nClick the eraser icon to choose Hard or Soft "
+     "region, with Primary and Alt making the design.\n\nClick the eraser icon to choose Hard or Soft "
      "from its arrow menu, or select Blur, Sharpen or Smudge. The Eraser tab keeps effect controls. "
      "Use Size to set the diameter. Custom size follows 64 px; the bottom size button also accepts 1–1024 "
      "px. "
@@ -136,10 +137,10 @@ inline constexpr HelpTopic help_topics[] = {
      "original. Cut removes it. Paste makes a new movable selection. Paste from opens an image file as a "
      "selection. Drag an image file from Finder or your file manager onto this window to paste it "
      "immediately. A larger pasted picture expands the canvas.\n\nTransparent selection skips pixels "
-     "exactly equal to Color 2. Crop keeps only the selected rectangle. With nothing selected, Crop first "
+     "exactly equal to Alt. Crop keeps only the selected rectangle. With nothing selected, Crop first "
      "switches to Select so you can mark the area. Delete removes selected content. Ctrl+A followed by "
      "Delete clears the whole picture without a drag. "
-     "Without a selection, Delete clears the canvas to Color 2.\n\nTightening lasso follows the nearest "
+     "Without a selection, Delete clears the canvas to Alt.\n\nTightening lasso follows the nearest "
      "connected object around the lasso center using perceptual color differences, with feathered "
      "edges and tolerance for small JPEG variations. Magic wand selects similar colors everywhere in the "
      "canvas from one click, including separate islands. Its tolerance uses the same perceptual color "
@@ -167,7 +168,7 @@ inline constexpr HelpTopic help_topics[] = {
      "places to print repeated copies, or hold and drag to scrub with the sample. R turns the stamp 15 "
      "degrees clockwise; Shift+R turns it the other "
      "way. + makes it bigger and - makes it smaller. These keys change the stamp, not the "
-     "canvas.\n\nTransparent stamp preserves transparent pixels and skips pixels matching Color 2. Turn "
+     "canvas.\n\nTransparent stamp preserves transparent pixels and skips pixels matching Alt. Turn "
      "it off to include that background color. The area outside the chosen mask is always transparent. "
      "Right-click or press Escape to clear the old sample and reset its rotation and scale, even while "
      "it is preparing. The next canvas click picks another. Stamp > Lift a new stamp does the same; "
@@ -178,7 +179,7 @@ inline constexpr HelpTopic help_topics[] = {
     {"8. Resize, rotate and the canvas",
      "Resize accepts percentages or pixel dimensions. Keep Maintain aspect ratio checked to avoid "
      "stretching. Scale artwork uses CONV* to reconstruct the image; turn it off to change only "
-     "the canvas boundary. Smaller boundaries crop. Larger ones add Color 2 around the existing "
+     "the canvas boundary. Smaller boundaries crop. Larger ones add Alt around the existing "
      "picture.\n\nThe round handle just outside a selection's upper-right corner turns it freely. "
      "Drag it around the object; hold Shift for 15-degree steps. Release to finish the rotation, "
      "then press Escape when you want to place the selection. The Selection ribbon also lets you enter any "
@@ -221,7 +222,7 @@ inline constexpr HelpTopic help_topics[] = {
      "strikeout, and an opaque "
      "background. Drag Move text to reposition the box and drag its edge handles to resize it. "
      "Word wrap moves whole words onto the next line; switch it off for explicit line breaks only. "
-     "Color 1 colors the letters; Color 2 colors an opaque background. Place text "
+     "Color 1 colors the letters; Alt colors an opaque background. Place text "
      "stamps the words into the picture. Cancel text discards them. Undo removes placed text if "
      "you change your mind. Ctrl+Enter places text; Escape cancels it.\n\nDynaPuff, Bubble Sans, Anton and "
      "Titan One are bundled poster fonts. Outline letters draws Primary around the contours and "
@@ -259,7 +260,8 @@ inline constexpr HelpTopic help_topics[] = {
      "releases a path, clears a loaded stamp, or cancels text. F1 opens this guide. R and +/- change "
      "a loaded stamp."},
     {"13. How I made this - Astra",
-     "I am Astra. I built Rainstar Paint in C++, first with Dear ImGui and SDL and now GUI.Forms, using "
+     "Plan Paint uses native GUI.Forms controls and CPU rendering. The older SDL/ImGui frontend is "
+     "deprecated and is not included in releases. The application is written in C++, using "
      "explicit types, "
      "named operations and callbacks, clear ownership, and inspectable "
      "numerical loops. I chose the Windows 7/10 Paint ribbon as the visual and behavioral reference.\n\nI "
@@ -278,7 +280,7 @@ inline constexpr HelpTopic help_topics[] = {
      "Final affine and mesh transforms clip target pixel footprints at source cells and integrate each part. "
      "Preparation "
      "runs on a background worker, and dragging reuses the compiled material.\n\nI use stb and libtiff "
-     "for file encoding and decoding, and libwebp for decoding. Dear ImGui and the image libraries retain "
+     "for file encoding and decoding, and libwebp for decoding. GUI.Forms and the image libraries retain "
      "their own permissive license notices. This is "
      "an independent implementation; it does not contain Microsoft's Paint code or artwork."},
     {"14. Free for everyone",
@@ -286,11 +288,55 @@ inline constexpr HelpTopic help_topics[] = {
      "gratitude for the nourishment that sustains human life, the energy that powers our tools, "
      "and the opportunity to weave information into works of use and beauty.\n\n"
      "Author: Astra\nSponsor: Rainstar\nCopyright (c) 2026 "
-     "joshuah.rainstar@gmail.com\n\nRainstar Paint is free and open source under the MIT license. Anyone "
+     "joshuah.rainstar@gmail.com\n\nPlan Paint is free and open source under the MIT license. Anyone "
      "may use it, learn from it, change it, and share it, including for commercial work. Keep the "
      "copyright and license notice with copies. The license does not promise a warranty.\n\nYour pictures "
      "are yours. There is no account, subscription, advertising, or upload service in the drawing "
      "workflow. The complete source and dependency notices are supplied with the project."},
+    {"Gradient fills",
+     "Open the arrow on the Fill bucket and choose Use gradient. The Gradients ribbon offers twelve "
+     "presets, including Rainbow spectrum, Sunset fire, Electric blue, Metallic chrome, Gunmetal and "
+     "Purple galaxy. Linear follows the chosen angle: 0 degrees goes left to right; 90 goes top to bottom. "
+     "Circular radiates from the center of the connected region.\n\n"
+     "Click the color strip to add a stop, then drag its handle. Stop and Position provide precise "
+     "selection and placement. Color opens the stop's color and alpha editor without changing Primary "
+     "or Alt. Add, Remove and Reverse edit the progression; keep between 2 and 32 stops.\n\n"
+     "Click the canvas to fill. Selections, their holes and guides constrain the connected area. Each "
+     "fill undoes once. Editing stops affects the next fill; Undo and fill again to revise a painted "
+     "gradient. Settings last for this session. Solid / material fill restores the ordinary bucket."},
+    {"Spirograph guides, inserts and pegs",
+     "Open the Path arrow and choose Spirograph. Its ribbon has separate guide and insert catalogs. "
+     "Start with the ring and wheel, then explore shaped guides, racks and other compatible inserts. "
+     "The translucent apparatus is a temporary guide; it does not become part of the saved picture.\n\n"
+     "Drag a peg from the ribbon into an insert hole. Use Fill to load the peg with ink. Click a peg "
+     "to select it, then choose its brush medium in Materials or the peg medium menu. Its top previews "
+     "the effect. Gel pen gives a solid line with subtle variation and small glints. Drag the insert's "
+     "center to operate it; loaded pegs draw as it follows the guide.\n\n"
+     "Move the support by dragging its body; the red close button removes it. Removing an insert clears "
+     "its pegs. Tools that dismiss an ordinary guide also dismiss the spirograph, keeping its drawn lines."},
+    {"Your own pattern canvas",
+     "Materials includes a custom tile alongside the pattern gallery. Choose Edit custom pattern "
+     "to open its separate canvas. Left draws black; right draws white. The repeating preview shows "
+     "the material mask. Set width and height from 1 to 128 pixels.\n\n"
+     "The tile has independent Undo and Redo and is saved for the next launch. Return to main canvas "
+     "restores the picture, view, selection and history. Primary and Alt supply its colors when painting."},
+    {"Interface settings, saving and recovery",
+     "File > Settings offers an interface hue, including blue, pink, purple and green. Its preview "
+     "changes the controls without recoloring your picture, icons or golden selected tools. Cancel "
+     "restores the previous appearance.\n\n"
+     "Save replaces a completed file atomically. Crash recovery is on by default, with a 60-second "
+     "interval; Settings accepts 15 to 600 seconds. Snapshots wait for active gestures and transforms. "
+     "They preserve a flattened picture, not editable text, guides, selections or undo history.\n\n"
+     "An empty launch offers recoverable artwork. File > Recover unfinished artwork opens the same "
+     "browser. Yes opens an unsaved recovered copy, No keeps that snapshot for later, and Cancel stops "
+     "browsing. Save the recovered copy to an explicit destination. Recovery never overwrites the "
+     "original file. Existing Rainstar Paint preferences and recovery records remain available in Plan "
+     "Paint."},
+    {"The name Plan Paint",
+     "For I know the plans I have for you, declares the LORD, plans to prosper you and not to harm you, "
+     "plans to give you hope and a future.\n\nJeremiah 29:11\n\n"
+     "Plan Paint is the name of the application from version 1.0. Earlier releases were called Rainstar "
+     "Paint."},
     {"Dithering and posterizing",
      "Select an area, open the Selection arrow, and choose Dither / posterize. Choose 2-32 colors "
      "and Crosswind, Weave, Scrambled, Drift, or Posterize. The preview prepares the exact result. "
