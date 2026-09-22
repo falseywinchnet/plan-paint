@@ -811,6 +811,12 @@ void Editor::pointer(const gf::PointerEvent& event) {
         }
         gui_drawing::PointF mapped = (*canvas_).client_to_bitmap(client);
         Point point{mapped.x, mapped.y};
+        if (!panning_ && (document.tool == Tool::Magnifier || document.tool == Tool::Stamp) &&
+            (!document.image.contains(static_cast<int>(std::floor(point.x)),
+                                      static_cast<int>(std::floor(point.y))) ||
+             (document.tool == Tool::Stamp && document.stamp.pixels.empty()))) {
+            canvas().set_cursor(gf::CursorKind::crosshair);
+        }
         if (event.action == gf::PointerAction::leave && !(*canvas_).has_pointer_capture()) {
             cursor_client_.reset();
         } else {

@@ -60,6 +60,10 @@ void tool_cursor_routes() {
     for (int i = 0; i <= static_cast<int>(paint::Tool::Spirograph); ++i) {
         editor.document.tool = static_cast<paint::Tool>(i);
         fixture.pointer(gf::PointerAction::move, 64, 48, gf::PointerButton::none);
+        if (editor.document.tool == paint::Tool::Stamp && editor.document.stamp.pixels.empty()) {
+            require(!editor.canvas().effective_cursor_images(), "empty stamp keeps a visible stock cursor");
+            continue;
+        }
         require(editor.canvas().effective_cursor_images() ==
                     paint::forms::tool_cursor_images(editor.document.tool),
                 "pointer route projects the current tool cursor");

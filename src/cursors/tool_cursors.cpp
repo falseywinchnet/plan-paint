@@ -38,6 +38,13 @@ CursorSet make_cursors() noexcept {
             return result;
         }
         for (std::size_t cell = 0; cell < result.size(); ++cell) {
+            if (cursor_tools[cell] == Tool::Magnifier || cursor_tools[cell] == Tool::Stamp) {
+                // These tools draw their own canvas preview. A transparent native
+                // cursor leaves the preview's central pixels unobstructed.
+                result[cell] = gui_forms::CursorImages::create(
+                    {{1, 1, 1.0, {{0, 0, 0, 0}}}}, 0, 0);
+                continue;
+            }
             const Image artwork =
                 cropped(sheet, {static_cast<int>(cell % 4) * 32, static_cast<int>(cell / 4) * 32, 32, 32});
             Image outlined = artwork;

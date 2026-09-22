@@ -1,5 +1,4 @@
 #include "conv.hpp"
-#include "cursors/tool_cursors.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
 #include <chrono>
@@ -197,8 +196,6 @@ bool Editor::resize_pointer(const gf::PointerEvent& event, Point point) {
                                 : hovered == 2 || hovered == 6  ? gf::CursorKind::resize_diagonal_up
                                 : document.tool == Tool::Text   ? gf::CursorKind::text
                                                                 : gf::CursorKind::crosshair);
-        } else {
-            apply_tool_cursor(canvas(), document.tool);
         }
         if (hovered < 0 || event.action != gf::PointerAction::down ||
             event.button != gf::PointerButton::primary) {

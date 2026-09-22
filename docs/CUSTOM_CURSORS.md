@@ -16,13 +16,17 @@ The contact is deliberately part of the artwork:
 | Picker | dropper tip at (8,26) |
 | Eraser | leading erasing corner at (11,20) |
 | Text | I-beam center at (16,16) |
-| Magnifier | center cross at (16,17) |
-| Select, Lasso, Fill, Shape, Path, Stamp, Reshape, Guide, Freehand, Spirograph | dark corner triangle tip at (3,3) |
+| Magnifier, Stamp | transparent native cursor; the canvas preview supplies the pointer |
+| Select, Lasso, Fill, Shape, Path, Reshape, Guide, Freehand, Spirograph | dark corner triangle tip at (3,3) |
 
 Coordinates are relative to each 32-pixel cell. The pointer is upright in screen
 space; view rotation continues to inverse-map the contact position through
 Paint's existing canvas transform. The cursor never changes document pixels,
 brush size or stroke coordinates.
+
+Magnifier and Stamp use a transparent native cursor while their preview is
+available. Outside the image, or before loading a stamp, a stock crosshair
+remains visible. Their original sheet cells are retained as editable artwork.
 
 `src/cursors/tool_cursors.cpp` builds immutable 16/24/32/48/64-pixel
 representations once. A one-pixel white outline is added for dark backgrounds.
@@ -50,7 +54,7 @@ or binaries with the extended SDK: the public C++ class layouts have changed.
 
 ## Validation
 
-`paint-cursors` checks all sixteen artwork contacts at eight scale factors,
+`paint-cursors` checks the fourteen visible artwork contacts and transparency of both preview cursors at eight scale factors,
 including fractional DPI, and requires each hotspot to land on an opaque dark
 contact pixel. The Forms fixture checks tool routing, resize cursor precedence,
 and restoring the pencil after leaving a handle. Run CTest and the house-style
