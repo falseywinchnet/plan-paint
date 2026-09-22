@@ -8,9 +8,9 @@ To the Holy One, blessed be He, from whom all good things come. We dedicate this
 
 A free, native paint program for Mac, Windows and Linux, with the familiar Windows 7/10 Paint ribbon. Make a meme, sketch an idea, or finish a picture: crop, caption, draw polygons, adjust curves and paint with a brush. Plan Paint keeps everyday drawing tools close at hand, with a clear interface built for direct editing.
 
-![Rainstar Paint 0.3.2 with its cobalt ribbon and moss cloth surround](assets/screenshots/macos-home-0.3.2.jpg)
+![Plan Paint 1.1 candidate showing a landscape made with polygons, an editable curve and watercolor](assets/screenshots/macos-home-1.1.jpg)
 
-Rainstar Paint 0.3.2, the predecessor to Plan Paint, shown on Apple Silicon Mac. The specimen was painted by the native brush and lettering tools and reopened as a flattened PNG. [Explore the illustrated guide and screenshots](https://paymenottowork.com/plan-paint/).
+Plan Paint 1.1 candidate on Apple Silicon Mac. This picture was drawn in the native application with filled polygons, a Bézier curve and watercolor strokes. [Explore the illustrated guide and screenshots](https://paymenottowork.com/plan-paint/).
 
 ## Download
 
