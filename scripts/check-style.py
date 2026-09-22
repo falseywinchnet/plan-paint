@@ -10,7 +10,7 @@ for folder in (ROOT / "src", ROOT / "tests", ROOT / "benchmarks"):
     for path in folder.rglob("*"):
         if path.suffix not in {".cpp", ".hpp", ".mm"}:
             continue
-        source = path.read_text()
+        source = path.read_text(encoding="utf-8")
         # Remove comments and literals so documentation does not trigger syntax checks.
         source = re.sub(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', " ", source, flags=re.S)
         for name, pattern in (("auto", r"\bauto\b"), ("arrow member access", r"->"),
