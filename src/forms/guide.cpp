@@ -327,6 +327,12 @@ void Editor::paint_path_swap(gf::Painter& painter) {
 
 namespace paint::forms {
 void Editor::unset_guide() {
+    // Spirograph apparatus has the same temporary lifetime as a drawing guide.
+    cancel_spiro_drag();
+    spiro = {};
+    if (document.tool == Tool::Spirograph) {
+        document.tool = Tool::Pencil;
+    }
     guide.clear();
     guide_swap_kind_.reset();
     guide_swap_segment_ = guide_swap_handle_ = guide_node_ = -1;

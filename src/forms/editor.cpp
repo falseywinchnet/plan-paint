@@ -1791,7 +1791,8 @@ void Editor::execute(const std::string& command) {
             refresh();
             return;
         }
-        if (command == "cut" && !document.selection.active && (guide.active() || !guide.nodes.empty())) {
+        if (command == "cut" && !document.selection.active &&
+            (guide.active() || !guide.nodes.empty() || spiro.active)) {
             // A stencil is editing state. Dismissing it must not enter Cut's
             // no-selection fallback, which intentionally cuts the whole image.
             unset_guide();

@@ -1915,6 +1915,70 @@ void spirograph_apparatus_and_ink() {
                                                 drawn.size() * sizeof(paint::Color)) == 0,
             "closing apparatus erases its finished drawing");
 }
+void spirograph_guide_dismissal() {
+    for (const paint::Tool tool : {paint::Tool::Select, paint::Tool::Lasso, paint::Tool::Path,
+                                   paint::Tool::Shape, paint::Tool::Text, paint::Tool::Reshape,
+                                   paint::Tool::Pencil, paint::Tool::Brush, paint::Tool::Fill,
+                                   paint::Tool::Eraser, paint::Tool::Stamp, paint::Tool::Picker,
+                                   paint::Tool::Magnifier, paint::Tool::Freehand}) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.document.image.set(40, 40, {21, 43, 68, 97});
+        const paint::Image original = editor.document.image;
+        const std::uint64_t revision = editor.document.revision;
+        editor.guide.nodes = {{20, 20}, {80, 20}, {80, 70}, {20, 70}};
+        editor.guide.closed = true;
+        editor.guide.rebuild_boundary();
+        editor.start_spirograph();
+        paint::SpiroPeg peg;
+        peg.seated = true;
+        editor.spiro.seat(0, peg);
+        editor.spiro.fill(0, {20, 70, 190, 255});
+        editor.spiro.select_peg(0);
+        editor.choose_tool(tool);
+        const bool retained = tool == paint::Tool::Pencil || tool == paint::Tool::Brush ||
+                              tool == paint::Tool::Fill || tool == paint::Tool::Eraser ||
+                              tool == paint::Tool::Stamp || tool == paint::Tool::Picker ||
+                              tool == paint::Tool::Magnifier || tool == paint::Tool::Freehand;
+        require(editor.guide.active() == retained && editor.spiro.active == retained &&
+                    editor.spiro.pegs[0].loaded == retained &&
+                    editor.spiro.selected_peg == (retained ? 0 : -1),
+                "tool switching gives spirograph a different lifetime from guides");
+        require(editor.document.tool == tool && editor.document.revision == revision &&
+                    std::equal(original.pixels.begin(), original.pixels.end(),
+                               editor.document.image.pixels.begin(), paint::equal),
+                "dismissing apparatus changes the selected tool, painted pixels, or history");
+    }
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.start_spirograph();
+    paint::SpiroPeg peg;
+    peg.seated = true;
+    editor.spiro.seat(0, peg);
+    editor.spiro.fill(0, {20, 70, 190, 255});
+    const paint::Point wheel = editor.spiro.wheel_center(0);
+    fixture.pointer(gf::PointerAction::down, wheel.x, wheel.y);
+    const paint::Point target = editor.spiro.wheel_center(.5);
+    fixture.pointer(gf::PointerAction::move, target.x, target.y);
+    const paint::Image drawn = editor.document.image;
+    const std::uint64_t revision = editor.document.revision;
+    require(editor.canvas().has_pointer_capture(), "wheel gesture did not capture pointer");
+    editor.choose_shape(paint::Shape::Rectangle);
+    require(!editor.spiro.active && !editor.canvas().has_pointer_capture() &&
+                editor.document.tool == paint::Tool::Shape && editor.document.revision == revision &&
+                std::equal(drawn.pixels.begin(), drawn.pixels.end(),
+                           editor.document.image.pixels.begin(), paint::equal),
+            "shape gallery leaves apparatus or capture behind, or erases an unfinished wheel stroke");
+    editor.start_spirograph();
+    require(!editor.spiro.pegs[0].seated && editor.spiro.selected_peg == -1,
+            "reopening a dismissed apparatus resurrects its old pegs");
+    editor.execute("cut");
+    require(!editor.spiro.active && editor.document.tool == paint::Tool::Pencil &&
+                editor.document.revision == revision &&
+                std::equal(drawn.pixels.begin(), drawn.pixels.end(),
+                           editor.document.image.pixels.begin(), paint::equal),
+            "Cut on temporary apparatus cuts the canvas instead of dismissing the guide");
+}
 void independent_color_materials_and_no_color() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -2993,6 +3057,7 @@ int main() {
         centered_circle_and_materials();
         carpet_generator_controls();
         spirograph_apparatus_and_ink();
+        spirograph_guide_dismissal();
         independent_color_materials_and_no_color();
         select_all_delete_without_drag();
         ribbon_collapse_and_reopen();
