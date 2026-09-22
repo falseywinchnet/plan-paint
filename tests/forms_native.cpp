@@ -15,7 +15,7 @@ struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
          materials = false, interface_review = false, view_review = false;
-    int backing = 0;
+    int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
     gf::SubscriptionToken resize_tick;
@@ -285,6 +285,7 @@ struct NativeExercise {
             return;
         }
         if (interface_review) {
+            (*editor).settings.interface_hue = hue;
             interface_gallery(window);
             return;
         }
@@ -380,6 +381,7 @@ int main(int argc, char** argv) {
         if (exercise.interface_review && argc > 2) {
             exercise.backing = std::clamp(std::stoi(argv[2]), 0, paint::canvas_backing_count - 1);
         }
+        if (exercise.interface_review && argc > 3) { exercise.hue = std::clamp(std::stoi(argv[3]), 0, 359); }
         exercise.materials = argc > 1 && std::string(argv[1]) == "--materials";
         exercise.view_review = argc > 1 && std::string(argv[1]) == "--view";
         exercise.bugs = argc > 1 && std::string(argv[1]) == "--bugs";

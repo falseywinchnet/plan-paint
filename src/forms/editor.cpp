@@ -231,6 +231,7 @@ void Editor::rebuild_file_menu() {
     items.push_back(std::move(wallpaper));
 #endif
     items.push_back(menu_item("properties", "Properties…"));
+    items.push_back(menu_item("recover", "Recover unfinished artwork…"));
     items.push_back(menu_item("settings", "Settings…"));
     items.push_back(menu_item("about", "About Rainstar Paint"));
     items.push_back(menu_item("quit", "Exit"));
@@ -279,7 +280,7 @@ void Editor::arrange(gf::Rect bounds) {
 }
 void Editor::on_paint(gf::Painter& painter, gf::Rect) {
     gf::Rect bounds = committed_arranged_bounds();
-    painter.fill_rect({0, 0, bounds.width, bounds.height}, gf::Color::rgba(232, 240, 249));
+    painter.fill_rect({0, 0, bounds.width, bounds.height}, interface_color(*this, gf::Color::rgba(232, 240, 249)));
     if (show_rulers) {
         double ribbon_height = (*ribbon_).ribbon_height();
         gf::Rect area = (*canvas_).committed_arranged_bounds();
@@ -290,9 +291,9 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
             step *= 2;
         }
         const gf::FontSpec font{gf::FontRole::control, 10, 400, false};
-        const gf::Color color = gf::Color::rgba(81, 103, 127);
-        painter.fill_rect({20, ribbon_height, area.width, 20}, gf::Color::rgba(245, 248, 252));
-        painter.fill_rect({0, (ribbon_height + 20), 20, area.height}, gf::Color::rgba(245, 248, 252));
+        const gf::Color color = interface_color(*this, gf::Color::rgba(81, 103, 127));
+        painter.fill_rect({20, ribbon_height, area.width, 20}, interface_color(*this, gf::Color::rgba(245, 248, 252)));
+        painter.fill_rect({0, (ribbon_height + 20), 20, area.height}, interface_color(*this, gf::Color::rgba(245, 248, 252)));
         for (int axis = 0; axis < 2; ++axis) {
             double start = axis == 0 ? origin.x : origin.y;
             double length = axis == 0 ? area.width : area.height;
@@ -327,10 +328,10 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
         return;
     }
     double y = bounds.height - 30;
-    painter.draw_line({0, y}, {bounds.width, y}, gf::Color::rgba(172, 193, 214), 1);
+    painter.draw_line({0, y}, {bounds.width, y}, interface_color(*this, gf::Color::rgba(172, 193, 214)), 1);
     for (double position : {249.0, 434.0, 565.0, 731.0, 887.0}) {
         const double x = position * bounds.width / 1280;
-        painter.draw_line({x, y + 5}, {x, bounds.height - 5}, gf::Color::rgba(193, 208, 224), 1);
+        painter.draw_line({x, y + 5}, {x, bounds.height - 5}, interface_color(*this, gf::Color::rgba(193, 208, 224)), 1);
     }
 }
 gf::Point Editor::screen(Point point) const {
@@ -353,10 +354,10 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         document.atlas.active >= 0) {
         const IconFrame& frame = document.atlas.icons[document.atlas.active];
         gf::Point point = screen({frame.hotspot_x + 0.5, frame.hotspot_y + 0.5});
-        painter.draw_line({point.x - 9, point.y}, {point.x + 9, point.y}, gf::Color::rgba(255, 255, 255), 3);
-        painter.draw_line({point.x, point.y - 9}, {point.x, point.y + 9}, gf::Color::rgba(255, 255, 255), 3);
-        painter.draw_line({point.x - 9, point.y}, {point.x + 9, point.y}, gf::Color::rgba(180, 25, 45), 1);
-        painter.draw_line({point.x, point.y - 9}, {point.x, point.y + 9}, gf::Color::rgba(180, 25, 45), 1);
+        painter.draw_line({point.x - 9, point.y}, {point.x + 9, point.y}, interface_color(*this, gf::Color::rgba(255, 255, 255)), 3);
+        painter.draw_line({point.x, point.y - 9}, {point.x, point.y + 9}, interface_color(*this, gf::Color::rgba(255, 255, 255)), 3);
+        painter.draw_line({point.x - 9, point.y}, {point.x + 9, point.y}, interface_color(*this, gf::Color::rgba(180, 25, 45)), 1);
+        painter.draw_line({point.x, point.y - 9}, {point.x, point.y + 9}, interface_color(*this, gf::Color::rgba(180, 25, 45)), 1);
     }
     if (show_grid && (*canvas_).zoom() >= 4) {
         const gf::Rect area = (*canvas_).client_rectangle();
@@ -374,7 +375,7 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         int top = std::max(0, static_cast<int>(std::floor(origin.y)));
         int right = std::min(document.image.width, static_cast<int>(std::ceil(right_bound)));
         int bottom = std::min(document.image.height, static_cast<int>(std::ceil(bottom_bound)));
-        gf::Color color = gf::Color::rgba(90, 110, 135, 85);
+        gf::Color color = interface_color(*this, gf::Color::rgba(90, 110, 135, 85));
         for (int x = left; x <= right; ++x) {
             painter.draw_line(screen({static_cast<double>(x), static_cast<double>(top)}),
                               screen({static_cast<double>(x), static_cast<double>(bottom)}), color, 1);
@@ -391,13 +392,13 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
                                  document.selection.image.height}
                           : rectangle(start_, current_);
         canvas().stroke_outline(painter, {bounds.x, bounds.y, bounds.w, bounds.h},
-                                gf::Color::rgba(30, 100, 190), 1);
+                                interface_color(*this, gf::Color::rgba(30, 100, 190)), 1);
     }
     paint_selection_contours(painter);
     if (dragging_ && (document.tool == Tool::Lasso || document.tool == Tool::Freehand) &&
         !moving_selection_) {
         for (std::size_t index = 1; index < lasso_.size(); ++index) {
-            painter.draw_line(screen(lasso_[index - 1]), screen(lasso_[index]), gf::Color::rgba(30, 100, 190),
+            painter.draw_line(screen(lasso_[index - 1]), screen(lasso_[index]), interface_color(*this, gf::Color::rgba(30, 100, 190)),
                               1);
         }
     }
@@ -407,16 +408,16 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
             if (document.curve.geometry.kind == CurveKind::Bezier) {
                 painter.draw_line(
                     screen(index == 0 ? document.curve.geometry.start : document.curve.geometry.end), point,
-                    gf::Color::rgba(50, 110, 180), 1);
+                    interface_color(*this, gf::Color::rgba(50, 110, 180)), 1);
             }
-            painter.fill_rect({point.x - 5, point.y - 5, 10, 10}, gf::Color::rgba(255, 255, 255));
-            painter.stroke_rect({point.x - 5, point.y - 5, 10, 10}, gf::Color::rgba(30, 100, 190), 2);
+            painter.fill_rect({point.x - 5, point.y - 5, 10, 10}, interface_color(*this, gf::Color::rgba(255, 255, 255)));
+            painter.stroke_rect({point.x - 5, point.y - 5, 10, 10}, interface_color(*this, gf::Color::rgba(30, 100, 190)), 2);
         }
     }
     for (std::size_t index = 0; index < document.path.nodes.size(); ++index) {
         gf::Point point = screen(document.path.nodes[index]);
-        painter.fill_rounded_rect({point.x - 6, point.y - 6, 12, 12}, 6, gf::Color::rgba(255, 255, 255));
-        painter.fill_rounded_rect({point.x - 5, point.y - 5, 10, 10}, 5, gf::Color::rgba(0, 120, 215));
+        painter.fill_rounded_rect({point.x - 6, point.y - 6, 12, 12}, 6, interface_color(*this, gf::Color::rgba(255, 255, 255)));
+        painter.fill_rounded_rect({point.x - 5, point.y - 5, 10, 10}, 5, interface_color(*this, gf::Color::rgba(0, 120, 215)));
     }
     paint_path_swap(painter);
     paint_resize_overlay(painter);
@@ -426,10 +427,10 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     if (settings.rotate_view) {
         const gf::Point point = canvas().rotation_handle();
         painter.fill_rounded_rect({point.x - 12, point.y - 12, 24, 24}, 12,
-                                  gf::Color::rgba(247, 250, 252, 245));
-        painter.stroke_rounded_rect({point.x - 12, point.y - 12, 24, 24}, 12, gf::Color::rgba(79, 102, 125),
+                                  interface_color(*this, gf::Color::rgba(247, 250, 252, 245)));
+        painter.stroke_rounded_rect({point.x - 12, point.y - 12, 24, 24}, 12, interface_color(*this, gf::Color::rgba(79, 102, 125)),
                                     1);
-        const gf::Color ink = gf::Color::rgba(39, 93, 141);
+        const gf::Color ink = interface_color(*this, gf::Color::rgba(39, 93, 141));
         painter.draw_line({point.x - 6, point.y + 3}, {point.x - 6, point.y - 5}, ink, 1.5);
         painter.draw_line({point.x - 6, point.y - 5}, {point.x + 5, point.y - 5}, ink, 1.5);
         painter.draw_line({point.x + 2, point.y - 8}, {point.x + 5, point.y - 5}, ink, 1.5);
@@ -452,6 +453,8 @@ void Editor::on_attached_to_window() {
                                                   std::bind(&Editor::help_shortcut, this));
 }
 void Editor::on_detaching_from_window(gf::Window& former_window) noexcept {
+    recovery_subscription.disconnect();
+    recovery_timer.reset();
     clear_transform_preview();
     help_accelerator_.disconnect();
     selection_frame_.disconnect();
@@ -466,9 +469,11 @@ void Editor::ready(gf::Window&, gf::ApplicationWindowHandle handle, const std::s
     if (!initial_path.empty()) {
         open_file(initial_path);
     }
+    start_recovery(initial_path);
 }
 void Editor::closing(gf::HostCloseRequest& request) {
     request.cancel = !can_replace();
+    if (!request.cancel) { reset_recovery(true); }
     if (request.cancel && !pending_save_path.empty()) {
         deferred_command = "quit";
     }
@@ -521,6 +526,7 @@ void Editor::publish_path_preview() {
     publish_image(composed, *canvas_);
 }
 void Editor::refresh() {
+    interface_themes.apply(*this, preview_interface_hue >= 0 ? preview_interface_hue : settings.interface_hue);
     if ((*custom_pattern).pixels.empty()) { (*custom_pattern).reset(8, 8); }
     document.ink.custom_pattern_revision = custom_pattern_revision;
     document.alt_ink.custom_pattern_revision = custom_pattern_revision;
@@ -1615,6 +1621,7 @@ void Editor::open_file(const std::string& path) {
     if (document.tool == Tool::Spirograph) {
         document.tool = Tool::Pencil;
     }
+    reset_recovery(true, path);
     recent.remember(path);
     rebuild_file_menu();
     (*canvas_).set_view(1, {-16, -16});
@@ -1665,6 +1672,13 @@ void Editor::save_path(const std::string& path) {
     }
     document.filename = path;
     document.saved_revision = document.revision;
+    try {
+        settle_recovery();
+        if (recovery_session) { (*recovery_session).discard(); }
+    } catch (const std::exception& exception) { recovery_notice = exception.what(); }
+    recovery_metadata.saved_ms = recovery_time_ms();
+    recovery_metadata.source_path = path;
+    recovery_capture_revision = 0;
     recent.remember(path);
     rebuild_file_menu();
     refresh();
@@ -1716,6 +1730,7 @@ void Editor::open_editor_dialog(EditorDialogKind kind, bool secondary) {
     close_editor_dialog();
     editor_dialog_ = gf::make_control<EditorDialog>(
         gf::StableId("editor-dialog"), std::static_pointer_cast<Editor>(shared_from_this()), kind, secondary);
+    interface_themes.apply(*editor_dialog_, settings.interface_hue);
     editor_dialog_popup_ = (*attached_window()).open_popup(shared_from_this(), editor_dialog_);
     editor_dialog_focus_ = (*attached_window()).begin_focus_scope(editor_dialog_);
     if (kind == EditorDialogKind::atlas_gallery) {
@@ -1727,6 +1742,12 @@ void Editor::open_editor_dialog(EditorDialogKind kind, bool secondary) {
     }
 }
 void Editor::close_editor_dialog() {
+    if (preview_interface_hue >= 0) {
+        preview_interface_hue = -1;
+        interface_themes.apply(*this, settings.interface_hue);
+        invalidate(gf::Dirty::paint);
+        (*ribbon_).invalidate(gf::Dirty::paint);
+    }
     pending_save_path.clear();
     deferred_command.clear();
     deferred_open_path.clear();
@@ -1907,6 +1928,7 @@ void Editor::execute(const std::string& command) {
                 reference_frame = -1;
                 healing_brush_.clear();
                 document.new_image();
+                reset_recovery(true);
                 spiro = {};
                 if (document.tool == Tool::Spirograph) {
                     document.tool = Tool::Pencil;
@@ -1937,6 +1959,8 @@ void Editor::execute(const std::string& command) {
                     deferred_open_path = path;
                 }
             }
+        } else if (command == "recover") {
+            recover_document();
         } else if (command == "settings") {
             open_editor_dialog(EditorDialogKind::settings);
         } else if (command == "properties") {

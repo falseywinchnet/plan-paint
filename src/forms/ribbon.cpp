@@ -1,4 +1,5 @@
 #include "forms/ribbon.hpp"
+#include "forms/interface_theme.hpp"
 #include "codecs.hpp"
 #include "forms/atlas.hpp"
 #include "forms/dropper_icon.hpp"
@@ -15,6 +16,16 @@
 namespace paint::forms {
 namespace gf = gui_forms;
 namespace {
+// Four-pixel gaps after the tools, guide and size groups; two-pixel divider gutters.
+double home_x(double x) {
+    if (x >= 1132) { return x - 28; }
+    if (x >= 814) { return x - 21; }
+    if (x >= 751) { return x - 16; }
+    if (x >= 540) { return x - 9; }
+    if (x >= 340) { return x - 7; }
+    if (x >= 142) { return x - 10; }
+    return x;
+}
 const Tool ribbon_tools[] = {Tool::Select, Tool::Lasso,  Tool::Pencil,    Tool::Fill,
                              Tool::Eraser, Tool::Picker, Tool::Magnifier, Tool::Brush,
                              Tool::Shape,  Tool::Path,   Tool::Stamp,     Tool::Guide};
@@ -38,15 +49,15 @@ class WeightButton final : public gf::Button {
   private:
     int weight_;
 };
-void paint_separator(gf::Painter& painter, double x) {
-    const gf::GradientStop shade[] = {{0, gf::Color::rgba(143, 170, 201, 0)},
-                                      {0.16, gf::Color::rgba(143, 170, 201, 125)},
-                                      {0.83, gf::Color::rgba(143, 170, 201, 125)},
-                                      {1, gf::Color::rgba(143, 170, 201, 0)}};
-    const gf::GradientStop light[] = {{0, gf::Color::rgba(255, 255, 255, 0)},
-                                      {0.16, gf::Color::rgba(255, 255, 255, 235)},
-                                      {0.83, gf::Color::rgba(255, 255, 255, 235)},
-                                      {1, gf::Color::rgba(255, 255, 255, 0)}};
+void paint_separator(gf::Painter& painter, double x, const gf::Control& owner) {
+    const gf::GradientStop shade[] = {{0, interface_color(owner, gf::Color::rgba(143, 170, 201, 0))},
+                                      {0.16, interface_color(owner, gf::Color::rgba(143, 170, 201, 125))},
+                                      {0.83, interface_color(owner, gf::Color::rgba(143, 170, 201, 125))},
+                                      {1, interface_color(owner, gf::Color::rgba(143, 170, 201, 0))}};
+    const gf::GradientStop light[] = {{0, interface_color(owner, gf::Color::rgba(255, 255, 255, 0))},
+                                      {0.16, interface_color(owner, gf::Color::rgba(255, 255, 255, 235))},
+                                      {0.83, interface_color(owner, gf::Color::rgba(255, 255, 255, 235))},
+                                      {1, interface_color(owner, gf::Color::rgba(255, 255, 255, 0))}};
     painter.fill_linear_gradient({x, 32, 1, 106}, {x, 32}, {x, 138}, shade);
     painter.fill_linear_gradient({x + 1, 32, 1, 106}, {x, 32}, {x, 138}, light);
 }
@@ -216,7 +227,7 @@ class RibbonTabButton final : public gf::Button {
         // Continue the selected sheet into the ribbon; no enclosed bottom edge.
         if (selected() && !visual_context().high_contrast) {
             const gf::Rect bounds = client_rectangle();
-            painter.fill_rect({0, bounds.height - 3, bounds.width, 3}, gf::Color::rgba(232, 242, 255));
+            painter.fill_rect({0, bounds.height - 3, bounds.width, 3}, interface_color(*this, gf::Color::rgba(232, 242, 255)));
         }
     }
 };
@@ -229,8 +240,8 @@ class DisclosureDivider final : public gf::Control {
     }
     void on_paint(gf::Painter& painter, gf::Rect) override {
         const double right = std::max(3.0, client_rectangle().width - 3);
-        painter.draw_line({3, 0.5}, {right, 0.5}, gf::Color::rgba(99, 132, 178), 1);
-        painter.draw_line({3, 1.5}, {right, 1.5}, gf::Color::rgba(255, 255, 255, 155), 1);
+        painter.draw_line({3, 0.5}, {right, 0.5}, interface_color(*this, gf::Color::rgba(99, 132, 178)), 1);
+        painter.draw_line({3, 1.5}, {right, 1.5}, interface_color(*this, gf::Color::rgba(255, 255, 255, 155)), 1);
     }
 };
 } // namespace
@@ -460,15 +471,15 @@ void Ribbon::initialize_control_tree() {
     button("help", "?", -1, {1164, 0, 32, 27});
     building_page_ = 1;
     button("save", "Save", 14, {5, 35, 64, 34});
-    button("undo", "", 15, {5, 81, 32, 32});
-    button("redo", "", 16, {39, 81, 32, 32});
+    button("undo", "", 15, {5, 81, 31, 30});
+    button("redo", "", 16, {38, 81, 31, 30});
     button("paste", "Paste", 0, {80, 34, 44, 83}, true, true, true);
-    button("tool-0", "", 3, {142, 37, 36, 30}, false, true, true);
-    button("crop", "", 4, {180, 37, 28, 30});
-    button("resize", "", 5, {210, 37, 28, 30});
-    button("rotate-menu", "", 6, {240, 37, 36, 30}, false, true);
-    button("cut", "", 1, {278, 37, 28, 30});
-    button("copy", "", 2, {308, 37, 28, 30});
+    button("tool-0", "", 3, {142, 34, 36, 30}, false, true, true);
+    button("crop", "", 4, {180, 34, 28, 30});
+    button("resize", "", 5, {210, 34, 28, 30});
+    button("rotate-menu", "", 6, {240, 34, 36, 30}, false, true);
+    button("cut", "", 1, {278, 34, 28, 30});
+    button("copy", "", 2, {308, 34, 28, 30});
     button("tool-2", "", 7, {144, 80, 28, 30});
     button("tool-3", "", 8, {176, 80, 28, 30});
     std::shared_ptr<gf::Button> text = button("text", "", 9, {208, 80, 28, 30});
@@ -1275,6 +1286,7 @@ void Ribbon::arrange(gf::Rect bounds) {
         gf::Rect rectangle = (*buttons_[i]).requested_bounds();
         const double button_scale =
             button_pages_[i] == 1 || button_pages_[i] == 0 ? horizontal_scale : bounds.width / 1280.0;
+        if (button_pages_[i] == 1) { rectangle.x = home_x(rectangle.x); }
         rectangle.x = button_pages_[i] == 0 && rectangle.y < 27 && rectangle.x >= 56
                           ? 56 + (rectangle.x - 56) * button_scale
                           : rectangle.x * button_scale;
@@ -1370,39 +1382,39 @@ void Ribbon::arrange(gf::Rect bounds) {
 }
 void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     double width = committed_arranged_bounds().width;
-    const gf::GradientStop tabs[] = {{0, gf::Color::rgba(155, 181, 216)},
-                                     {1, gf::Color::rgba(155, 181, 216)}};
+    const gf::GradientStop tabs[] = {{0, interface_color(*this, gf::Color::rgba(155, 181, 216))},
+                                     {1, interface_color(*this, gf::Color::rgba(155, 181, 216))}};
     painter.fill_linear_gradient({0, 0, width, 27}, {0, 0}, {0, 27}, tabs);
     if (collapsed_) {
-        painter.draw_line({0, 26}, {width, 26}, gf::Color::rgba(145, 172, 202), 1);
+        painter.draw_line({0, 26}, {width, 26}, interface_color(*this, gf::Color::rgba(145, 172, 202)), 1);
         return;
     }
     // Broadly spaced stops keep the body continuous behind every tool group.
-    const gf::GradientStop stops[] = {{0, gf::Color::rgba(232, 242, 255)},
-                                      {0.28, gf::Color::rgba(202, 222, 251)},
-                                      {0.62, gf::Color::rgba(165, 196, 241)},
-                                      {1, gf::Color::rgba(118, 159, 223)}};
+    const gf::GradientStop stops[] = {{0, interface_color(*this, gf::Color::rgba(232, 242, 255))},
+                                      {0.28, interface_color(*this, gf::Color::rgba(202, 222, 251))},
+                                      {0.62, interface_color(*this, gf::Color::rgba(165, 196, 241))},
+                                      {1, interface_color(*this, gf::Color::rgba(118, 159, 223))}};
     painter.fill_linear_gradient({0, 27, width, 116}, {0, 27}, {0, 143}, stops);
-    painter.draw_line({0, 27}, {width, 27}, gf::Color::rgba(171, 192, 216), 1);
-    painter.draw_line({0, 28}, {width, 28}, gf::Color::rgba(255, 255, 255, 225), 1);
-    painter.draw_line({0, 141}, {width, 141}, gf::Color::rgba(245, 251, 255, 210), 1);
-    painter.draw_line({0, 142}, {width, 142}, gf::Color::rgba(145, 172, 202), 1);
+    painter.draw_line({0, 27}, {width, 27}, interface_color(*this, gf::Color::rgba(171, 192, 216)), 1);
+    painter.draw_line({0, 28}, {width, 28}, interface_color(*this, gf::Color::rgba(255, 255, 255, 225)), 1);
+    painter.draw_line({0, 141}, {width, 141}, interface_color(*this, gf::Color::rgba(245, 251, 255, 210)), 1);
+    painter.draw_line({0, 142}, {width, 142}, interface_color(*this, gf::Color::rgba(145, 172, 202)), 1);
     if (page_ == 64) {
         return;
     }
     if (page_ == 4) {
         const double scale = width / 1280;
         const gf::Rect tray{137 * scale, 32, 835 * scale, 83};
-        const gf::GradientStop well[] = {{0, gf::Color::rgba(248, 251, 255)},
-                                         {1, gf::Color::rgba(255, 255, 255)}};
+        const gf::GradientStop well[] = {{0, interface_color(*this, gf::Color::rgba(248, 251, 255))},
+                                         {1, interface_color(*this, gf::Color::rgba(255, 255, 255))}};
         painter.fill_linear_gradient(tray, {0, tray.y}, {0, tray.bottom()}, well);
-        painter.stroke_rect(tray, gf::Color::rgba(148, 172, 200), 1);
+        painter.stroke_rect(tray, interface_color(*this, gf::Color::rgba(148, 172, 200)), 1);
         painter.draw_line({tray.x + 1, tray.y + 1}, {tray.right() - 1, tray.y + 1},
-                          gf::Color::rgba(111, 142, 177, 75), 1);
+                          interface_color(*this, gf::Color::rgba(111, 142, 177, 75)), 1);
         painter.draw_line({tray.x, tray.bottom() + 1}, {tray.right(), tray.bottom() + 1},
-                          gf::Color::rgba(255, 255, 255, 225), 1);
-        paint_separator(painter, 132 * width / 1280);
-        paint_separator(painter, 974 * width / 1280);
+                          interface_color(*this, gf::Color::rgba(255, 255, 255, 225)), 1);
+        paint_separator(painter, 132 * width / 1280, *this);
+        paint_separator(painter, 974 * width / 1280, *this);
         return;
     }
     if (page_ != 1) {
@@ -1440,31 +1452,31 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
             }
             const double context_scale = width / 1280;
             double x = edges[i + 1] == width ? width : edges[i + 1] * context_scale;
-            paint_separator(painter, x);
+            paint_separator(painter, x, *this);
             gf::Size size = painter.measure_text_utf8(labels[i], font);
             painter.draw_text_utf8(
                 {(edges[i] * context_scale + x - size.width) / 2, page_ == 128 ? 139.0 : 132.0}, labels[i],
-                font, gf::Color::rgba(72, 91, 112));
+                font, interface_color(*this, gf::Color::rgba(72, 91, 112)));
         }
         return;
     }
     const double scale = width / 1200;
-    for (double x : {74.0, 336.0, 540.0, 814.0}) {
-        paint_separator(painter, x * scale);
+    for (double x : {74.0, 338.0, 540.0, 814.0}) {
+        paint_separator(painter, (x == 338 ? 330 : home_x(x)) * scale, *this);
     }
-    const gf::GradientStop gallery[] = {{0, gf::Color::rgba(248, 251, 255)},
-                                        {1, gf::Color::rgba(255, 255, 255)}};
-    painter.fill_linear_gradient({546 * scale, 36, 176 * scale, 75}, {0, 36}, {0, 111}, gallery);
-    painter.stroke_rect({545.5 * scale, 35.5, 195 * scale, 76}, gf::Color::rgba(148, 172, 200), 1);
-    painter.draw_line({546 * scale, 36.5}, {721 * scale, 36.5}, gf::Color::rgba(111, 142, 177, 35), 1);
-    painter.draw_line({546 * scale, 112}, {741 * scale, 112}, gf::Color::rgba(255, 255, 255, 225), 1);
-    const char* captions[] = {"Clipboard", "Tools", "Brushes", "Shapes", "Size", "Colors"};
+    const gf::GradientStop gallery[] = {{0, interface_color(*this, gf::Color::rgba(248, 251, 255))},
+                                        {1, interface_color(*this, gf::Color::rgba(255, 255, 255))}};
+    painter.fill_linear_gradient({home_x(546) * scale, 36, 176 * scale, 75}, {0, 36}, {0, 111}, gallery);
+    painter.stroke_rect({home_x(545.5) * scale, 35.5, 195 * scale, 76}, interface_color(*this, gf::Color::rgba(148, 172, 200)), 1);
+    painter.draw_line({home_x(546) * scale, 36.5}, {home_x(721) * scale, 36.5}, interface_color(*this, gf::Color::rgba(111, 142, 177, 35)), 1);
+    painter.draw_line({home_x(546) * scale, 112}, {home_x(741) * scale, 112}, interface_color(*this, gf::Color::rgba(255, 255, 255, 225)), 1);
+    const char* captions[] = {"", "Tools", "Brushes", "Shapes", "Size", "Colors"};
     const double centers[] = {102, 239, 438, 644, 778, 1010};
     const gf::FontSpec font{gf::FontRole::control, 12, 400, false, 0.08};
     for (int i = 0; i < 5; ++i) {
         gf::Size size = painter.measure_text_utf8(captions[i], font);
-        painter.draw_text_utf8({centers[i] * scale - size.width / 2, 132}, captions[i], font,
-                               gf::Color::rgba(72, 91, 112));
+        painter.draw_text_utf8({home_x(centers[i]) * scale - size.width / 2, 132}, captions[i], font,
+                               interface_color(*this, gf::Color::rgba(72, 91, 112)));
     }
 }
 void Ribbon::synchronize() {
@@ -2025,7 +2037,7 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             std::shared_ptr<gf::Button> item = add_popup_button(
                 *panel, "stamp-shape-" + std::to_string(i), "",
                 100 + static_cast<int>(stamp_geometry_shape(shape)),
-                {6.0 + (i % 7) * 38, 5.0 + (i / 7) * 34, 37, 33}, document.stamp_shape == shape);
+                {6.0 + (i % 7) * 38, 5.0 + (i / 7) * 34, 34, 33}, document.stamp_shape == shape);
             (*item).set_accessible_name(stamp_shape_name(shape));
         }
     } else if (id == "shapes-menu") {
@@ -2033,7 +2045,7 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
         height = 8 + 34 * ((shape_count + 6) / 7);
         for (int i = 0; i < shape_count; ++i) {
             add_popup_button(*panel, "shape-" + std::to_string(i), "", 100 + i,
-                             {6.0 + (i % 7) * 38, 5.0 + (i / 7) * 34, 37, 33},
+                             {6.0 + (i % 7) * 38, 5.0 + (i / 7) * 34, 34, 33},
                              document.shape == static_cast<Shape>(i));
         }
     } else if (id == "size-menu") {
