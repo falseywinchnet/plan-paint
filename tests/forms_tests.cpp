@@ -2546,6 +2546,90 @@ void canvas_work_is_coalesced_and_stamp_is_cached() {
     std::cout << "Canvas work: 120 rotations -> 1 render; 80 stroke moves -> 1 preparation; "
                  "stamp reuse and idle-work checks passed.\n";
 }
+void interface_colors_and_spacing() {
+    const gf::Color royal = gf::Color::rgba(118, 159, 223);
+    const gf::Color gold = gf::Color::rgba(255, 207, 102);
+    require(paint::forms::interface_color(royal, 220) == royal, "royal blue is byte-exact");
+    const paint::Lab reference = paint::to_oklab({118, 159, 223, 255});
+    for (int hue = 0; hue < 360; ++hue) {
+        const gf::Color color = paint::forms::interface_color(royal, hue);
+        const paint::Lab lab = paint::to_oklab({color.red, color.green, color.blue, 255});
+        require(std::abs(lab.l - reference.l) < 0.005, "theme wheel preserves perceptual lightness");
+        require(paint::forms::interface_color(gold, hue) == gold, "selected tools remain golden at every hue");
+    }
+    Fixture fixture;
+    gf::Window& window = *fixture.window;
+    paint::forms::Editor& editor = *fixture.editor;
+    const std::shared_ptr<const gf::Theme> source = (*window.find("save")).theme_override();
+    for (int hue : {330, 280, 140, 220}) {
+        editor.settings.interface_hue = hue;
+        editor.refresh();
+        window.perform_layout();
+        const gf::Rect tools = (*window.find("tool-0")).absolute_bounds();
+        const gf::Rect brushes = (*window.find("brush-menu")).absolute_bounds();
+        require(tools.y == brushes.y, "tools top row aligns with the adjacent group");
+        require((*window.find("tool-6")).absolute_bounds().right() < brushes.x,
+                "last tool clears the divider and brush group");
+    }
+    require((*window.find("save")).theme_override() == source,
+            "returning to royal blue restores authored recipes without cumulative recoloring");
+}
+void recovery_editor_contracts() {
+    Fixture fixture;
+    TestServices services;
+    gf::HostSession host(*fixture.window, service_capabilities(), &services);
+    require(host.dispatch({1, 0, gf::HostAttachEvent{{1180, 820}, 1}}).accepted(), "recovery fixture attaches");
+    paint::forms::Editor& editor = *fixture.editor;
+    const std::filesystem::path root = std::filesystem::temp_directory_path() /
+        ("rainstar-editor-recovery-" + std::to_string(paint::recovery_time_ms()));
+    editor.recovery_root = root;
+    editor.reset_recovery(false, "original.png");
+    editor.document.new_image(24, 20);
+    editor.document.checkpoint();
+    editor.document.image.set(3, 4, {90, 40, 170, 255});
+    editor.refresh();
+    editor.recovery_tick();
+    editor.settle_recovery();
+    require(editor.recovery_session != nullptr, "dirty editor creates a snapshot");
+    const std::string id = (*editor.recovery_session).id();
+    require(paint::equal((*editor.recovery_session).read().image.frames[0].image.get(3, 4), {90, 40, 170, 255}),
+            "automatic snapshot uses original-coordinate document pixels");
+    const std::uint64_t generation = (*editor.recovery_session).read().generation;
+    editor.recovery_deadline = {};
+    editor.recovery_tick();
+    require(!editor.recovery_job.valid() && (*editor.recovery_session).read().generation == generation,
+            "unchanged idle document does not rewrite recovery");
+    editor.document.paste(editor.document.image);
+    editor.document.selection.x = 5;
+    editor.refresh();
+    editor.recovery_deadline = {};
+    editor.recovery_tick(); editor.settle_recovery();
+    require(paint::equal((*editor.recovery_session).read().image.frames[0].image.get(8, 4), {90, 40, 170, 255}) &&
+                editor.document.selection.active, "floating artwork is captured without committing it");
+    editor.settings.recovery_enabled = false;
+    editor.refresh(); editor.recovery_deadline = {};
+    editor.recovery_tick();
+    require(!editor.recovery_job.valid(), "disabled recovery never queues new writes");
+    editor.reset_recovery(false);
+    editor.document.new_image(24, 20);
+    services.choice = gf::HostDialogChoice::no;
+    editor.recover_document();
+    require(!editor.document.dirty() && paint::RecoverySession::candidates(root).size() == 1,
+            "declining recovery retains artwork for later");
+    services.choice = gf::HostDialogChoice::yes;
+    editor.start_recovery("");
+    require(editor.recovery_startup_pending && !editor.document.dirty(),
+            "startup defers its recovery prompt until after native window initialization");
+    editor.recovery_tick();
+    require(!editor.recovery_startup_pending && editor.document.dirty() && editor.document.filename.empty() &&
+                (*editor.recovery_session).id() == id && editor.recovery_metadata.opened_path == "original.png",
+            "restoration retains identity and provenance but opens an unsaved copy");
+    services.path = (root / "recovered.png").string();
+    require(editor.save(false), "recovered document saves explicitly");
+    editor.reset_recovery(false);
+    require(paint::RecoverySession::candidates(root).empty(), "successful save retires recovery snapshots");
+    std::filesystem::remove_all(root);
+}
 void scroll_distance_bounds_and_settings() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -2583,6 +2667,10 @@ void scroll_distance_bounds_and_settings() {
     std::shared_ptr<gf::NumericUpDown> distance =
         std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("settings-scroll"));
     require(distance && (*distance).value() == 6, "settings presents modest default scroll distance");
+    std::shared_ptr<gf::TrackBar> hue = std::dynamic_pointer_cast<gf::TrackBar>(window.find("settings-theme-hue"));
+    (*hue).set_value(330);
+    require(editor.preview_interface_hue == 330 && editor.settings.interface_hue == 220,
+            "theme preview is immediate but does not save before OK");
     (*distance).set_value(2.5);
     std::shared_ptr<gf::ComboBox> backing =
         std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-background"));
@@ -2595,8 +2683,15 @@ void scroll_distance_bounds_and_settings() {
     require(editor.settings.drag_shapes && editor.settings.scroll_distance == 6 &&
                 editor.settings.canvas_backing == paint::CanvasBacking::PaleFelt,
             "cancel leaves scroll distance and canvas surround unchanged");
+    require(editor.preview_interface_hue == -1 && editor.settings.interface_hue == 220,
+            "cancel restores the original interface hue");
     editor.execute("settings");
     window.perform_layout();
+    hue = std::dynamic_pointer_cast<gf::TrackBar>(window.find("settings-theme-hue"));
+    (*hue).set_value(280);
+    std::shared_ptr<gf::NumericUpDown> recovery_interval =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("settings-recovery-seconds"));
+    (*recovery_interval).set_value(30);
     distance = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("settings-scroll"));
     (*distance).set_value(2.5);
     backing = std::dynamic_pointer_cast<gf::ComboBox>(window.find("settings-background"));
@@ -2614,6 +2709,8 @@ void scroll_distance_bounds_and_settings() {
     paint::EditorSettings reloaded;
     reloaded.storage_path = editor.settings.storage_path;
     reloaded.load();
+    require(reloaded.interface_hue == 280 && reloaded.recovery_enabled && reloaded.recovery_seconds == 30,
+            "theme and crash-recovery settings persist together");
     require(!reloaded.drag_shapes && !editor.settings.drag_shapes && reloaded.scroll_distance == 2.5 &&
                 editor.settings.scroll_distance == 2.5,
             "accepted scroll distance persists between launches");
@@ -3176,6 +3273,8 @@ int main() {
         material_deposition_does_not_depend_on_event_count();
         retained_curve_save_undo_and_release();
         selection_move_path_and_stamp();
+        interface_colors_and_spacing();
+        recovery_editor_contracts();
         scroll_distance_bounds_and_settings();
         stamp_material_keeps_one_hardness_mask();
         compact_ribbon_keeps_icons_and_fields();

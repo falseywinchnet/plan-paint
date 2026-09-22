@@ -52,33 +52,37 @@ void EditorSettings::load() {
     std::istringstream input(encoded);
     std::string magic;
     double distance = 0;
-    if (input >> magic >> distance &&
-        (magic == "RSPS1" || magic == "RSPS2" || magic == "RSPS3" || magic == "RSPS4" || magic == "RSPS5" ||
-         magic == "RSPS6") &&
-        std::isfinite(distance) && distance >= 0.1 && distance <= 100) {
-        scroll_distance = distance;
-        int background = 0;
-        if (magic != "RSPS1" && input >> background) {
-            canvas_backing =
-                background >= 0 && background < ((magic == "RSPS4" || magic == "RSPS5" || magic == "RSPS6")
-                                                     ? canvas_backing_count
-                                                     : 2)
-                    ? static_cast<CanvasBacking>(background)
-                    : CanvasBacking::PaleFelt;
+    if (!(input >> magic >> distance)) {
+        return;
+    }
+    const int version = magic.size() == 5 && magic.starts_with("RSPS") ? magic[4] - '0' : 0;
+    if (version < 1 || version > 7 || !std::isfinite(distance) || distance < 0.1 || distance > 100) {
+        return;
+    }
+    scroll_distance = distance;
+    int background = 0;
+    if (version >= 2 && input >> background) {
+        canvas_backing = background >= 0 && background < (version >= 4 ? canvas_backing_count : 2)
+                             ? static_cast<CanvasBacking>(background) : CanvasBacking::PaleFelt;
+    }
+    int solid = 0;
+    std::string color;
+    Color parsed;
+    if (version >= 3 && input >> solid >> color && from_hex(color, parsed)) {
+        solid_transparency = solid == 1;
+        parsed.a = 255;
+        transparency_color = parsed;
+    }
+    int drag = 0, rotate = 0;
+    drag_shapes = version >= 5 && (input >> drag) && drag == 1;
+    rotate_view = version >= 6 && (input >> rotate) && rotate == 1;
+    if (version >= 7) {
+        int hue = 220, enabled = 1, seconds = 60;
+        if (input >> hue >> enabled >> seconds) {
+            interface_hue = hue >= 0 && hue <= 359 ? hue : 220;
+            recovery_enabled = enabled != 0;
+            recovery_seconds = std::clamp(seconds, 15, 600);
         }
-        int solid = 0;
-        std::string color;
-        Color parsed;
-        if ((magic == "RSPS3" || magic == "RSPS4" || magic == "RSPS5" || magic == "RSPS6") &&
-            input >> solid >> color && from_hex(color, parsed)) {
-            solid_transparency = solid == 1;
-            parsed.a = 255;
-            transparency_color = parsed;
-        }
-        int drag = 0;
-        drag_shapes = (magic == "RSPS5" || magic == "RSPS6") && (input >> drag) && drag == 1;
-        int rotate = 0;
-        rotate_view = magic == "RSPS6" && (input >> rotate) && rotate == 1;
     }
 }
 void EditorSettings::save() const {
@@ -86,13 +90,15 @@ void EditorSettings::save() const {
         return;
     }
     std::ostringstream output;
-    output << "RSPS6\n"
+    output << "RSPS7\n"
            << scroll_distance << '\n'
            << static_cast<int>(canvas_backing) << '\n'
            << (solid_transparency ? 1 : 0) << '\n'
            << to_hex(transparency_color) << '\n'
            << (drag_shapes ? 1 : 0) << '\n'
-           << (rotate_view ? 1 : 0) << '\n';
+           << (rotate_view ? 1 : 0) << '\n'
+           << interface_hue << '\n' << (recovery_enabled ? 1 : 0) << '\n'
+           << recovery_seconds << '\n';
     const std::string encoded = output.str();
     const std::vector<std::uint8_t> bytes(encoded.begin(), encoded.end());
     write_file_atomic(bytes, storage_path, "Paint could not save its settings file.");

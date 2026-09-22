@@ -1,5 +1,9 @@
 #pragma once
 #include "carpet.hpp"
+#include "recovery.hpp"
+#include <future>
+#include <gui_forms/timer.hpp>
+#include "forms/interface_theme.hpp"
 #include "forms/pattern_canvas.hpp"
 #include "color_tools.hpp"
 #include "desktop.hpp"
@@ -152,6 +156,24 @@ class Editor final : public gui_forms::Control {
     void load_custom_pattern();
     CustomColors custom_colors;
     EditorSettings settings;
+    InterfaceThemes interface_themes;
+    int preview_interface_hue = -1;
+    void start_recovery(const std::string& initial_path);
+    void recovery_tick();
+    void recover_document();
+    void reset_recovery(bool discard, const std::string& opened_path = "");
+    void settle_recovery();
+    std::filesystem::path recovery_root;
+    std::unique_ptr<RecoverySession> recovery_session;
+    std::unique_ptr<gui_forms::Timer> recovery_timer;
+    gui_forms::SubscriptionToken recovery_subscription;
+    std::future<void> recovery_job;
+    RecoveryRecord recovery_metadata;
+    std::chrono::steady_clock::time_point recovery_deadline{};
+    std::uint64_t recovery_capture_revision = 0;
+    bool recovery_failed = false, recovery_startup_pending = false;
+    std::string recovery_notice;
+
     RecentFiles recent;
     int jpeg_quality = 92;
     TextSession text;

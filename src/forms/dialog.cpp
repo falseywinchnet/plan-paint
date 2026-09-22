@@ -1,4 +1,5 @@
 #include "forms/dialog.hpp"
+#include "forms/interface_theme.hpp"
 #include "forms/atlas.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
@@ -309,40 +310,55 @@ void EditorDialog::initialize_control_tree() {
         }
         set_color(original_);
     } else if (kind_ == EditorDialogKind::settings) {
-        panel_ = {0, 0, 490, 510};
+        panel_ = {0, 0, 530, 510};
         label("settings-scroll-label", "Scroll distance", {24, 58, 220, 28});
         atlas_numbers_.push_back(
             number("settings-scroll", {280, 57, 180, 30}, 0.1, 100, (*editor).settings.scroll_distance, 1));
-        label("settings-scroll-unit", "Screen pixels per wheel / trackpad unit", {24, 97, 440, 26});
-        label("settings-scroll-hint", "Default: 6. Smaller values move the canvas less.", {24, 129, 440, 26});
-        label("settings-background-label", "Canvas surround", {24, 178, 220, 28});
+        label("settings-background-label", "Canvas surround", {24, 96, 220, 28});
         background_ = gf::make_control<gf::ComboBox>(gf::StableId("settings-background"));
         for (int index = 0; index < canvas_backing_count; ++index) {
             (*background_).add_item(canvas_backing_name(static_cast<CanvasBacking>(index)));
         }
         (*background_).set_selected_index(static_cast<std::size_t>((*editor).settings.canvas_backing));
-        put(background_, {230, 178, 230, 30});
-        label("settings-alpha-label", "Transparency display", {24, 226, 200, 28});
+        put(background_, {230, 96, 230, 30});
+        label("settings-alpha-label", "Transparency display", {24, 134, 200, 28});
         alpha_background_ = gf::make_control<gf::ComboBox>(gf::StableId("settings-alpha-background"));
         (*alpha_background_).add_item("Checkerboard");
         (*alpha_background_).add_item("Solid color");
         (*alpha_background_).set_selected_index((*editor).settings.solid_transparency ? 1 : 0);
-        put(alpha_background_, {230, 226, 230, 30});
-        label("settings-alpha-color-label", "Solid color (hex)", {24, 271, 200, 28});
+        put(alpha_background_, {230, 134, 230, 30});
+        label("settings-alpha-color-label", "Solid color (hex)", {24, 172, 200, 28});
         alpha_background_color_ = gf::make_control<gf::TextBox>(gf::StableId("settings-alpha-color"));
         (*alpha_background_color_).set_text(to_hex((*editor).settings.transparency_color));
         (*alpha_background_color_).set_accessible_name("Transparency background color, hex RGB");
-        put(alpha_background_color_, {230, 271, 230, 30});
-        label("settings-shape-label", "Lines and shapes", {24, 319, 200, 28});
+        put(alpha_background_color_, {230, 172, 230, 30});
+        label("settings-shape-label", "Lines and shapes", {24, 210, 200, 28});
         shape_gesture_ = gf::make_control<gf::ComboBox>(gf::StableId("settings-shape-gesture"));
         (*shape_gesture_).add_item("Click, move, click");
         (*shape_gesture_).add_item("Click, hold, release");
         (*shape_gesture_).set_selected_index((*editor).settings.drag_shapes ? 1 : 0);
-        put(shape_gesture_, {230, 319, 230, 30});
+        put(shape_gesture_, {230, 210, 230, 30});
         rotate_view_ = gf::make_control<gf::CheckBox>(gf::StableId("settings-rotate-view"),
                                                       "Enable canvas rotation handle");
         (*rotate_view_).set_checked((*editor).settings.rotate_view);
-        put(rotate_view_, {24, 366, 430, 30});
+        put(rotate_view_, {24, 248, 430, 30});
+        label("settings-theme-label", "Interface color", {24, 288, 180, 28});
+        theme_hue_ = gf::make_control<gf::TrackBar>(gf::StableId("settings-theme-hue"));
+        (*theme_hue_).set_range(0, 359);
+        (*theme_hue_).set_small_change(1);
+        (*theme_hue_).set_large_change(30);
+        (*theme_hue_).set_value((*editor).settings.interface_hue);
+        (*theme_hue_).set_accessible_name("Interface hue, 0 to 359 degrees; royal blue is 220");
+        put(theme_hue_, {230, 288, 270, 28});
+        subscriptions_.push_back((*theme_hue_).value_changed().subscribe(
+            *this, gf::Delegate<double>::bind<EditorDialog, &EditorDialog::theme_changed>(*this)));
+        recovery_enabled_ = gf::make_control<gf::CheckBox>(gf::StableId("settings-recovery"), "Keep crash recovery snapshots");
+        (*recovery_enabled_).set_checked((*editor).settings.recovery_enabled);
+        put(recovery_enabled_, {24, 334, 450, 28});
+        label("settings-recovery-time-label", "Save a snapshot every (seconds)", {24, 372, 290, 28});
+        recovery_seconds_ = number("settings-recovery-seconds", {350, 372, 150, 30}, 15, 600,
+                                   (*editor).settings.recovery_seconds);
+        label("settings-recovery-hint", "Separate copies; your original file stays untouched.", {24, 410, 480, 24});
     } else if (kind_ == EditorDialogKind::properties) {
         panel_ = {0, 0, 460, 345};
         Document& document = (*editor).document;
@@ -537,16 +553,37 @@ void EditorDialog::arrange(gf::Rect bounds) {
 }
 void EditorDialog::on_paint(gf::Painter& painter, gf::Rect) {
     gf::Rect bounds = committed_arranged_bounds();
-    painter.fill_rect({0, 0, bounds.width, bounds.height}, gf::Color::rgba(33, 51, 73, 48));
-    painter.draw_box_shadow(panel_, 3, {0, 7}, 22, 0, gf::Color::rgba(20, 35, 53, 80));
-    painter.fill_rounded_rect(panel_, 3, gf::Color::rgba(244, 247, 250));
-    painter.fill_rect({panel_.x + 1, panel_.y + 1, panel_.width - 2, 35}, gf::Color::rgba(215, 230, 247));
-    painter.stroke_rounded_rect(panel_, 3, gf::Color::rgba(126, 150, 178), 1);
+    painter.fill_rect({0, 0, bounds.width, bounds.height}, interface_color(*this, gf::Color::rgba(33, 51, 73, 48)));
+    painter.draw_box_shadow(panel_, 3, {0, 7}, 22, 0, interface_color(*this, gf::Color::rgba(20, 35, 53, 80)));
+    painter.fill_rounded_rect(panel_, 3, interface_color(*this, gf::Color::rgba(244, 247, 250)));
+    painter.fill_rect({panel_.x + 1, panel_.y + 1, panel_.width - 2, 35}, interface_color(*this, gf::Color::rgba(215, 230, 247)));
+    painter.stroke_rounded_rect(panel_, 3, interface_color(*this, gf::Color::rgba(126, 150, 178)), 1);
     painter.draw_text_utf8({panel_.x + 16, panel_.y + 24}, title(),
-                           {gf::FontRole::control, 15, 600, false, 0.08}, gf::Color::rgba(35, 60, 86));
+                           {gf::FontRole::control, 15, 600, false, 0.08}, interface_color(*this, gf::Color::rgba(35, 60, 86)));
     painter.draw_line({panel_.x + 1, panel_.y + panel_.height - 53},
                       {panel_.x + panel_.width - 1, panel_.y + panel_.height - 53},
-                      gf::Color::rgba(205, 217, 231), 1);
+                      interface_color(*this, gf::Color::rgba(205, 217, 231)), 1);
+    if (kind_ == EditorDialogKind::settings) {
+        for (int i = 0; i < 270; ++i) {
+            const Color color = picker_color(PickerSpace::RGB, {i / 269.0, 0.65, 0.85});
+            painter.fill_rect({panel_.x + 230 + i, panel_.y + 318, 1, 5},
+                              gf::Color::rgba(color.r, color.g, color.b));
+        }
+    }
+}
+int EditorDialog::interface_hue() const {
+    std::shared_ptr<Editor> editor = editor_.lock();
+    return editor ? ((*editor).preview_interface_hue >= 0 ? (*editor).preview_interface_hue : (*editor).settings.interface_hue) : 220;
+}
+void EditorDialog::theme_changed(double hue) {
+    std::shared_ptr<Editor> editor = editor_.lock();
+    if (!editor) { return; }
+    (*editor).preview_interface_hue = static_cast<int>(std::round(hue));
+    (*editor).interface_themes.apply(*editor, (*editor).preview_interface_hue);
+    (*editor).interface_themes.apply(*this, (*editor).preview_interface_hue);
+    (*editor).invalidate(gf::Dirty::paint);
+    invalidate(gf::Dirty::paint);
+    for (const std::shared_ptr<gf::Control>& child : (*editor).children()) { (*child).invalidate(gf::Dirty::paint); }
 }
 void EditorDialog::on_pointer(gf::PointerEvent& event) {
     event.handled = true;
@@ -904,6 +941,10 @@ void EditorDialog::accept() {
         } else if (kind_ == EditorDialogKind::settings) {
             EditorSettings settings = (*editor).settings;
             settings.scroll_distance = (*atlas_numbers_[0]).value();
+            settings.interface_hue = static_cast<int>(std::round((*theme_hue_).value()));
+            settings.recovery_enabled = (*recovery_enabled_).checked();
+            settings.recovery_seconds = static_cast<int>((*recovery_seconds_).value());
+            (*editor).recovery_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(settings.recovery_seconds);
             settings.drag_shapes = (*shape_gesture_).selected_index().value_or(0) == 1;
             settings.rotate_view = (*rotate_view_).checked();
             settings.canvas_backing = static_cast<CanvasBacking>((*background_).selected_index().value_or(0));

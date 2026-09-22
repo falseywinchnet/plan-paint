@@ -67,6 +67,7 @@ class EditorDialog final : public gui_forms::Control {
     void on_pointer(gui_forms::PointerEvent& event) override;
     void on_key_preview(gui_forms::KeyEvent& event) override;
     gui_forms::SemanticDescriptor semantic_descriptor() const override;
+    int interface_hue() const;
     void choose_hsv(double hue, double saturation, double value);
     double hue = 0, saturation = 0, value = 0;
     Color plane_color(double h, double s, double level) const;
@@ -75,6 +76,10 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void theme_changed(double hue);
+    std::shared_ptr<gui_forms::TrackBar> theme_hue_;
+    std::shared_ptr<gui_forms::CheckBox> recovery_enabled_;
+    std::shared_ptr<gui_forms::NumericUpDown> recovery_seconds_;
     void initialize_dither();
     void render_dither();
     void stop_dither();

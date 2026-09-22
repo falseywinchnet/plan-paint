@@ -14,6 +14,9 @@ struct RecentFiles {
 struct EditorSettings {
     std::string storage_path;
     double scroll_distance = 6;
+    int interface_hue = 220;
+    bool recovery_enabled = true;
+    int recovery_seconds = 60;
     CanvasBacking canvas_backing = CanvasBacking::PaleFelt;
     bool solid_transparency = false;
     bool drag_shapes = false;

@@ -88,6 +88,7 @@ static void simplify_segment(const std::vector<Point>& input, std::size_t first,
 }
 } // namespace
 Editor::~Editor() {
+    if (recovery_job.valid()) { recovery_job.wait(); }
     transform_preview_worker_.cancel();
     transform_preview_worker_.wait();
     warp_worker_.wait();
