@@ -25,6 +25,14 @@ Rainstar Paint 0.3.2, the predecessor to Plan Paint, shown on Apple Silicon Mac.
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
+## In development: 1.1.0
+
+Plan Paint adds operating-system language detection, a language selector in Settings, and 22 external language packs covering menus, tools and the in-app guide. English remains compiled into the application. Bundled fonts and improved text layout support Arabic, Hebrew, Indic scripts and CJK text. Language changes take effect after restarting.
+
+Settings → Canvas controls provides drawing coordinates, movement steps, separate Start stroke and Finish stroke actions, and checkbox alternatives to held modifiers. Spirograph pegs and the custom pattern canvas gain additional keyboard and accessibility actions. GUI.Forms exposes control semantics on macOS, Windows and Linux; end-to-end assistive-device usability testing is still in progress.
+
+See [accessibility and platform validation](docs/ACCESSIBILITY.md), [language packs](languages/README.md), and the [1.1 release notes](docs/releases/1.1.0.md). The downloads above remain the published 1.0.0 release.
+
 ## New in 1.0.0
 
 Plan Paint is the new name of Rainstar Paint. The native GUI.Forms application is the primary and only released frontend. The SDL/ImGui version is deprecated and retained solely for historical comparison. Version 1.0 includes the new application icon, refreshed in-app help, interface hue controls, atomic saving and crash recovery.
