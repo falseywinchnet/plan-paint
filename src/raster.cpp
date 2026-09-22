@@ -10,7 +10,8 @@ const char* pattern_names[pattern_count] = {
     "Woven cloth",  "Houndstooth",  "Polka dots", "Waves",        "No color"};
 const char* brush_names[brush_count] = {
     "Brush",  "Calligraphy brush 1", "Calligraphy brush 2", "Airbrush",      "Oil brush",   "Crayon",
-    "Marker", "Natural pencil",      "Watercolor brush",    "Bristle brush", "Soft pastel", "Charcoal"};
+    "Marker", "Natural pencil",      "Watercolor brush",    "Bristle brush", "Soft pastel", "Charcoal",
+    "Gel pen"};
 const char* shape_names[shape_count] = {"Line",
                                         "Bézier",
                                         "Oval",

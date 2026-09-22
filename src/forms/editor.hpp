@@ -265,9 +265,10 @@ class Editor final : public gui_forms::Control {
     Point text_drag_start_;
     void paint_atlas_overlay(gui_forms::Painter& painter);
     void paint_tool_preview(gui_forms::Painter& painter);
-    enum class SpiroDrag { None, Guide, Wheel, Peg };
+    enum class SpiroDrag { None, Guide, Wheel, PegPending, Peg };
     SpiroDrag spiro_drag_ = SpiroDrag::None;
     Point spiro_grab_{}, spiro_pointer_{};
+    SpirographStroke spiro_stroke_;
     SpiroPeg spiro_carried_{};
     int spiro_origin_hole_ = -1, spiro_target_hole_ = -1;
     bool spiro_checkpoint_ = false;

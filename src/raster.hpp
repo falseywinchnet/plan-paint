@@ -49,9 +49,10 @@ enum class Brush {
     Watercolor,
     Bristle,
     Pastel,
-    Charcoal
+    Charcoal,
+    Gel
 };
-inline constexpr int brush_count = 12;
+inline constexpr int brush_count = 13;
 enum class Shape {
     Line,
     Bezier,

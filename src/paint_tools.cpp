@@ -292,6 +292,7 @@ Color sample_bilinear(const Image& image, double x, double y, bool wrap) {
                      : Color{0, 0, 0, 0};
 }
 void DynamicBrushStroke::clear() {
+    gel_.clear();
     dry_pixels_.clear();
     pending_ = 0;
     dab_ = 0;
@@ -299,6 +300,20 @@ void DynamicBrushStroke::clear() {
 }
 void DynamicBrushStroke::segment(Image& image, Point start, Point end, const Ink& ink, bool glitter,
                                  bool wrap) {
+    if (ink.brush == Brush::Gel) {
+        if (!wrap) {
+            gel_.segment(image, start, end, ink);
+        } else {
+            for (int y = -1; y <= 1; ++y) {
+                for (int x = -1; x <= 1; ++x) {
+                    gel_.segment(image, {start.x + x * image.width, start.y + y * image.height},
+                                 {end.x + x * image.width, end.y + y * image.height}, ink);
+                }
+            }
+        }
+        return;
+    }
+
     const double dx = end.x - start.x, dy = end.y - start.y, length = std::hypot(dx, dy);
     const Point direction = length > 1e-9 ? Point{dx / length, dy / length} : Point{1, 0};
     const double spacing = std::max(0.5, ink.size * 0.075);

@@ -30,7 +30,7 @@ std::uint8_t channel(double value) {
 bool textured_brush(Brush brush) {
     return brush == Brush::Oil || brush == Brush::Crayon || brush == Brush::Pencil ||
            brush == Brush::Watercolor || brush == Brush::Bristle || brush == Brush::Pastel ||
-           brush == Brush::Charcoal || brush == Brush::Marker;
+           brush == Brush::Charcoal || brush == Brush::Marker || brush == Brush::Gel;
 }
 MaterialSurface::MaterialSurface(const Ink& ink, Brush brush) : ink_(ink), brush_(brush) {
     if (ink_.alternate) {
@@ -60,6 +60,19 @@ Color MaterialSurface::sample(int x, int y, double edge_distance) const {
 Color MaterialSurface::sample_primary(int x, int y, double edge_distance) const {
     Color color = patterned(ink_, x, y);
     if (!textured_brush(brush_) || color.a == 0) {
+        return color;
+    }
+    if (brush_ == Brush::Gel) {
+        // Opaque body with fixed spatial sheen: no event-dependent dots or drying simulation.
+        const double scale = ink_.grain_scale;
+        const double field = noise(x / (8 * scale), y / (8 * scale), ink_.noise + 131);
+        const double fleck = hash(x, y, ink_.noise + 193);
+        const double shine = (.025 + .09 * field + (fleck > .975 ? .25 : 0)) * ink_.paper_roughness;
+        const double tone = .965 + .035 * field;
+        color.r = channel(color.r * tone + (255 - color.r) * shine);
+        color.g = channel(color.g * tone + (255 - color.g) * shine);
+        color.b = channel(color.b * tone + (255 - color.b) * shine);
+        color.a = ink_.pigment_load > 0 ? color.a : 0;
         return color;
     }
     double scale = ink_.grain_scale, rough = ink_.paper_roughness, load = ink_.pigment_load;

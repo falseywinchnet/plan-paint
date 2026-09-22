@@ -17,10 +17,81 @@ void circle(gf::Painter& painter, gf::Point c, double r, gf::Color color, double
 gf::Point polar(gf::Point center, double radius, double angle) {
     return {center.x + radius * std::cos(angle), center.y + radius * std::sin(angle)};
 }
+gf::Point profile_point(gf::Point center, double radius, const SpiroProfile& profile, double a,
+                        double rotation) {
+    const Point p = profile.point(a);
+    const double c = std::cos(rotation), sn = std::sin(rotation);
+    return {center.x + radius * (p.x * c - p.y * sn), center.y + radius * (p.x * sn + p.y * c)};
+}
+void profile_shape(gf::Painter& painter, gf::Point center, double r, const SpiroProfile& profile,
+                   double rotation, gf::Color fill, gf::Color edge, double width) {
+    if (profile.circular()) {
+        if (fill.alpha > 0) {
+            disc(painter, center, r, fill);
+        }
+        circle(painter, center, r, edge, width);
+        return;
+    }
+    std::vector<gf::Point> points;
+    double top = center.y, bottom = center.y;
+    for (int i = 0; i < 96; ++i) {
+        const gf::Point p = profile_point(center, r, profile, tau * i / 96, rotation);
+        points.push_back(p);
+        top = std::min(top, p.y);
+        bottom = std::max(bottom, p.y);
+    }
+    if (fill.alpha > 0) {
+        // Convex scan conversion keeps the temporary sheet transparent without overlapping fans.
+        const double step = std::max(1.0, (bottom - top) / 600);
+        for (double y = top; y < bottom; y += step) {
+            double left = 1e20, right = -1e20;
+            for (int i = 0; i < 96; ++i) {
+                const gf::Point a = points[i], b = points[(i + 1) % 96];
+                if ((a.y <= y + step * .5 && b.y > y + step * .5) ||
+                    (b.y <= y + step * .5 && a.y > y + step * .5)) {
+                    const double x = a.x + (b.x - a.x) * (y + step * .5 - a.y) / (b.y - a.y);
+                    left = std::min(left, x);
+                    right = std::max(right, x);
+                }
+            }
+            if (right > left) {
+                painter.fill_rect({left, y, right - left, step}, fill);
+            }
+        }
+    }
+    for (int i = 0; i < 96; ++i) {
+        painter.draw_line(points[i], points[(i + 1) % 96], edge, width);
+    }
+}
+double profile_clearance(Point point, Point center, double radius, const SpiroProfile& profile,
+                         double rotation) {
+    const double x = (point.x - center.x) * std::cos(rotation) + (point.y - center.y) * std::sin(rotation);
+    const double y = -(point.x - center.x) * std::sin(rotation) + (point.y - center.y) * std::cos(rotation);
+    double result = -1e20;
+    for (int i = 0; i < 96; ++i) {
+        const double a = tau * i / 96;
+        result = std::max(result, x * std::cos(a) + y * std::sin(a) - radius * profile.support(a));
+    }
+    return result;
+}
 void peg_cap(gf::Painter& painter, gf::Point center, double r, const SpiroPeg& peg) {
     disc(painter, {center.x + 1, center.y + 2}, r + 1, gf::Color::rgba(10, 25, 50, 80));
     const Color ink = peg.loaded ? peg.ink : Color{222, 235, 245, 255};
     disc(painter, center, r, gf::Color::rgba(ink.r, ink.g, ink.b, 190));
+    if (!peg.preview.pixels.empty()) {
+        const double pixel = r * 1.6 / peg.preview.width;
+        for (int y = 0; y < peg.preview.height; ++y) {
+            for (int x = 0; x < peg.preview.width; ++x) {
+                const Color c = peg.preview.get(x, y);
+                if (c.a == 0) {
+                    continue;
+                }
+                painter.fill_rect({center.x + (x - peg.preview.width * .5) * pixel,
+                                   center.y + (y - peg.preview.height * .5) * pixel, pixel, pixel},
+                                  gf::Color::rgba(c.r, c.g, c.b, c.a));
+            }
+        }
+    }
     circle(painter, center, r, gf::Color::rgba(245, 255, 255, 210), 1.3);
     circle(painter, center, r + 1, gf::Color::rgba(20, 60, 90, 210), 1);
     disc(painter, {center.x - r * .24, center.y - r * .32}, r * .28, gf::Color::rgba(255, 255, 255, 160));
@@ -36,21 +107,22 @@ void paint_spiro_part(gf::Painter& painter, gf::Rect bounds, int kind, int index
         peg_cap(painter, c, r * (.6 + .15 * index), peg);
         return;
     }
-    if (kind == 0) {
-        circle(painter, {c.x + 1, c.y + 2}, r, gf::Color::rgba(15, 75, 35, 100), 7);
-        circle(painter, c, r, gf::Color::rgba(80, 235, 65, 150), 6);
-        circle(painter, c, r + 3, gf::Color::rgba(220, 255, 165, 230), 1);
-    } else {
-        disc(painter, {c.x + 1, c.y + 2}, r, gf::Color::rgba(10, 60, 90, 80));
-        disc(painter, c, r, gf::Color::rgba(0, 174, 255, 125));
-        circle(painter, c, r, gf::Color::rgba(10, 110, 215, 235), 1.2);
-        for (int i = 0; i < 18 + index * 3; ++i) {
-            const double angle = tau * i / (18 + index * 3);
-            painter.draw_line(polar(c, r - 1, angle), polar(c, r + 2, angle),
-                              gf::Color::rgba(10, 140, 225, 220), 2);
+    const SpiroProfile& profile = kind == 0 ? spiro_guides()[index].profile : spiro_inserts()[index].profile;
+    if (kind == 0 && spiro_guides()[index].rack) {
+        painter.draw_line({c.x - r * 1.4, c.y}, {c.x + r * 1.4, c.y}, gf::Color::rgba(60, 215, 70, 200), 7);
+        for (int i = -6; i <= 6; ++i) {
+            painter.draw_line({c.x + i * r / 5, c.y - 5}, {c.x + i * r / 5, c.y},
+                              gf::Color::rgba(20, 130, 40), 1);
         }
-        for (int i = 0; i < 3; ++i) {
-            circle(painter, {c.x + r * (.25 + i * .25), c.y}, 1.4, gf::Color::rgba(250, 255, 255, 240), 1);
+        return;
+    }
+    profile_shape(painter, c, r, profile, 0,
+                  kind == 0 ? gf::Color::rgba(0, 0, 0, 0) : gf::Color::rgba(0, 170, 255, 100),
+                  kind == 0 ? gf::Color::rgba(60, 215, 70, 200) : gf::Color::rgba(10, 120, 225, 220),
+                  kind == 0 ? 5 : 1.5);
+    if (kind == 1) {
+        for (const Point hole : spiro_inserts()[index].holes) {
+            circle(painter, {c.x + hole.x * r, c.y + hole.y * r}, 1.4, gf::Color::rgba(250, 255, 255), 1);
         }
     }
 }
@@ -60,21 +132,31 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
     }
     const double zoom = canvas().zoom(), radius = spiro.guide_radius() * zoom;
     const gf::Point center = screen(spiro.center);
+    const SpiroGuide& frame = spiro_guides()[spiro.guide];
     const double rim = std::max(8.0, 10 * spiro.scale * zoom);
-    circle(painter, {center.x + 1, center.y + 2}, radius + rim * .65, gf::Color::rgba(15, 60, 25, 60),
-           rim + 2);
-    circle(painter, center, radius + rim * .65, gf::Color::rgba(55, 245, 65, 85), rim);
-    circle(painter, center, radius + rim * 1.15, gf::Color::rgba(205, 255, 175, 220), 1.6);
-    circle(painter, center, radius + rim * .15, gf::Color::rgba(24, 150, 40, 210), 1.3);
-    for (int i = 0; i < spiro_guides()[spiro.guide].teeth; ++i) {
-        const double a = tau * i / spiro_guides()[spiro.guide].teeth + canvas().view_angle;
-        painter.draw_line(polar(center, radius - 1.3 * spiro.scale * zoom, a),
-                          polar(center, radius + 2 * spiro.scale * zoom, a),
-                          gf::Color::rgba(38, 200, 45, 185), std::max(1.0, 2.2 * spiro.scale * zoom));
+    if (spiro.rack()) {
+        const gf::Point a = screen(spiro.guide_point(-1.5)), b = screen(spiro.guide_point(1.5));
+        painter.draw_line(a, b, gf::Color::rgba(55, 235, 65, 150), rim);
+        const int marks = std::max(1, static_cast<int>(3 * frame.teeth / tau));
+        for (int i = 0; i <= marks; ++i) {
+            const Point p = spiro.guide_point(-1.5 + 3.0 * i / marks);
+            painter.draw_line(screen({p.x, p.y - 3 * spiro.scale}), screen({p.x, p.y + 3 * spiro.scale}),
+                              gf::Color::rgba(25, 140, 40, 230), std::max(1.0, spiro.scale * zoom));
+        }
+    } else {
+        profile_shape(painter, center, radius + rim * .65, frame.profile, canvas().view_angle,
+                      gf::Color::rgba(0, 0, 0, 0), gf::Color::rgba(55, 235, 65, 105), rim);
+        profile_shape(painter, center, radius, frame.profile, canvas().view_angle,
+                      gf::Color::rgba(0, 0, 0, 0), gf::Color::rgba(25, 145, 40, 210), 1.3);
+        for (int i = 0; i < frame.teeth; ++i) {
+            const double a = frame.profile.normal_at_arc(tau * i / frame.teeth);
+            const gf::Point p = screen(spiro.guide_point(a));
+            painter.draw_line(polar(p, -1.5 * spiro.scale * zoom, a + canvas().view_angle),
+                              polar(p, 2 * spiro.scale * zoom, a + canvas().view_angle),
+                              gf::Color::rgba(38, 200, 45, 185), std::max(1.0, 2 * spiro.scale * zoom));
+        }
     }
-    const gf::Point close =
-        screen({spiro.center.x + (spiro.guide_radius() + 10 * spiro.scale) * .7071067811865476,
-                spiro.center.y - (spiro.guide_radius() + 10 * spiro.scale) * .7071067811865476});
+    const gf::Point close = screen(spiro.close_position());
     disc(painter, {close.x + 1, close.y + 2}, 10, gf::Color::rgba(70, 20, 20, 100));
     disc(painter, close, 9, gf::Color::rgba(219, 55, 55, 250));
     circle(painter, close, 9, gf::Color::rgba(255, 184, 162, 240), 1.4);
@@ -85,16 +167,18 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
     if (spiro.inserted) {
         const gf::Point wheel = screen(spiro.wheel_center(spiro.angle));
         const double r = spiro.wheel_radius() * zoom;
-        disc(painter, {wheel.x + 1, wheel.y + 2}, r, gf::Color::rgba(15, 45, 90, 30));
-        disc(painter, wheel, r, gf::Color::rgba(0, 170, 255, 70));
-        circle(painter, wheel, r - 1, gf::Color::rgba(175, 240, 255, 220), 1.7);
-        circle(painter, wheel, r, gf::Color::rgba(15, 110, 215, 220), 1.2);
-        const int teeth = spiro_inserts()[spiro.insert].teeth;
-        for (int i = 0; i < teeth; ++i) {
-            const double a = tau * i / teeth + spiro.wheel_rotation(spiro.angle) + canvas().view_angle;
-            painter.draw_line(polar(wheel, r - 1.3 * spiro.scale * zoom, a),
-                              polar(wheel, r + 1.3 * spiro.scale * zoom, a),
-                              gf::Color::rgba(5, 151, 245, 215), std::max(1.0, 2.2 * spiro.scale * zoom));
+        const SpiroInsert& part = spiro_inserts()[spiro.insert];
+        const double rotation = spiro.wheel_rotation(spiro.angle) + canvas().view_angle;
+        profile_shape(painter, {wheel.x + 1, wheel.y + 2}, r, part.profile, rotation,
+                      gf::Color::rgba(15, 45, 90, 25), gf::Color::rgba(15, 45, 90, 50), 1);
+        profile_shape(painter, wheel, r, part.profile, rotation, gf::Color::rgba(0, 170, 255, 70),
+                      gf::Color::rgba(15, 110, 215, 220), 1.3);
+        for (int i = 0; i < part.teeth; ++i) {
+            const double a = part.profile.normal_at_arc(tau * i / part.teeth);
+            const gf::Point p = profile_point(wheel, r, part.profile, a, rotation);
+            painter.draw_line(polar(p, -1.3 * spiro.scale * zoom, a + rotation),
+                              polar(p, 1.3 * spiro.scale * zoom, a + rotation),
+                              gf::Color::rgba(5, 151, 245, 215), std::max(1.0, 2 * spiro.scale * zoom));
         }
         disc(painter, wheel, 8, gf::Color::rgba(145, 228, 255, 180));
         circle(painter, wheel, 8, gf::Color::rgba(10, 100, 170, 230), 1);
@@ -106,6 +190,10 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
         for (int i = 0; i < spiro.hole_count(); ++i) {
             const gf::Point hole = screen(spiro.hole(i, spiro.angle));
             if (spiro.pegs[i].seated) {
+                if (spiro.selected_peg == i) {
+                    circle(painter, hole, 11, gf::Color::rgba(255, 200, 30, 65), 5);
+                    circle(painter, hole, 10, gf::Color::rgba(255, 184, 20, 255), 2);
+                }
                 peg_cap(painter, hole, 7, spiro.pegs[i]);
             } else {
                 disc(painter, hole, 4, gf::Color::rgba(240, 250, 255, 160));
@@ -144,10 +232,19 @@ void Editor::spiro_choice(const std::string& id) {
         spiro.set_insert(std::stoi(id.substr(13)));
     } else if (id == "spiro-remove") {
         spiro.remove_insert();
+    } else if (id == "spiro-outside") {
+        spiro.outside = !spiro.outside;
+        if (!spiro.compatible(spiro.guide, spiro.insert)) {
+            spiro.outside = true;
+        }
+        spiro.angle = 0;
+    } else if (id == "spiro-deselect") {
+        spiro.selected_peg = -1;
     } else if (id == "spiro-center") {
         spiro.center = {document.image.width * .5, document.image.height * .5};
     } else if (id == "spiro-clear-pegs") {
         spiro.pegs = {};
+        spiro.selected_peg = -1;
     } else if (id == "spiro-fill") {
         document.tool = Tool::Fill;
     } else if (id == "spiro-operate") {
@@ -178,10 +275,12 @@ int Editor::spiro_hole_at(Point point, bool empty_only) const {
 void Editor::cancel_spiro_drag() {
     if (spiro_drag_ == SpiroDrag::Peg && spiro_origin_hole_ >= 0 && spiro.active) {
         spiro.seat(spiro_origin_hole_, spiro_carried_);
+        spiro.select_peg(spiro_origin_hole_);
     }
     spiro_drag_ = SpiroDrag::None;
     spiro_origin_hole_ = spiro_target_hole_ = -1;
     spiro_checkpoint_ = false;
+    spiro_stroke_.clear();
     if (ribbon_) {
         (*ribbon_).cancel_spiro_drag();
     }
@@ -189,16 +288,22 @@ void Editor::cancel_spiro_drag() {
 void Editor::drop_spiro_peg() {
     if (spiro_target_hole_ >= 0) {
         spiro.seat(spiro_target_hole_, spiro_carried_);
+        spiro.select_peg(spiro_target_hole_);
     } else if (spiro_origin_hole_ >= 0) {
         const Point center = spiro.wheel_center(spiro.angle);
-        if (std::hypot(spiro_pointer_.x - center.x, spiro_pointer_.y - center.y) <= spiro.wheel_radius()) {
+        if (profile_clearance(spiro_pointer_, center, spiro.wheel_radius(),
+                              spiro_inserts()[spiro.insert].profile,
+                              spiro.wheel_rotation(spiro.angle)) <= 0) {
             spiro.seat(spiro_origin_hole_, spiro_carried_);
+            spiro.select_peg(spiro_origin_hole_);
         }
     }
     // Releasing away from a socket removes the peg and its ink.
     spiro_origin_hole_ = -1;
     spiro_drag_ = SpiroDrag::None;
     spiro_target_hole_ = -1;
+    spiro.select_peg(spiro.selected_peg);
+    (*ribbon_).synchronize();
     canvas().invalidate(gf::Dirty::paint);
 }
 void Editor::spiro_tray_pointer(int width, const gf::PointerEvent& event) {
@@ -229,6 +334,24 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
     }
     if (spiro_drag_ != SpiroDrag::None) {
         if (event.action == gf::PointerAction::move || event.action == gf::PointerAction::up) {
+            if (spiro_drag_ == SpiroDrag::PegPending) {
+                if (std::hypot(point.x - spiro_pointer_.x, point.y - spiro_pointer_.y) * canvas().zoom() >
+                    4) {
+                    spiro_carried_ = spiro.pegs[spiro_origin_hole_];
+                    spiro.pegs[spiro_origin_hole_] = {};
+                    spiro.selected_peg = -1;
+                    spiro_drag_ = SpiroDrag::Peg;
+                } else if (event.action == gf::PointerAction::up) {
+                    spiro_drag_ = SpiroDrag::None;
+                    spiro_origin_hole_ = -1;
+                }
+            }
+            if (spiro_drag_ == SpiroDrag::None || spiro_drag_ == SpiroDrag::PegPending) {
+                if (event.action == gf::PointerAction::up) {
+                    canvas().set_pointer_capture(false);
+                }
+                return true;
+            }
             if (spiro_drag_ == SpiroDrag::Guide) {
                 spiro.center = {point.x + spiro_grab_.x, point.y + spiro_grab_.y};
             } else if (spiro_drag_ == SpiroDrag::Peg) {
@@ -238,43 +361,27 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
                     drop_spiro_peg();
                 }
             } else {
-                const double x = point.x + spiro_grab_.x - spiro.center.x,
-                             y = point.y + spiro_grab_.y - spiro.center.y;
-                if (std::hypot(x, y) > std::max(2.0, spiro.guide_radius() * .08)) {
-                    const double target = spiro.angle + std::remainder(std::atan2(y, x) - spiro.angle, tau);
+                const Point target_point{point.x + spiro_grab_.x, point.y + spiro_grab_.y};
+                if (spiro.rack() ||
+                    std::hypot(target_point.x - spiro.center.x, target_point.y - spiro.center.y) > 2) {
+                    double target = spiro.project(target_point, spiro.angle);
+                    if (std::abs(target - spiro.angle) <= 1e-9) {
+                        target = spiro.angle;
+                    }
                     if (spiro.loaded() && std::abs(target - spiro.angle) > 1e-9 && !spiro_checkpoint_) {
                         document.settle_selection();
                         paint_base_ = document.image;
                         document.checkpoint();
                         spiro_checkpoint_ = true;
+                        spiro_stroke_.clear();
                     }
                     const std::vector<SpiroTrace> traces = spiro.advance(target);
-                    for (const SpiroTrace& trace : traces) {
-                        Ink ink;
-                        ink.primary = trace.ink;
-                        ink.size = trace.width;
-                        ink.brush = Brush::Round;
-                        ink.pattern = Pattern::Solid;
-                        stroke(document.image, trace.start, trace.end, ink);
-                    }
+                    const Rect damage = spiro_stroke_.render(document.image, paint_base_, spiro, traces);
                     if (!traces.empty()) {
                         constrain_paint(document.image, paint_base_, guide,
                                         atlas_painting() && atlas_preserve_alpha);
                         document.constrain_selection(document.image, paint_base_);
                         ++canvas_revision;
-                        double left = document.image.width, top = document.image.height, right = 0,
-                               bottom = 0;
-                        for (const SpiroTrace& trace : traces) {
-                            const double margin = trace.width + 2;
-                            left = std::min(left, std::min(trace.start.x, trace.end.x) - margin);
-                            top = std::min(top, std::min(trace.start.y, trace.end.y) - margin);
-                            right = std::max(right, std::max(trace.start.x, trace.end.x) + margin);
-                            bottom = std::max(bottom, std::max(trace.start.y, trace.end.y) + margin);
-                        }
-                        const int x = static_cast<int>(std::floor(left)),
-                                  y = static_cast<int>(std::floor(top));
-                        const Rect damage{x, y, static_cast<int>(std::ceil(right)) - x,
-                                          static_cast<int>(std::ceil(bottom)) - y};
                         publish_image(document.selection.active && !document.selection.on_canvas
                                           ? document.visible_image()
                                           : document.image,
@@ -286,20 +393,26 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
             if (event.action == gf::PointerAction::up) {
                 spiro_drag_ = SpiroDrag::None;
                 spiro_checkpoint_ = false;
+                spiro_stroke_.clear();
                 canvas().set_pointer_capture(false);
             }
             canvas().invalidate(gf::Dirty::paint);
         }
         return true;
     }
-    const Point close{spiro.center.x + (spiro.guide_radius() + 10 * spiro.scale) * .7071067811865476,
-                      spiro.center.y - (spiro.guide_radius() + 10 * spiro.scale) * .7071067811865476};
-    const double radial = std::hypot(point.x - spiro.center.x, point.y - spiro.center.y);
+    const Point close = spiro.close_position();
     const Point wheel = spiro.wheel_center(spiro.angle);
-    const bool on_wheel = spiro.inserted && std::hypot(point.x - wheel.x, point.y - wheel.y) <=
-                                                spiro.wheel_radius() + 3 * spiro.scale;
-    const bool on_ring =
-        std::abs(radial - (spiro.guide_radius() + 6 * spiro.scale)) < 10 * spiro.scale + 4 / canvas().zoom();
+    const bool on_wheel =
+        spiro.inserted &&
+        profile_clearance(point, wheel, spiro.wheel_radius(), spiro_inserts()[spiro.insert].profile,
+                          spiro.wheel_rotation(spiro.angle)) < 3 * spiro.scale;
+    const double margin = 10 * spiro.scale + 4 / canvas().zoom();
+    const bool on_ring = spiro.rack()
+                             ? std::abs(point.y - spiro.center.y) < margin &&
+                                   std::abs(point.x - spiro.center.x) < 1.5 * spiro.guide_radius() + margin
+                             : std::abs(profile_clearance(point, spiro.center, spiro.guide_radius(),
+                                                          spiro_guides()[spiro.guide].profile, 0) -
+                                        6 * spiro.scale) < margin;
     const bool on_close = std::hypot(point.x - close.x, point.y - close.y) * canvas().zoom() < 11;
     const int hole = spiro_hole_at(point, false);
     if (event.action == gf::PointerAction::down && (on_wheel || on_ring || on_close || hole >= 0)) {
@@ -310,7 +423,10 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
         if (document.tool == Tool::Fill && hole >= 0) {
             const Ink ink = event.button == gf::PointerButton::secondary ? document.alternate_ink()
                                                                          : document.primary_ink();
-            spiro.fill(hole, ink.pattern == Pattern::None ? Color{0, 0, 0, 0} : ink.primary);
+            if (spiro.fill(hole, ink.pattern == Pattern::None ? Color{0, 0, 0, 0} : ink.primary)) {
+                spiro.select_peg(hole);
+                (*ribbon_).synchronize();
+            }
             canvas().invalidate(gf::Dirty::paint);
             return true;
         }
@@ -323,11 +439,11 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
         }
         release_gesture();
         if (hole >= 0 && spiro.pegs[hole].seated) {
-            spiro_carried_ = spiro.pegs[hole];
-            spiro.pegs[hole] = {};
+            spiro.select_peg(hole);
+            (*ribbon_).synchronize();
             spiro_origin_hole_ = hole;
             spiro_pointer_ = point;
-            spiro_drag_ = SpiroDrag::Peg;
+            spiro_drag_ = SpiroDrag::PegPending;
         } else if (on_wheel && std::hypot(point.x - wheel.x, point.y - wheel.y) * canvas().zoom() <= 10) {
             spiro_drag_ = SpiroDrag::Wheel;
             spiro_grab_ = {wheel.x - point.x, wheel.y - point.y};
@@ -344,6 +460,11 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
     }
     if (event.action == gf::PointerAction::move && (on_wheel || on_ring || on_close || hole >= 0)) {
         canvas().set_cursor(gf::CursorKind::hand);
+    }
+    if (event.action == gf::PointerAction::down && spiro.selected_peg >= 0) {
+        spiro.selected_peg = -1;
+        (*ribbon_).synchronize();
+        canvas().invalidate(gf::Dirty::paint);
     }
     return document.tool == Tool::Spirograph;
 }

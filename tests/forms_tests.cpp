@@ -1835,6 +1835,25 @@ void spirograph_apparatus_and_ink() {
             "loading pegs floods the canvas or changes its history");
     routed_button(window, "spiro-operate");
     hole = editor.spiro.hole(0, editor.spiro.angle);
+    fixture.click(hole.x, hole.y);
+    require(editor.spiro.selected_peg == 0 && editor.spiro.pegs[0].seated,
+            "clicking a peg moves it instead of selecting it");
+    const gf::Rect medium = (*window.find("spiro-brushes-menu")).absolute_bounds();
+    window.dispatch_pointer(
+        {gf::PointerAction::down, gf::PointerButton::primary, {medium.x + 8, medium.y + 8}});
+    window.dispatch_pointer(
+        {gf::PointerAction::up, gf::PointerButton::primary, {medium.x + 8, medium.y + 8}});
+    routed_button(window, "popup-peg-brush-12");
+    require(editor.spiro.pegs[0].effect.brush == paint::Brush::Gel &&
+                editor.spiro.pegs[2].effect.brush == paint::Brush::Round && editor.spiro.pegs[0].ink.r == 200,
+            "peg gallery changes the wrong ink or brush");
+    open_tab(window, "patterns-tab");
+    routed_button(window, "material-brush-8");
+    require(editor.spiro.pegs[0].effect.brush == paint::Brush::Watercolor,
+            "ordinary material gallery does not target the highlighted peg");
+    routed_button(window, "material-brush-12");
+    open_tab(window, "tool-tab");
+    hole = editor.spiro.hole(0, editor.spiro.angle);
     const paint::Point grip = editor.spiro.wheel_center(editor.spiro.angle);
     fixture.drag(hole.x, hole.y, grip.x, grip.y);
     require(editor.spiro.pegs[0].loaded, "invalid peg move inside wheel loses the original peg");
@@ -1890,9 +1909,7 @@ void spirograph_apparatus_and_ink() {
             "spirograph redo differs from original ink");
     routed_button(window, "spiro-remove");
     require(!editor.spiro.inserted && !editor.spiro.pegs[0].seated, "removing insert retains pegs");
-    const paint::Point close{
-        editor.spiro.center.x + (editor.spiro.guide_radius() + 10 * editor.spiro.scale) * .7071067811865476,
-        editor.spiro.center.y - (editor.spiro.guide_radius() + 10 * editor.spiro.scale) * .7071067811865476};
+    const paint::Point close = editor.spiro.close_position();
     fixture.click(close.x, close.y);
     require(!editor.spiro.active && std::memcmp(drawn.data(), editor.document.image.pixels.data(),
                                                 drawn.size() * sizeof(paint::Color)) == 0,

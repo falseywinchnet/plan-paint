@@ -28,6 +28,7 @@ class StrokeStabilizer {
 Color interpolate_pixel(Color base, Color replacement, double amount);
 Color sample_bilinear(const Image& image, double x, double y, bool wrap = false);
 class DynamicBrushStroke {
+    MaterialStroke gel_;
     struct DryDeposit {
         Color original;
         double coverage = 0;

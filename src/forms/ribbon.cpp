@@ -1,6 +1,7 @@
 #include "forms/ribbon.hpp"
 #include "codecs.hpp"
 #include "forms/atlas.hpp"
+#include "forms/dropper_icon.hpp"
 #include "forms/editor.hpp"
 #include "forms/ribbon_icons.hpp"
 #include "forms/spirograph_view.hpp"
@@ -322,24 +323,6 @@ void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
                       gf::Color::rgba(25, 40, 55, 50), 1);
 }
 namespace {
-class PickerHandButton final : public gf::Button {
-  public:
-    explicit PickerHandButton(gf::StableId id) : Button(std::move(id), "") {}
-    void on_paint(gf::Painter& painter, gf::Rect damage) override {
-        Button::on_paint(painter, damage);
-        const gf::Rect box = client_rectangle();
-        const double x = box.width / 2 - 9, y = box.height / 2 - 9;
-        const gf::Color ink = gf::Color::rgba(44, 65, 89), skin = gf::Color::rgba(241, 207, 158);
-        painter.fill_rounded_rect({x + 8, y + 8, 9, 8}, 3, skin);
-        painter.stroke_rounded_rect({x + 8, y + 8, 9, 8}, 3, ink, 1);
-        painter.draw_line({x + 3, y + 14}, {x + 13, y + 4}, ink, 4);
-        painter.draw_line({x + 3, y + 14}, {x + 13, y + 4}, gf::Color::rgba(219, 239, 251), 2);
-        painter.draw_line({x + 11, y + 3}, {x + 15, y + 7}, ink, 3);
-        painter.fill_rounded_rect({x + 10, y + 9, 7, 3}, 1.5, skin);
-        painter.draw_line({x + 10, y + 12}, {x + 14, y + 12}, ink, 1);
-        painter.fill_rounded_rect({x + 1, y + 16, 2, 2}, 1, gf::Color::rgba(48, 130, 191));
-    }
-};
 class ShapeSwitchButton final : public gf::Button {
   public:
     ShapeSwitchButton(gf::StableId id, bool fill) : Button(std::move(id), ""), fill_(fill) {}
@@ -424,8 +407,7 @@ std::shared_ptr<gf::Button> Ribbon::button(const std::string& id, const std::str
         subscriptions_.push_back((*dropdown).drop_down_close_requested().subscribe(
             *this, gf::Delegate<gf::DropDownButton&>::bind<Ribbon, &Ribbon::dropdown>(*this)));
         result = dropdown;
-    } else if (id == "tool-5") {
-        result = gf::make_control<PickerHandButton>(gf::StableId(id));
+
     } else if (id.ends_with("-tab")) {
         result = gf::make_control<RibbonTabButton>(gf::StableId(id), text);
     } else if (id == "edge-switch" || id == "fill-switch") {
@@ -638,6 +620,8 @@ void Ribbon::add_options() {
         spiro_button("spiro-insert-" + std::to_string(i), spiro_inserts()[i].name, 1, i,
                      {270 + i * 108.0, 35, 100, 76});
     }
+    button("spiro-guides-menu", "More", -1, {10, 111, 220, 22}, false, true);
+    button("spiro-inserts-menu", "More", -1, {270, 111, 316, 22}, false, true);
     for (int i = 0; i < 3; ++i) {
         spiro_button("spiro-peg-" + std::to_string(1 << i),
                      i == 0   ? "Fine peg"
@@ -649,6 +633,9 @@ void Ribbon::add_options() {
     button("spiro-operate", "Operate", -1, {1095, 35, 173, 31});
     button("spiro-remove", "Remove insert", -1, {932, 76, 155, 31});
     button("spiro-center", "Center guide", -1, {1095, 76, 173, 31});
+    button("spiro-brushes-menu", "Peg medium", -1, {625, 111, 277, 22}, false, true);
+    button("spiro-outside", "Roll outside", -1, {932, 111, 155, 22});
+    button("spiro-deselect", "Deselect peg", -1, {1095, 111, 173, 22});
     building_page_ = 2;
     button("zoom-in", "Zoom in", 12, {8, 35, 65, 81}, true);
     button("zoom-out", "Zoom out", 12, {76, 35, 65, 81}, true);
@@ -662,9 +649,9 @@ void Ribbon::add_options() {
     button("material-edge", "Primary", -1, {10, 34, 114, 22});
     button("material-fill", "Alt", -1, {10, 59, 114, 22});
     check("alt-carries-body", "Alt carries body", {340, 111, 225, 22});
-    const char* material_names[] = {"Brush",      "Calligraphy 1", "Calligraphy 2", "Spray can",
-                                    "Oil",        "Crayon",        "Marker",        "Pencil",
-                                    "Watercolor", "Bristle",       "Pastel",        "Charcoal"};
+    const char* material_names[] = {"Brush",  "Calligraphy 1", "Calligraphy 2", "Spray can",  "Oil",
+                                    "Crayon", "Marker",        "Pencil",        "Watercolor", "Bristle",
+                                    "Pastel", "Charcoal",      "Gel pen"};
     for (int i = 1; i < brush_count; ++i) {
         std::shared_ptr<gf::Button> choice =
             button("material-brush-" + std::to_string(i), material_names[i], -1,
@@ -840,7 +827,8 @@ void Ribbon::show_tool_context() {
     collapsed_ = false;
     std::shared_ptr<Editor> editor = editor_.lock();
     page_ = editor && ((*editor).document.tool == Tool::Spirograph ||
-                       ((*editor).spiro.active && (*editor).document.tool == Tool::Fill))
+                       ((*editor).spiro.active &&
+                        ((*editor).document.tool == Tool::Fill || (*editor).spiro.selected_peg >= 0)))
                 ? 128
             : editor && (*editor).document.tool == Tool::Text ? 16
                                                               : 8;
@@ -908,13 +896,13 @@ void Ribbon::show_page() {
         page_ = tool == Tool::Text ? 16 : 8;
     }
     bool selection = tool == Tool::Select || tool == Tool::Lasso;
-    bool ink = tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path ||
-               tool == Tool::Freehand;
+    bool ink = (*editor).spiro.selected_peg >= 0 || tool == Tool::Fill || tool == Tool::Brush ||
+               tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
     if (page_ == 4 && !ink) {
         page_ = 8;
     }
-    bool material =
-        tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
+    bool material = (*editor).spiro.selected_peg >= 0 || tool == Tool::Brush || tool == Tool::Shape ||
+                    tool == Tool::Path || tool == Tool::Freehand;
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());
@@ -1043,11 +1031,14 @@ void Ribbon::options_changed(double) {
     if (!editor) {
         return;
     }
-    Ink& ink = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
+    Ink& ink = (*editor).spiro.selected_peg >= 0 ? (*editor).spiro.pegs[(*editor).spiro.selected_peg].effect
+               : secondary_color_                ? (*editor).document.alt_ink
+                                                 : (*editor).document.ink;
     ink.grain_scale = (*grain_).value();
     ink.paper_roughness = (*tooth_).value();
     ink.pigment_load = (*load_).value();
     ink.material_angle = (*angle_).value();
+    (*editor).spiro.refresh_peg((*editor).spiro.selected_peg);
     (*editor).document.ink.size = static_cast<int>((*tool_size_).value());
     (*editor).text.style.size = static_cast<int>((*text_size_).value());
     (*editor).text.style.outline_width = (*text_outline_).value();
@@ -1188,6 +1179,14 @@ void Ribbon::on_attached_to_window() {
     large_icons_ = std::make_shared<gf::ImageList>(*attached_window(), gf::Size{32, 32});
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
+        if (control.stable_id().value() == "tool-5") {
+            static_cast<void>(
+                (*medium_icons_).add_png("dropper-hand", std::as_bytes(std::span(dropper_icon)), 1));
+            control.set_image_key("dropper-hand");
+            control.set_image_list(medium_icons_);
+            control.set_content_padding({1, 1, 1, 1});
+            continue;
+        }
         if (control.stable_id().value().starts_with("material-brush-")) {
             continue;
         }
@@ -1280,7 +1279,7 @@ void Ribbon::arrange(gf::Rect bounds) {
             rectangle.height = control.selected() && !collapsed_ ? 29 : control.selected() ? 27 : 23;
             rectangle.width += 3;
         }
-        if (!control.image_key().empty() && !id.starts_with("material-brush-") &&
+        if (!control.image_key().empty() && id != "tool-5" && !id.starts_with("material-brush-") &&
             !id.starts_with("r-pattern-")) {
             const int icon = std::stoi(control.image_key());
             const bool tall = control.requested_bounds().height > 45 && control.requested_bounds().width > 25;
@@ -1420,8 +1419,8 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
                 continue;
             }
             if (page_ == 8 && i > 0 && !selection) {
-                bool ink = tool == Tool::Fill || tool == Tool::Brush || tool == Tool::Shape ||
-                           tool == Tool::Path || tool == Tool::Freehand;
+                bool ink = (*editor).spiro.selected_peg >= 0 || tool == Tool::Fill || tool == Tool::Brush ||
+                           tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
                 bool material = tool == Tool::Brush || tool == Tool::Shape || tool == Tool::Path ||
                                 tool == Tool::Freehand;
                 if ((i == 1 && !ink) || (i > 1 && !material)) {
@@ -1432,8 +1431,9 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
             double x = edges[i + 1] == width ? width : edges[i + 1] * context_scale;
             paint_separator(painter, x);
             gf::Size size = painter.measure_text_utf8(labels[i], font);
-            painter.draw_text_utf8({(edges[i] * context_scale + x - size.width) / 2, 132}, labels[i], font,
-                                   gf::Color::rgba(72, 91, 112));
+            painter.draw_text_utf8(
+                {(edges[i] * context_scale + x - size.width) / 2, page_ == 128 ? 139.0 : 132.0}, labels[i],
+                font, gf::Color::rgba(72, 91, 112));
         }
         return;
     }
@@ -1515,7 +1515,10 @@ void Ribbon::synchronize() {
             selected = document.tool == Tool::Text;
         }
         if (id.starts_with("material-brush-")) {
-            const Ink& choice = secondary_color_ ? document.alt_ink : document.ink;
+            const Ink& choice = (*editor).spiro.selected_peg >= 0
+                                    ? (*editor).spiro.pegs[(*editor).spiro.selected_peg].effect
+                                : secondary_color_ ? document.alt_ink
+                                                   : document.ink;
             selected = choice.pattern == Pattern::Solid &&
                        std::stoi(id.substr(15)) == static_cast<int>(choice.brush);
             control.set_image_list(secondary_color_               ? fill_previews_
@@ -1553,9 +1556,10 @@ void Ribbon::synchronize() {
                                             : "tool-tab");
         }
         if (id.starts_with("r-pattern-")) {
-            const Ink& choice = secondary_color_ ? document.alt_ink : document.ink;
-            selected =
-                choice.brush == Brush::Round && static_cast<int>(choice.pattern) == std::stoi(id.substr(10));
+            const Ink& choice = (*editor).spiro.selected_peg >= 0
+                                    ? (*editor).spiro.pegs[(*editor).spiro.selected_peg].effect
+                                    : secondary_color_ ? document.alt_ink : document.ink;
+            selected = choice.brush == Brush::Round && static_cast<int>(choice.pattern) == std::stoi(id.substr(10));
         }
         if (id.starts_with("stamp-shape-")) {
             selected = static_cast<int>(document.stamp_shape) == std::stoi(id.substr(12));
@@ -1581,9 +1585,35 @@ void Ribbon::synchronize() {
         }
         if (id.starts_with("spiro-guide-")) {
             selected = (*editor).spiro.guide == std::stoi(id.substr(12));
+            control.set_enabled((*editor).spiro.compatible(std::stoi(id.substr(12)), (*editor).spiro.insert));
         }
         if (id.starts_with("spiro-insert-")) {
             selected = (*editor).spiro.inserted && (*editor).spiro.insert == std::stoi(id.substr(13));
+            control.set_enabled((*editor).spiro.compatible((*editor).spiro.guide, std::stoi(id.substr(13))));
+        }
+        if (id == "spiro-guides-menu") {
+            control.set_text(spiro_guides()[(*editor).spiro.guide].name);
+            control.set_accessible_name(std::string("Guide catalog: ") + control.text());
+        }
+        if (id == "spiro-inserts-menu") {
+            control.set_text(spiro_inserts()[(*editor).spiro.insert].name);
+            control.set_accessible_name(std::string("Insert catalog: ") + control.text());
+        }
+        if (id == "spiro-brushes-menu") {
+            const int peg = (*editor).spiro.selected_peg;
+            control.set_enabled(peg >= 0);
+            control.set_text(peg < 0
+                                 ? "Select a peg · choose medium"
+                                 : std::string("Peg ") + std::to_string(peg + 1) + " · " +
+                                       brush_names[static_cast<int>((*editor).spiro.pegs[peg].effect.brush)]);
+            control.set_accessible_name(control.text());
+        }
+        if (id == "spiro-deselect") {
+            control.set_enabled((*editor).spiro.selected_peg >= 0);
+        }
+        if (id == "spiro-outside") {
+            selected = (*editor).spiro.outside;
+            control.set_enabled(!(*editor).spiro.rack());
         }
         if (id == "spiro-fill") {
             selected = document.tool == Tool::Fill;
@@ -1610,7 +1640,10 @@ void Ribbon::synchronize() {
         ordered_tab_page_ = page_;
     }
     synchronizing_ = true;
-    const Ink& material = secondary_color_ ? document.alt_ink : document.ink;
+    const Ink& material = (*editor).spiro.selected_peg >= 0
+                              ? (*editor).spiro.pegs[(*editor).spiro.selected_peg].effect
+                          : secondary_color_ ? document.alt_ink
+                                             : document.ink;
     (*grain_).set_value(material.grain_scale);
     (*tooth_).set_value(material.paper_roughness);
     (*load_).set_value(material.pigment_load);
@@ -1760,6 +1793,13 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         close_popup();
         return;
     }
+    if (id.starts_with("r-pattern-") && (*editor).spiro.selected_peg >= 0) {
+        select_pattern((*editor).spiro.pegs[(*editor).spiro.selected_peg].effect,
+                       static_cast<Pattern>(std::stoi(id.substr(10))));
+        (*editor).spiro.refresh_peg((*editor).spiro.selected_peg);
+        (*editor).refresh();
+        return;
+    }
     if (id == "edge-switch" || id == "fill-switch") {
         (*editor).execute(id == "edge-switch" ? "outline" : "fill");
         return;
@@ -1792,6 +1832,10 @@ void Ribbon::clicked(gf::ButtonBase& button) {
     }
     if (id.starts_with("material-brush-")) {
         Brush selected = static_cast<Brush>(std::stoi(id.substr(15)));
+        if ((*editor).spiro.assign_brush(selected)) {
+            (*editor).refresh();
+            return;
+        }
         (*editor).brush_family = BrushFamily::Additive;
         Ink& material = secondary_color_ ? (*editor).document.alt_ink : (*editor).document.ink;
         select_brush(material, selected);
@@ -1810,7 +1854,8 @@ void Ribbon::clicked(gf::ButtonBase& button) {
                    : id == "patterns-tab" ? 4
                    : id == "atlas-tab"    ? 64
                    : ((*editor).document.tool == Tool::Spirograph ||
-                      ((*editor).spiro.active && (*editor).document.tool == Tool::Fill))
+                      ((*editor).spiro.active &&
+                       ((*editor).document.tool == Tool::Fill || (*editor).spiro.selected_peg >= 0)))
                        ? 128
                    : (*editor).document.tool == Tool::Text ? 16
                                                            : 8;
@@ -1877,6 +1922,10 @@ std::shared_ptr<gf::Button> Ribbon::add_popup_button(gf::Panel& panel, const std
     std::shared_ptr<gf::Button> item;
     if (id.starts_with("size-")) {
         item = gf::make_control<WeightButton>(gf::StableId("popup-" + id), text, std::stoi(id.substr(5)));
+    } else if (id.starts_with("spiro-guide-") || id.starts_with("spiro-insert-")) {
+        const bool guide = id.starts_with("spiro-guide-");
+        item = gf::make_control<SpiroPartButton>(gf::StableId("popup-" + id), text, guide ? 0 : 1,
+                                                 std::stoi(id.substr(guide ? 12 : 13)));
     } else {
         item = gf::make_control<gf::Button>(gf::StableId("popup-" + id), text);
     }
@@ -1899,6 +1948,11 @@ std::shared_ptr<gf::Button> Ribbon::add_popup_button(gf::Panel& panel, const std
         }
         (*item).set_image_list(medium_icons_);
         (*item).set_content_padding({4, 4, 4, 4});
+    }
+    if (id.starts_with("spiro-guide-") || id.starts_with("spiro-insert-")) {
+        (*item).set_content_padding({2, 40, 2, 2});
+        (*item).set_font({gf::FontRole::control, 11, 400, false});
+        (*item).set_text_alignment(gf::ContentAlignment::bottom_center);
     }
     panel.add_child(item);
     return item;
@@ -1923,7 +1977,34 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
     material.shadows.push_back({{0, 3}, 7, 0, gf::Color::rgba(30, 50, 75, 60), false});
     (*panel).set_authored_surface_material(material);
     double width = 232, height = 10;
-    if (id == "stamp-shapes-menu") {
+    if (id == "spiro-guides-menu" || id == "spiro-inserts-menu") {
+        const bool guides = id == "spiro-guides-menu";
+        const int count = static_cast<int>(guides ? spiro_guides().size() : spiro_inserts().size());
+        width = 568;
+        height = 8 + 76 * ((count + 4) / 5);
+        for (int i = 0; i < count; ++i) {
+            const bool selected = guides ? (*editor).spiro.guide == i : (*editor).spiro.insert == i;
+            const std::shared_ptr<gf::Button> part = add_popup_button(
+                *panel, std::string(guides ? "spiro-guide-" : "spiro-insert-") + std::to_string(i),
+                guides ? spiro_guides()[i].name : spiro_inserts()[i].name, -1,
+                {4.0 + (i % 5) * 112, 4.0 + (i / 5) * 76, 110, 74}, selected);
+            (*part).set_enabled(guides ? (*editor).spiro.compatible(i, (*editor).spiro.insert)
+                                       : (*editor).spiro.compatible((*editor).spiro.guide, i));
+        }
+    } else if (id == "spiro-brushes-menu") {
+        prepare_material_previews();
+        width = 436;
+        height = 8 + 32 * ((brush_count + 1) / 2);
+        for (int i = 0; i < brush_count; ++i) {
+            const std::shared_ptr<gf::Button> part = add_popup_button(
+                *panel, "peg-brush-" + std::to_string(i), brush_names[i], -1,
+                {4.0 + (i % 2) * 214, 4.0 + (i / 2) * 32, 212, 31},
+                (*editor).spiro.selected_peg >= 0 &&
+                    static_cast<int>((*editor).spiro.pegs[(*editor).spiro.selected_peg].effect.brush) == i);
+            (*part).set_image_key(std::to_string(i));
+            (*part).set_image_list(dynamic_previews_);
+        }
+    } else if (id == "stamp-shapes-menu") {
         width = 280;
         height = 8 + 34 * ((stamp_shape_count + 6) / 7);
         for (int i = 0; i < stamp_shape_count; ++i) {
@@ -2120,6 +2201,15 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         return;
     }
     close_popup();
+    if (id.starts_with("peg-brush-")) {
+        (*editor).spiro.assign_brush(static_cast<Brush>(std::stoi(id.substr(10))));
+        (*editor).refresh();
+        return;
+    }
+    if (id.starts_with("spiro-guide-") || id.starts_with("spiro-insert-")) {
+        (*editor).spiro_choice(id);
+        return;
+    }
     if (id == "spirograph") {
         close_popup();
         (*editor).start_spirograph();
@@ -2142,6 +2232,10 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
             document.shape_outline = true;
         }
     } else if (id.starts_with("brush-")) {
+        if ((*editor).spiro.assign_brush(static_cast<Brush>(std::stoi(id.substr(6))))) {
+            (*editor).refresh();
+            return;
+        }
         select_brush(document.ink, static_cast<Brush>(std::stoi(id.substr(6))));
         (*editor).choose_tool(Tool::Brush);
     } else if (id.starts_with("size-")) {

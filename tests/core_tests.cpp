@@ -479,7 +479,18 @@ void test_materials_and_shapes() {
                 maximum = std::max(maximum, alpha);
             }
         }
-        require(maximum - minimum > 3, "natural medium has no spatial material variation");
+        if (ink.brush == paint::Brush::Gel) {
+            require(minimum == ink.primary.a && maximum == ink.primary.a, "gel body varies opacity");
+            int min_red = 255, max_red = 0;
+            for (int x = 0; x < 80; ++x) {
+                const paint::Color c = surface.sample(x, 17, 2);
+                min_red = std::min(min_red, static_cast<int>(c.r));
+                max_red = std::max(max_red, static_cast<int>(c.r));
+            }
+            require(max_red - min_red > 3, "gel has no brightness variation");
+        } else {
+            require(maximum - minimum > 3, "natural medium has no spatial material variation");
+        }
         paint::Ink dry = ink;
         dry.pigment_load = 0;
         paint::MaterialSurface empty(dry, dry.brush);
