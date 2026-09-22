@@ -1,5 +1,12 @@
 #!/bin/sh
 set -eu
+# Check cursor ownership before the full toolkit build so native failures carry
+# focused diagnostics without waiting for all application targets.
+g++ -std=c++20 -Ibuild-deps/gui-forms/include \
+  build-deps/gui-forms/tests/windows_cursor_tests.cpp \
+  build-deps/gui-forms/src/core/types/cursor_image/cursor_image.cpp \
+  -luser32 -lgdi32 -o build-deps/windows-cursor-check.exe
+build-deps/windows-cursor-check.exe
 cmake -S build-deps/gui-forms -B build-deps/gui-forms-build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release -DGUI_FORMS_ENABLE_WINDOWS_HOST=ON \
   -DGUI_FORMS_ENABLE_SKIA=OFF -DGUI_FORMS_ENABLE_HARFBUZZ_TEXT=OFF \

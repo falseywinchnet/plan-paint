@@ -32,7 +32,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/fetch-gui-forms.py --github-cli
       - name: Build and verify the musl package on Linux ${{ matrix.arch }}
-        run: docker run --rm -v "$PWD:/work" -w /work alpine:3.24.2 sh scripts/ci-linux.sh
+        run: docker run --rm -e BUILD_JOBS=4 -v "$PWD:/work" -w /work alpine:3.24.2 sh scripts/ci-linux.sh
       - name: Launch the package on the glibc host
         run: |
           sudo apt-get update
