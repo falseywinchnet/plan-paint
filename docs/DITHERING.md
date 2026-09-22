@@ -17,7 +17,7 @@ preserved; unselected pixels and fully transparent pixels are left byte-identica
 - Drift changes the finer weave allocation over larger regions.
 - Posterize chooses the nearest palette color without a spatial pattern.
 
-## Color reduction in 0.4.0
+## Color reduction in 1.0
 
 Both palette construction and color assignment use OKLab. Posterize first splits
 sampled colors where doing so removes the most squared perceptual error, then

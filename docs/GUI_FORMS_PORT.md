@@ -3,9 +3,9 @@
 GUI.Forms is the primary frontend in Plan Paint 1.0. The SDL/ImGui frontend is deprecated and excluded from release packages.
 
 
-Plan Paint 0.3.4 uses GUI.Forms by default. The executable links the installed
+Plan Paint 1.0 uses GUI.Forms by default. The executable links the installed
 `GUIForms::Application` target and Paint's document, raster, material, CONV and
-format libraries. It does not link SDL, ImGui or GTK. The optional comparison
+format libraries. It does not link SDL, ImGui or GTK. The deprecated SDL/ImGui
 frontend remains available with `RAINSTAR_LEGACY_UI=ON`.
 
 ## Build the SDK and application
@@ -118,8 +118,8 @@ every desktop service or window-manager configuration was exercised.
 ## Source layout and toolkit snapshot
 
 Application UI code lives in `src/forms/`. The shared document, raster tools,
-CONV transforms and codecs live in `src/`; the optional earlier frontend remains
-available for comparison and is excluded from the default build.
+CONV transforms and codecs live in `src/`; the deprecated SDL/ImGui frontend remains
+available for historical comparison and is excluded from the default build.
 
 The pinned GUI.Forms snapshot includes optional font packs, shared font storage
 and macOS exposure handling. Fetch it with `scripts/fetch-gui-forms.py` before
