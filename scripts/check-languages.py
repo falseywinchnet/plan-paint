@@ -47,9 +47,9 @@ def main():
         catalogs[path.stem] = strings
     required = set()
     for path in (ROOT / 'src/forms').glob('*.cpp'):
-        source = re.sub(r'//[^\n]*|/\*[\s\S]*?\*/', '', path.read_text())
+        source = re.sub(r'//[^\n]*|/\*[\s\S]*?\*/', '', path.read_text(encoding='utf-8'))
         required.update(decode(m[1]) for m in re.finditer(r'\btr\(\s*(' + GROUP + r')\s*\)', source))
-    help_source = (ROOT / 'src/help_content.hpp').read_text().split('help_welcome =', 1)[1]
+    help_source = (ROOT / 'src/help_content.hpp').read_text(encoding='utf-8').split('help_welcome =', 1)[1]
     required.update(decode(m[0]) for m in re.finditer(GROUP, help_source))
     # Product identifiers and punctuation are deliberately language independent.
     neutral = {'Plan Paint', 'Astra', 'Rainstar', 'RGB', 'RGBA', 'OKLab', 'OKHSL', 'SVG', 'PNG', 'JPEG', 'BMP', 'TIFF', 'TGA', 'ICO', 'CUR'}
