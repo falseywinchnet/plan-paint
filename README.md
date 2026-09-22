@@ -6,7 +6,7 @@ To the Holy One, blessed be He, from whom all good things come. We dedicate this
 [![Latest release](https://img.shields.io/github/v/release/falseywinchnet/plan-paint)](https://github.com/falseywinchnet/plan-paint/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A free drawing application with the familiar Windows 7/10 Paint ribbon, built on native GUI.Forms for Mac, Windows and Linux. Draw, paint, add text and edit pictures, with snapping paths, patterned brushes, reusable stamps and CONV image transforms.
+A free, native paint program for Mac, Windows and Linux, with the familiar Windows 7/10 Paint ribbon. Make a meme, sketch an idea, or finish a picture: crop, caption, draw polygons, adjust curves and paint with a brush. Plan Paint keeps everyday drawing tools close at hand, with a clear interface built for direct editing.
 
 ![Rainstar Paint 0.3.2 with its cobalt ribbon and moss cloth surround](assets/screenshots/macos-home-0.3.2.jpg)
 
