@@ -86,6 +86,19 @@ class Ribbon final : public gui_forms::Control {
     std::vector<std::string> font_paths_;
     void font_changed(std::optional<std::size_t> index);
     void add_options();
+    void initialize_gradient();
+    void synchronize_gradient();
+    bool gradient_clicked(const std::string& id);
+    void gradient_number_changed(double value);
+    void gradient_stop_changed(std::optional<std::size_t> index);
+    gui_forms::Size gradient_gallery(gui_forms::Panel& panel);
+    std::shared_ptr<gui_forms::Control> gradient_strip_;
+    std::shared_ptr<gui_forms::NumericUpDown> gradient_angle_, gradient_position_;
+    std::shared_ptr<gui_forms::ComboBox> gradient_stops_;
+    std::shared_ptr<gui_forms::ImageList> gradient_previews_;
+    std::shared_ptr<SwatchButton> gradient_color_;
+    bool gradient_synchronizing_ = false;
+
     void options_changed(double value);
     void apply_choice(const std::string& id);
     void show_page();

@@ -242,13 +242,21 @@ void EditorDialog::initialize_control_tree() {
         width_ = number("custom-tool-size", {196, 54, 136, 30}, 1, 1024, (*editor).document.ink.size);
     } else if (kind_ == EditorDialogKind::carpet) {
         initialize_carpet();
-    } else if (kind_ == EditorDialogKind::color) {
+    } else if (kind_ == EditorDialogKind::color || kind_ == EditorDialogKind::gradient_color) {
         panel_ = {0, 0, 660, 540};
         original_ = secondary_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;
+        if (kind_ == EditorDialogKind::gradient_color) {
+            original_ = (*editor).fill_gradient.stops[(*editor).gradient_stop].color;
+        }
         primary_tab_ = button("dialog-color1", "Primary", {18, 48, 90, 28});
         secondary_tab_ = button("dialog-color2", "Alt", {112, 48, 90, 28});
         (*primary_tab_).set_theme_override(ribbon_theme());
         (*secondary_tab_).set_theme_override(ribbon_theme());
+        if (kind_ == EditorDialogKind::gradient_color) {
+            (*primary_tab_).set_text("Stop color");
+            (*primary_tab_).set_enabled(false);
+            (*secondary_tab_).set_visible(false);
+        }
         label("custom-colors-label", "Custom colors", {20, 91, 245, 22}, true);
         for (int i = 0; i < 30; ++i) {
             std::shared_ptr<SwatchButton> swatch = gf::make_control<SwatchButton>(
@@ -520,8 +528,12 @@ void EditorDialog::initialize_control_tree() {
     (*error_).set_font({gf::FontRole::control, 12, 400, false});
     (*error_).set_foreground(gf::Color::rgba(161, 49, 39));
     (*error_).set_text_wrapping(gf::TextWrapping::word);
-    put(error_, {20, panel_.height - (kind_ == EditorDialogKind::color ? 74 : 86), panel_.width - 40,
-                 kind_ == EditorDialogKind::color ? 25.0 : 36.0});
+    put(error_,
+        {20,
+         panel_.height -
+             ((kind_ == EditorDialogKind::color || kind_ == EditorDialogKind::gradient_color) ? 74 : 86),
+         panel_.width - 40,
+         (kind_ == EditorDialogKind::color || kind_ == EditorDialogKind::gradient_color) ? 25.0 : 36.0});
     std::shared_ptr<gf::Button> ok =
         button("dialog-ok",
                kind_ == EditorDialogKind::atlas_gallery || kind_ == EditorDialogKind::print_preview ? "Close"
@@ -628,6 +640,8 @@ std::string EditorDialog::title() const {
         return "Carpet generator";
     case EditorDialogKind::about:
         return "About Rainstar Paint";
+    case EditorDialogKind::gradient_color:
+        return "Gradient stop color";
     case EditorDialogKind::color:
         return "Edit Colors";
     case EditorDialogKind::resize:
@@ -857,7 +871,7 @@ void EditorDialog::clicked(gf::ButtonBase& control) {
             accept();
             return;
         }
-        if (id == "dialog-color1" || id == "dialog-color2") {
+        if (kind_ != EditorDialogKind::gradient_color && (id == "dialog-color1" || id == "dialog-color2")) {
             secondary_ = id == "dialog-color2";
             original_ = secondary_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;
             set_color(original_);
@@ -922,10 +936,16 @@ void EditorDialog::accept() {
             return;
         }
 
-        if (kind_ == EditorDialogKind::color) {
+        if (kind_ == EditorDialogKind::color || kind_ == EditorDialogKind::gradient_color) {
             Color parsed;
             if (!from_hex(std::string((*hex_).text()), parsed)) {
                 (*error_).set_text("Enter a six-digit hex color, such as #4F81BD.");
+                return;
+            }
+            if (kind_ == EditorDialogKind::gradient_color) {
+                (*editor).fill_gradient.stops[(*editor).gradient_stop].color = color_;
+                (*editor).close_editor_dialog();
+                (*editor).refresh();
                 return;
             }
             Color& target = secondary_ ? (*editor).document.ink.secondary : (*editor).document.ink.primary;

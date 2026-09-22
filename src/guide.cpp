@@ -497,7 +497,7 @@ void constrain_paint(Image& image, const Image& base, const Guide& guide, bool p
     }
 }
 void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide, bool wrap,
-                   const FloatingSelection* selection) {
+                   const FloatingSelection* selection, const Gradient* gradient) {
     if (image.width < 1 || image.height < 1) {
         return;
     }
@@ -516,12 +516,19 @@ void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide
     std::queue<int> queue;
     queue.push(y * image.width + x);
     visited[y * image.width + x] = 1;
+    int left = x, right = x, top = y, bottom = y;
     while (!queue.empty()) {
         const int index = queue.front();
         queue.pop();
         x = index % image.width;
         y = index / image.width;
-        image.blend(x, y, material.sample(x, y, 32));
+        left = std::min(left, x);
+        right = std::max(right, x);
+        top = std::min(top, y);
+        bottom = std::max(bottom, y);
+        if (!gradient) {
+            image.blend(x, y, material.sample(x, y, 32));
+        }
         const int nx[] = {x - 1, x + 1, x, x}, ny[] = {y, y, y - 1, y + 1};
         for (int direction = 0; direction < 4; ++direction) {
             int px = nx[direction], py = ny[direction];
@@ -539,6 +546,16 @@ void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide
             }
             visited[next] = 1;
             queue.push(next);
+        }
+    }
+    if (gradient) {
+        const GradientSampler sampler(*gradient, {left, top, right - left + 1, bottom - top + 1});
+        for (int py = top; py <= bottom; ++py) {
+            for (int px = left; px <= right; ++px) {
+                if (visited[static_cast<std::size_t>(py) * image.width + px]) {
+                    image.blend(px, py, sampler.sample(px, py));
+                }
+            }
         }
     }
 }

@@ -466,6 +466,7 @@ void Ribbon::initialize_control_tree() {
     button("patterns-tab", "Materials", -1, {184, 0, 100, 27});
     button("tool-tab", "Pencil", -1, {286, 0, 142, 27});
     button("atlas-tab", "Atlas", -1, {431, 0, 72, 27});
+    button("gradient-tab", "Gradients", -1, {506, 0, 105, 27});
     atlas_ = gf::make_control<AtlasPanel>(gf::StableId("atlas-panel"), editor_);
     add_child(atlas_);
     button("help", "?", -1, {1164, 0, 32, 27});
@@ -481,8 +482,8 @@ void Ribbon::initialize_control_tree() {
     button("cut", "", 1, {278, 34, 28, 30});
     button("copy", "", 2, {308, 34, 28, 30});
     button("tool-2", "", 7, {144, 80, 28, 30});
-    button("tool-3", "", 8, {176, 80, 28, 30});
-    std::shared_ptr<gf::Button> text = button("text", "", 9, {208, 80, 28, 30});
+    button("tool-3", "", 8, {174, 80, 34, 30}, false, true, true);
+    std::shared_ptr<gf::Button> text = button("text", "", 9, {210, 80, 26, 30});
     (*text).set_accessible_name("Text");
     button("tool-4", "", 10, {240, 80, 36, 30}, false, true, true);
     button("tool-5", "", -1, {278, 80, 28, 30});
@@ -594,7 +595,9 @@ std::shared_ptr<gf::NumericUpDown> Ribbon::number(const std::string& id, const s
     (*control).set_accessible_name(text);
     option(control, {bounds.x + 113, bounds.y, bounds.width - 113, bounds.height});
     subscriptions_.push_back((*control).value_changed().subscribe(
-        *this, gf::Delegate<double>::bind<Ribbon, &Ribbon::options_changed>(*this)));
+        *this, id.starts_with("gradient-")
+                   ? gf::Delegate<double>::bind<Ribbon, &Ribbon::gradient_number_changed>(*this)
+                   : gf::Delegate<double>::bind<Ribbon, &Ribbon::options_changed>(*this)));
     return control;
 }
 namespace {
@@ -823,6 +826,7 @@ void Ribbon::add_options() {
     button("text-cancel", "Cancel", -1, {1166, 35, 92, 25});
     button("text-fit", "Fit height", -1, {1068, 64, 92, 25});
     button("text-reset-effects", "Reset", -1, {1166, 64, 92, 25});
+    initialize_gradient();
     building_page_ = 1;
 }
 double Ribbon::ribbon_height() const {
@@ -847,8 +851,9 @@ void Ribbon::show_tool_context() {
                        ((*editor).spiro.active &&
                         ((*editor).document.tool == Tool::Fill || (*editor).spiro.selected_peg >= 0)))
                 ? 128
-            : editor && (*editor).document.tool == Tool::Text ? 16
-                                                              : 8;
+            : editor && (*editor).document.tool == Tool::Fill && (*editor).gradient_fill ? 256
+            : editor && (*editor).document.tool == Tool::Text                            ? 16
+                                                                                         : 8;
     close_popup();
     synchronize();
 }
@@ -906,6 +911,9 @@ void Ribbon::show_page() {
         (*atlas_).synchronize();
     }
     Tool tool = (*editor).document.tool;
+    if (page_ == 256 && !(*editor).gradient_fill) {
+        page_ = 8;
+    }
     if (page_ == 128 && !(*editor).spiro.active) {
         page_ = 8;
     }
@@ -951,6 +959,9 @@ void Ribbon::show_page() {
             visible = page_ == 8 && selection && (*editor).document.selection.active;
             control.set_enabled(id == "warp-place" || id == "warp-cancel" ? (*editor).warp_active()
                                                                           : !(*editor).warp_active());
+        }
+        if (id == "gradient-tab") {
+            visible = (*editor).gradient_fill;
         }
         if (id == "patterns-tab") {
             control.set_enabled(ink);
@@ -1428,12 +1439,14 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
                 ? std::vector<std::string>{"Font", "Letter treatment", "Transform", "Colors", "Finish text"}
             : page_ == 128
                 ? std::vector<std::string>{"Guides", "Inserts", "Pegs · drag into a hole", "Load and operate"}
-            : page_ == 2 ? std::vector<std::string>{"Zoom", "Show or hide", "Display"}
-            : page_ == 4 ? std::vector<std::string>{"Apply to", "Brushes", "Patterns"}
-                         : std::vector<std::string>{"Tool settings"};
+            : page_ == 256 ? std::vector<std::string>{"Presets", "Color stops", "Direction and selected stop"}
+            : page_ == 2   ? std::vector<std::string>{"Zoom", "Show or hide", "Display"}
+            : page_ == 4   ? std::vector<std::string>{"Apply to", "Brushes", "Patterns"}
+                           : std::vector<std::string>{"Tool settings"};
         const std::vector<double> edges = selection      ? std::vector<double>{0, 230, 496, 764, 906, width}
                                           : page_ == 16  ? std::vector<double>{0, 455, 690, 920, 1062, 1280}
                                           : page_ == 128 ? std::vector<double>{0, 250, 605, 915, 1280}
+                                          : page_ == 256 ? std::vector<double>{0, 150, 620, 1280}
                                           : page_ == 2   ? std::vector<double>{0, 220, 390, 620}
                                           : page_ == 4   ? std::vector<double>{0, 132, 660, 974, width}
                                                          : std::vector<double>{0, width};
@@ -1572,11 +1585,12 @@ void Ribbon::synchronize() {
             selected = secondary_color_;
         }
         if (id.ends_with("-tab")) {
-            selected = id == (page_ == 1    ? "home-tab"
-                              : page_ == 2  ? "view-tab"
-                              : page_ == 4  ? "patterns-tab"
-                              : page_ == 64 ? "atlas-tab"
-                                            : "tool-tab");
+            selected = id == (page_ == 1     ? "home-tab"
+                              : page_ == 2   ? "view-tab"
+                              : page_ == 4   ? "patterns-tab"
+                              : page_ == 64  ? "atlas-tab"
+                              : page_ == 256 ? "gradient-tab"
+                                             : "tool-tab");
         }
         if (id.starts_with("r-pattern-")) {
             const Ink& choice = (*editor).spiro.selected_peg >= 0
@@ -1648,14 +1662,26 @@ void Ribbon::synchronize() {
             id == "spiro-operate" || id == "spiro-fill") {
             control.set_enabled((*editor).spiro.inserted);
         }
+        if (id == "gradient-linear") {
+            selected = (*editor).fill_gradient.kind == GradientKind::Linear;
+        }
+        if (id == "gradient-radial") {
+            selected = (*editor).fill_gradient.kind == GradientKind::Radial;
+        }
+        if (id == "gradient-add") {
+            control.set_enabled((*editor).fill_gradient.stops.size() < 32);
+        }
+        if (id == "gradient-remove") {
+            control.set_enabled((*editor).fill_gradient.stops.size() > 2);
+        }
         control.set_selected(selected);
     }
     if (ordered_tab_page_ != page_) {
         // Backmost first, foreground last: paint and hit testing share this order.
-        for (int index = 4; index >= 0; --index) {
+        for (int index = 5; index >= 0; --index) {
             (*buttons_[static_cast<std::size_t>(index)]).bring_to_front();
         }
-        for (std::size_t index = 0; index < 5; ++index) {
+        for (std::size_t index = 0; index < 6; ++index) {
             if ((*buttons_[index]).selected()) {
                 (*buttons_[index]).bring_to_front();
             }
@@ -1740,6 +1766,7 @@ void Ribbon::synchronize() {
                              : id == "outline"               ? document.shape_outline
                                                              : document.shape_fill);
     }
+    synchronize_gradient();
     synchronizing_ = false;
 }
 void Ribbon::cancel_spiro_drag() {
@@ -1813,6 +1840,9 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         return;
     }
     std::string id(button.stable_id().value());
+    if (gradient_clicked(id)) {
+        return;
+    }
     if (id == "edit-custom-pattern") { (*editor).toggle_pattern_canvas(); return; }
     if (popup_owner_.get() == &button) {
         close_popup();
@@ -1878,6 +1908,7 @@ void Ribbon::clicked(gf::ButtonBase& button) {
                    : id == "view-tab"     ? 2
                    : id == "patterns-tab" ? 4
                    : id == "atlas-tab"    ? 64
+                   : id == "gradient-tab" ? 256
                    : ((*editor).document.tool == Tool::Spirograph ||
                       ((*editor).spiro.active &&
                        ((*editor).document.tool == Tool::Fill || (*editor).spiro.selected_peg >= 0)))
@@ -2002,7 +2033,11 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
     material.shadows.push_back({{0, 3}, 7, 0, gf::Color::rgba(30, 50, 75, 60), false});
     (*panel).set_authored_surface_material(material);
     double width = 232, height = 10;
-    if (id == "spiro-guides-menu" || id == "spiro-inserts-menu") {
+    if (id == "gradient-presets-menu") {
+        const gf::Size size = gradient_gallery(*panel);
+        width = size.width;
+        height = size.height;
+    } else if (id == "spiro-guides-menu" || id == "spiro-inserts-menu") {
         const bool guides = id == "spiro-guides-menu";
         const int count = static_cast<int>(guides ? spiro_guides().size() : spiro_inserts().size());
         width = 568;
@@ -2147,6 +2182,10 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
                         : std::vector<std::string>{"Edit guide", "Swap segment ▸", "Unset guide"};
             guide_swap_menu_ = false;
         }
+        if (id == "tool-3") {
+            ids = {"bucket-solid", "bucket-gradient"};
+            texts = {"Solid / material fill", "Use gradient"};
+        }
         if (id == "brush-menu") {
             ids = {"family-additive", "family-mix", "family-heal", "family-carpet", "family-dither"};
             texts = {"Additive brushes", "Mix existing pixels", "Heal / continuous clone",
@@ -2224,6 +2263,9 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         return;
     }
     close_popup();
+    if (gradient_clicked(id)) {
+        return;
+    }
     if (id == "edit-custom-pattern") { (*editor).toggle_pattern_canvas(); return; }
     if (id.starts_with("peg-brush-")) {
         (*editor).spiro.assign_brush(static_cast<Brush>(std::stoi(id.substr(10))));

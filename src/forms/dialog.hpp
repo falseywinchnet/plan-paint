@@ -22,6 +22,7 @@ enum class EditorDialogKind {
     carpet,
     about,
     color,
+    gradient_color,
     resize,
     atlas_grid,
     icon_sizes,

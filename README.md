@@ -25,7 +25,9 @@ Actual packaged Rainstar Paint 0.3.2 on Apple Silicon Mac. The specimen was pain
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
-## New in 0.4.0
+## New in 0.4.0 (unreleased)
+
+- Fill → Use gradient opens a Gradients ribbon with twelve presets, 2–32 draggable color stops, linear angle and circular modes, independent stop colors and transparency. Gradient fills respect connected regions, selections and guides. See [gradient fills](docs/GRADIENTS.md).
 
 - Selection dithering and posterization use refined OKLab palettes. Dithering also fits how palette colors mix, preserving more tonal range while discouraging harsh, unrelated color speckles.
 - Crosswind transports only color error the palette can represent, preventing accumulated fringes and ripples. Weave, Scrambled and Drift retain their distinct lattice patterns.

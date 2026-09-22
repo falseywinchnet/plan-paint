@@ -1,5 +1,6 @@
 #pragma once
 #include "curve.hpp"
+#include "gradient.hpp"
 #include "raster.hpp"
 namespace paint {
 enum class LassoMode { Free, Tighten, InnerVoid, Wand };
@@ -40,5 +41,5 @@ struct Guide {
 void constrain_paint(Image& image, const Image& base, const Guide& guide, bool preserve_alpha);
 struct FloatingSelection;
 void stencil_flood(Image& image, Point point, const Ink& ink, const Guide& guide, bool wrap,
-                   const FloatingSelection* selection = nullptr);
+                   const FloatingSelection* selection = nullptr, const Gradient* gradient = nullptr);
 } // namespace paint

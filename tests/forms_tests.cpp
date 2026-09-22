@@ -1783,6 +1783,88 @@ void await_carpet(Fixture& fixture) {
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
+void gradient_fill_controls_and_undo() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    require(!(*window.find("gradient-tab")).visible(), "Gradient tab starts hidden");
+    const gf::Rect bucket = (*window.find("tool-3")).absolute_bounds();
+    const gf::Point arrow{bucket.right() - 3, bucket.y + bucket.height / 2};
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, arrow});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, arrow});
+    window.perform_layout();
+    routed_button(window, "popup-bucket-gradient");
+    require(editor.gradient_fill && editor.document.tool == paint::Tool::Fill &&
+                (*window.find("gradient-strip")).visible(),
+            "Fill menu activates gradient editor");
+    const paint::Color primary = editor.document.ink.primary, alternate = editor.document.ink.secondary;
+    const std::size_t stops = editor.fill_gradient.stops.size();
+    routed_button(window, "gradient-add");
+    require(editor.fill_gradient.stops.size() == stops + 1, "Add inserts a gradient handle");
+    const std::shared_ptr<gf::NumericUpDown> position =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("gradient-position"));
+    const std::shared_ptr<gf::NumericUpDown> angle =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("gradient-angle"));
+    (*position).set_value(42);
+    (*angle).set_value(90);
+    require(std::abs(editor.fill_gradient.stops[editor.gradient_stop].position - .42) < 1e-9 &&
+                editor.fill_gradient.angle == 90,
+            "Position and angle updates are independent and survive refresh");
+    routed_button(window, "gradient-edit-color");
+    const paint::Color original = editor.fill_gradient.stops[editor.gradient_stop].color;
+    std::shared_ptr<gf::TextBox> hex = std::dynamic_pointer_cast<gf::TextBox>(window.find("color-hex"));
+    (*hex).set_text("#123ABC");
+    routed_button(window, "dialog-cancel");
+    require(paint::equal(original, editor.fill_gradient.stops[editor.gradient_stop].color),
+            "Cancel leaves stop unchanged");
+    routed_button(window, "gradient-edit-color");
+    hex = std::dynamic_pointer_cast<gf::TextBox>(window.find("color-hex"));
+    (*hex).set_text("#123ABC");
+    routed_button(window, "dialog-ok");
+    require(paint::equal(editor.fill_gradient.stops[editor.gradient_stop].color, {18, 58, 188, 255}),
+            "Color dialog changes selected stop");
+    require(paint::equal(primary, editor.document.ink.primary) &&
+                paint::equal(alternate, editor.document.ink.secondary),
+            "Gradient colors do not overwrite Primary or Alt");
+    routed_button(window, "gradient-remove");
+    require(editor.fill_gradient.stops.size() == stops, "Remove deletes only selected stop");
+    routed_button(window, "gradient-presets-menu");
+    window.perform_layout();
+    require(window.find("popup-gradient-preset-11") != nullptr, "Gallery exposes all twelve presets");
+    routed_button(window, "popup-gradient-preset-3");
+    require(editor.fill_gradient.stops.size() == 6 && editor.fill_gradient.angle == 90,
+            "Chrome preset loads nonuniform stops and its direction");
+    routed_button(window, "gradient-radial");
+    require(editor.fill_gradient.kind == paint::GradientKind::Radial && !(*angle).enabled(),
+            "Circular mode disables angle only");
+    routed_button(window, "gradient-linear");
+    editor.document.select({20, 20, 80, 60});
+    editor.document.settle_selection();
+    editor.refresh();
+    const paint::Image before = editor.document.image;
+    const std::size_t history = editor.document.undo_history.size();
+    fixture.click(40, 40);
+    require(editor.document.undo_history.size() == history + 1, "Gradient bucket is one undo step");
+    require(editor.document.selection.active && white(editor.document.image.get(10, 10)),
+            "Gradient keeps selection and exterior");
+    require(!paint::equal(editor.document.image.get(40, 20), editor.document.image.get(40, 79)),
+            "Selected region receives the gradient");
+    editor.execute("undo");
+    require(std::equal(before.pixels.begin(), before.pixels.end(), editor.document.image.pixels.begin(),
+                       paint::equal),
+            "Gradient bucket undoes exactly");
+    open_tab(window, "home-tab");
+    routed_button(window, "tool-2");
+    require((*window.find("gradient-tab")).visible(),
+            "Gradient configuration remains available across tools");
+    open_tab(window, "home-tab");
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, arrow});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, arrow});
+    window.perform_layout();
+    routed_button(window, "popup-bucket-solid");
+    require(!editor.gradient_fill && !(*window.find("gradient-tab")).visible(),
+            "Material fill hides gradient tab without losing its stops");
+}
 void dither_dialog_and_brush() {
     Fixture fixture;
     paint::forms::Editor& editor=*fixture.editor;
@@ -3292,6 +3374,7 @@ int main() {
         click_move_click_shapes();
         centered_closed_shapes();
         centered_circle_and_materials();
+        gradient_fill_controls_and_undo();
         dither_dialog_and_brush();
         carpet_generator_controls();
         spirograph_apparatus_and_ink();

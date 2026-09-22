@@ -127,6 +127,9 @@ class Editor final : public gui_forms::Control {
     BrushFamily brush_family = BrushFamily::Additive;
     DitherBrushMode dither_brush_mode = DitherBrushMode::Neighborhood;
     DitherOptions dither_options;
+    bool gradient_fill = false;
+    Gradient fill_gradient = gradient_presets().front().gradient;
+    std::size_t gradient_stop = 0;
     std::vector<std::uint8_t> canvas_selection_mask() const;
     MixEffect mix_effect = MixEffect::Ripple;
     EraserMode eraser_mode = EraserMode::Hard;
