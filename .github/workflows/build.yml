@@ -14,31 +14,41 @@ permissions:
   contents: write
 jobs:
   linux:
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x64
+            musl: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+            musl: aarch64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - name: Fetch verified GUI.Forms source
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 scripts/fetch-gui-forms.py --github-cli
-      - name: Build and verify the musl package on Linux x64
+      - name: Build and verify the musl package on Linux ${{ matrix.arch }}
         run: docker run --rm -v "$PWD:/work" -w /work alpine:3.24.2 sh scripts/ci-linux.sh
       - name: Launch the package on the glibc host
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb
-          test ! -e /lib/ld-musl-x86_64.so.1
+          test ! -e /lib/ld-musl-${{ matrix.musl }}.so.1
           set +e
           xvfb-run -a timeout 3 'dist/RainstarPaint/Rainstar Paint'
           result=$?
           set -e
           test "$result" = 124
           GUI_FORMS_FONT_DIR="$PWD/dist/RainstarPaint/bin/fonts" xvfb-run -a \
-            "$PWD/dist/RainstarPaint/lib/ld-musl-x86_64.so.1" \
+            "$PWD/dist/RainstarPaint/lib/ld-musl-${{ matrix.musl }}.so.1" \
             --library-path "$PWD/dist/RainstarPaint/lib" "$PWD/build-linux/paint-forms-native-tests"
       - uses: actions/upload-artifact@v4
         with:
-          name: rainstar-paint-linux-x64
+          name: rainstar-paint-linux-${{ matrix.arch }}
           path: dist/*.tar.gz
   windows:
     runs-on: windows-2022
