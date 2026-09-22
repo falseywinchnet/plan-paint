@@ -756,6 +756,7 @@ void Ribbon::add_options() {
     check("stroke-stabilize", "Stabilizer", {12, 79, 150, 28});
     stabilizer_lag_ = number("stroke-lag", "Lag (px)", {180, 79, 220, 28}, 0.1, 50, 5, 1);
     check("spray-glitter", "Fine glitter", {920, 79, 200, 28});
+    check("dither-brush-noise", "Brightness / saturation noise", {260, 79, 310, 28});
     building_page_ = 40;
     rotation_ = number("rotation-degrees", "Angle (°)", {242, 36, 240, 28}, -360, 360, 15, 1);
     button("rotate-custom", "Apply rotation", 6, {242, 79, 240, 30});
@@ -972,6 +973,9 @@ void Ribbon::show_page() {
             if (id.starts_with("stroke-")) {
                 visible = tool == Tool::Brush || tool == Tool::Pencil;
             }
+            if (id == "dither-brush-noise") {
+                visible = tool == Tool::Brush && (*editor).brush_family == BrushFamily::Dither;
+            }
             if (id == "spray-glitter") {
                 visible = tool == Tool::Brush && (*editor).brush_family == BrushFamily::Additive &&
                           (*editor).document.ink.brush == Brush::Airbrush;
@@ -1095,6 +1099,8 @@ void Ribbon::apply_choice(const std::string& id) {
         (*editor).set_heal_source = true;
     } else if (id == "stroke-stabilize") {
         (*editor).stabilize = !(*editor).stabilize;
+    } else if (id == "dither-brush-noise") {
+        (*editor).dither_brush_mode = (*editor).dither_brush_mode == DitherBrushMode::Neighborhood ? DitherBrushMode::Noise : DitherBrushMode::Neighborhood;
     } else if (id == "spray-glitter") {
         (*editor).glitter = !(*editor).glitter;
     } else if (id == "picker-magnifier") {
@@ -1706,6 +1712,7 @@ void Ribbon::synchronize() {
         }
         (*check).set_checked(id == "guide-fill"              ? (*editor).guide.fill
                              : id == "stroke-stabilize"      ? (*editor).stabilize
+                             : id == "dither-brush-noise" ? (*editor).dither_brush_mode == DitherBrushMode::Noise
                              : id == "spray-glitter"         ? (*editor).glitter
                              : id == "picker-magnifier"      ? (*editor).picker_magnifier
                              : id == "soft-eraser"           ? (*editor).eraser_soft
@@ -2076,7 +2083,7 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
         std::vector<std::string> ids, texts;
         if (id == "tool-0") {
             ids = {"tool-0",     "lasso-free", "lasso-tight",      "lasso-void",
-                   "lasso-wand", "select-all", "invert-selection", "transparent-selection"};
+                   "lasso-wand", "select-all", "invert-selection", "transparent-selection", "selection-dither"};
             texts = {"Rectangular selection",
                      "Free-form selection",
                      "Tightening lasso",
@@ -2084,7 +2091,7 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
                      "Magic wand (all similar colors)",
                      "Select all",
                      "Invert selection",
-                     "Transparent selection"};
+                     "Transparent selection", "Dither / posterize…"};
         }
         if (id == "tool-4") {
             ids = {"eraser-0", "eraser-1", "eraser-2", "eraser-3", "eraser-4"};
@@ -2129,9 +2136,9 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             guide_swap_menu_ = false;
         }
         if (id == "brush-menu") {
-            ids = {"family-additive", "family-mix", "family-heal", "family-carpet"};
+            ids = {"family-additive", "family-mix", "family-heal", "family-carpet", "family-dither"};
             texts = {"Additive brushes", "Mix existing pixels", "Heal / continuous clone",
-                     "Carpet generator…"};
+                     "Carpet generator…", "Dithering brush"};
         }
         if (id == "tool-10") {
             ids = {"tool-10", "stamp-add", "stamp-clear"};
@@ -2299,6 +2306,7 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         if (id != "family-carpet") {
             (*editor).brush_family = id == "family-additive" ? BrushFamily::Additive
                                      : id == "family-mix"    ? BrushFamily::Mix
+                                     : id == "family-dither" ? BrushFamily::Dither
                                                              : BrushFamily::Heal;
         }
         (*editor).choose_tool(Tool::Brush);

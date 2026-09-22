@@ -5,6 +5,7 @@
 #include "desktop.hpp"
 #include "document.hpp"
 #include "forms/dialog.hpp"
+#include "dither.hpp"
 #include "forms/help.hpp"
 #include "forms/ribbon.hpp"
 #include "material.hpp"
@@ -120,6 +121,9 @@ class Editor final : public gui_forms::Control {
     CarpetParameters carpet_parameters;
     Image carpet_tile;
     BrushFamily brush_family = BrushFamily::Additive;
+    DitherBrushMode dither_brush_mode = DitherBrushMode::Neighborhood;
+    DitherOptions dither_options;
+    std::vector<std::uint8_t> canvas_selection_mask() const;
     MixEffect mix_effect = MixEffect::Ripple;
     EraserMode eraser_mode = EraserMode::Hard;
     double effect_strength = 0.75, effect_scale = 24, effect_phase = 0;
@@ -314,6 +318,8 @@ class Editor final : public gui_forms::Control {
     EraserStroke eraser_;
     MaterialStroke material_;
     DynamicBrushStroke dynamic_brush_;
+    DitherBrushStroke dither_brush_;
+    std::vector<std::uint8_t> dither_brush_mask_;
     TransformStroke transform_brush_;
     HealingBrush healing_brush_;
     StrokeStabilizer stabilizer_;

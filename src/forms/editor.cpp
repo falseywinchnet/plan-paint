@@ -682,6 +682,8 @@ void Editor::release_gesture() {
     eraser_.clear();
     material_.clear();
     dynamic_brush_.clear();
+    dither_brush_.clear();
+    dither_brush_mask_.clear();
     carpet_stroke_.clear();
     (*canvas_).set_pointer_capture(false);
 }
@@ -1141,7 +1143,12 @@ void Editor::begin(Point point, bool secondary) {
         eraser_.clear();
         material_.clear();
         dynamic_brush_.clear();
+    dither_brush_.clear();
+    dither_brush_mask_.clear();
         carpet_stroke_.clear();
+        if (document.tool == Tool::Brush && brush_family == BrushFamily::Dither) {
+            dither_brush_mask_ = canvas_selection_mask();
+        }
         // A fresh stochastic deposit each gesture; pattern/shape materials retain
         // their authored seed and remain independent of brush-only dynamics.
         if (document.tool == Tool::Brush) {
@@ -1996,6 +2003,11 @@ void Editor::execute(const std::string& command) {
             if (window()) {
                 static_cast<void>((*window()).request_focus(canvas_));
             }
+        } else if (command == "selection-dither") {
+            document.require_rgba_transform();
+            document.settle_selection();
+            open_editor_dialog(EditorDialogKind::dither);
+            return;
         } else if (command == "invert-selection") {
             document.invert_selection();
         } else if (command == "delete") {

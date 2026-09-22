@@ -1750,6 +1750,47 @@ void await_carpet(Fixture& fixture) {
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
+void dither_dialog_and_brush() {
+    Fixture fixture;
+    paint::forms::Editor& editor=*fixture.editor;
+    gf::Window& window=*fixture.window;
+    for(int y=0;y<96;++y) for(int x=0;x<128;++x) editor.document.image.set(x,y,{static_cast<std::uint8_t>(x*2),static_cast<std::uint8_t>(y*2),110,255});
+    editor.document.select({16,16,80,60});
+    editor.document.settle_selection();
+    paint::Image before=editor.document.image;
+    std::size_t history=editor.document.undo_history.size();
+    editor.execute("selection-dither");window.perform_layout();
+    require(window.find("dither-preview")!=nullptr,"Dither command opens preview dialog");
+    const std::shared_ptr<gf::NumericUpDown> count=std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("dither-colors"));
+    const std::shared_ptr<gf::ComboBox> pattern=std::dynamic_pointer_cast<gf::ComboBox>(window.find("dither-pattern"));
+    (*count).set_value(8);(*pattern).set_selected_index(3);await_carpet(fixture);
+    require(editor.document.undo_history.size()==history && std::memcmp(before.pixels.data(),editor.document.image.pixels.data(),before.pixels.size()*sizeof(paint::Color))==0,"Dither preview does not edit document or history");
+    routed_button(window,"dialog-ok");
+    require(editor.document.undo_history.size()==history+1 && editor.dither_options.pattern==paint::DitherPattern::Drift,"Dither applies once and remembers pattern");
+    require(editor.document.selection.active && editor.document.selection.canvas_selection,"Dither retains selection");
+    for(int y=0;y<96;++y) for(int x=0;x<128;++x) if(!editor.document.selection.contains(x,y)) require(paint::equal(before.get(x,y),editor.document.image.get(x,y)),"Dither preserves pixels outside selection");
+    editor.execute("undo");
+    require(std::memcmp(before.pixels.data(),editor.document.image.pixels.data(),before.pixels.size()*sizeof(paint::Color))==0,"Dither dialog edit undoes exactly");
+    editor.execute("selection-dither");window.perform_layout();routed_button(window,"dialog-cancel");
+    static_cast<void>(window.drain_posted_work());
+    require(!window.find("editor-dialog"),"Dither cancellation joins worker and dismisses dialog");
+    open_tab(window,"home-tab");window.perform_layout();
+    const gf::Rect bounds=(*window.find("brush-menu")).absolute_bounds();
+    const gf::Point arrow{bounds.x+bounds.width/2,bounds.bottom()-5};
+    window.dispatch_pointer({gf::PointerAction::down,gf::PointerButton::primary,arrow});
+    window.dispatch_pointer({gf::PointerAction::up,gf::PointerButton::primary,arrow});window.perform_layout();
+    routed_button(window,"popup-family-dither");
+    require(editor.brush_family==paint::BrushFamily::Dither,"Brush menu selects dithering family");
+    require((*window.find("dither-brush-noise")).visible(),"Dither brush exposes its noise mode");
+    routed_button(window,"dither-brush-noise");
+    require(editor.dither_brush_mode==paint::DitherBrushMode::Noise,"Dither noise option routes");
+    editor.document.ink.size=32;
+    fixture.drag(0,40,120,40);
+    require(std::memcmp(before.pixels.data(),editor.document.image.pixels.data(),before.pixels.size()*sizeof(paint::Color))!=0,"Routed dither brush edits existing pixels");
+    for(int y=0;y<96;++y) for(int x=0;x<128;++x) if(!editor.document.selection.contains(x,y)) require(paint::equal(before.get(x,y),editor.document.image.get(x,y)),"Dither brush obeys persistent selection");
+    editor.execute("undo");
+    require(std::memcmp(before.pixels.data(),editor.document.image.pixels.data(),before.pixels.size()*sizeof(paint::Color))==0,"Dither brush stroke undoes once");
+}
 void carpet_generator_controls() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -3118,6 +3159,7 @@ int main() {
         click_move_click_shapes();
         centered_closed_shapes();
         centered_circle_and_materials();
+        dither_dialog_and_brush();
         carpet_generator_controls();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();

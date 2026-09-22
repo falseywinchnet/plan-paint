@@ -45,6 +45,7 @@ struct CarpetWork {
 } // namespace
 EditorDialog::~EditorDialog() {
     stop_carpet();
+    stop_dither();
 }
 void EditorDialog::stop_carpet() {
     if (carpet_job_) {
@@ -57,12 +58,14 @@ void EditorDialog::stop_carpet() {
 }
 void EditorDialog::on_attached_to_window() {
     Control::on_attached_to_window();
+    if (kind_ == EditorDialogKind::dither) render_dither();
     if (kind_ == EditorDialogKind::carpet) {
         render_carpet_preview();
     }
 }
 void EditorDialog::on_detaching_from_window(gf::Window& window) noexcept {
     stop_carpet();
+    stop_dither();
     Control::on_detaching_from_window(window);
 }
 void EditorDialog::initialize_carpet() {

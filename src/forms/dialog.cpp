@@ -233,7 +233,9 @@ void EditorDialog::initialize_control_tree() {
         (*close).set_default_button(true);
         return;
     }
-    if (kind_ == EditorDialogKind::tool_size) {
+    if (kind_ == EditorDialogKind::dither) {
+        initialize_dither();
+    } else if (kind_ == EditorDialogKind::tool_size) {
         panel_ = {0, 0, 360, 210};
         label("custom-tool-size-label", "Size in pixels", {24, 54, 160, 28});
         width_ = number("custom-tool-size", {196, 54, 136, 30}, 1, 1024, (*editor).document.ink.size);
@@ -581,6 +583,8 @@ gf::SemanticDescriptor EditorDialog::semantic_descriptor() const {
 }
 std::string EditorDialog::title() const {
     switch (kind_) {
+    case EditorDialogKind::dither:
+        return "Dither / posterize";
     case EditorDialogKind::tool_size:
         return "Tool size";
     case EditorDialogKind::carpet:
@@ -864,6 +868,10 @@ void EditorDialog::accept() {
         return;
     }
     try {
+        if (kind_ == EditorDialogKind::dither) {
+            accept_dither();
+            return;
+        }
         if (kind_ == EditorDialogKind::carpet) {
             if (carpet_image_.pixels.empty() || !(*(*attached_window()).find("dialog-ok")).enabled()) {
                 return;

@@ -16,14 +16,24 @@ Actual packaged Rainstar Paint 0.3.2 on Apple Silicon Mac. The specimen was pain
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/rainstar-paint-0.3.6-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/rainstar-paint-0.3.6-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/rainstar-paint-0.3.6-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/rainstar-paint-0.3.6-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/rainstar-paint-0.3.9-macos-arm64.pkg) | macOS 26 or newer. Install, then open Rainstar Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/rainstar-paint-0.3.9-windows-x64.zip) | Extract the folder and run `rainstar-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/rainstar-paint-0.3.9-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Rainstar Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/rainstar-paint-0.3.9-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.6/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
+[Release notes](https://github.com/falseywinchnet/rainstar-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/rainstar-paint/releases/download/v0.3.9/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/rainstar-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
+
+## New in 0.3.9
+
+- Paint-authored tool cursors have precise contact points and native fallbacks. Magnifier and stamp previews remain unobstructed.
+- Spirograph has translucent guides and inserts, component catalogs, movable ink pegs, and per-peg brush media. Gel pen adds a solid stroke with subtle variation and glints. The apparatus follows the same dismissal rules as ordinary guides.
+- Materials adds classic tiled patterns and a separate custom pattern canvas with its own size, undo history, and saved tile.
+- Selection → Dither / posterize offers Crosswind, Weave, Scrambled, Drift, and plain posterization with 2–32 colors, a prepared preview, preserved alpha, and one-step Undo.
+- Brushes → Dithering brush softly scatters changes toward the center of its disk. Use neighborhood half-blending, or enable light brightness/saturation noise in the Tool ribbon. Existing pixels supply the colors; active selections remain protected.
+
+See [Spirograph](docs/SPIROGRAPH.md), [custom patterns](docs/CUSTOM_PATTERNS.md), [tool cursors](docs/CUSTOM_CURSORS.md), and [dithering](docs/DITHERING.md).
 
 ## New in 0.3.6
 

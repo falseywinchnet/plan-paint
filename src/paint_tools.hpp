@@ -2,7 +2,7 @@
 #include "material.hpp"
 #include <unordered_map>
 namespace paint {
-enum class BrushFamily { Additive, Mix, Heal, Carpet };
+enum class BrushFamily { Additive, Mix, Heal, Carpet, Dither };
 enum class MixEffect {
     Ripple,
     Glass,

@@ -149,8 +149,21 @@ void Editor::paint_guide_overlay(gf::Painter& painter) {
         }
     }
 }
+std::vector<std::uint8_t> Editor::canvas_selection_mask() const {
+    const FloatingSelection& selection = document.selection;
+    if (!selection.active || !selection.canvas_selection) return {};
+    std::vector<std::uint8_t> mask(document.image.pixels.size());
+    for (int y=0;y<document.image.height;++y) for(int x=0;x<document.image.width;++x) {
+        mask[static_cast<std::size_t>(y)*document.image.width+x] = selection.contains(x,y) ? 1 : 0;
+    }
+    return mask;
+}
 void Editor::paint_segment(Point start, Point end) {
     const bool wrap = atlas_painting() && atlas_wrap;
+    if (document.tool == Tool::Brush && brush_family == BrushFamily::Dither) {
+        dither_brush_.segment(document.image,start,end,gesture_ink_.size,dither_brush_mode,gesture_ink_.noise,wrap,dither_brush_mask_);
+        return;
+    }
     if (document.tool == Tool::Brush && brush_family == BrushFamily::Carpet) {
         carpet_stroke_.segment(document.image, start, end, gesture_ink_.size, carpet_tile,
                                gesture_ink_.primary.a / 255.0, wrap);

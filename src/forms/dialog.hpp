@@ -15,7 +15,9 @@ class Editor;
 class SwatchButton;
 class EditorDialog;
 struct CarpetRenderJob;
+struct DitherRenderJob;
 enum class EditorDialogKind {
+    dither,
     tool_size,
     carpet,
     about,
@@ -57,6 +59,7 @@ class EditorDialog final : public gui_forms::Control {
     void on_attached_to_window() override;
     void on_detaching_from_window(gui_forms::Window& window) noexcept override;
     void deliver_carpet();
+    void deliver_dither();
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
     void arrange(gui_forms::Rect bounds) override;
@@ -72,6 +75,18 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_dither();
+    void render_dither();
+    void stop_dither();
+    void accept_dither();
+    void dither_count_changed(double);
+    void dither_pattern_changed(std::optional<std::size_t>);
+    std::shared_ptr<DitherRenderJob> dither_job_;
+    std::thread dither_worker_;
+    std::shared_ptr<gui_forms::NumericUpDown> dither_count_;
+    std::shared_ptr<gui_forms::ComboBox> dither_pattern_;
+    std::shared_ptr<gui_forms::RasterCanvas> dither_preview_;
+    std::shared_ptr<gui_forms::Label> dither_status_;
     std::shared_ptr<gui_forms::ComboBox> shape_gesture_;
     CarpetParameters carpet_;
     Image carpet_image_;

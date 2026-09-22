@@ -291,5 +291,14 @@ inline constexpr HelpTopic help_topics[] = {
      "copyright and license notice with copies. The license does not promise a warranty.\n\nYour pictures "
      "are yours. There is no account, subscription, advertising, or upload service in the drawing "
      "workflow. The complete source and dependency notices are supplied with the project."},
+    {"Dithering and posterizing",
+     "Select an area, open the Selection arrow, and choose Dither / posterize. Choose 2-32 colors "
+     "and Crosswind, Weave, Scrambled, Drift, or Posterize. The preview prepares the exact result. "
+     "OK applies it in one Undo step; Cancel keeps the original. With no canvas selection, the "
+     "whole canvas is processed. Alpha and selection holes are preserved.\n\n"
+     "For local changes, open the Brushes arrow and choose Dithering brush. Its spray is denser "
+     "near the center. Normally, sampled pixels move halfway toward their neighborhood average. "
+     "Enable Brightness / saturation noise in the Tool ribbon for small color variations instead. "
+     "Both modes use existing artwork, preserve alpha, and respect the active selection."},
 };
 } // namespace paint
