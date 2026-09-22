@@ -1,4 +1,5 @@
 #include "desktop.hpp"
+#include "localization.hpp"
 #include "codecs.hpp"
 #include "conv.hpp"
 #include "paths.hpp"
@@ -57,7 +58,7 @@ void EditorSettings::load() {
         return;
     }
     const int version = magic.size() == 5 && magic.starts_with("RSPS") ? magic[4] - '0' : 0;
-    if (version < 1 || version > 7 || !std::isfinite(distance) || distance < 0.1 || distance > 100) {
+    if (version < 1 || version > 8 || !std::isfinite(distance) || distance < 0.1 || distance > 100) {
         return;
     }
     scroll_distance = distance;
@@ -85,13 +86,22 @@ void EditorSettings::load() {
             recovery_seconds = std::clamp(seconds, 15, 600);
         }
     }
+    if (version >= 8) {
+        std::string preference;
+        int controls = 0;
+        if (input >> preference >> controls) {
+            language = preference == "system" ? preference : normalize_language_tag(preference);
+            if (language.empty()) { language = "system"; }
+            canvas_controls = controls == 1;
+        }
+    }
 }
 void EditorSettings::save() const {
     if (storage_path.empty()) {
         return;
     }
     std::ostringstream output;
-    output << "RSPS7\n"
+    output << "RSPS8\n"
            << scroll_distance << '\n'
            << static_cast<int>(canvas_backing) << '\n'
            << (solid_transparency ? 1 : 0) << '\n'
@@ -99,7 +109,7 @@ void EditorSettings::save() const {
            << (drag_shapes ? 1 : 0) << '\n'
            << (rotate_view ? 1 : 0) << '\n'
            << interface_hue << '\n' << (recovery_enabled ? 1 : 0) << '\n'
-           << recovery_seconds << '\n';
+           << recovery_seconds << '\n' << language << '\n' << (canvas_controls ? 1 : 0) << '\n';
     const std::string encoded = output.str();
     const std::vector<std::uint8_t> bytes(encoded.begin(), encoded.end());
     write_file_atomic(bytes, storage_path, "Paint could not save its settings file.");

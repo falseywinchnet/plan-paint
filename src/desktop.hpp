@@ -13,6 +13,8 @@ struct RecentFiles {
 };
 struct EditorSettings {
     std::string storage_path;
+    std::string language = "system";
+    bool canvas_controls = false;
     double scroll_distance = 6;
     int interface_hue = 220;
     bool recovery_enabled = true;

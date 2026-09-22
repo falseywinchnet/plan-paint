@@ -54,6 +54,7 @@ def main():
             continue
         subprocess.run(["patchelf", "--set-rpath", "$ORIGIN", str(library)], check=True)
     copy_fonts(sdk, bundle / "bin/fonts")
+    shutil.copytree(ROOT / "languages", bundle / "bin/languages", ignore=shutil.ignore_patterns("*.md"))
     locale = Path("/usr/share/X11/locale")
     if not locale.is_dir():
         raise RuntimeError("X11 locale data is required for keyboard input.")
@@ -86,6 +87,7 @@ def main():
         "version": args.version, "architecture": architecture,
         "frontend": "GUI.Forms", "window_system": "X11; XWayland on Wayland desktops",
         "loader": loader.name,
+        "runtime_packages": subprocess.check_output(["apk", "info", "-v"], text=True).splitlines() if shutil.which("apk") else [],
         "files": {str(path.relative_to(bundle)): hashlib.sha256(path.read_bytes()).hexdigest()
                   for path in sorted(bundle.rglob("*")) if path.is_file()},
     }

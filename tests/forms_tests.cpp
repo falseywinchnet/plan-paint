@@ -1944,6 +1944,24 @@ void carpet_generator_controls() {
     routed_button(window, "dialog-cancel");
     require(editor.carpet_parameters.view == 35, "cancel changes committed carpet parameters");
 }
+void spirograph_accessible_pegs() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.start_spirograph();
+    editor.refresh();
+    window.perform_layout();
+    require(window.perform_semantic_action("spiro-peg-1", gf::SemanticAction::press),
+            "accessible peg activation unavailable");
+    require(editor.spiro.pegs[0].seated && editor.spiro.selected_peg == 0,
+            "accessible peg activation does not seat the first empty socket");
+    editor.spiro.fill(0, {20, 70, 190, 255});
+    require(window.perform_semantic_action("spiro-peg-4", gf::SemanticAction::press),
+            "accessible peg resize unavailable");
+    require(editor.spiro.pegs[0].width == 4 && editor.spiro.pegs[0].loaded &&
+                editor.spiro.pegs[0].ink.b == 190 && !editor.canvas().has_pointer_capture(),
+            "accessible peg resize loses ink or captures the pointer");
+}
 void spirograph_apparatus_and_ink() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -3305,6 +3323,12 @@ void custom_pattern_canvas_is_independent() {
             "resize preserves overlap and fills new area white");
     (*pattern).undo();
     require((*editor.custom_pattern).width == 8, "pattern resize is undoable");
+    window.request_focus(pattern);
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::down});
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::space});
+    require((*editor.custom_pattern).get(0, 1).r == 0, "pattern keyboard draws without pointer holding");
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::enter});
+    require(white((*editor.custom_pattern).get(0, 1)), "pattern keyboard can paint white");
     editor.execute("new");
     require(editor.document.image.width == 128, "main document commands cannot leak into pattern editing");
     editor.toggle_pattern_canvas();
@@ -3334,8 +3358,53 @@ void custom_pattern_canvas_is_independent() {
         require(foreground > 0 && foreground < 256, "each classic tile contains both materials");
     }
 }
+void canvas_controls_without_dragging() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.settings.canvas_controls = true;
+    editor.refresh(); window.perform_layout();
+    const std::shared_ptr<gf::NumericUpDown> x = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("canvas-position-0"));
+    const std::shared_ptr<gf::NumericUpDown> y = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("canvas-position-1"));
+    require(x && y && (*x).semantic_descriptor().name == "Canvas X", "canvas coordinates expose meaningful semantic names");
+    (*x).set_value(12); (*y).set_value(14);
+    editor.canvas_control_action(0);
+    editor.canvas_control_action(3);
+    require(!editor.canvas().has_pointer_capture(), "latched stroke never captures the controls");
+    require(paint::equal(editor.document.image.get(12, 14), editor.document.ink.primary), "start stroke paints its original image coordinate");
+    fixture.pointer(gf::PointerAction::move, 80, 80);
+    require(white(editor.document.image.get(80, 80)), "ordinary pointer hover cannot advance the latched stroke");
+    (*x).set_value(22);
+    editor.canvas_control_action(0);
+    editor.canvas_control_action(4);
+    require(paint::equal(editor.document.image.get(20, 14), editor.document.ink.primary), "coordinate moves draw a continuous stroke");
+    editor.canvas_control_action(5);
+    require(white(editor.document.image.get(12, 14)) && white(editor.document.image.get(20, 14)), "one undo removes the complete latched stroke");
+    editor.rotate_view(0.6);
+    (*x).set_value(25); (*y).set_value(33);
+    editor.canvas_control_action(0);
+    editor.canvas_control_action(1);
+    require(paint::equal(editor.document.image.get(25, 33), editor.document.ink.primary), "virtual coordinates survive arbitrary view rotation");
+    editor.document.ink.secondary = {20, 160, 240, 255};
+    (*x).set_value(35); (*y).set_value(44);
+    editor.canvas_control_action(2);
+    require(paint::equal(editor.document.image.get(35, 44), editor.document.ink.secondary), "alternate click uses the alternate material");
+    editor.rotate_view(0);
+    editor.choose_shape(paint::Shape::Rectangle);
+    editor.settings.drag_shapes = false;
+    (*x).set_value(70); (*y).set_value(70); editor.canvas_control_action(3);
+    (*x).set_value(100); (*y).set_value(85); editor.canvas_control_action(0); editor.canvas_control_action(4);
+    require(!white(editor.document.image.get(85, 70)), "latched shape finish commits click-placement geometry");
+    const paint::Image finished = editor.document.image;
+    (*x).set_value(120); (*y).set_value(90); editor.canvas_control_action(0);
+    for (std::size_t i = 0; i < finished.pixels.size(); ++i) {
+        require(paint::equal(editor.document.image.pixels[i], finished.pixels[i]), "finished shape no longer follows virtual cursor");
+    }
+
+}
 int main() {
     try {
+        canvas_controls_without_dragging();
         custom_pattern_canvas_is_independent();
         tool_cursor_routes();
         freehand_wand_picker_and_size();
@@ -3382,6 +3451,7 @@ int main() {
         gradient_fill_controls_and_undo();
         dither_dialog_and_brush();
         carpet_generator_controls();
+        spirograph_accessible_pegs();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();
         independent_color_materials_and_no_color();

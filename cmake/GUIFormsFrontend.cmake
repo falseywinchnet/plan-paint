@@ -56,7 +56,7 @@ endif()
 if(NOT RAINSTAR_SCROLLING_LAYOUT)
   message(FATAL_ERROR "Plan Paint requires the GUI.Forms scrolling-layout, keyboard, and diagonal-cursor extensions. See docs/GUI_FORMS_PORT.md.")
 endif()
-add_library(paint_forms STATIC src/forms/gradient_controls.cpp src/forms/recovery.cpp src/forms/interface_theme.cpp src/cursors/tool_cursors.cpp src/forms/editor.cpp src/forms/pattern_canvas.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/carpet_dialog.cpp src/forms/dither_dialog.cpp src/forms/text.cpp src/forms/warp.cpp src/forms/atlas.cpp src/forms/selection.cpp src/forms/help.cpp src/forms/surface.cpp src/forms/guide.cpp src/forms/spirograph.cpp)
+add_library(paint_forms STATIC src/forms/canvas_controls.cpp src/forms/gradient_controls.cpp src/forms/recovery.cpp src/forms/interface_theme.cpp src/cursors/tool_cursors.cpp src/forms/editor.cpp src/forms/pattern_canvas.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/carpet_dialog.cpp src/forms/dither_dialog.cpp src/forms/text.cpp src/forms/warp.cpp src/forms/atlas.cpp src/forms/selection.cpp src/forms/help.cpp src/forms/surface.cpp src/forms/guide.cpp src/forms/spirograph.cpp)
 target_link_libraries(paint_forms PUBLIC paint_core GUIForms::Application)
 target_include_directories(paint_forms PUBLIC src)
 target_compile_definitions(paint_forms PUBLIC RAINSTAR_VERSION="${PROJECT_VERSION}")
@@ -159,4 +159,18 @@ if(EXISTS "${PROJECT_SOURCE_DIR}/astra/ribbon-export.cpp")
   add_executable(paint-export-ribbon-icons EXCLUDE_FROM_ALL astra/ribbon-export.cpp)
   target_include_directories(paint-export-ribbon-icons PRIVATE src scripts)
   target_link_libraries(paint-export-ribbon-icons PRIVATE paint_core)
+endif()
+
+# External translations are optional at runtime. English lives in the binary.
+file(GLOB paint_languages CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/languages/*.json")
+if(APPLE)
+  set_source_files_properties(${paint_languages} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/languages")
+  target_sources(plan-paint PRIVATE ${paint_languages})
+else()
+  add_custom_target(paint-language-packs ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/languages"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/languages" "${CMAKE_CURRENT_BINARY_DIR}/languages"
+    VERBATIM)
+  add_dependencies(plan-paint paint-language-packs)
+  install(DIRECTORY "${PROJECT_SOURCE_DIR}/languages/" DESTINATION languages FILES_MATCHING PATTERN "*.json")
 endif()

@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/editor.hpp"
 #include "codecs.hpp"
 #include "forms/atlas.hpp"
@@ -75,7 +76,7 @@ Image validated_clipboard_image(const gf::HostImage& source) {
         pixels > 64000000 || source.row_bytes < row_bytes ||
         source.row_bytes > std::numeric_limits<std::size_t>::max() ||
         (source.height > 0 && source.row_bytes > source.pixels.size() / source.height)) {
-        throw std::runtime_error("The clipboard image has invalid or unsafe pixel geometry.");
+        throw std::runtime_error(tr("The clipboard image has invalid or unsafe pixel geometry."));
     }
     Image image;
     image.reset(static_cast<int>(source.width), static_cast<int>(source.height));
@@ -162,8 +163,8 @@ void Editor::initialize_control_tree() {
         (*label).set_font({gf::FontRole::control, 12, 400, false, 0.08});
         add_child(label);
     }
-    tool_size_status_ = gf::make_control<gf::Button>(gf::StableId("status-tool-size"), "Size: 3 px");
-    (*tool_size_status_).set_accessible_name("Current tool size; choose custom size");
+    tool_size_status_ = gf::make_control<gf::Button>(gf::StableId("status-tool-size"), tr("Size: 3 px"));
+    (*tool_size_status_).set_accessible_name(tr("Current tool size; choose custom size"));
     zoom_out_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-out"), "−");
     zoom_in_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-in"), "+");
     zoom_reset_ = gf::make_control<gf::Button>(gf::StableId("status-zoom-reset"), "100%");
@@ -176,9 +177,9 @@ void Editor::initialize_control_tree() {
             *this, gf::Delegate<gf::ButtonBase&>::bind<Editor, &Editor::status_clicked>(*this)));
         add_child(button);
     }
-    (*zoom_out_).set_accessible_name("Zoom out");
-    (*zoom_in_).set_accessible_name("Zoom in");
-    (*zoom_reset_).set_accessible_name("Zoom percentage; reset to 100%");
+    (*zoom_out_).set_accessible_name(tr("Zoom out"));
+    (*zoom_in_).set_accessible_name(tr("Zoom in"));
+    (*zoom_reset_).set_accessible_name(tr("Zoom percentage; reset to 100%"));
     zoom_slider_ = gf::make_control<ZoomTrackBar>(gf::StableId("zoom-slider"));
     (*zoom_slider_).set_range(-4, 5);
     (*zoom_slider_).set_value(0);
@@ -186,12 +187,13 @@ void Editor::initialize_control_tree() {
     (*zoom_slider_).set_large_change(1);
     (*zoom_slider_).set_show_ticks(false);
     (*zoom_slider_).set_visual_style(gf::TrackBarVisualStyle::classic);
-    (*zoom_slider_).set_accessible_name("Zoom percentage");
+    (*zoom_slider_).set_accessible_name(tr("Zoom percentage"));
     subscriptions_.push_back(
         (*zoom_slider_)
             .value_changed()
             .subscribe(*this, gf::Delegate<double>::bind<Editor, &Editor::zoom_slider_changed>(*this)));
     add_child(zoom_slider_);
+    initialize_canvas_controls();
     refresh();
 }
 gf::MenuItemSpec Editor::menu_item(const std::string& id, const std::string& text) {
@@ -204,38 +206,38 @@ gf::MenuItemSpec Editor::menu_item(const std::string& id, const std::string& tex
 void Editor::rebuild_file_menu() {
     menu_subscriptions_.clear();
     commands_.clear();
-    std::vector<gf::MenuItemSpec> items = {menu_item("new", "New"), menu_item("open", "Open…")};
+    std::vector<gf::MenuItemSpec> items = {menu_item("new", tr("New")), menu_item("open", tr("Open…"))};
     if (!recent.paths.empty()) {
         gf::MenuItemSpec recent_menu;
         recent_menu.stable_id = "recent-files";
         recent_menu.kind = gf::MenuItemKind::submenu;
-        recent_menu.text = "Recent pictures";
+        recent_menu.text = tr("Recent pictures");
         for (std::size_t i = 0; i < recent.paths.size(); ++i) {
             recent_menu.children.push_back(menu_item("recent-" + std::to_string(i), recent.paths[i]));
         }
         items.push_back(std::move(recent_menu));
     }
-    items.push_back(menu_item("save", "Save"));
-    items.push_back(menu_item("save-as", "Save as…"));
-    items.push_back(menu_item("print-preview", "Print preview…"));
+    items.push_back(menu_item("save", tr("Save")));
+    items.push_back(menu_item("save-as", tr("Save as…")));
+    items.push_back(menu_item("print-preview", tr("Print preview…")));
 #if RAINSTAR_FORMS_NATIVE_PRINT
-    items.push_back(menu_item("print", "Print…"));
-    items.push_back(menu_item("page-setup", "Page setup…"));
-    items.push_back(menu_item("acquire", "From scanner or camera…"));
+    items.push_back(menu_item("print", tr("Print…")));
+    items.push_back(menu_item("page-setup", tr("Page setup…")));
+    items.push_back(menu_item("acquire", tr("From scanner or camera…")));
     gf::MenuItemSpec wallpaper;
     wallpaper.stable_id = "wallpaper";
     wallpaper.kind = gf::MenuItemKind::submenu;
-    wallpaper.text = "Set as desktop background";
-    wallpaper.children = {menu_item("wallpaper-fill", "Fill"), menu_item("wallpaper-tile", "Tile"),
-                          menu_item("wallpaper-center", "Center")};
+    wallpaper.text = tr("Set as desktop background");
+    wallpaper.children = {menu_item("wallpaper-fill", tr("Fill")), menu_item("wallpaper-tile", tr("Tile")),
+                          menu_item("wallpaper-center", tr("Center"))};
     items.push_back(std::move(wallpaper));
 #endif
-    items.push_back(menu_item("properties", "Properties…"));
-    items.push_back(menu_item("recover", "Recover unfinished artwork…"));
-    items.push_back(menu_item("settings", "Settings…"));
-    items.push_back(menu_item("about", "About Plan Paint"));
-    items.push_back(menu_item("quit", "Exit"));
-    (*menu_).set_items({{"file", "File", std::move(items)}});
+    items.push_back(menu_item("properties", tr("Properties…")));
+    items.push_back(menu_item("recover", tr("Recover unfinished artwork…")));
+    items.push_back(menu_item("settings", tr("Settings…")));
+    items.push_back(menu_item("about", tr("About Plan Paint")));
+    items.push_back(menu_item("quit", tr("Exit")));
+    (*menu_).set_items({{"file", tr("File"), std::move(items)}});
 }
 void Editor::arrange(gf::Rect bounds) {
     arrange_self(bounds);
@@ -251,6 +253,9 @@ void Editor::arrange(gf::Rect bounds) {
     set_child_layout(menu_, {0, 0, 56, 27});
     double ruler = show_rulers ? 20 : 0;
     double footer = show_status ? 30 : 0;
+    const double controls_height = settings.canvas_controls && !pattern_editing ? 132 : 0;
+    arrange_canvas_controls({0, bounds.height - footer - controls_height, bounds.width, controls_height});
+    footer += controls_height;
     double sidebar = show_help ? std::min(370.0, bounds.width * 0.38) : 0;
     (*help_).set_visible(show_help && !pattern_editing);
     set_child_layout(
@@ -346,6 +351,13 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         {0, 0, (*canvas_).committed_arranged_bounds().width, (*canvas_).committed_arranged_bounds().height});
     if (transform_image_.value) {
         painter.draw_image(transform_image_, transform_destination_);
+    }
+    if (settings.canvas_controls) {
+        const gf::Point point = screen({canvas_position_.x + 0.5, canvas_position_.y + 0.5});
+        painter.draw_line({point.x - 7, point.y}, {point.x + 7, point.y}, gf::Color::rgba(255, 255, 255), 3);
+        painter.draw_line({point.x, point.y - 7}, {point.x, point.y + 7}, gf::Color::rgba(255, 255, 255), 3);
+        painter.draw_line({point.x - 7, point.y}, {point.x + 7, point.y}, gf::Color::rgba(0, 0, 0), 1);
+        painter.draw_line({point.x, point.y - 7}, {point.x, point.y + 7}, gf::Color::rgba(0, 0, 0), 1);
     }
     paint_atlas_overlay(painter);
     paint_guide_overlay(painter);
@@ -586,11 +598,11 @@ void Editor::update_cursor_status() {
     if (!cursor_status_) {
         return;
     }
-    std::string text = "X: —   Y: —";
+    std::string text = tr("X: —   Y: —");
     if (cursor_client_) {
         gui_drawing::PointF point = (*canvas_).client_to_bitmap(*cursor_client_);
-        text = "X: " + std::to_string(static_cast<int>(std::floor(point.x))) +
-               "   Y: " + std::to_string(static_cast<int>(std::floor(point.y))) + " px";
+        text = tr("X: ") + std::to_string(static_cast<int>(std::floor(point.x))) +
+               tr("   Y: ") + std::to_string(static_cast<int>(std::floor(point.y))) + tr(" px");
     }
     (*cursor_status_).set_text(text);
 }
@@ -599,26 +611,26 @@ void Editor::update_status() {
         return;
     }
     (*status_).set_text((document.filename.empty()
-                             ? "Untitled"
+                             ? tr("Untitled")
                              : std::filesystem::path(document.filename).filename().string()) +
-                        (document.dirty() ? " *" : "") + (background_busy() ? " · Rendering…" : ""));
+                        (document.dirty() ? " *" : "") + (background_busy() ? tr(" · Rendering…") : ""));
     (*dimensions_status_)
         .set_text(std::to_string(document.image.width) + " × " + std::to_string(document.image.height) +
-                  " px");
+                  tr(" px"));
     std::string selection;
     if (resize_handle_ >= 0 && resize_selection_) {
         selection =
-            std::to_string(resize_preview_.w) + " × " + std::to_string(resize_preview_.h) + " px selected";
+            std::to_string(resize_preview_.w) + " × " + std::to_string(resize_preview_.h) + tr(" px selected");
     } else if (document.selection.active) {
         selection = std::to_string(document.selection.image.width) + " × " +
-                    std::to_string(document.selection.image.height) + " px selected";
+                    std::to_string(document.selection.image.height) + tr(" px selected");
     } else if (dragging_ && (document.tool == Tool::Select || document.tool == Tool::Lasso)) {
         Rect bounds = rectangle(start_, current_);
-        selection = std::to_string(bounds.w) + " × " + std::to_string(bounds.h) + " px selected";
+        selection = std::to_string(bounds.w) + " × " + std::to_string(bounds.h) + tr(" px selected");
     }
     (*selection_status_).set_text(selection);
     (*tool_size_status_)
-        .set_text("Size: " + std::to_string(document.tool == Tool::Pencil ? 1 : document.ink.size) + " px");
+        .set_text(tr("Size: ") + std::to_string(document.tool == Tool::Pencil ? 1 : document.ink.size) + tr(" px"));
     double percent = (*canvas_).zoom() * 100;
     std::ostringstream label;
     label << std::fixed << std::setprecision(percent < 10 ? 2 : 0) << percent << "%";
@@ -667,6 +679,8 @@ void Editor::command_invoked(const gf::CommandInvocation& invocation) {
     execute(invocation.command_id);
 }
 void Editor::release_gesture() {
+    canvas_control_stroke_ = false;
+    if (canvas_actions_.size() > 3) { (*canvas_actions_[3]).set_selected(false); }
     cancel_spiro_drag();
     if (!transform_preview_stamp_) {
         end_transform_preview();
@@ -763,6 +777,7 @@ void Editor::choose_tool(Tool tool) {
     refresh();
 }
 void Editor::pointer(const gf::PointerEvent& event) {
+    if (canvas_control_stroke_ && !canvas_control_dispatch_) { return; }
     try {
         if (panning_ && event.action != gf::PointerAction::up) {
             canvas().set_cursor(gf::CursorKind::hand);
@@ -1411,6 +1426,16 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
             }
         }
     }
+    if (settings.canvas_controls && window() && (*window()).focused_control() == canvas_ &&
+        event.modifiers == gf::Modifier::none) {
+        int action = -1;
+        if (event.physical_key == gf::PhysicalKey::left) { action = 6; }
+        if (event.physical_key == gf::PhysicalKey::right) { action = 7; }
+        if (event.physical_key == gf::PhysicalKey::up) { action = 8; }
+        if (event.physical_key == gf::PhysicalKey::down) { action = 9; }
+        if (event.physical_key == gf::PhysicalKey::space) { action = 1; }
+        if (action >= 0) { canvas_control_action(action); event.handled = true; return; }
+    }
     bool command = gf::has_modifier(event.modifiers, gf::Modifier::control) ||
                    gf::has_modifier(event.modifiers, gf::Modifier::meta);
     bool shift = gf::has_modifier(event.modifiers, gf::Modifier::shift);
@@ -1555,7 +1580,7 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
 }
 gf::HostServices& Editor::services() {
     if (!window() || !(*window()).host_services()) {
-        throw std::runtime_error("Native host services are not attached");
+        throw std::runtime_error(tr("Native host services are not attached"));
     }
     return *(*window()).host_services();
 }
@@ -1565,7 +1590,7 @@ gf::HostDialogResult Editor::dialog(gf::HostDialogRequestPayload payload) {
     request.payload = std::move(payload);
     gf::HostDialogResult result = services().show_dialog(request);
     if (!result.status.accepted()) {
-        throw std::runtime_error("The native dialog service could not complete the request");
+        throw std::runtime_error(tr("The native dialog service could not complete the request"));
     }
     return result;
 }
@@ -1593,9 +1618,9 @@ bool Editor::can_replace() {
         return true;
     }
     gf::HostMessageDialogRequest request;
-    request.title = "Save changes?";
+    request.title = tr("Save changes?");
     request.message =
-        "Save changes to " + (document.filename.empty() ? std::string("Untitled") : document.filename) + "?";
+        tr("Save changes to ") + (document.filename.empty() ? std::string(tr("Untitled")) : document.filename) + "?";
     request.buttons = gf::HostMessageButtons::yes_no_cancel;
     request.default_choice = gf::HostDialogChoice::cancel;
     try {
@@ -1638,11 +1663,11 @@ bool Editor::save(bool save_as) {
     std::string path = document.filename;
     if (save_as || path.empty() || !writable_image_path(path)) {
         gf::HostSaveFileDialogRequest request;
-        request.title = "Save image";
+        request.title = tr("Save image");
         request.suggested_name =
             path.empty() ? "Untitled.png" : std::filesystem::path(path).filename().string();
         request.default_extension = "png";
-        request.filters = {{"Images", {"png", "bmp", "jpg", "jpeg", "tif", "tiff", "tga", "ico", "cur"}}};
+        request.filters = {{tr("Images"), {"png", "bmp", "jpg", "jpeg", "tif", "tiff", "tga", "ico", "cur"}}};
         gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
         if (result.outcome != gf::HostDialogOutcome::accepted || result.paths.empty()) {
             return false;
@@ -1689,13 +1714,13 @@ void Editor::copy() {
                            static_cast<std::uint64_t>(image.width) * 4,
                            std::as_bytes(std::span<const Color>(image.pixels))};
     if (!services().write_clipboard_image(view).accepted()) {
-        throw std::runtime_error("Could not copy the image to the clipboard");
+        throw std::runtime_error(tr("Could not copy the image to the clipboard"));
     }
 }
 void Editor::paste() {
     gf::HostClipboardFilesResult files = services().read_clipboard_files();
     if (!files.status.accepted() && files.status.error != gf::HostServiceError::unsupported) {
-        throw std::runtime_error("Could not read files from the clipboard");
+        throw std::runtime_error(tr("Could not read files from the clipboard"));
     }
     if (!files.paths_utf8.empty()) {
         Image image = load_image(files.paths_utf8.front());
@@ -1709,7 +1734,7 @@ void Editor::paste() {
     }
     gf::HostClipboardImageResult result = services().read_clipboard_image();
     if (!result.status.accepted()) {
-        throw std::runtime_error("Could not read the image clipboard");
+        throw std::runtime_error(tr("Could not read the image clipboard"));
     }
     if (!result.has_image) {
         return;
@@ -1944,7 +1969,7 @@ void Editor::execute(const std::string& command) {
                 return;
             }
             gf::HostOpenFileDialogRequest request;
-            request.title = "Open image";
+            request.title = tr("Open image");
             gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
             if (result.outcome == gf::HostDialogOutcome::accepted && !result.paths.empty()) {
                 open_file(result.paths.front());
@@ -1999,7 +2024,7 @@ void Editor::execute(const std::string& command) {
             finish_controls();
             gf::HostMonitorResult monitors = services().query_monitors();
             if (!monitors.status.accepted() || monitors.monitors.empty()) {
-                throw std::runtime_error("The desktop display size is unavailable.");
+                throw std::runtime_error(tr("The desktop display size is unavailable."));
             }
             gf::HostMonitor monitor = monitors.monitors.front();
             for (std::size_t i = 0; i < monitors.monitors.size(); ++i) {
@@ -2125,7 +2150,7 @@ void Editor::execute(const std::string& command) {
         } else if (command == "full-screen") {
             gf::HostServiceStatus result = handle_.toggle_full_screen();
             if (!result.accepted()) {
-                error("Full screen is unavailable from this window host.");
+                error(tr("Full screen is unavailable from this window host."));
             }
         } else if (command == "primary" || command == "secondary") {
             edit_color(command == "secondary");

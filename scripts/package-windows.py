@@ -54,6 +54,7 @@ def main():
             if not destination.exists(): shutil.copy2(candidates[key], destination)
             pending.append(destination)
     copy_fonts(args.gui_forms_sdk, bundle / "fonts")
+    shutil.copytree(ROOT / "languages", bundle / "languages", ignore=shutil.ignore_patterns("*.md"))
     for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"): shutil.copy2(ROOT / name, bundle)
     shutil.copy2(ROOT / "packaging/README.txt", bundle / "README.txt")
     shutil.copytree(ROOT / "packaging/licenses", bundle / "licenses")

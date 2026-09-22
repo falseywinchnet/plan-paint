@@ -7,3 +7,11 @@ Carlito-BoldItalic.ttf
 Cousine-Regular.ttf
 OFL-Carlito.txt
 OFL-Cousine.txt
+NotoSansCJKjp-Regular.otf
+OFL-NotoSansCJKjp.txt
+OFL-Noto.txt
+NotoSansArabic-Regular.ttf
+NotoSansHebrew-Regular.ttf
+NotoSansDevanagari-Regular.ttf
+NotoSansBengali-Regular.ttf
+NotoSansGurmukhi-Regular.ttf

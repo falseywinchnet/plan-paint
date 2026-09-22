@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/editor.hpp"
 #include "raster.hpp"
 #include <algorithm>
@@ -650,7 +651,7 @@ void PaintCanvas::render_display() {
                 ? (*window()).replace_bgra32_premultiplied(rotated_, width, height, width * 4, pixels, *this)
                 : (*window()).load_bgra32_premultiplied(width, height, width * 4, pixels);
         if (!uploaded) {
-            view_error = "Unable to allocate the rotated view.";
+            view_error = tr("Unable to allocate the rotated view.");
             return;
         }
         rotated_ = uploaded.image;
@@ -673,7 +674,7 @@ void PaintCanvas::paint_rotated(gf::Painter& painter, const Editor&) {
                    gf::Color::rgba(93, 111, 130, 155), 1);
     if (view_worker_.busy() || !view_error.empty()) {
         painter.draw_text_utf8({12, viewport.height - 14},
-                               view_error.empty() ? "Preparing CONV view…" : view_error,
+                               view_error.empty() ? tr("Preparing CONV view…") : view_error,
                                {gf::FontRole::control, 12, 400, false}, gf::Color::rgba(45, 63, 81));
     }
 }

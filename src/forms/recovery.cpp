@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/editor.hpp"
 #include "paths.hpp"
 #include <chrono>
@@ -31,7 +32,7 @@ void Editor::reset_recovery(bool discard, const std::string& opened_path) {
 void Editor::start_recovery(const std::string& initial_path) {
     try {
         if (recovery_root.empty()) {
-            recovery_root = path_from_utf8(preference_directory()) / "Recovery";
+            recovery_root = path_from_utf8(preference_directory()) / tr("Recovery");
         }
         reset_recovery(false, initial_path);
         // Ready can precede the native application's final launch notification.
@@ -45,7 +46,7 @@ void Editor::start_recovery(const std::string& initial_path) {
         (*recovery_timer).start();
     } catch (const std::exception& exception) {
         recovery_notice = exception.what();
-        error("Automatic recovery is unavailable: " + recovery_notice);
+        error(tr("Automatic recovery is unavailable: ") + recovery_notice);
     }
 }
 void Editor::recovery_tick() {
@@ -72,7 +73,7 @@ void Editor::recovery_tick() {
             recovery_capture_revision = 0;
             if (!recovery_failed) {
                 recovery_failed = true;
-                error("Automatic recovery could not save: " + recovery_notice);
+                error(tr("Automatic recovery could not save: ") + recovery_notice);
             }
         }
     }
@@ -128,7 +129,7 @@ void Editor::recovery_tick() {
         recovery_notice = exception.what();
         if (!recovery_failed) {
             recovery_failed = true;
-            error("Automatic recovery could not save: " + recovery_notice);
+            error(tr("Automatic recovery could not save: ") + recovery_notice);
         }
     }
     recovery_deadline = now + std::chrono::seconds(settings.recovery_seconds);
@@ -155,12 +156,12 @@ void Editor::recover_document() {
             timestamp << std::put_time(local, "%Y-%m-%d %H:%M:%S");
         }
         gf::HostMessageDialogRequest request;
-        request.title = "Recover unfinished artwork";
-        request.message = "Recover " +
-                          (record.source_path.empty() ? std::string("Untitled") : record.source_path) +
-                          "?\nSnapshot: " + timestamp.str() +
-                          "\nYes opens a recovered copy. No keeps this snapshot for later. Cancel stops "
-                          "browsing.\nThe original file will not be overwritten.";
+        request.title = tr("Recover unfinished artwork");
+        request.message = tr("Recover ") +
+                          (record.source_path.empty() ? std::string(tr("Untitled")) : record.source_path) +
+                          tr("?\nSnapshot: ") + timestamp.str() +
+                          tr("\nYes opens a recovered copy. No keeps this snapshot for later. Cancel stops "
+                          "browsing.\nThe original file will not be overwritten.");
         request.buttons = gf::HostMessageButtons::yes_no_cancel;
         request.default_choice = gf::HostDialogChoice::yes;
         const gf::HostMessageDialogResult result =

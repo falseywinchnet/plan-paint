@@ -1,11 +1,30 @@
 #include "forms/editor.hpp"
 #include "paths.hpp"
+#include "localization.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <iostream>
 int main(int argc, char** argv) {
     try {
+        paint::EditorSettings startup_settings;
+        try {
+            startup_settings.storage_path = paint::path_to_utf8(paint::path_from_utf8(paint::preference_directory()) / "settings.txt");
+            startup_settings.load();
+        } catch (const std::exception&) {
+            // Preference storage failure must not prevent starting in English.
+            startup_settings.language = "en-us";
+        }
+        std::string initial_path;
+        std::string session_language = startup_settings.language;
+        bool session_canvas_controls = false;
+        for (int i = 1; i < argc; ++i) {
+            const std::string argument(argv[i]);
+            if (argument.starts_with("--language=")) { session_language = argument.substr(11); }
+            else if (argument == "--canvas-controls") { session_canvas_controls = true; }
+            else if (initial_path.empty()) { initial_path = argument; }
+        }
+        paint::initialize_language(paint::application_language_directory(), session_language);
         const std::shared_ptr<paint::forms::Editor> editor =
             gui_forms::make_control<paint::forms::Editor>(gui_forms::StableId("paint.editor"));
         try {
@@ -19,7 +38,7 @@ int main(int argc, char** argv) {
         } catch (const std::exception&) {
             (*editor).custom_colors.storage_path.clear();
         }
-        const std::string initial_path = argc > 1 ? argv[1] : "";
+        if (session_canvas_controls) { (*editor).settings.canvas_controls = true; }
         std::unique_ptr<gui_forms::Window> window =
             std::make_unique<gui_forms::Window>(editor, gui_forms::Size{1280, 820});
         gui_forms::ApplicationWindowOptions options;

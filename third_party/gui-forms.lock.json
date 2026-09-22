@@ -18,6 +18,11 @@
     {
       "file": "third_party/gui-forms-patches/windows-cursor-resource-test.patch",
       "sha256": "14b79d4df6788fe9b0d693ca51834d5e81026d9b1baf42d0cf064b610f9e8077"
+    },
+    {
+      "file": "third_party/gui-forms-patches/accessibility-languages.patch",
+      "sha256": "36cadbae2fc8aa3e3ed52ce9c42eba4ab5bd968903d911758b307c015577a9f8",
+      "upstream_commit": "eeb9e24d72627917094b9fdf19d6eb5bda50e8d6"
     }
   ]
 }

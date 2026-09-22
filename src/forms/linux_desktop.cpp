@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/linux_desktop.hpp"
 #include "desktop.hpp"
 #include <algorithm>
@@ -33,7 +34,7 @@ std::string run_program(const std::vector<std::string>& arguments, bool wait = t
     argv.push_back(nullptr);
     int output[2];
     if (pipe(output) != 0) {
-        throw std::runtime_error("Cannot create a desktop service channel.");
+        throw std::runtime_error(tr("Cannot create a desktop service channel."));
     }
     posix_spawn_file_actions_t actions;
     posix_spawn_file_actions_init(&actions);
@@ -80,7 +81,7 @@ std::string run_program(const std::vector<std::string>& arguments, bool wait = t
         waited = waitpid(child, &status, 0);
     } while (waited < 0 && errno == EINTR);
     if (waited < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-        throw std::runtime_error(arguments[0] + " failed. " + result);
+        throw std::runtime_error(arguments[0] + tr(" failed. ") + result);
     }
     return result;
 }
@@ -90,7 +91,7 @@ struct TemporaryFile {
         char name[] = "/tmp/rainstar-print-XXXXXX";
         const int descriptor = mkstemp(name);
         if (descriptor < 0) {
-            throw std::runtime_error("Cannot create a temporary print file.");
+            throw std::runtime_error(tr("Cannot create a temporary print file."));
         }
         close(descriptor);
         path = name;
@@ -108,7 +109,7 @@ bool acquire_picture(std::string&) {
             static_cast<void>(run_program({"xsane"}, false));
         } catch (const std::exception&) {
             throw std::runtime_error(
-                "Install Document Scanner (simple-scan) or XSane, then try this command again.");
+                tr("Install Document Scanner (simple-scan) or XSane, then try this command again."));
         }
     }
     return false;
@@ -123,8 +124,8 @@ void set_wallpaper(const std::string& path) {
     const bool cinnamon = name.find("Cinnamon") != std::string::npos;
     if (!cinnamon && name.find("GNOME") == std::string::npos && name.find("Unity") == std::string::npos &&
         name.find("Budgie") == std::string::npos) {
-        throw std::runtime_error("Wallpaper integration supports GNOME, Cinnamon, Budgie and KDE. Use this "
-                                 "desktop's background settings with a saved picture.");
+        throw std::runtime_error(tr("Wallpaper integration supports GNOME, Cinnamon, Budgie and KDE. Use this "
+                                 "desktop's background settings with a saved picture."));
     }
     const std::string schema = cinnamon ? "org.cinnamon.desktop.background" : "org.gnome.desktop.background";
     std::string uri = "file://";
@@ -176,7 +177,7 @@ void write_print_postscript(const Image& image, const LinuxPrintSettings& settin
         !std::isfinite(settings.height_mm) || !std::isfinite(settings.margin_mm) ||
         settings.width_mm <= 2 * settings.margin_mm || settings.height_mm <= 2 * settings.margin_mm ||
         settings.margin_mm < 0) {
-        throw std::runtime_error("Choose paper dimensions larger than twice the margin.");
+        throw std::runtime_error(tr("Choose paper dimensions larger than twice the margin."));
     }
     std::ofstream file(path, std::ios::binary);
     file.imbue(std::locale::classic());
@@ -208,13 +209,13 @@ void write_print_postscript(const Image& image, const LinuxPrintSettings& settin
     file << ">\ngrestore\nshowpage\n%%EOF\n";
     file.close();
     if (!file) {
-        throw std::runtime_error("Cannot write the print job.");
+        throw std::runtime_error(tr("Cannot write the print job."));
     }
 }
 void linux_print_image(const Image& image, const LinuxPrintSettings& settings) {
     TemporaryFile file;
     write_print_postscript(image, settings, file.path);
-    std::vector<std::string> arguments = {"lp", "-t", "Plan Paint picture", "-n",
+    std::vector<std::string> arguments = {"lp", "-t", tr("Plan Paint picture"), "-n",
                                           std::to_string(settings.copies)};
     if (!settings.printer.empty()) {
         arguments.push_back("-d");

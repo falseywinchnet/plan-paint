@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/pattern_canvas.hpp"
 #include "forms/editor.hpp"
 #include "safe_file.hpp"
@@ -9,11 +10,11 @@ namespace gf = gui_forms;
 PatternCanvas::PatternCanvas(gf::StableId id, std::weak_ptr<Editor> editor, std::shared_ptr<Image> tile)
     : Control(std::move(id)), editor_(std::move(editor)), tile_(std::move(tile)) {
     set_focusable(true);
-    set_accessible_name("Custom pattern canvas — black and white pencil");
+    set_accessible_name(tr("Custom pattern canvas — black and white pencil"));
 }
 void PatternCanvas::initialize_control_tree() {
     const char* ids[] = {"pattern-return", "pattern-resize", "pattern-undo", "pattern-redo"};
-    const char* labels[] = {"Return to main canvas", "Resize tile", "Undo", "Redo"};
+    const std::string labels[] = {tr("Return to main canvas"), tr("Resize tile"), tr("Undo"), tr("Redo")};
     const gf::Rect positions[] = {
         {12, 12, 180, 30}, {470, 12, 110, 30}, {592, 12, 70, 30}, {670, 12, 70, 30}};
     for (int i = 0; i < 4; ++i) {
@@ -37,12 +38,12 @@ void PatternCanvas::initialize_control_tree() {
     (*height_).set_value((*tile_).height);
     (*width_).set_requested_bounds({250, 12, 75, 30});
     (*height_).set_requested_bounds({383, 12, 75, 30});
-    (*width_).set_accessible_name("Pattern width in pixels");
-    (*height_).set_accessible_name("Pattern height in pixels");
-    const char* texts[] = {
-        "Width", "Height",
-        "Custom pattern · Pencil only · Left: black / Right: white · 1–128 pixels per side",
-        "Repeating preview"};
+    (*width_).set_accessible_name(tr("Pattern width in pixels"));
+    (*height_).set_accessible_name(tr("Pattern height in pixels"));
+    const std::string texts[] = {
+        tr("Width"), tr("Height"),
+        tr("Custom pattern · Pencil only · Left: black / Right: white · 1–128 pixels per side"),
+        tr("Repeating preview")};
     const gf::Rect bounds[] = {{202, 15, 48, 24}, {335, 15, 48, 24}, {14, 53, 850, 28}, {14, 88, 200, 24}};
     for (int i = 0; i < 4; ++i) {
         const std::shared_ptr<gf::Label> label =
@@ -71,6 +72,16 @@ void PatternCanvas::on_paint(gf::Painter& painter, gf::Rect) {
             painter.fill_rect({origin_.x + x * cell_, origin_.y + y * cell_, cell_, cell_},
                               gf::Color::rgba(c.r, c.r, c.r));
         }
+    }
+    if (window() && (*window()).focused_control().get() == this) {
+        keyboard_cell_.x = std::clamp(keyboard_cell_.x, 0.0, static_cast<double>(tile.width - 1));
+        keyboard_cell_.y = std::clamp(keyboard_cell_.y, 0.0, static_cast<double>(tile.height - 1));
+        const double x = origin_.x + keyboard_cell_.x * cell_, y = origin_.y + keyboard_cell_.y * cell_;
+        const gf::Color marker = gf::Color::rgba(255, 90, 20);
+        painter.draw_line({x, y}, {x + cell_, y}, marker, 2);
+        painter.draw_line({x + cell_, y}, {x + cell_, y + cell_}, marker, 2);
+        painter.draw_line({x + cell_, y + cell_}, {x, y + cell_}, marker, 2);
+        painter.draw_line({x, y + cell_}, {x, y}, marker, 2);
     }
     if (cell_ >= 6) {
         const gf::Color grid = gf::Color::rgba(140, 155, 140);
@@ -206,6 +217,21 @@ void PatternCanvas::on_key_preview(gf::KeyEvent& event) {
     if (event.action != gf::KeyAction::down) {
         return;
     }
+    if (window() && (*window()).focused_control().get() == this && event.modifiers == gf::Modifier::none) {
+        bool moved = true;
+        if (event.physical_key == gf::PhysicalKey::left) { keyboard_cell_.x -= 1; }
+        else if (event.physical_key == gf::PhysicalKey::right) { keyboard_cell_.x += 1; }
+        else if (event.physical_key == gf::PhysicalKey::up) { keyboard_cell_.y -= 1; }
+        else if (event.physical_key == gf::PhysicalKey::down) { keyboard_cell_.y += 1; }
+        else { moved = false; }
+        keyboard_cell_.x = std::clamp(keyboard_cell_.x, 0.0, static_cast<double>((*tile_).width - 1));
+        keyboard_cell_.y = std::clamp(keyboard_cell_.y, 0.0, static_cast<double>((*tile_).height - 1));
+        if (event.physical_key == gf::PhysicalKey::space || event.physical_key == gf::PhysicalKey::enter) {
+            checkpoint(); black_ = event.physical_key == gf::PhysicalKey::space;
+            last_ = keyboard_cell_; pencil(keyboard_cell_); changed(); event.handled = true;
+        } else if (moved) { invalidate(gf::Dirty::paint); event.handled = true; }
+        if (event.handled) { return; }
+    }
     const bool command = gf::has_modifier(event.modifiers, gf::Modifier::control) ||
                          gf::has_modifier(event.modifiers, gf::Modifier::meta);
     if (command && (event.physical_key == gf::PhysicalKey::z || event.physical_key == gf::PhysicalKey::y)) {
@@ -221,7 +247,7 @@ void Editor::load_custom_pattern() {
     }
     try {
         const std::vector<std::uint8_t> bytes =
-            read_regular_file_bounded(pattern_storage_path_, 16390, "Cannot read custom pattern");
+            read_regular_file_bounded(pattern_storage_path_, 16390, tr("Cannot read custom pattern").c_str());
         if (bytes.size() < 6 || bytes[0] != 'R' || bytes[1] != 'P' || bytes[2] != 'T' || bytes[3] != 1) {
             return;
         }
@@ -256,7 +282,7 @@ void Editor::store_custom_pattern() {
         bytes.push_back(pixel.r < 128 ? 1 : 0);
     }
     try {
-        write_file_atomic(bytes, pattern_storage_path_, "Could not save custom pattern");
+        write_file_atomic(bytes, pattern_storage_path_, tr("Could not save custom pattern").c_str());
     } catch (const std::exception& error) {
         (*status_).set_text(error.what());
     }
