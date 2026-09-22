@@ -19,3 +19,13 @@ Windows GCC 16.1.0 runtime sources: https://gcc.gnu.org/pub/gcc/releases/gcc-16.
 
 The locally cross-compiled Windows package uses the pinned Chromium zlib source
 from GUI.Forms: https://chromium.googlesource.com/chromium/src/third_party/zlib/+/646b7f569718921d7d4b5b8e22572ff6c76f2596
+
+Accessibility dependency sources (dynamically linked; installed versions are recorded by the platform build):
+
+- ATK/AT-SPI: https://gitlab.gnome.org/GNOME/at-spi2-core
+- GLib/GObject/GIO: https://gitlab.gnome.org/GNOME/glib
+- D-Bus: https://gitlab.freedesktop.org/dbus/dbus
+- libffi: https://github.com/libffi/libffi
+- PCRE2: https://github.com/PCRE2Project/pcre2
+
+Corresponding source can be obtained from these upstreams and the exact Alpine package versions recorded in the package build receipt. LGPL libraries remain separate, replaceable shared objects. The package adds no private static copy of GLib or AT-SPI.

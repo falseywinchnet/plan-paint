@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
 #include <iomanip>
@@ -75,10 +76,10 @@ void EditorDialog::initialize_carpet() {
         carpet_ = (*editor).carpet_parameters;
     }
     carpet_presets_ = gf::make_control<gf::ComboBox>(gf::StableId("carpet-presets"));
-    (*carpet_presets_).set_accessible_name("Fabric preset");
-    (*carpet_presets_).add_item("Current settings");
+    (*carpet_presets_).set_accessible_name(tr("Fabric preset"));
+    (*carpet_presets_).add_item(tr("Current settings"));
     for (int i = 0; i < carpet_preset_count; ++i) {
-        (*carpet_presets_).add_item(carpet_preset_name(i));
+        (*carpet_presets_).add_item(tr(carpet_preset_name(i)));
     }
     (*carpet_presets_).set_selected_index(0);
     put(carpet_presets_, {22, 47, 505, 30});
@@ -89,10 +90,10 @@ void EditorDialog::initialize_carpet() {
                                   EditorDialog, &EditorDialog::carpet_preset_changed>(*this)));
     for (int i = 0; i < 10; ++i) {
         const double y = 92 + i * 43;
-        label("carpet-label-" + std::to_string(i), names[i], {22, y, 208, 25});
+        label("carpet-label-" + std::to_string(i), tr(names[i]), {22, y, 208, 25});
         const std::shared_ptr<gf::TrackBar> slider =
             gf::make_control<gf::TrackBar>(gf::StableId("carpet-slider-" + std::to_string(i)));
-        (*slider).set_accessible_name(names[i]);
+        (*slider).set_accessible_name(tr(names[i]));
         (*slider).set_range(low[i], high[i]);
         (*slider).set_small_change((high[i] - low[i]) / 100);
         (*slider).set_large_change((high[i] - low[i]) / 10);
@@ -105,9 +106,9 @@ void EditorDialog::initialize_carpet() {
         put(value, {469, y, 66, 26});
         carpet_values_.push_back(value);
     }
-    label("carpet-dye-label", "Dye color (hex)", {22, 529, 180, 28});
+    label("carpet-dye-label", tr("Dye color (hex)"), {22, 529, 180, 28});
     carpet_color_ = gf::make_control<gf::TextBox>(gf::StableId("carpet-color"));
-    (*carpet_color_).set_accessible_name("Dye color, hex RGB");
+    (*carpet_color_).set_accessible_name(tr("Dye color, hex RGB"));
     put(carpet_color_, {236, 527, 150, 30});
     subscriptions_.push_back(
         (*carpet_color_)
@@ -117,19 +118,19 @@ void EditorDialog::initialize_carpet() {
                 gf::Delegate<const std::string&>::bind<EditorDialog, &EditorDialog::carpet_color_changed>(
                     *this)));
     carpet_preview_ = gf::make_control<gf::RasterCanvas>(gf::StableId("carpet-preview"));
-    (*carpet_preview_).set_accessible_name("Generated carpet texture preview");
+    (*carpet_preview_).set_accessible_name(tr("Generated carpet texture preview"));
     put(carpet_preview_, {576, 92, 320, 320});
     (*carpet_preview_).set_zoom(.625);
-    carpet_hillshade_ = gf::make_control<gf::CheckBox>(gf::StableId("carpet-hillshade"), "Hillshade relief");
+    carpet_hillshade_ = gf::make_control<gf::CheckBox>(gf::StableId("carpet-hillshade"), tr("Hillshade relief"));
     put(carpet_hillshade_, {576, 435, 290, 28});
     subscriptions_.push_back(
         (*carpet_hillshade_)
             .clicked()
             .subscribe(*this,
                        gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::clicked>(*this)));
-    button("carpet-seed", "New fibers", {576, 483, 145, 30});
+    button("carpet-seed", tr("New fibers"), {576, 483, 145, 30});
     label("carpet-hint",
-          "The generated texture follows your brush.\nLighting and dye are part of the texture.",
+          tr("The generated texture follows your brush.\nLighting and dye are part of the texture."),
           {576, 527, 315, 42});
     sync_carpet();
 }
@@ -187,7 +188,7 @@ void EditorDialog::carpet_color_changed(const std::string& value) {
     } else {
         stop_carpet();
         carpet_image_ = {};
-        (*error_).set_text("Enter a hex RGB color, such as #1645C5.");
+        (*error_).set_text(tr("Enter a hex RGB color, such as #1645C5."));
         if (attached_window()) {
             (*(*attached_window()).find("dialog-ok")).set_enabled(false);
         }
@@ -207,7 +208,7 @@ void EditorDialog::render_carpet_preview() {
     }
     stop_carpet();
     carpet_image_ = {};
-    (*error_).set_text("Rendering fibers…");
+    (*error_).set_text(tr("Rendering fibers…"));
     (*(*attached_window()).find("dialog-ok")).set_enabled(false);
     carpet_job_ = std::make_shared<CarpetRenderJob>();
     (*carpet_job_).parameters = carpet_;

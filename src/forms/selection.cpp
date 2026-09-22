@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "conv.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
@@ -152,7 +153,7 @@ void Editor::update_transform_preview() {
             : (*window()).replace_bgra32_premultiplied(transform_image_, columns, rows, columns * 4, pixels,
                                                        canvas());
     if (!result) {
-        throw std::runtime_error("The transform preview exceeds the display resource budget.");
+        throw std::runtime_error(tr("The transform preview exceeds the display resource budget."));
     }
     transform_image_ = result.image;
     canvas().invalidate(gf::Dirty::paint);
@@ -359,7 +360,7 @@ void Editor::paint_resize_overlay(gf::Painter& painter) {
         canvas().stroke_outline(painter, {bounds.x, bounds.y, bounds.w, bounds.h},
                                 gf::Color::rgba(30, 95, 160), 2);
         painter.draw_text_utf8({point.x + width + 8, point.y + height + 16},
-                               std::to_string(bounds.w) + " × " + std::to_string(bounds.h) + " px",
+                               std::to_string(bounds.w) + " × " + std::to_string(bounds.h) + tr(" px"),
                                {gf::FontRole::control, 12, 400, false}, gf::Color::rgba(30, 65, 95));
     }
 }

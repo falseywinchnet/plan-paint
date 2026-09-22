@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/atlas.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
@@ -55,8 +56,8 @@ void AtlasThumbnail::synchronize() {
     bool selected = atlas.active == index_ ||
                     std::find(atlas.sequence.begin(), atlas.sequence.end(), index_) != atlas.sequence.end();
     set_selected(selected);
-    set_accessible_name("Frame " + std::to_string(index_ + 1) + (atlas.active == index_ ? ", current" : "") +
-                        (selected ? ", selected" : ""));
+    set_accessible_name(tr("Frame ") + std::to_string(index_ + 1) + (atlas.active == index_ ? tr(", current") : "") +
+                        (selected ? tr(", selected") : ""));
     update_image();
     invalidate(gf::Dirty::paint);
 }
@@ -167,8 +168,8 @@ AtlasPanel::AtlasPanel(gf::StableId id, std::weak_ptr<Editor> editor, bool galle
 void AtlasPanel::initialize_control_tree() {
     const char* ids[] = {"atlas-grid",     "atlas-icons", "atlas-cursors", "atlas-whole",  "atlas-leave",
                          "atlas-previous", "atlas-next",  "atlas-hotspot", "atlas-gallery"};
-    const char* labels[] = {"Sprite grid…", "Icon sizes…", "Cursor sizes…", "Whole sheet", "Leave atlas",
-                            "Previous",     "Next",        "Hotspot…",      "Gallery…"};
+    const std::string labels[] = {tr("Sprite grid…"), tr("Icon sizes…"), tr("Cursor sizes…"), tr("Whole sheet"), tr("Leave atlas"),
+                            tr("Previous"),     tr("Next"),        tr("Hotspot…"),      tr("Gallery…")};
     for (int i = 0; i < 9; ++i) {
         std::shared_ptr<gf::Button> control = gf::make_control<gf::Button>(
             gf::StableId(std::string(gallery_ ? "gallery-" : "") + ids[i]), labels[i]);
@@ -191,12 +192,12 @@ void AtlasPanel::initialize_control_tree() {
     (*status_).set_font({gf::FontRole::control, 11, 400, false});
     add_child(status_);
     wrap_ = gf::make_control<gf::CheckBox>(gf::StableId(gallery_ ? "gallery-atlas-wrap" : "atlas-wrap"),
-                                           "Warp edges");
+                                           tr("Warp edges"));
     alpha_ = gf::make_control<gf::CheckBox>(gf::StableId(gallery_ ? "gallery-atlas-alpha" : "atlas-alpha"),
-                                            "Preserve transparency");
+                                            tr("Preserve transparency"));
     clear_reference_ = gf::make_control<gf::Button>(
         gf::StableId(gallery_ ? "gallery-atlas-reference-clear" : "atlas-reference-clear"),
-        "Dismiss reference");
+        tr("Dismiss reference"));
     for (const std::shared_ptr<gf::CheckBox>& check : {wrap_, alpha_}) {
         (*check).set_font({gf::FontRole::control, 11, 400, false});
         subscriptions_.push_back((*check).clicked().subscribe(
@@ -283,11 +284,11 @@ void AtlasPanel::synchronize() {
     (*buttons_[7]).set_enabled(atlas.kind == AtlasKind::Cursor);
     (*status_).set_text(
         count_ == 0
-            ? "Split a sprite sheet or create a set of icon or cursor sizes."
+            ? tr("Split a sprite sheet or create a set of icon or cursor sizes.")
             : (atlas.active < 0
-                   ? "Whole sheet"
-                   : "Frame " + std::to_string(atlas.active + 1) + " of " + std::to_string(count_)) +
-                  " · Ctrl-click frames to select a sequence; use Previous / Next to step through it.");
+                   ? tr("Whole sheet")
+                   : tr("Frame ") + std::to_string(atlas.active + 1) + tr(" of ") + std::to_string(count_)) +
+                  tr(" · Ctrl-click frames to select a sequence; use Previous / Next to step through it."));
 }
 void AtlasPanel::reveal_current() {
     if (!window() || active_ < 0 || active_ >= count_) {

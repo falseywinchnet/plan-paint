@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/help.hpp"
 #include "help_content.hpp"
 #include <algorithm>
@@ -49,31 +50,33 @@ HelpBook::HelpBook(gf::StableId id) : ScrollableControl(std::move(id)) {
 void HelpBook::initialize_control_tree() {
     close_ = gf::make_control<gf::Button>(gf::StableId("help-close"), "×");
     (*close_).set_font({gf::FontRole::control, 24, 400, false});
-    (*close_).set_accessible_name("Close Paint Help");
+    (*close_).set_accessible_name(tr("Close Paint Help"));
     add_child(close_);
-    title_ = gf::make_control<gf::Label>(gf::StableId("help-title"), "Plan Paint Help");
-    introduction_ = gf::make_control<gf::Label>(gf::StableId("help-welcome"), std::string(help_welcome));
+    title_ = gf::make_control<gf::Label>(gf::StableId("help-title"), tr("Plan Paint Help"));
+    introduction_ = gf::make_control<gf::Label>(gf::StableId("help-welcome"), tr(help_welcome));
     for (const std::shared_ptr<gf::Label>& label : {title_, introduction_}) {
         (*label).set_font({gf::FontRole::control, 18, 400, false});
         (*label).set_foreground(gf::Color::rgba(0, 0, 0));
         (*label).set_text_wrapping(gf::TextWrapping::word);
+        if (current_language().right_to_left) { (*label).set_alignment(gf::HorizontalAlignment::far); }
         add_child(label);
     }
     for (std::size_t i = 0; i < std::size(help_topics); ++i) {
         const HelpTopic& topic = help_topics[i];
         std::shared_ptr<gf::Button> header = gf::make_control<HelpHeader>(
-            gf::StableId("help-topic-" + std::to_string(i)), std::string(topic.title), topic.open);
+            gf::StableId("help-topic-" + std::to_string(i)), tr(topic.title), topic.open);
         (*header).set_font({gf::FontRole::control, 18, 400, false});
         (*header).set_text_alignment(gf::ContentAlignment::middle_left);
         (*header).set_content_padding({4, 1, 4, 1});
-        (*header).set_accessible_name(std::string(topic.title));
+        (*header).set_accessible_name(tr(topic.title));
         subscriptions_.push_back((*header).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<HelpBook, &HelpBook::toggle>(*this)));
         std::shared_ptr<gf::Label> body = gf::make_control<gf::Label>(
-            gf::StableId("help-body-" + std::to_string(i)), std::string(topic.body));
+            gf::StableId("help-body-" + std::to_string(i)), tr(topic.body));
         (*body).set_font({gf::FontRole::control, 18, 400, false});
         (*body).set_foreground(gf::Color::rgba(0, 0, 0));
         (*body).set_text_wrapping(gf::TextWrapping::word);
+        if (current_language().right_to_left) { (*body).set_alignment(gf::HorizontalAlignment::far); }
         (*body).set_visible(topic.open);
         headers_.push_back(header);
         bodies_.push_back(body);

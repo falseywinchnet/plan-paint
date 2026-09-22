@@ -43,3 +43,11 @@ https://github.com/google/fonts/tree/main/ofl/anton,
 https://github.com/google/fonts/tree/main/ofl/titanone,
 https://www.dafont.com/bubble-sans.font,
 https://github.com/abayemes/bubblesans.
+
+## Language and accessibility dependencies
+
+SheenBidi 2.9.0 (commit 829d99918adf05761e9f35611dc13e76e6810f80) supplies Unicode bidirectional ordering under Apache License 2.0. Its unchanged source and license are included in the GUI.Forms source patch and SDK notices.
+
+Noto Sans Arabic, Hebrew, Devanagari, Bengali and Gurmukhi, plus Noto Sans CJK, provide interface fallback coverage under the SIL Open Font License 1.1. GUI.Forms carries the original font files, OFL notices and source hashes. These fonts do not alter saved artwork unless explicitly selected for text.
+
+Linux accessibility uses ATK and the AT-SPI bridge from at-spi2-core, dynamically linked under LGPL 2.1 or later. Portable packages must retain their license notices and permit replacement of the shared libraries. Upstream source: https://gitlab.gnome.org/GNOME/at-spi2-core . Windows accessibility uses the operating system's Oleacc/COM service; macOS uses AppKit.

@@ -224,8 +224,20 @@ class Editor final : public gui_forms::Control {
     void cancel_spiro_drag();
     void rotate_view(double radians);
     void pointer(const gui_forms::PointerEvent& event);
+    void canvas_control_action(int action);
 
   private:
+    void initialize_canvas_controls();
+    void arrange_canvas_controls(gui_forms::Rect area);
+    void canvas_control_pointer(gui_forms::PointerAction action, gui_forms::PointerButton button);
+    void canvas_control_clicked(gui_forms::ButtonBase& button);
+    std::shared_ptr<gui_forms::Panel> canvas_controls_;
+    std::array<std::shared_ptr<gui_forms::NumericUpDown>, 3> canvas_positions_;
+    std::vector<std::shared_ptr<gui_forms::Button>> canvas_actions_;
+    std::shared_ptr<gui_forms::CheckBox> canvas_alt_, canvas_shift_, canvas_center_;
+    Point canvas_position_;
+    bool canvas_control_stroke_ = false, canvas_control_dispatch_ = false;
+    gui_forms::PointerButton canvas_control_button_ = gui_forms::PointerButton::primary;
     std::shared_ptr<PatternCanvas> pattern_canvas_;
     std::string pattern_storage_path_;
     bool help_shortcut();

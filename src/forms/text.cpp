@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
 #include <chrono>
@@ -31,9 +32,9 @@ gf::SemanticDescriptor PaintCanvas::semantic_descriptor() const {
     }
     gf::SemanticDescriptor descriptor;
     descriptor.role = gf::SemanticRole::text_box;
-    descriptor.name = "Canvas text";
+    descriptor.name = tr("Canvas text");
     descriptor.value = (*editor).text.edit.content;
-    descriptor.description = "Editable text box. Control or Command + Enter places it; Escape cancels.";
+    descriptor.description = tr("Editable text box. Control or Command + Enter places it; Escape cancels.");
     descriptor.actions = {gf::SemanticAction::focus, gf::SemanticAction::set_value};
     descriptor.exposed = true;
     return descriptor;
@@ -353,7 +354,7 @@ void Editor::paint_text_overlay(gf::Painter& painter) {
     gf::Rect box = canvas().bitmap_to_client({text.bounds.x, text.bounds.y, text.bounds.w, text.bounds.h});
     gf::Color blue = gf::Color::rgba(29, 103, 180);
     painter.fill_rect({box.x, box.y - 22, 92, 20}, gf::Color::rgba(223, 236, 250));
-    painter.draw_text_utf8({box.x + 7, box.y - 8}, "Move text", {gf::FontRole::control, 12, 400, false},
+    painter.draw_text_utf8({box.x + 7, box.y - 8}, tr("Move text"), {gf::FontRole::control, 12, 400, false},
                            blue);
     canvas().stroke_outline(painter, {text.bounds.x, text.bounds.y, text.bounds.w, text.bounds.h}, blue, 1);
     const double hx[] = {0, .5, 1, 1, 1, .5, 0, 0}, hy[] = {0, 0, 0, .5, 1, 1, 1, .5};

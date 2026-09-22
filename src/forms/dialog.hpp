@@ -93,7 +93,8 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::ComboBox> dither_pattern_;
     std::shared_ptr<gui_forms::RasterCanvas> dither_preview_;
     std::shared_ptr<gui_forms::Label> dither_status_;
-    std::shared_ptr<gui_forms::ComboBox> shape_gesture_;
+    std::shared_ptr<gui_forms::ComboBox> shape_gesture_, language_;
+    std::shared_ptr<gui_forms::CheckBox> canvas_controls_;
     CarpetParameters carpet_;
     Image carpet_image_;
     std::shared_ptr<CarpetRenderJob> carpet_job_;

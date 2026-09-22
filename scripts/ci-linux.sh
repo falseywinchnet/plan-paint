@@ -2,7 +2,7 @@
 set -eu
 apk add --no-cache build-base linux-headers cmake clang lld python3 pkgconf git ca-certificates \
   libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev tiff-dev libwebp-dev dav1d-dev zlib-dev \
-  libjpeg-turbo-dev gn samurai xvfb xauth ghostscript patchelf
+  at-spi2-core-dev libjpeg-turbo-dev gn samurai xvfb xauth ghostscript patchelf
 if ! command -v ninja >/dev/null; then ln -s /usr/bin/samu /usr/local/bin/ninja; fi
 export BUILD_JOBS=${BUILD_JOBS:-2}
 GUI_FORMS_SYSTEM_BUILD_TOOLS=1 sh build-deps/gui-forms/third_party/fetch_skia_cpu.sh

@@ -25,6 +25,7 @@ class PatternCanvas final : public gui_forms::Control {
     std::vector<Image> undo_, redo_;
     bool drawing_ = false, black_ = true;
     Point last_;
+    Point keyboard_cell_{};
     double cell_ = 32;
     gui_forms::Point origin_;
     void clicked(gui_forms::ButtonBase& button);

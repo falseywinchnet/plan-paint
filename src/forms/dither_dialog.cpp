@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
 namespace paint::forms {
@@ -43,25 +44,25 @@ struct DitherWork {
 void EditorDialog::initialize_dither() {
     panel_ = {0, 0, 620, 580};
     std::shared_ptr<Editor> editor = editor_.lock();
-    label("dither-colors-label", "Colors", {24, 52, 120, 28});
+    label("dither-colors-label", tr("Colors"), {24, 52, 120, 28});
     dither_count_ = number("dither-colors", {145, 52, 105, 28}, 2, 32, (*editor).dither_options.colors);
-    label("dither-pattern-label", "Pattern", {285, 52, 80, 28});
+    label("dither-pattern-label", tr("Pattern"), {285, 52, 80, 28});
     dither_pattern_ = gf::make_control<gf::ComboBox>(gf::StableId("dither-pattern"));
-    (*dither_pattern_).set_accessible_name("Dithering pattern");
-    for (const char* name : {"Crosswind", "Weave", "Scrambled", "Drift", "Posterize (no dither)"}) {
+    (*dither_pattern_).set_accessible_name(tr("Dithering pattern"));
+    for (const std::string& name : {tr("Crosswind"), tr("Weave"), tr("Scrambled"), tr("Drift"), tr("Posterize (no dither)")}) {
         (*dither_pattern_).add_item(name);
     }
     (*dither_pattern_).set_selected_index(static_cast<std::size_t>((*editor).dither_options.pattern));
     put(dither_pattern_, {367, 52, 228, 28});
     dither_preview_ = gf::make_control<gf::RasterCanvas>(gf::StableId("dither-preview"));
-    (*dither_preview_).set_accessible_name("Dither result preview");
+    (*dither_preview_).set_accessible_name(tr("Dither result preview"));
     put(dither_preview_, {24, 96, 572, 320});
     dither_status_ = gf::make_control<gf::Label>(gf::StableId("dither-status"));
     put(dither_status_, {24, 426, 572, 28});
     label("dither-scope",
           (*editor).document.selection.active && (*editor).document.selection.canvas_selection
-              ? "Applies inside the selection. Alpha is preserved."
-              : "Applies to the canvas. Alpha is preserved.",
+              ? tr("Applies inside the selection. Alpha is preserved.")
+              : tr("Applies to the canvas. Alpha is preserved."),
           {24, 455, 572, 24});
     subscriptions_.push_back(
         (*dither_count_)
@@ -99,7 +100,7 @@ void EditorDialog::render_dither() {
     }
     stop_dither();
     (*(*attached_window()).find("dialog-ok")).set_enabled(false);
-    (*dither_status_).set_text("Preparing palette and preview…");
+    (*dither_status_).set_text(tr("Preparing palette and preview…"));
     (*error_).set_text("");
     dither_job_ = std::make_shared<DitherRenderJob>();
     (*dither_job_).source = (*editor).document.image;
@@ -128,7 +129,7 @@ void EditorDialog::deliver_dither() {
     publish_image(image, *dither_preview_);
     (*dither_preview_).set_zoom(std::min(572.0 / image.width, 320.0 / image.height));
     (*dither_status_)
-        .set_text(std::to_string((*dither_job_).palette.size()) + " colors — preview is the prepared result");
+        .set_text(std::to_string((*dither_job_).palette.size()) + tr(" colors — preview is the prepared result"));
     (*(*attached_window()).find("dialog-ok")).set_enabled(true);
 }
 void EditorDialog::accept_dither() {

@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "conv.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
@@ -123,12 +124,12 @@ void Editor::start_reshape() {
     document.commit_path();
     document.commit_curve();
     if (!document.selection.active) {
-        throw std::runtime_error("Select or lasso an object before reshaping it.");
+        throw std::runtime_error(tr("Select or lasso an object before reshaping it."));
     }
     warp_worker_.wait();
     poll_warp();
     if (warp_worker_.busy()) {
-        throw std::runtime_error("The stamp is still preparing. Try reshape after it finishes.");
+        throw std::runtime_error(tr("The stamp is still preparing. Try reshape after it finishes."));
     }
     document.lift_selection();
     std::vector<Point> outline = document.selection.outline;
@@ -162,7 +163,7 @@ AffineMap Editor::rotation_map() const {
 }
 void Editor::start_rotation() {
     if (!document.selection.active || warp_active() || warp_worker_.busy()) {
-        throw std::runtime_error("Select an object and finish the current transform before rotating.");
+        throw std::runtime_error(tr("Select an object and finish the current transform before rotating."));
     }
     document.lift_selection();
     warp_original_ = document.selection;
@@ -176,7 +177,7 @@ void Editor::start_rotation() {
 }
 void Editor::request_rotation(double degrees) {
     if (!std::isfinite(degrees)) {
-        throw std::runtime_error("Enter a finite rotation angle.");
+        throw std::runtime_error(tr("Enter a finite rotation angle."));
     }
     finish_text(true);
     finish_warp(false);
@@ -196,13 +197,13 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
                           double vertical_degrees) {
     if (!std::isfinite(horizontal_degrees) || !std::isfinite(vertical_degrees) ||
         std::abs(horizontal_degrees) > 80 || std::abs(vertical_degrees) > 80) {
-        throw std::runtime_error("Skew angles must be between -80 and 80 degrees.");
+        throw std::runtime_error(tr("Skew angles must be between -80 and 80 degrees."));
     }
     finish_text(true);
     finish_warp(false);
     document.require_rgba_transform();
     if (warp_worker_.busy()) {
-        throw std::runtime_error("Finish the current stamp transform first.");
+        throw std::runtime_error(tr("Finish the current stamp transform first."));
     }
     document.commit_curve();
     document.commit_path();
@@ -218,7 +219,7 @@ void Editor::request_skew(int width, int height, bool scale, double horizontal_d
     double horizontal = std::tan(horizontal_degrees * std::numbers::pi / 180.0);
     double vertical = std::tan(vertical_degrees * std::numbers::pi / 180.0);
     if (std::abs(1 - horizontal * vertical) < 0.05) {
-        throw std::runtime_error("This skew collapses the picture. Choose smaller angles.");
+        throw std::runtime_error(tr("This skew collapses the picture. Choose smaller angles."));
     }
     const double sx = scale ? static_cast<double>(width) / input.width : 1;
     const double sy = scale ? static_cast<double>(height) / input.height : 1;
@@ -436,7 +437,7 @@ void Editor::publish_stamp_preview() {
                                                        stamp_preview_.height, stamp_preview_.width * 4,
                                                        pixels, *canvas_);
     if (!result) {
-        throw std::runtime_error("The stamp preview exceeds the display resource budget.");
+        throw std::runtime_error(tr("The stamp preview exceeds the display resource budget."));
     }
     stamp_image_ = result.image;
 }

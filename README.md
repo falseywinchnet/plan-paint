@@ -6,24 +6,32 @@ To the Holy One, blessed be He, from whom all good things come. We dedicate this
 [![Latest release](https://img.shields.io/github/v/release/falseywinchnet/plan-paint)](https://github.com/falseywinchnet/plan-paint/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A free drawing application with the familiar Windows 7/10 Paint ribbon, built on native GUI.Forms for Mac, Windows and Linux. Draw, paint, add text and edit pictures, with snapping paths, patterned brushes, reusable stamps and CONV image transforms.
+A free, native paint program for Mac, Windows and Linux, with the familiar Windows 7/10 Paint ribbon. Make a meme, sketch an idea, or finish a picture: crop, caption, draw polygons, adjust curves and paint with a brush. Plan Paint keeps everyday drawing tools close at hand, with a clear interface built for direct editing.
 
-![Rainstar Paint 0.3.2 with its cobalt ribbon and moss cloth surround](assets/screenshots/macos-home-0.3.2.jpg)
+![Plan Paint 1.1 showing a landscape made with polygons, an editable curve and watercolor](assets/screenshots/macos-home-1.1.jpg)
 
-Rainstar Paint 0.3.2, the predecessor to Plan Paint, shown on Apple Silicon Mac. The specimen was painted by the native brush and lettering tools and reopened as a flattened PNG. [Explore the illustrated guide and screenshots](https://paymenottowork.com/plan-paint/).
+Plan Paint 1.1 on Apple Silicon Mac. This picture was drawn in the native application with filled polygons, a Bézier curve and watercolor strokes. [Explore the illustrated guide and screenshots](https://paymenottowork.com/plan-paint/).
 
 ## Download
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/plan-paint-1.0.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Plan Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/plan-paint-1.0.0-windows-x64.zip) | Extract the folder and run `plan-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/plan-paint-1.0.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Plan Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/plan-paint-1.0.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/plan-paint-1.1.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Plan Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/plan-paint-1.1.0-windows-x64.zip) | Extract the folder and run `plan-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/plan-paint-1.1.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Plan Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/plan-paint-1.1.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/plan-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/download/v1.0.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
+[Release notes](https://github.com/falseywinchnet/plan-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
+
+## New in 1.1.0
+
+Plan Paint adds operating-system language detection, a language selector in Settings, and 22 external language packs covering menus, tools and the in-app guide. English remains compiled into the application. Bundled fonts and improved text layout support Arabic, Hebrew, Indic scripts and CJK text. Language changes take effect after restarting.
+
+Settings → Canvas controls provides drawing coordinates, movement steps, separate Start stroke and Finish stroke actions, and checkbox alternatives to held modifiers. Spirograph pegs and the custom pattern canvas gain additional keyboard and accessibility actions. GUI.Forms exposes control semantics on macOS, Windows and Linux; end-to-end assistive-device usability testing is still in progress.
+
+See [accessibility and platform validation](docs/ACCESSIBILITY.md), [language packs](languages/README.md), and the [1.1 release notes](docs/releases/1.1.0.md).
 
 ## New in 1.0.0
 

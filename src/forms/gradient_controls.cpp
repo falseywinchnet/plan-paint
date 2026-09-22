@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "codecs.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
@@ -12,7 +13,7 @@ class GradientStrip final : public gf::Control {
   public:
     GradientStrip(gf::StableId id, std::weak_ptr<Editor> editor) : Control(std::move(id)), editor_(editor) {
         set_accessible_name(
-            "Gradient stops: click to add, drag to move; use Stop and Position for keyboard editing");
+            tr("Gradient stops: click to add, drag to move; use Stop and Position for keyboard editing"));
     }
     void on_paint(gf::Painter& painter, gf::Rect) override {
         const std::shared_ptr<Editor> editor = editor_.lock();
@@ -47,7 +48,7 @@ class GradientStrip final : public gf::Control {
                                 selected ? 2 : 1);
             painter.fill_rect({x - 3, 49, 6, 8}, gf::Color::rgba(stop.color.r, stop.color.g, stop.color.b));
         }
-        painter.draw_text_utf8({8, 76}, "Click to add a stop; drag its handle to move",
+        painter.draw_text_utf8({8, 76}, tr("Click to add a stop; drag its handle to move"),
                                {gf::FontRole::control, 11, 400, false}, gf::Color::rgba(55, 68, 85));
     }
     void on_pointer(gf::PointerEvent& event) override {
@@ -103,16 +104,16 @@ class GradientStrip final : public gf::Control {
 } // namespace
 void Ribbon::initialize_gradient() {
     building_page_ = 256;
-    button("gradient-presets-menu", "Presets", -1, {12, 35, 130, 79}, true, true);
+    button("gradient-presets-menu", tr("Presets"), -1, {12, 35, 130, 79}, true, true);
     gradient_strip_ = gf::make_control<GradientStrip>(gf::StableId("gradient-strip"), editor_);
     option(gradient_strip_, {160, 34, 450, 84});
-    button("gradient-linear", "Linear", -1, {630, 35, 82, 28});
-    button("gradient-radial", "Circular", -1, {716, 35, 86, 28});
-    gradient_angle_ = number("gradient-angle", "Angle (°)", {824, 35, 225, 28}, 0, 360, 0, 1);
+    button("gradient-linear", tr("Linear"), -1, {630, 35, 82, 28});
+    button("gradient-radial", tr("Circular"), -1, {716, 35, 86, 28});
+    gradient_angle_ = number("gradient-angle", tr("Angle (°)"), {824, 35, 225, 28}, 0, 360, 0, 1);
     (*gradient_angle_).set_increment(1);
-    button("gradient-reverse", "Reverse", -1, {1065, 35, 98, 28});
+    button("gradient-reverse", tr("Reverse"), -1, {1065, 35, 98, 28});
     gradient_stops_ = gf::make_control<gf::ComboBox>(gf::StableId("gradient-stop"));
-    (*gradient_stops_).set_accessible_name("Selected gradient stop");
+    (*gradient_stops_).set_accessible_name(tr("Selected gradient stop"));
     option(gradient_stops_, {630, 80, 94, 28});
     subscriptions_.push_back(
         (*gradient_stops_)
@@ -120,11 +121,11 @@ void Ribbon::initialize_gradient() {
             .subscribe(*this,
                        gf::Delegate<std::optional<std::size_t>>::bind<Ribbon, &Ribbon::gradient_stop_changed>(
                            *this)));
-    gradient_position_ = number("gradient-position", "Position (%)", {738, 80, 215, 28}, 0, 100, 0, 1);
+    gradient_position_ = number("gradient-position", tr("Position (%)"), {738, 80, 215, 28}, 0, 100, 0, 1);
     (*gradient_position_).set_increment(1);
     gradient_color_ = gf::make_control<SwatchButton>(gf::StableId("gradient-color"), "", Color{0, 0, 0, 255});
     (*gradient_color_).set_requested_bounds({969, 80, 28, 28});
-    (*gradient_color_).set_accessible_name("Edit selected gradient stop color");
+    (*gradient_color_).set_accessible_name(tr("Edit selected gradient stop color"));
     subscriptions_.push_back(
         (*gradient_color_)
             .clicked()
@@ -132,9 +133,9 @@ void Ribbon::initialize_gradient() {
     buttons_.push_back(gradient_color_);
     button_pages_.push_back(256);
     add_child(gradient_color_);
-    button("gradient-edit-color", "Color…", -1, {1001, 80, 73, 28});
-    button("gradient-add", "Add", -1, {1090, 80, 70, 28});
-    button("gradient-remove", "Remove", -1, {1170, 80, 92, 28});
+    button("gradient-edit-color", tr("Color…"), -1, {1001, 80, 73, 28});
+    button("gradient-add", tr("Add"), -1, {1090, 80, 70, 28});
+    button("gradient-remove", tr("Remove"), -1, {1170, 80, 92, 28});
 }
 void Ribbon::synchronize_gradient() {
     const std::shared_ptr<Editor> editor = editor_.lock();
@@ -147,7 +148,7 @@ void Ribbon::synchronize_gradient() {
     if ((*gradient_stops_).items().size() != gradient.stops.size()) {
         std::vector<std::string> names;
         for (std::size_t i = 0; i < gradient.stops.size(); ++i) {
-            names.push_back("Stop " + std::to_string(i + 1));
+            names.push_back(tr("Stop ") + std::to_string(i + 1));
         }
         (*gradient_stops_).set_items(std::move(names));
     }

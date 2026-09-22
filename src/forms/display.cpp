@@ -1,3 +1,4 @@
+#include "localization.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
@@ -41,10 +42,10 @@ static void publish_pixels(const Image& source, gui_forms::RasterCanvas& canvas,
     if (replacement) {
         canvas.set_bitmap(bitmap);
         if (canvas.last_resource_error() != gui_forms::ImageResourceError::none) {
-            throw std::runtime_error("The image exceeds the window's display resource budget");
+            throw std::runtime_error(tr("The image exceeds the window's display resource budget"));
         }
     } else if (!canvas.synchronize_bitmap()) {
-        throw std::runtime_error("Canvas resource synchronization failed");
+        throw std::runtime_error(tr("Canvas resource synchronization failed"));
     }
 }
 void publish_image(const Image& source, gui_forms::RasterCanvas& canvas, Rect damage) {
