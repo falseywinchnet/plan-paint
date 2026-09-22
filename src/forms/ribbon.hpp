@@ -37,6 +37,7 @@ class Ribbon final : public gui_forms::Control {
     void synchronize();
     void close_popup();
     void show_tool_context();
+    void cancel_spiro_drag();
     void show_transforms();
     void show_atlas();
     double ribbon_height() const;
@@ -63,6 +64,9 @@ class Ribbon final : public gui_forms::Control {
     void prepare_material_previews();
     int page_ = 1, building_page_ = 1, palette_page_ = 0, ordered_tab_page_ = -1;
     Color palette_color(int index) const;
+    int spiro_drag_width_ = 0;
+    void spiro_button(const std::string& id, const std::string& text, int kind, int index,
+                      gui_forms::Rect bounds);
     bool synchronizing_ = false, fonts_loaded_ = false, collapsed_ = false;
     void ensure_fonts();
     std::vector<int> button_pages_;

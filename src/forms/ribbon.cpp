@@ -3,6 +3,7 @@
 #include "forms/atlas.hpp"
 #include "forms/editor.hpp"
 #include "forms/ribbon_icons.hpp"
+#include "forms/spirograph_view.hpp"
 #include "material.hpp"
 #include "platform.hpp"
 #include <algorithm>
@@ -599,7 +600,55 @@ std::shared_ptr<gf::NumericUpDown> Ribbon::number(const std::string& id, const s
         *this, gf::Delegate<double>::bind<Ribbon, &Ribbon::options_changed>(*this)));
     return control;
 }
+namespace {
+class SpiroPartButton final : public gf::Button {
+    int kind_, index_;
+
+  public:
+    SpiroPartButton(gf::StableId id, std::string text, int kind, int index)
+        : Button(std::move(id), std::move(text)), kind_(kind), index_(index) {}
+    void on_paint(gf::Painter& painter, gf::Rect damage) override {
+        Button::on_paint(painter, damage);
+        const gf::Rect box = client_rectangle();
+        paint_spiro_part(painter, {0, 0, box.width, box.height - 22}, kind_, index_);
+    }
+};
+} // namespace
+void Ribbon::spiro_button(const std::string& id, const std::string& text, int kind, int index,
+                          gf::Rect bounds) {
+    const std::shared_ptr<gf::Button> choice =
+        gf::make_control<SpiroPartButton>(gf::StableId(id), text, kind, index);
+    (*choice).set_requested_bounds(bounds);
+    (*choice).set_content_padding({1, 48, 1, 1});
+    (*choice).set_text_alignment(gf::ContentAlignment::bottom_center);
+    (*choice).set_accessible_name(text);
+    subscriptions_.push_back((*choice).clicked().subscribe(
+        *this, gf::Delegate<gf::ButtonBase&>::bind<Ribbon, &Ribbon::clicked>(*this)));
+    button_pages_.push_back(128);
+    buttons_.push_back(choice);
+    add_child(choice);
+}
 void Ribbon::add_options() {
+    building_page_ = 128;
+    for (int i = 0; i < 2; ++i) {
+        spiro_button("spiro-guide-" + std::to_string(i), spiro_guides()[i].name, 0, i,
+                     {10 + i * 115.0, 35, 105, 76});
+    }
+    for (int i = 0; i < 3; ++i) {
+        spiro_button("spiro-insert-" + std::to_string(i), spiro_inserts()[i].name, 1, i,
+                     {270 + i * 108.0, 35, 100, 76});
+    }
+    for (int i = 0; i < 3; ++i) {
+        spiro_button("spiro-peg-" + std::to_string(1 << i),
+                     i == 0   ? "Fine peg"
+                     : i == 1 ? "Medium peg"
+                              : "Bold peg",
+                     2, i, {625 + i * 95.0, 35, 87, 76});
+    }
+    button("spiro-fill", "Fill pegs", 8, {932, 35, 155, 31});
+    button("spiro-operate", "Operate", -1, {1095, 35, 173, 31});
+    button("spiro-remove", "Remove insert", -1, {932, 76, 155, 31});
+    button("spiro-center", "Center guide", -1, {1095, 76, 173, 31});
     building_page_ = 2;
     button("zoom-in", "Zoom in", 12, {8, 35, 65, 81}, true);
     button("zoom-out", "Zoom out", 12, {76, 35, 65, 81}, true);
@@ -790,7 +839,11 @@ void Ribbon::show_transforms() {
 void Ribbon::show_tool_context() {
     collapsed_ = false;
     std::shared_ptr<Editor> editor = editor_.lock();
-    page_ = editor && (*editor).document.tool == Tool::Text ? 16 : 8;
+    page_ = editor && ((*editor).document.tool == Tool::Spirograph ||
+                       ((*editor).spiro.active && (*editor).document.tool == Tool::Fill))
+                ? 128
+            : editor && (*editor).document.tool == Tool::Text ? 16
+                                                              : 8;
     close_popup();
     synchronize();
 }
@@ -848,6 +901,9 @@ void Ribbon::show_page() {
         (*atlas_).synchronize();
     }
     Tool tool = (*editor).document.tool;
+    if (page_ == 128 && !(*editor).spiro.active) {
+        page_ = 8;
+    }
     if (page_ == 8 || page_ == 16) {
         page_ = tool == Tool::Text ? 16 : 8;
     }
@@ -1348,14 +1404,17 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
             selection ? std::vector<std::string>{"Selection", "Rotation", "Mesh", "Finish", "Controls"}
             : page_ == 16
                 ? std::vector<std::string>{"Font", "Letter treatment", "Transform", "Colors", "Finish text"}
+            : page_ == 128
+                ? std::vector<std::string>{"Guides", "Inserts", "Pegs · drag into a hole", "Load and operate"}
             : page_ == 2 ? std::vector<std::string>{"Zoom", "Show or hide", "Display"}
             : page_ == 4 ? std::vector<std::string>{"Apply to", "Brushes", "Patterns"}
                          : std::vector<std::string>{"Tool settings"};
-        const std::vector<double> edges = selection     ? std::vector<double>{0, 230, 496, 764, 906, width}
-                                          : page_ == 16 ? std::vector<double>{0, 455, 690, 920, 1062, 1280}
-                                          : page_ == 2  ? std::vector<double>{0, 220, 390, 620}
-                                          : page_ == 4  ? std::vector<double>{0, 132, 660, 974, width}
-                                                        : std::vector<double>{0, width};
+        const std::vector<double> edges = selection      ? std::vector<double>{0, 230, 496, 764, 906, width}
+                                          : page_ == 16  ? std::vector<double>{0, 455, 690, 920, 1062, 1280}
+                                          : page_ == 128 ? std::vector<double>{0, 250, 605, 915, 1280}
+                                          : page_ == 2   ? std::vector<double>{0, 220, 390, 620}
+                                          : page_ == 4   ? std::vector<double>{0, 132, 660, 974, width}
+                                                         : std::vector<double>{0, width};
         for (std::size_t i = 0; i < labels.size(); ++i) {
             if (selection && i > 0 && !(*editor).document.selection.active) {
                 continue;
@@ -1507,14 +1566,34 @@ void Ribbon::synchronize() {
             bind_icon(control, 100 + static_cast<int>(stamp_geometry_shape(document.stamp_shape)), false);
         }
         if (id == "tool-tab") {
-            const char* names[] = {"Selection", "Selection",    "Pencil",    "Fill",  "Text",
-                                   "Eraser",    "Color picker", "Magnifier", "Brush", "Shape",
-                                   "Path",      "Stamp",        "Mesh",      "Guide", "Freehand shape"};
-            static_assert(std::size(names) == static_cast<std::size_t>(Tool::Freehand) + 1);
-            control.set_text(page_ == 32 ? "Transform" : names[static_cast<int>(document.tool)]);
-            control.set_accessible_name(page_ == 32
+            const char* names[] = {"Selection", "Selection", "Pencil",         "Fill",
+                                   "Text",      "Eraser",    "Color picker",   "Magnifier",
+                                   "Brush",     "Shape",     "Path",           "Stamp",
+                                   "Mesh",      "Guide",     "Freehand shape", "Spirograph"};
+            static_assert(std::size(names) == static_cast<std::size_t>(Tool::Spirograph) + 1);
+            control.set_text(page_ == 128  ? "Spirograph"
+                             : page_ == 32 ? "Transform"
+                                           : names[static_cast<int>(document.tool)]);
+            control.set_accessible_name(page_ == 128 ? "Spirograph tools"
+                                        : page_ == 32
                                             ? "Transform tools"
                                             : std::string(names[static_cast<int>(document.tool)]) + " tools");
+        }
+        if (id.starts_with("spiro-guide-")) {
+            selected = (*editor).spiro.guide == std::stoi(id.substr(12));
+        }
+        if (id.starts_with("spiro-insert-")) {
+            selected = (*editor).spiro.inserted && (*editor).spiro.insert == std::stoi(id.substr(13));
+        }
+        if (id == "spiro-fill") {
+            selected = document.tool == Tool::Fill;
+        }
+        if (id == "spiro-operate") {
+            selected = document.tool == Tool::Spirograph;
+        }
+        if (id.starts_with("spiro-peg-") || id == "spiro-remove" || id == "spiro-clear-pegs" ||
+            id == "spiro-operate" || id == "spiro-fill") {
+            control.set_enabled((*editor).spiro.inserted);
         }
         control.set_selected(selected);
     }
@@ -1606,7 +1685,37 @@ void Ribbon::synchronize() {
     }
     synchronizing_ = false;
 }
+void Ribbon::cancel_spiro_drag() {
+    if (spiro_drag_width_) {
+        spiro_drag_width_ = 0;
+        set_pointer_capture(false);
+    }
+}
 void Ribbon::on_pointer_preview(gf::PointerEvent& event) {
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    if (editor && spiro_drag_width_) {
+        (*editor).spiro_tray_pointer(spiro_drag_width_, event);
+        if (event.action == gf::PointerAction::up) {
+            spiro_drag_width_ = 0;
+            set_pointer_capture(false);
+        }
+        event.handled = true;
+        return;
+    }
+    if (editor && event.button == gf::PointerButton::primary && event.action == gf::PointerAction::down) {
+        for (const std::shared_ptr<gf::Button>& choice : buttons_) {
+            const std::string id((*choice).stable_id().value());
+            if (id.starts_with("spiro-peg-") && (*choice).visible() && (*choice).enabled() &&
+                (*choice).absolute_bounds().contains(event.position)) {
+                const int width = std::stoi(id.substr(10));
+                (*editor).spiro_tray_pointer(width, event);
+                spiro_drag_width_ = width;
+                set_pointer_capture(true);
+                event.handled = true;
+                return;
+            }
+        }
+    }
     if (event.button != gf::PointerButton::secondary) {
         return;
     }
@@ -1655,6 +1764,10 @@ void Ribbon::clicked(gf::ButtonBase& button) {
         (*editor).execute(id == "edge-switch" ? "outline" : "fill");
         return;
     }
+    if (id.starts_with("spiro-") && !id.starts_with("spiro-peg-")) {
+        (*editor).spiro_choice(id);
+        return;
+    }
     if (id == "palette-pane") {
         palette_page_ = (palette_page_ + 1) % 3;
         synchronize();
@@ -1692,10 +1805,13 @@ void Ribbon::clicked(gf::ButtonBase& button) {
     }
     if (id.ends_with("-tab")) {
         close_popup();
-        int next = id == "home-tab"                        ? 1
-                   : id == "view-tab"                      ? 2
-                   : id == "patterns-tab"                  ? 4
-                   : id == "atlas-tab"                     ? 64
+        int next = id == "home-tab"       ? 1
+                   : id == "view-tab"     ? 2
+                   : id == "patterns-tab" ? 4
+                   : id == "atlas-tab"    ? 64
+                   : ((*editor).document.tool == Tool::Spirograph ||
+                      ((*editor).spiro.active && (*editor).document.tool == Tool::Fill))
+                       ? 128
                    : (*editor).document.tool == Tool::Text ? 16
                                                            : 8;
         collapsed_ = next == page_ ? !collapsed_ : false;
@@ -1911,11 +2027,12 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             texts = {"Zoom in", "Zoom out", "100%", "Fit canvas"};
         }
         if (id == "tool-9") {
-            ids = path_swap_menu_ ? std::vector<std::string>{"path-swap-bezier", "path-swap-arc"}
-                                  : std::vector<std::string>{"tool-9", "freehand-shape", "path-swap"};
-            texts = path_swap_menu_
-                        ? std::vector<std::string>{"Bézier", "Arc"}
-                        : std::vector<std::string>{"Continue path", "Freehand shape", "Swap segment ▸"};
+            ids = path_swap_menu_
+                      ? std::vector<std::string>{"path-swap-bezier", "path-swap-arc"}
+                      : std::vector<std::string>{"tool-9", "freehand-shape", "spirograph", "path-swap"};
+            texts = path_swap_menu_ ? std::vector<std::string>{"Bézier", "Arc"}
+                                    : std::vector<std::string>{"Continue path", "Freehand shape",
+                                                               "Spirograph", "Swap segment ▸"};
             path_swap_menu_ = false;
         }
         if (id == "tool-11") {
@@ -2003,6 +2120,11 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         return;
     }
     close_popup();
+    if (id == "spirograph") {
+        close_popup();
+        (*editor).start_spirograph();
+        return;
+    }
     Document& document = (*editor).document;
     if (id.starts_with("stamp-shape-")) {
         (*editor).reset_stamp();

@@ -346,6 +346,7 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     }
     paint_atlas_overlay(painter);
     paint_guide_overlay(painter);
+    paint_spiro_overlay(painter);
     if ((show_hotspot || pick_hotspot) && document.atlas.kind == AtlasKind::Cursor &&
         document.atlas.active >= 0) {
         const IconFrame& frame = document.atlas.icons[document.atlas.active];
@@ -651,6 +652,7 @@ void Editor::command_invoked(const gf::CommandInvocation& invocation) {
     execute(invocation.command_id);
 }
 void Editor::release_gesture() {
+    cancel_spiro_drag();
     if (!transform_preview_stamp_) {
         end_transform_preview();
     }
@@ -898,6 +900,9 @@ void Editor::pointer(const gf::PointerEvent& event) {
                     refresh();
                 }
             }
+            return;
+        }
+        if (spiro_pointer(event, point)) {
             return;
         }
         if (path_swap_pointer(event, point)) {
@@ -1575,6 +1580,10 @@ void Editor::open_file(const std::string& path) {
     reference_frame = -1;
     healing_brush_.clear();
     document.replace_container(std::move(image), path);
+    spiro = {};
+    if (document.tool == Tool::Spirograph) {
+        document.tool = Tool::Pencil;
+    }
     recent.remember(path);
     rebuild_file_menu();
     (*canvas_).set_view(1, {-16, -16});
@@ -1861,6 +1870,10 @@ void Editor::execute(const std::string& command) {
                 reference_frame = -1;
                 healing_brush_.clear();
                 document.new_image();
+                spiro = {};
+                if (document.tool == Tool::Spirograph) {
+                    document.tool = Tool::Pencil;
+                }
             } else if (!pending_save_path.empty()) {
                 deferred_command = "new";
             }

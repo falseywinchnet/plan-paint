@@ -22,7 +22,8 @@ enum class Tool {
     Stamp,
     Reshape,
     Guide,
-    Freehand
+    Freehand,
+    Spirograph
 };
 struct SelectionSource {
     Image image;

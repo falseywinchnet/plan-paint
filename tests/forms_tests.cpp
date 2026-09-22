@@ -1788,6 +1788,116 @@ void carpet_generator_controls() {
     routed_button(window, "dialog-cancel");
     require(editor.carpet_parameters.view == 35, "cancel changes committed carpet parameters");
 }
+void spirograph_apparatus_and_ink() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.new_image(640, 480);
+    editor.refresh();
+    const gf::Rect menu = (*window.find("tool-9")).absolute_bounds();
+    const gf::Point arrow{menu.x + menu.width / 2, menu.bottom() - 4};
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, arrow});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, arrow});
+    routed_button(window, "popup-spirograph");
+    require(editor.spiro.active && editor.document.tool == paint::Tool::Spirograph,
+            "graph menu activates spirograph");
+    require(window.find("spiro-peg-1") && (*window.find("spiro-peg-1")).visible(),
+            "spirograph peg tray missing");
+    editor.execute("fit");
+    editor.settings.rotate_view = true;
+    editor.rotate_view(.35);
+    const std::uint64_t revision = editor.document.revision;
+    const std::vector<paint::Color> blank = editor.document.image.pixels;
+    for (int h : {0, 2}) {
+        const gf::Rect tray = (*window.find(h == 0 ? "spiro-peg-1" : "spiro-peg-4")).absolute_bounds();
+        const gf::Point from{tray.x + tray.width / 2, tray.y + tray.height / 2};
+        const paint::Point hole = editor.spiro.hole(h, editor.spiro.angle);
+        const gf::Point to = fixture.position(hole.x, hole.y);
+        window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, from});
+        window.dispatch_pointer({gf::PointerAction::move, gf::PointerButton::primary, to});
+        window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, to});
+        require(editor.spiro.pegs[h].seated && !editor.spiro.pegs[h].loaded,
+                "tray drag fails to seat an empty peg");
+    }
+    editor.document.ink.primary = {200, 30, 40, 255};
+    editor.document.ink.secondary = {20, 70, 190, 255};
+    routed_button(window, "spiro-fill");
+    paint::Point hole = editor.spiro.hole(0, editor.spiro.angle);
+    fixture.click(hole.x, hole.y);
+    hole = editor.spiro.hole(2, editor.spiro.angle);
+    fixture.pointer(gf::PointerAction::down, hole.x, hole.y, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, hole.x, hole.y, gf::PointerButton::secondary);
+    require(editor.spiro.pegs[0].loaded && editor.spiro.pegs[2].loaded && editor.spiro.pegs[2].ink.b == 190,
+            "Fill loads Primary and Alt into pegs");
+    require(editor.document.revision == revision &&
+                std::memcmp(blank.data(), editor.document.image.pixels.data(),
+                            blank.size() * sizeof(paint::Color)) == 0,
+            "loading pegs floods the canvas or changes its history");
+    routed_button(window, "spiro-operate");
+    hole = editor.spiro.hole(0, editor.spiro.angle);
+    const paint::Point grip = editor.spiro.wheel_center(editor.spiro.angle);
+    fixture.drag(hole.x, hole.y, grip.x, grip.y);
+    require(editor.spiro.pegs[0].loaded, "invalid peg move inside wheel loses the original peg");
+    fixture.pointer(gf::PointerAction::down, hole.x, hole.y);
+    fixture.pointer(gf::PointerAction::move, 20, 20);
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(editor.spiro.pegs[0].loaded && !editor.canvas().has_pointer_capture(),
+            "Escape fails to restore a moved peg");
+    const gf::Rect tray = (*window.find("spiro-peg-1")).absolute_bounds();
+    window.dispatch_pointer({gf::PointerAction::down,
+                             gf::PointerButton::primary,
+                             {tray.x + tray.width / 2, tray.y + tray.height / 2}});
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(!(*window.find("ribbon")).has_pointer_capture(), "Escape leaves a tray peg captured");
+    const paint::Point old = editor.spiro.center;
+    const double r = editor.spiro.guide_radius() + 7 * editor.spiro.scale;
+    fixture.drag(old.x - r, old.y, old.x - r + 17, old.y + 12);
+    require(std::abs(editor.spiro.center.x - old.x - 17) < 1e-7 &&
+                std::abs(editor.spiro.center.y - old.y - 12) < 1e-7,
+            "guide movement does not carry the assembly");
+    require(editor.document.revision == revision, "moving support creates an ink history entry");
+    editor.document.select({390, 0, 200, 480});
+    const paint::Point wheel = editor.spiro.wheel_center(editor.spiro.angle);
+    fixture.pointer(gf::PointerAction::down, wheel.x, wheel.y);
+    for (int i = 1; i <= 50; ++i) {
+        const paint::Point target = editor.spiro.wheel_center(i * .025);
+        fixture.pointer(gf::PointerAction::move, target.x, target.y);
+    }
+    const paint::Point end = editor.spiro.wheel_center(1.25);
+    fixture.pointer(gf::PointerAction::up, end.x, end.y);
+    require(std::abs(editor.spiro.angle - 1.25) < 1e-6,
+            "dragging the center does not operate the rolling insert");
+    bool red = false, blue = false;
+    for (paint::Color c : editor.document.image.pixels) {
+        red = red || (c.r > c.b + 50);
+        blue = blue || (c.b > c.r + 50);
+    }
+    require(red && blue, "loaded pegs do not draw both colors");
+    for (int y = 0; y < 480; ++y) {
+        for (int x = 0; x < 390; ++x) {
+            require(white(editor.document.image.get(x, y)),
+                    "spirograph ink escapes active selection in rotated view");
+        }
+    }
+    const std::vector<paint::Color> drawn = editor.document.image.pixels;
+    editor.execute("undo");
+    require(std::memcmp(blank.data(), editor.document.image.pixels.data(),
+                        blank.size() * sizeof(paint::Color)) == 0,
+            "multi-peg gesture is not one undo step");
+    editor.execute("redo");
+    require(std::memcmp(drawn.data(), editor.document.image.pixels.data(),
+                        drawn.size() * sizeof(paint::Color)) == 0,
+            "spirograph redo differs from original ink");
+    routed_button(window, "spiro-remove");
+    require(!editor.spiro.inserted && !editor.spiro.pegs[0].seated, "removing insert retains pegs");
+    const paint::Point close{
+        editor.spiro.center.x + (editor.spiro.guide_radius() + 10 * editor.spiro.scale) * .7071067811865476,
+        editor.spiro.center.y - (editor.spiro.guide_radius() + 10 * editor.spiro.scale) * .7071067811865476};
+    fixture.click(close.x, close.y);
+    require(!editor.spiro.active && std::memcmp(drawn.data(), editor.document.image.pixels.data(),
+                                                drawn.size() * sizeof(paint::Color)) == 0,
+            "closing apparatus erases its finished drawing");
+}
 void independent_color_materials_and_no_color() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -2865,6 +2975,7 @@ int main() {
         centered_closed_shapes();
         centered_circle_and_materials();
         carpet_generator_controls();
+        spirograph_apparatus_and_ink();
         independent_color_materials_and_no_color();
         select_all_delete_without_drag();
         ribbon_collapse_and_reopen();

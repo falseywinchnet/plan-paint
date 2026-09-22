@@ -8,6 +8,7 @@
 #include "forms/ribbon.hpp"
 #include "material.hpp"
 #include "paint_tools.hpp"
+#include "spirograph.hpp"
 #include "text_session.hpp"
 #include "warp_session.hpp"
 #include <gui_forms/application.hpp>
@@ -180,6 +181,11 @@ class Editor final : public gui_forms::Control {
     std::string pending_save_path, deferred_command, deferred_open_path;
     void complete_deferred_save();
     PaintCanvas& canvas();
+    Spirograph spiro;
+    void start_spirograph();
+    void spiro_choice(const std::string& id);
+    void spiro_tray_pointer(int width, const gui_forms::PointerEvent& event);
+    void cancel_spiro_drag();
     void rotate_view(double radians);
     void pointer(const gui_forms::PointerEvent& event);
 
@@ -259,6 +265,16 @@ class Editor final : public gui_forms::Control {
     Point text_drag_start_;
     void paint_atlas_overlay(gui_forms::Painter& painter);
     void paint_tool_preview(gui_forms::Painter& painter);
+    enum class SpiroDrag { None, Guide, Wheel, Peg };
+    SpiroDrag spiro_drag_ = SpiroDrag::None;
+    Point spiro_grab_{}, spiro_pointer_{};
+    SpiroPeg spiro_carried_{};
+    int spiro_origin_hole_ = -1, spiro_target_hole_ = -1;
+    bool spiro_checkpoint_ = false;
+    void paint_spiro_overlay(gui_forms::Painter& painter);
+    bool spiro_pointer(const gui_forms::PointerEvent& event, Point point);
+    int spiro_hole_at(Point point, bool empty_only) const;
+    void drop_spiro_peg();
     void paint_guide_overlay(gui_forms::Painter& painter);
     bool guide_pointer(const gui_forms::PointerEvent& event, Point point);
     std::optional<CurveKind> path_swap_kind_;
