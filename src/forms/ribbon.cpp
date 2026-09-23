@@ -356,9 +356,15 @@ class ShapeSwitchButton final : public gf::Button {
             painter.fill_rect(sample, gf::Color::rgba(255, 255, 255));
             painter.stroke_rect(sample, blue, 2);
         }
+        const std::string caption = fill_ ? tr("Fill") : tr("Edge");
+        gf::FontSpec font{gf::FontRole::control, std::clamp(bounds.width * 0.23, 8.5, 11.0), 500, false};
+        const double available = std::max(1.0, bounds.width - side - 9);
+        const gf::Size measured = painter.measure_text_utf8(caption, font);
+        if (measured.width > available) {
+            font.size = std::max(8.5, font.size * available / measured.width);
+        }
         painter.draw_text_utf8(
-            {side + 6, bounds.height / 2 + 3.5}, fill_ ? tr("Fill") : tr("Edge"),
-            {gf::FontRole::control, std::clamp(bounds.width * 0.23, 8.5, 11.0), 500, false},
+            {side + 6, bounds.height / 2 + font.size * 0.32}, caption, font,
             gf::Color::rgba(34, 52, 72));
         painter.restore();
     }
@@ -1347,10 +1353,26 @@ void Ribbon::arrange(gf::Rect bounds) {
         const double font_size = material_caption ? std::clamp(11 * horizontal_scale, 8.0, 12.0)
                                  : tall_caption   ? std::clamp(12 * horizontal_scale, 8.0, 14.0)
                                                   : std::clamp(14 * horizontal_scale, 10.0, 15.0);
-        (*buttons_[i])
-            .set_font({gf::FontRole::control, font_size,
-                       static_cast<std::uint16_t>(id.ends_with("-tab") && control.selected() ? 700 : 400),
-                       false, 0.05});
+        gf::FontSpec caption_font{gf::FontRole::control, font_size,
+            static_cast<std::uint16_t>(id.ends_with("-tab") && control.selected() ? 700 : 400), false, 0.05};
+        if (window() && !control.text().empty() &&
+            (tall_caption || id.ends_with("-tab") || id == "primary" || id == "secondary")) {
+            const gf::Insets padding = control.content_padding();
+            const double available = std::max(1.0, rectangle.width - padding.left - padding.right - 2);
+            double widest = 0;
+            std::size_t start = 0;
+            do {
+                const std::size_t end = control.text().find('\n', start);
+                const std::string line = control.text().substr(start, end - start);
+                widest = std::max(widest, (*window()).resolve_text_layout_utf8(line, caption_font).logical_size.width);
+                if (end == std::string::npos) { break; }
+                start = end + 1;
+            } while (start < control.text().size());
+            if (widest > available) {
+                caption_font.size = std::max(9.0, caption_font.size * available / widest);
+            }
+        }
+        control.set_font(caption_font);
         set_child_layout(buttons_[i], rectangle);
     }
     for (const std::shared_ptr<gf::Control>& control : option_controls_) {
