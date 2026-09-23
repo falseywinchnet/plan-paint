@@ -23,13 +23,14 @@ struct Guide {
     std::vector<Point> nodes;
     bool closed = false, fill = true;
     double width = 2;
-    // A selection-derived mask preserves holes and feathered silhouettes until
-    // a node edit replaces it with the editable polygon.
+    // A selection-derived body fills enclosed holes while retaining the
+    // feathered exterior until a node edit replaces it with the editable polygon.
     SelectionMask selection;
     std::vector<GuideSegment> segments;
     std::vector<Point> curved_boundary;
     const std::vector<Point>& boundary() const;
     void rebuild_boundary();
+    void seal_selection_body();
     int swap_segment(std::size_t edge, CurveKind kind);
     void move_node(std::size_t index, Point point);
     void move_handle(int segment, int handle, Point point);

@@ -1009,6 +1009,28 @@ void test_guides_masks_and_path_swap() {
     require(paint::equal(lifted.image.get(0, 0), lifted.ink.secondary),
             "moving a feathered selection leaves its cut source behind");
     paint::Guide guide;
+    guide.selection.bounds = {0, 0, 7, 7};
+    guide.selection.coverage.assign(49, 0);
+    for (int y = 1; y <= 5; ++y) {
+        for (int x = 1; x <= 5; ++x) {
+            if (x == 1 || x == 5 || y == 1 || y == 5) {
+                guide.selection.coverage[y * 7 + x] = 128;
+            }
+        }
+    }
+    const paint::SelectionMask ring = guide.selection;
+    guide.seal_selection_body();
+    require(guide.blocked(3, 3) == 1 && guide.blocked(0, 3) == 0 &&
+                guide.selection.coverage[3 * 7 + 1] == 128,
+            "selection guide seals enclosed body without changing feathered edges or exterior");
+    const paint::SelectionMask sealed = guide.selection;
+    guide.seal_selection_body();
+    require(guide.selection.coverage == sealed.coverage, "sealing the guide body is idempotent");
+    guide.selection = ring;
+    guide.selection.coverage[1 * 7 + 3] = 0;
+    guide.seal_selection_body();
+    require(guide.blocked(3, 3) == 0, "open silhouettes retain exterior-connected gaps");
+    guide.clear();
     guide.nodes = {{9, 9}, {31, 9}, {31, 31}, {9, 31}};
     guide.closed = true;
     paint::Image target = source;

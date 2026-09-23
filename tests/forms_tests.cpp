@@ -2964,6 +2964,54 @@ void cobalt_tabs_and_split_button_routes() {
         }
     }
 }
+void tightened_oval_guide_survives_brush_switch() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.ink.size = 3;
+    editor.choose_shape(paint::Shape::Oval);
+    fixture.drag(30, 20, 100, 80);
+    editor.choose_tool(paint::Tool::Lasso);
+    editor.lasso_mode = paint::LassoMode::Tighten;
+    fixture.pointer(gf::PointerAction::down, 20, 10);
+    fixture.pointer(gf::PointerAction::move, 110, 10);
+    fixture.pointer(gf::PointerAction::move, 110, 90);
+    fixture.pointer(gf::PointerAction::move, 20, 90);
+    fixture.pointer(gf::PointerAction::up, 20, 10);
+    require(editor.document.selection.active, "tightening lasso selects the oval");
+    open_tab(window, "home-tab");
+    routed_button(window, "tool-11");
+    require(editor.guide.active() && editor.guide.fill && !editor.document.selection.active,
+            "Guide converts the tightening selection to a protected stencil");
+    require(editor.guide.blocked(65, 50) == 1,
+            "filled selection guide protects the enclosed oval body, not only its ink");
+    const std::vector<std::uint8_t> coverage = editor.guide.selection.coverage;
+    PreviewPainter before;
+    editor.paint_canvas_overlay(before, {});
+    routed_button(window, "brush-menu");
+    PreviewPainter after;
+    editor.paint_canvas_overlay(after, {});
+    require(editor.document.tool == paint::Tool::Brush && editor.guide.active() &&
+                editor.guide.selection.coverage == coverage && before.guide_lines > 0 &&
+                after.guide_lines == before.guide_lines,
+            "Brush retains the selection guide and its visible boundary");
+    require((*require_button(window, "tool-11")).selected() &&
+                (*require_button(window, "brush-menu")).selected(),
+            "ribbon indicates the active brush and retained guide");
+    editor.document.ink.primary = {220, 30, 90, 255};
+    fixture.drag(10, 50, 115, 50);
+    require(white(editor.document.image.get(65, 50)) && !white(editor.document.image.get(15, 50)),
+            "brush paints outside the filled guide and leaves its enclosed body untouched");
+    editor.execute("guide-edit");
+    open_tab(window, "home-tab");
+    routed_button(window, "fill-switch");
+    routed_button(window, "brush-menu");
+    require(!editor.guide.fill && editor.guide.blocked(65, 50) == 0,
+            "turning Fill off leaves a boundary-only guide");
+    fixture.drag(50, 50, 80, 50);
+    require(!white(editor.document.image.get(65, 50)),
+            "brush can paint the guide interior with Fill off");
+}
 void guide_atlas_and_text_effect_interactions() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -3477,6 +3525,7 @@ int main() {
         stamp_material_keeps_one_hardness_mask();
         compact_ribbon_keeps_icons_and_fields();
         cobalt_tabs_and_split_button_routes();
+        tightened_oval_guide_survives_brush_switch();
         guide_atlas_and_text_effect_interactions();
         guide_dismissal_preserves_paint_and_curves();
         zoom_anchors_the_point();
