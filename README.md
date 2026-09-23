@@ -16,14 +16,23 @@ Plan Paint 1.1 on Apple Silicon Mac. This picture was drawn in the native applic
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/plan-paint-1.1.0-macos-arm64.pkg) | macOS 26 or newer. Install, then open Plan Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/plan-paint-1.1.0-windows-x64.zip) | Extract the folder and run `plan-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/plan-paint-1.1.0-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Plan Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/plan-paint-1.1.0-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.1/plan-paint-1.1.1-macos-arm64.pkg) | macOS 26 or newer. Install, then open Plan Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.1/plan-paint-1.1.1-windows-x64.zip) | Extract the folder and run `plan-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.1/plan-paint-1.1.1-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Plan Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.1/plan-paint-1.1.1-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/plan-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.0/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
+[Release notes](https://github.com/falseywinchnet/plan-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.1/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
+
+## New in 1.1.1
+
+- Windows correctly displays ribbon captions made entirely from fallback-font characters, including Russian tabs. Its font fallback uses the bundled Cyrillic, Arabic, Hebrew and Indic faces.
+- The language selector shows all choices when space permits and a visible scrollbar in smaller windows. **Help! English!** beside Help offers a way back to English after restarting.
+- Bundled fonts use shared file mappings on macOS and Linux, reducing retained heap copies. Packages strip unneeded binary symbols; the Mac installer uses improved compression. All fonts and language packs remain included.
+- Longer translated ribbon captions fit their button widths.
+
+See the [1.1.1 release notes](docs/releases/1.1.1.md).
 
 ## New in 1.1.0
 

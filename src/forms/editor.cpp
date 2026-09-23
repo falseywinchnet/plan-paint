@@ -2169,6 +2169,8 @@ void Editor::execute(const std::string& command) {
                                       0.0625, 32.0);
             (*canvas_).set_view(scale, {view.x + (width - bounds.width / scale) / 2,
                                         view.y + (height - bounds.height / scale) / 2});
+        } else if (command == "help-english") {
+            open_editor_dialog(EditorDialogKind::english_help);
         } else if (command == "help") {
             show_help = !show_help;
             invalidate(gf::Dirty::layout | gf::Dirty::paint);

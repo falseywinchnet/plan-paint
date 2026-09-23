@@ -3,6 +3,7 @@
 #include "conv.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
+#include "localization.hpp"
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -2735,6 +2736,46 @@ void recovery_editor_contracts() {
     require(paint::RecoverySession::candidates(root).empty(), "successful save retires recovery snapshots");
     std::filesystem::remove_all(root);
 }
+void english_language_recovery() {
+    const std::filesystem::path catalogs = std::filesystem::path(__FILE__).parent_path().parent_path() / "languages";
+    for (const std::string language : {"ja-jp", "ar"}) {
+        paint::initialize_language(catalogs, language);
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        gf::Window& window = *fixture.window;
+        editor.settings.language = language;
+        editor.settings.storage_path = (std::filesystem::temp_directory_path() /
+            ("plan-paint-english-recovery-" + language + ".txt")).string();
+        editor.settings.save();
+        const std::shared_ptr<gf::Button> help = require_button(window, "help-english");
+        require((*help).text() == "Help! English!" && (*help).visible(), "English escape is readable in non-English UI");
+        (*help).perform_click();
+        window.perform_layout();
+        require((*require_button(window, "dialog-ok")).text() == "OK" &&
+                (*require_button(window, "dialog-cancel")).text() == "Cancel", "escape dialog buttons remain English");
+        const std::shared_ptr<gf::Label> question = std::dynamic_pointer_cast<gf::Label>(window.find("english-help-question"));
+        require(question && (*question).text() == "Is English your language?" &&
+                (*question).alignment() == gf::HorizontalAlignment::near, "English question stays left aligned in RTL UI");
+        (*require_button(window, "dialog-cancel")).perform_click();
+        require(editor.settings.language == language, "Cancel preserves language");
+        (*help).perform_click();
+        (*require_button(window, "dialog-ok")).perform_click();
+        paint::EditorSettings restored;
+        restored.storage_path = editor.settings.storage_path;
+        restored.load();
+        require(restored.language == "en-us" && paint::current_language().tag == language,
+                "OK persists English for restart without changing an active editing session");
+        std::filesystem::remove(editor.settings.storage_path);
+    }
+    paint::initialize_language(catalogs, "en-us");
+    Fixture english;
+    require(!(*english.window).find("help-english"), "English UI has no redundant recovery button");
+    (*english.editor).execute("settings");
+    const std::shared_ptr<gf::ComboBox> choices = std::dynamic_pointer_cast<gf::ComboBox>((*english.window).find("settings-language"));
+    require(choices && (*choices).maximum_drop_down_items() >= (*choices).items().size(),
+            "language picker requests every choice rather than an unexplained short list");
+}
+
 void scroll_distance_bounds_and_settings() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -3432,6 +3473,7 @@ int main() {
         interface_colors_and_spacing();
         recovery_editor_contracts();
         scroll_distance_bounds_and_settings();
+        english_language_recovery();
         stamp_material_keeps_one_hardness_mask();
         compact_ribbon_keeps_icons_and_fields();
         cobalt_tabs_and_split_button_routes();

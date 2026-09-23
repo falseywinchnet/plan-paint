@@ -1,5 +1,22 @@
 # Package, startup and memory measurements
 
+## Current packaging and font ownership
+
+The multilingual application includes CJK, Arabic, Hebrew and Indic fallback
+fonts alongside its UI fonts. The macOS and Linux renderer maps bundled font
+files and shares their immutable storage with the text shaper, avoiding a
+full-file heap copy for each window. Font tables, glyph caches and rendered
+surfaces still allocate memory. The byte-span registration API retains its
+copying contract for callers whose source storage is temporary.
+
+Release packaging strips unneeded symbols from copied executables and shared
+libraries before signing or recording package hashes. macOS uses the latest
+installer compression compatible with the application's declared minimum OS;
+Windows ZIP packaging uses maximum deflate compression. Fonts and language
+catalogs retain their complete content.
+
+## Historical 0.2.0 to 0.2.1 comparison
+
 These measurements compare the macOS ARM64 0.2.0 package with the 0.2.1
 build on macOS 26.5. They describe this configuration, not Windows or
 Linux, and do not establish a minimum system requirement.

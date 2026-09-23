@@ -23,6 +23,16 @@
       "file": "third_party/gui-forms-patches/accessibility-languages.patch",
       "sha256": "36cadbae2fc8aa3e3ed52ce9c42eba4ab5bd968903d911758b307c015577a9f8",
       "upstream_commit": "eeb9e24d72627917094b9fdf19d6eb5bda50e8d6"
+    },
+    {
+      "file": "third_party/gui-forms-patches/mapped-fonts-dropdown-scroll.patch",
+      "sha256": "5935e00d27ffb7b6d1b9546e5170994339d9a540359c3a4f78a16a78efff466f",
+      "upstream_commit": "538ff4734109644ca7fe45cf7e6e13c9ae2d0966"
+    },
+    {
+      "file": "third_party/gui-forms-patches/windows-fallback-captions.patch",
+      "sha256": "e953467d86b9cda806aa4c954de0c0e9473dff920e9cc03e596b10bbedcb8bba",
+      "upstream_commit": "f2249fa9e1cc9a980e6ee09daae60f3010a9e450"
     }
   ]
 }

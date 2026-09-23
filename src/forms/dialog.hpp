@@ -31,6 +31,7 @@ enum class EditorDialogKind {
     atlas_gallery,
     properties,
     settings,
+    english_help,
     print_preview,
     linux_print,
     linux_page_setup
