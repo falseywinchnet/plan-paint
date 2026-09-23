@@ -24,3 +24,18 @@ ctest --test-dir build-windows --output-on-failure
 python scripts/check-style.py
 python scripts/package-windows.py --build build-windows \
   --gui-forms-sdk build-deps/gui-forms-sdk --runtime-dir /mingw64/bin
+# Exercise the stripped, packaged application with its shipped fonts and catalogs.
+python - <<'PYTHON'
+from pathlib import Path
+import subprocess
+bundle = Path("dist/PlanPaint").resolve()
+process = subprocess.Popen([str(bundle / "plan-paint.exe"), "--language=ru-ru"], cwd=bundle)
+try:
+    result = process.wait(timeout=5)
+except subprocess.TimeoutExpired:
+    process.terminate()
+    process.wait(timeout=10)
+    print("Packaged Russian Windows startup passed")
+else:
+    raise SystemExit(f"Packaged Windows application exited early: {result}")
+PYTHON
