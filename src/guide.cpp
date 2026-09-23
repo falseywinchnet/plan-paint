@@ -340,6 +340,48 @@ SelectionMask tighten_lasso(const Image& image, const std::vector<Point>& polygo
     trim_selection_mask(result);
     return result;
 }
+void Guide::seal_selection_body() {
+    const int width = selection.bounds.w, height = selection.bounds.h;
+    if (width < 1 || height < 1 ||
+        selection.coverage.size() != static_cast<std::size_t>(width) * height) {
+        return;
+    }
+    // Exterior-connected empty pixels stay paintable. Enclosed empty pixels
+    // belong to the solid guide body, even when the selection was only ink.
+    // Do this once at conversion, keeping per-pixel stencil lookups constant-time.
+    std::vector<std::uint8_t> exterior(selection.coverage.size(), 0);
+    std::queue<std::size_t> pending;
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            if (x != 0 && y != 0 && x != width - 1 && y != height - 1) continue;
+            const std::size_t index = static_cast<std::size_t>(y) * width + x;
+            if (!selection.coverage[index]) {
+                exterior[index] = 1;
+                pending.push(index);
+            }
+        }
+    }
+    while (!pending.empty()) {
+        const std::size_t index = pending.front();
+        pending.pop();
+        const std::size_t absent = selection.coverage.size();
+        const std::size_t x = index % width, y = index / width;
+        const std::size_t neighbors[] = {
+            x > 0 ? index - 1 : absent,
+            x + 1 < static_cast<std::size_t>(width) ? index + 1 : absent,
+            y > 0 ? index - width : absent,
+            y + 1 < static_cast<std::size_t>(height) ? index + width : absent};
+        for (const std::size_t next : neighbors) {
+            if (next != absent && !exterior[next] && !selection.coverage[next]) {
+                exterior[next] = 1;
+                pending.push(next);
+            }
+        }
+    }
+    for (std::size_t index = 0; index < selection.coverage.size(); ++index) {
+        if (!selection.coverage[index] && !exterior[index]) selection.coverage[index] = 255;
+    }
+}
 void Guide::clear() {
     nodes.clear();
     segments.clear();

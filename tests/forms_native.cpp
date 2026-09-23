@@ -14,7 +14,7 @@ namespace gf = gui_forms;
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
-         materials = false, interface_review = false, view_review = false;
+         materials = false, interface_review = false, view_review = false, guide_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -264,6 +264,21 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (guide_review) {
+            document.ink.size = 3;
+            paint::draw_shape(document.image, paint::Shape::Oval, {300, 110}, {620, 430},
+                              document.ink, true, false);
+            document.select_mask(paint::tighten_lasso(document.image,
+                {{280, 90}, {640, 90}, {640, 450}, {280, 450}}, false));
+            (*editor).choose_tool(paint::Tool::Guide);
+            (*editor).choose_tool(paint::Tool::Brush);
+            document.ink.primary = {210, 40, 90, 255};
+            document.ink.size = 14;
+            (*editor).refresh();
+            window.perform_layout();
+            entered = true;
+            return;
+        }
         if (view_review) {
             document.new_image(480, 300);
             document.ink.primary = {30, 90, 150, 255};
@@ -384,6 +399,7 @@ int main(int argc, char** argv) {
         if (exercise.interface_review && argc > 3) { exercise.hue = std::clamp(std::stoi(argv[3]), 0, 359); }
         exercise.materials = argc > 1 && std::string(argv[1]) == "--materials";
         exercise.view_review = argc > 1 && std::string(argv[1]) == "--view";
+        exercise.guide_review = argc > 1 && std::string(argv[1]) == "--guide";
         exercise.bugs = argc > 1 && std::string(argv[1]) == "--bugs";
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));

@@ -749,6 +749,7 @@ void Editor::choose_tool(Tool tool) {
         for (std::size_t index = 0; index < selected.image.pixels.size(); ++index) {
             guide.selection.coverage[index] = selected.image.pixels[index].a;
         }
+        guide.seal_selection_body();
         guide.nodes = mask_outline(guide.selection.coverage, selected.image.width, selected.image.height);
         for (std::size_t index = 0; index < guide.nodes.size(); ++index) {
             guide.nodes[index].x += selected.x;

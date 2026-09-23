@@ -36,7 +36,7 @@ Choose **Tightening lasso** or **Inner-void lasso** from the selection menu. Tig
 
 Selections retain animated dashed contours around every selected island and interior hole. Hold **Ctrl** while drawing another lasso to add that freeform region; hold **Alt** to subtract it. Both modifier operations use the exact drawn region regardless of the active lasso mode.
 
-With a selection active, choose Guide to protect its silhouette immediately. Selection-derived guides retain holes and feathered coverage until their vertices are edited.
+With a selection active, choose Guide to protect its silhouette immediately. With Fill enabled, enclosed holes belong to the protected body too: a tightening lasso around an outlined oval protects its interior as well as its ink. The exterior keeps its feathered coverage until the guide's vertices are edited. Turn Fill off for a boundary-only stencil. Switching to Brush keeps the guide active; its cross-hatching marks the protected body after the editing handles disappear.
 
 ## Paths
 
