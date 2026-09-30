@@ -23,6 +23,20 @@ std::vector<Point> sockets(int count) {
     }
     return result;
 }
+std::vector<Point> spiral_sockets(int teeth, int count) {
+    // Approximate the kit's inward spiral, not dimensioned manufacturing coordinates.
+    // Keep a constant radial step and roughly constant distance between adjacent holes.
+    std::vector<Point> result;
+    double angle = -std::numbers::pi / 2;
+    for (int i = 0; i < count; ++i) {
+        const double radius = teeth - 10.0 - 2 * i;
+        result.push_back({radius * std::cos(angle) / teeth, radius * std::sin(angle) / teeth});
+        if (i + 1 < count) {
+            angle += 2 * std::asin(std::sqrt(117 / (4 * radius * (radius - 2))));
+        }
+    }
+    return result;
+}
 } // namespace
 bool SpiroProfile::circular() const {
     return oval == 0 && triangle == 0 && square == 0 && pentagon == 0 && hexagon == 0;
@@ -122,20 +136,20 @@ const std::vector<SpiroGuide>& spiro_guides() {
 const std::vector<SpiroInsert>& spiro_inserts() {
     static const std::vector<SpiroInsert> parts{
         {"Wheel 36", 36, {{.28, 0}, {.54, 0}, {.8, 0}, {-.4, .4}, {-.5, -.3}}},
-        {"Wheel 40", 40, {{.25, 0}, {.52, 0}, {.8, 0}, {-.32, .38}, {-.4, -.4}, {.1, -.65}}},
-        {"Wheel 48", 48, sockets(7)},
+        {"Wheel 40", 40, spiral_sockets(40, 13)},
+        {"Wheel 48", 48, spiral_sockets(48, 17)},
         {"Wheel 12", 12, sockets(3)},
         {"Wheel 18", 18, sockets(4)},
-        {"Wheel 24", 24, sockets(5)},
-        {"Wheel 30", 30, sockets(6)},
+        {"Wheel 24", 24, spiral_sockets(24, 5)},
+        {"Wheel 30", 30, spiral_sockets(30, 8)},
         {"Prime 31", 31, sockets(6)},
         {"Prime 37", 37, sockets(7)},
-        {"Wheel 45", 45, sockets(7)},
-        {"Wheel 56", 56, sockets(8)},
-        {"Wheel 60", 60, sockets(8)},
+        {"Wheel 45", 45, spiral_sockets(45, 16)},
+        {"Wheel 56", 56, spiral_sockets(56, 21)},
+        {"Wheel 60", 60, spiral_sockets(60, 23)},
         {"Wheel 64", 64, sockets(8)},
-        {"Wheel 72", 72, sockets(8)},
-        {"Wheel 80", 80, sockets(8)},
+        {"Wheel 72", 72, spiral_sockets(72, 29)},
+        {"Wheel 80", 80, spiral_sockets(80, 33)},
         {"Oval 36", 36, sockets(6), {.18}},
         {"Long oval 40", 40, sockets(6), {.25}},
         {"Triangle 42", 42, sockets(7), {0, .07}},
@@ -143,7 +157,13 @@ const std::vector<SpiroInsert>& spiro_inserts() {
         {"Pentagon 48", 48, sockets(7), {0, 0, 0, .022}},
         {"Hexagon 48", 48, sockets(8), {0, 0, 0, 0, .015}},
         {"Egg 40", 40, sockets(6), {.10, .035}},
-        {"Shield 42", 42, sockets(7), {-.09, .035, .012}}};
+        {"Shield 42", 42, sockets(7), {-.09, .035, .012}},
+        {"Wheel 32", 32, spiral_sockets(32, 9)},
+        {"Wheel 42", 42, spiral_sockets(42, 14)},
+        {"Wheel 52", 52, spiral_sockets(52, 19)},
+        {"Wheel 63", 63, spiral_sockets(63, 25)},
+        {"Wheel 75", 75, spiral_sockets(75, 31)},
+        {"Wheel 84", 84, spiral_sockets(84, 35)}};
     return parts;
 }
 void Spirograph::open(int width, int height) {
@@ -438,7 +458,7 @@ std::vector<SpiroTrace> Spirograph::advance(double target) {
 }
 void SpirographStroke::clear() {
     scratch_ = {};
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < spiro_max_holes; ++i) {
         std::unordered_map<int, Color> released;
         layers_[i].swap(released);
         material_[i].clear();

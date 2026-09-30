@@ -686,5 +686,16 @@
   "4× Smooth": "4× Glatt",
   "Line and shape rendering": "Linien- und Formdarstellung",
   "Ring 144/96": "Ring 144/96",
-  "Ring 150/105": "Ring 150/105"
+  "Ring 150/105": "Ring 150/105",
+  "Choose hole": "Loch wählen",
+  "Select peg": "Stift auswählen",
+  "Place fine peg": "Feinen Stift einsetzen",
+  "Load Primary": "Primärfarbe laden",
+  "Load Alt": "Alternativfarbe laden",
+  "Wheel 32": "Rad 32",
+  "Wheel 42": "Rad 42",
+  "Wheel 52": "Rad 52",
+  "Wheel 63": "Rad 63",
+  "Wheel 75": "Rad 75",
+  "Wheel 84": "Rad 84"
 }

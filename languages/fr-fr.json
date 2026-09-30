@@ -686,5 +686,16 @@
   "4× Smooth": "4× Lissé",
   "Line and shape rendering": "Rendu des lignes et des formes",
   "Ring 144/96": "Anneau 144/96",
-  "Ring 150/105": "Anneau 150/105"
+  "Ring 150/105": "Anneau 150/105",
+  "Choose hole": "Choisir un trou",
+  "Select peg": "Sélectionner la pointe",
+  "Place fine peg": "Placer une pointe fine",
+  "Load Primary": "Charger principale",
+  "Load Alt": "Charger Alt",
+  "Wheel 32": "Roue 32",
+  "Wheel 42": "Roue 42",
+  "Wheel 52": "Roue 52",
+  "Wheel 63": "Roue 63",
+  "Wheel 75": "Roue 75",
+  "Wheel 84": "Roue 84"
 }

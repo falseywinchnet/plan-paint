@@ -1966,6 +1966,58 @@ void spirograph_accessible_pegs() {
     require(editor.spiro.pegs[0].width == 4 && editor.spiro.pegs[0].loaded &&
                 editor.spiro.pegs[0].ink.b == 190 && !editor.canvas().has_pointer_capture(),
             "accessible peg resize loses ink or captures the pointer");
+    const std::vector<paint::Color> blank = editor.document.image.pixels;
+    routed_button(window, "spiro-holes-menu");
+    require(window.find("popup-spiro-hole-3") != nullptr, "numbered hole choices are missing");
+    require(window.perform_semantic_action("popup-spiro-hole-3", gf::SemanticAction::press),
+            "numbered hole cannot be activated through accessibility");
+    require(editor.spiro.selected_peg == 3 && editor.spiro.pegs[3].seated &&
+                !editor.spiro.pegs[3].loaded && !editor.spiro.pegs[1].seated,
+            "choosing an empty numbered hole does not place an empty fine peg there");
+    editor.document.ink.primary = {180, 40, 60, 255};
+    editor.document.ink.secondary = {20, 170, 90, 255};
+    routed_button(window, "spiro-load-primary");
+    require(editor.spiro.pegs[3].loaded && editor.spiro.pegs[3].ink.r == 180 &&
+                editor.spiro.pegs[0].ink.b == 190,
+            "Load Primary changes the wrong peg or fails to load it");
+    routed_button(window, "spiro-load-alt");
+    require(editor.spiro.pegs[3].ink.g == 170, "Load Alt does not use the alternate ink");
+    routed_button(window, "spiro-holes-menu");
+    routed_button(window, "popup-spiro-hole-0");
+    require(editor.spiro.selected_peg == 0 && editor.spiro.pegs[0].width == 4 &&
+                editor.spiro.pegs[0].ink.b == 190,
+            "choosing an occupied hole replaces its peg or ink");
+    editor.document.ink.pattern = paint::Pattern::None;
+    routed_button(window, "spiro-load-primary");
+    require(editor.spiro.pegs[0].seated && !editor.spiro.pegs[0].loaded,
+            "loading No Color removes the peg instead of emptying its ink");
+    require(std::memcmp(blank.data(), editor.document.image.pixels.data(),
+                        blank.size() * sizeof(paint::Color)) == 0 && !editor.canvas().has_pointer_capture(),
+            "numbered peg setup draws on the canvas or captures the pointer");
+    routed_button(window, "spiro-remove");
+    require(!(*window.find("spiro-holes-menu")).enabled() &&
+                !(*window.find("spiro-load-primary")).enabled() &&
+                !(*window.find("spiro-load-alt")).enabled(),
+            "peg setup controls stay enabled after the insert is removed");
+    editor.spiro_choice("spiro-insert-28"); // Wheel 84, with 35 holes.
+    routed_button(window, "spiro-holes-menu");
+    window.perform_layout();
+    for (int i = 0; i < 35; ++i) {
+        const std::shared_ptr<gf::Control> choice = window.find("popup-spiro-hole-" + std::to_string(i));
+        require(choice != nullptr, "a large wheel has an inaccessible hole");
+        const gf::Rect bounds = (*choice).absolute_bounds();
+        require(bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= 1280 &&
+                    bounds.y + bounds.height <= 820,
+                "large wheel hole choices extend beyond the window");
+    }
+    routed_button(window, "popup-spiro-hole-34");
+    require(editor.spiro.selected_peg == 34 && editor.spiro.pegs[34].seated,
+            "the final Deluxe hole cannot receive a peg through visible controls");
+    routed_button(window, "spiro-deselect");
+    const paint::Point inner_hole = editor.spiro.hole(34, editor.spiro.angle);
+    fixture.click(inner_hole.x, inner_hole.y);
+    require(editor.spiro.selected_peg == 34,
+            "the wheel's center grip intercepts its innermost peg");
 }
 void rendering_quality_controls() {
     Fixture fixture;
@@ -2106,7 +2158,8 @@ void spirograph_apparatus_and_ink() {
                 std::abs(editor.spiro.center.y - old.y - 12) < 1e-7,
             "guide movement does not carry the assembly");
     require(editor.document.revision == revision, "moving support creates an ink history entry");
-    editor.document.select({390, 0, 200, 480});
+    const int selection_left = static_cast<int>(std::floor(editor.spiro.center.x));
+    editor.document.select({selection_left, 0, 200, 480});
     const paint::Point wheel = editor.spiro.wheel_center(editor.spiro.angle);
     fixture.pointer(gf::PointerAction::down, wheel.x, wheel.y);
     for (int i = 1; i <= 50; ++i) {
@@ -2124,7 +2177,7 @@ void spirograph_apparatus_and_ink() {
     }
     require(red && blue, "loaded pegs do not draw both colors");
     for (int y = 0; y < 480; ++y) {
-        for (int x = 0; x < 390; ++x) {
+        for (int x = 0; x < selection_left; ++x) {
             require(white(editor.document.image.get(x, y)),
                     "spirograph ink escapes active selection in rotated view");
         }

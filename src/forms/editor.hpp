@@ -327,6 +327,7 @@ class Editor final : public gui_forms::Control {
     void paint_spiro_overlay(gui_forms::Painter& painter);
     bool spiro_pointer(const gui_forms::PointerEvent& event, Point point);
     int spiro_hole_at(Point point, bool empty_only) const;
+    double spiro_grip_radius() const;
     void drop_spiro_peg();
     void paint_guide_overlay(gui_forms::Painter& painter);
     bool guide_pointer(const gui_forms::PointerEvent& event, Point point);

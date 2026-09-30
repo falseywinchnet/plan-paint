@@ -209,11 +209,12 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
                               polar(p, 1.3 * spiro.scale * zoom, a + rotation),
                               gf::Color::rgba(5, 151, 245, 215), std::max(1.0, 2 * spiro.scale * zoom));
         }
-        disc(painter, wheel, 8, gf::Color::rgba(145, 228, 255, 180));
-        circle(painter, wheel, 8, gf::Color::rgba(10, 100, 170, 230), 1);
+        const double grip = spiro_grip_radius();
+        disc(painter, wheel, grip, gf::Color::rgba(145, 228, 255, 180));
+        circle(painter, wheel, grip, gf::Color::rgba(10, 100, 170, 230), 1);
         for (int axis = 0; axis < 2; ++axis) {
-            painter.draw_line({wheel.x - (axis ? 0 : 4), wheel.y - (axis ? 4 : 0)},
-                              {wheel.x + (axis ? 0 : 4), wheel.y + (axis ? 4 : 0)},
+            painter.draw_line({wheel.x - (axis ? 0 : grip * .5), wheel.y - (axis ? grip * .5 : 0)},
+                              {wheel.x + (axis ? 0 : grip * .5), wheel.y + (axis ? grip * .5 : 0)},
                               gf::Color::rgba(25, 100, 145), 1);
         }
         for (int i = 0; i < spiro.hole_count(); ++i) {
@@ -268,6 +269,17 @@ void Editor::spiro_choice(const std::string& id) {
         spiro.set_guide(std::stoi(id.substr(12)));
     } else if (id.starts_with("spiro-insert-")) {
         spiro.set_insert(std::stoi(id.substr(13)));
+    } else if (id.starts_with("spiro-hole-")) {
+        const int hole = std::stoi(id.substr(11));
+        if (hole >= 0 && hole < spiro.hole_count()) {
+            if (!spiro.pegs[hole].seated) {
+                spiro.seat(hole, {true, false, {}, 1});
+            }
+            spiro.select_peg(hole);
+        }
+    } else if (id == "spiro-load-primary" || id == "spiro-load-alt") {
+        const Ink ink = id == "spiro-load-primary" ? document.primary_ink() : document.alternate_ink();
+        spiro.fill(spiro.selected_peg, ink.pattern == Pattern::None ? Color{0, 0, 0, 0} : ink.primary);
     } else if (id == "spiro-remove") {
         spiro.remove_insert();
     } else if (id == "spiro-outside") {
@@ -294,7 +306,20 @@ void Editor::spiro_choice(const std::string& id) {
     (*ribbon_).show_tool_context();
     refresh();
 }
+double Editor::spiro_grip_radius() const {
+    double radius = 8;
+    const Point center = spiro.wheel_center(spiro.angle);
+    for (int i = 0; i < spiro.hole_count(); ++i) {
+        const Point hole = spiro.hole(i, spiro.angle);
+        radius = std::min(radius, std::hypot(hole.x - center.x, hole.y - center.y) * (*canvas_).zoom() * .5);
+    }
+    return radius;
+}
 int Editor::spiro_hole_at(Point point, bool empty_only) const {
+    const Point center = spiro.wheel_center(spiro.angle);
+    if (std::hypot(point.x - center.x, point.y - center.y) * (*canvas_).zoom() < spiro_grip_radius()) {
+        return -1;
+    }
     int best = -1;
     double distance = 11 / (*canvas_).zoom();
     for (int i = 0; i < spiro.hole_count(); ++i) {

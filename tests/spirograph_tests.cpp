@@ -2,6 +2,7 @@
 #include "paint_tools.hpp"
 #include "raster.hpp"
 #include "spirograph.hpp"
+#include "text.hpp"
 #include <chrono>
 #include <cmath>
 #include <iostream>
@@ -89,6 +90,63 @@ void paired_ring_tracks() {
                 "outside ring track fails to close");
     }
     require(checked == 2, "both Deluxe ring tracks must be represented");
+}
+void deluxe_circular_wheels() {
+    const int teeth[] = {24, 30, 32, 40, 42, 45, 48, 52, 56, 60, 63, 72, 75, 80, 84};
+    const int holes[] = {5, 8, 9, 13, 14, 16, 17, 19, 21, 23, 25, 29, 31, 33, 35};
+    paint::Spirograph apparatus;
+    apparatus.open(256, 256);
+    for (int expected = 0; expected < 15; ++expected) {
+        int matches = 0;
+        for (int index = 0; index < static_cast<int>(paint::spiro_inserts().size()); ++index) {
+            const paint::SpiroInsert& part = paint::spiro_inserts()[index];
+            if (!part.profile.circular() || part.teeth != teeth[expected]) {
+                continue;
+            }
+            ++matches;
+            apparatus.set_insert(index);
+            require(apparatus.insert == index && apparatus.hole_count() == holes[expected],
+                    "Deluxe circular wheel is missing its full hole count");
+            double previous_radius = 1;
+            for (int i = 0; i < apparatus.hole_count(); ++i) {
+                const double radius = std::hypot(part.holes[i].x, part.holes[i].y);
+                require(std::isfinite(radius) && radius > 0 && radius < previous_radius,
+                        "numbered wheel sockets are not an inward spiral inside the rim");
+                previous_radius = radius;
+                for (int j = 0; j < i; ++j) {
+                    require(distance(part.holes[i], part.holes[j]) * part.teeth > 8,
+                            "approximate wheel sockets overlap");
+                }
+                require(apparatus.seat(i, {true, true, {25, 80, 170, 255}, 1}),
+                        "a numbered wheel socket cannot accept a pen");
+            }
+            const std::vector<paint::SpiroTrace> traces = apparatus.advance(.05);
+            std::array<bool, paint::spiro_max_holes> drawn{};
+            for (const paint::SpiroTrace& trace : traces) {
+                drawn.at(trace.peg) = true;
+                require(distance(trace.start, trace.end) <= .501, "larger wheel underresolves pen motion");
+            }
+            for (int i = 0; i < apparatus.hole_count(); ++i) {
+                require(drawn[i], "a loaded socket is missing from multi-pen motion");
+            }
+        }
+        require(matches == 1, "Deluxe circular tooth count is absent or duplicated");
+    }
+    // The last wheel exercises the highest pen slot, including clearing its sparse coat.
+    paint::Image base;
+    base.reset(256, 256);
+    paint::Image first = base, repeated = base;
+    paint::SpirographStroke stroke;
+    const std::vector<paint::SpiroTrace> traces = apparatus.advance(.15);
+    stroke.render(first, base, apparatus, traces);
+    stroke.clear();
+    stroke.render(repeated, base, apparatus, traces);
+    bool marked = false;
+    for (std::size_t i = 0; i < base.pixels.size(); ++i) {
+        marked = marked || !paint::equal(first.pixels[i], base.pixels[i]);
+        require(paint::equal(first.pixels[i], repeated.pixels[i]), "clearing leaves a high-numbered pen coat");
+    }
+    require(marked, "full wheel pens produce no rendered output");
 }
 void extended_geometry() {
     paint::Spirograph s;
@@ -247,11 +305,51 @@ void draw_gallery(const char* path) {
     }
     paint::save_image(image, path);
 }
+void draw_circular_catalog(const char* path) {
+    const int teeth[] = {24, 30, 32, 40, 42, 45, 48, 52, 56, 60, 63, 72, 75, 80, 84};
+    paint::Image image;
+    image.reset(1100, 690, {248, 250, 252, 255});
+    paint::TextStyle label;
+    label.size = 16;
+    for (int cell = 0; cell < 15; ++cell) {
+        for (const paint::SpiroInsert& part : paint::spiro_inserts()) {
+            if (part.teeth != teeth[cell] || !part.profile.circular()) {
+                continue;
+            }
+            const paint::Point center{110.0 + 220 * (cell % 5), 105.0 + 230 * (cell / 5)};
+            std::vector<paint::Point> rim;
+            for (int tooth = 0; tooth < part.teeth * 4; ++tooth) {
+                const double angle = tooth * 2 * std::numbers::pi / (part.teeth * 4);
+                const double radius = part.teeth + (tooth % 4 < 2 ? 1 : -1);
+                rim.push_back({center.x + radius * std::cos(angle), center.y + radius * std::sin(angle)});
+            }
+            paint::Ink ink;
+            ink.primary = {30, 110, 175, 255};
+            ink.secondary = {180, 228, 251, 255};
+            ink.size = 1;
+            paint::polygon(image, rim, ink, true, true);
+            for (const paint::Point local : part.holes) {
+                const paint::Point hole{center.x + part.teeth * local.x, center.y + part.teeth * local.y};
+                ink.primary = {30, 110, 175, 255};
+                ink.size = 6;
+                paint::stroke(image, hole, hole, ink);
+                ink.primary = {248, 250, 252, 255};
+                ink.size = 4;
+                paint::stroke(image, hole, hole, ink);
+            }
+            paint::draw_text(image, {center.x - 82, center.y + 94},
+                             std::to_string(part.teeth) + " teeth / " + std::to_string(part.holes.size()) + " holes",
+                             label, {20, 45, 65, 255}, {}, "");
+        }
+    }
+    paint::save_image(image, path);
+}
 } // namespace
 int main(int argc, char** argv) {
     try {
         apparatus_resize();
         paired_ring_tracks();
+        deluxe_circular_wheels();
         extended_geometry();
         gel_and_peg_media();
         paint::Spirograph s;
@@ -300,6 +398,9 @@ int main(int argc, char** argv) {
         require(!s.loaded(), "replacement insert inherits old ink");
         if (argc > 2) {
             draw_gallery(argv[2]);
+        }
+        if (argc > 3) {
+            draw_circular_catalog(argv[3]);
         }
         if (argc > 1) {
             paint::Image image;

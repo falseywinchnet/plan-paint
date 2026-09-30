@@ -686,5 +686,16 @@
   "4× Smooth": "4× Laini",
   "Line and shape rendering": "Uchoraji wa mistari na maumbo",
   "Ring 144/96": "Pete 144/96",
-  "Ring 150/105": "Pete 150/105"
+  "Ring 150/105": "Pete 150/105",
+  "Choose hole": "Chagua tundu",
+  "Select peg": "Chagua kalamu",
+  "Place fine peg": "Weka kalamu nyembamba",
+  "Load Primary": "Jaza rangi kuu",
+  "Load Alt": "Jaza rangi mbadala",
+  "Wheel 32": "Gurudumu 32",
+  "Wheel 42": "Gurudumu 42",
+  "Wheel 52": "Gurudumu 52",
+  "Wheel 63": "Gurudumu 63",
+  "Wheel 75": "Gurudumu 75",
+  "Wheel 84": "Gurudumu 84"
 }

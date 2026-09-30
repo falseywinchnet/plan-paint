@@ -686,5 +686,16 @@
   "4× Smooth": "4× Smooth",
   "Line and shape rendering": "How lines and shapes dey draw",
   "Ring 144/96": "Ring 144/96",
-  "Ring 150/105": "Ring 150/105"
+  "Ring 150/105": "Ring 150/105",
+  "Choose hole": "Choose hole",
+  "Select peg": "Choose peg",
+  "Place fine peg": "Put fine peg",
+  "Load Primary": "Load main colour",
+  "Load Alt": "Load other colour",
+  "Wheel 32": "Wheel 32",
+  "Wheel 42": "Wheel 42",
+  "Wheel 52": "Wheel 52",
+  "Wheel 63": "Wheel 63",
+  "Wheel 75": "Wheel 75",
+  "Wheel 84": "Wheel 84"
 }

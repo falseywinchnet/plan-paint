@@ -2,6 +2,8 @@
 #include "paint_tools.hpp"
 #include <array>
 namespace paint {
+constexpr int spiro_max_holes = 35;
+constexpr int spiro_default_insert = 26; // Wheel 63 in the stable component catalog.
 // Convex pitch curves parameterized by outward normal, with exact arc length.
 struct SpiroProfile {
     double oval = 0, triangle = 0, square = 0, pentagon = 0, hexagon = 0;
@@ -44,11 +46,11 @@ struct SpiroTrace {
 };
 struct Spirograph {
     bool active = false, inserted = true;
-    int guide = 0, insert = 0, selected_peg = -1;
+    int guide = 0, insert = spiro_default_insert, selected_peg = -1;
     bool outside = false;
     double scale = 1.35, angle = 0;
     Point center{};
-    std::array<SpiroPeg, 8> pegs{};
+    std::array<SpiroPeg, spiro_max_holes> pegs{};
     void open(int width, int height);
     void set_insert(int index);
     void remove_insert();
@@ -79,12 +81,12 @@ struct Spirograph {
     bool fill(int hole_index, Color ink);
     std::vector<SpiroTrace> advance(double target);
 };
-// Sparse independent coats give crossings a stable peg order without eight full canvases.
+// Sparse independent coats give crossings a stable peg order without a canvas per hole.
 class SpirographStroke {
     Image scratch_;
-    std::array<std::unordered_map<int, Color>, 8> layers_;
-    std::array<MaterialStroke, 8> material_;
-    std::array<DynamicBrushStroke, 8> dynamic_;
+    std::array<std::unordered_map<int, Color>, spiro_max_holes> layers_;
+    std::array<MaterialStroke, spiro_max_holes> material_;
+    std::array<DynamicBrushStroke, spiro_max_holes> dynamic_;
 
   public:
     void clear();

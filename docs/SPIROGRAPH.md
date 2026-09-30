@@ -17,6 +17,16 @@ an image export.
    miniature stroke preview in its cap. Brush assignment does not draw.
 6. Drag the insert's center grip. Every loaded peg draws with its own medium.
 
+For precise placement without dragging, open **Choose hole**. Each numbered
+entry says whether it will **Place fine peg** in an empty hole or **Select peg**
+already there. Selecting an occupied hole keeps its ink, width and medium.
+Use **Load Primary** or **Load Alt** to fill the selected peg directly; No Color
+empties its ink while leaving the peg seated. Activate Fine, Medium or Bold
+with the keyboard or an accessibility action to change its width. These setup
+controls do not mark the canvas. Hole numbers run from the outside inward on
+the circular kit wheels. Their positions are approximate, so instruction-book
+patterns will be visually similar rather than exact reproductions.
+
 All thirteen additive media are available, including Gel pen, Watercolor,
 Marker, Natural pencil, Crayon, Oil, and Airbrush. These use the same stroke
 renderers as freehand brushes. Pixel-mixing and cloning tools are not ink media.
@@ -47,7 +57,8 @@ Undo step. Canvas zoom remains independent of apparatus scale.
 
 ## Component catalog
 
-The catalog includes 17 guides and 23 inserts:
+The catalog includes 17 guides and 29 inserts. The ribbon starts with the two
+paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
 
 - Paired rings: 144/96 and 150/105, named with outer/inner tooth counts. These
   reproduce the Deluxe kit's two circular pitch-track ratios. Both toothed
@@ -57,8 +68,13 @@ The catalog includes 17 guides and 23 inserts:
 - Shaped guides: oval, long oval, rounded triangle, square, pentagon, hexagon,
   egg, and shield.
 - Racks: standard and long straight supports with travel limits.
-- Circular inserts: 12, 18, 24, 30, 31, 36, 37, 40, 45, 48, 56, 60, 64, 72,
-  and 80 teeth; the prime counts support longer repeating patterns.
+- Deluxe circular inserts: 24, 30, 32, 40, 42, 45, 48, 52, 56, 60, 63, 72,
+  75, 80 and 84 teeth. They have respectively 5, 8, 9, 13, 14, 16, 17, 19,
+  21, 23, 25, 29, 31, 33 and 35 holes in approximate inward spirals. Every
+  hole can hold an independent pen; the numbered menu uses columns so even
+  the largest wheel remains within the window at the standard ribbon size.
+- Additional circular inserts: 12, 18, 31, 36, 37 and 64 teeth; the prime
+  counts support longer repeating patterns.
 - Shaped inserts: oval, long oval, rounded triangle, square, pentagon, hexagon,
   egg, and shield. Each has its own socket arrangement.
 
@@ -86,8 +102,11 @@ rigid-body collision simulation or accumulating integration slip. These are
 original smooth pitch profiles, not reproductions of commercial molded parts.
 The paired circular ring counts follow the
 [Deluxe guide](https://www.worldbrands.es/wp-content/uploads/80977_SpirographDeluxeGuide_V2_esp_ONLINE_O_LOW_compressed.pdf).
-The insert socket layouts and shaped profiles remain distinct from the kit;
-the catalog is not yet a complete Deluxe replica.
+Circular tooth and hole counts follow the illustrated kit and this
+[firsthand inventory of a Deluxe set](https://spirographicart.com/2014/05/02/chart-spirograph-wheels-rings/).
+The spiral socket coordinates are an approximation, not measurements of the
+molded pieces. Shaped profiles and racks remain distinct from the kit; the
+catalog is not yet a complete Deluxe replica.
 
 Pen subdivision is bounded to half an image pixel by a curvature-dependent
 speed bound. Per-peg stroke state preserves continuous deposition across mouse

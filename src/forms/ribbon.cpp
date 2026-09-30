@@ -644,11 +644,14 @@ void Ribbon::spiro_button(const std::string& id, const std::string& text, int ki
 void Ribbon::add_options() {
     building_page_ = 128;
     for (int i = 0; i < 2; ++i) {
-        spiro_button("spiro-guide-" + std::to_string(i), tr(spiro_guides()[i].name), 0, i,
+        const int guide = i == 0 ? 0 : 16;
+        spiro_button("spiro-guide-" + std::to_string(guide), tr(spiro_guides()[guide].name), 0, guide,
                      {10 + i * 95.0, 35, 87, 76});
     }
+    const int tray_inserts[] = {1, spiro_default_insert, 2};
     for (int i = 0; i < 3; ++i) {
-        spiro_button("spiro-insert-" + std::to_string(i), tr(spiro_inserts()[i].name), 1, i,
+        const int insert = tray_inserts[i];
+        spiro_button("spiro-insert-" + std::to_string(insert), tr(spiro_inserts()[insert].name), 1, insert,
                      {220 + i * 88.0, 35, 80, 76});
     }
     button("spiro-guides-menu", tr("More"), -1, {10, 111, 182, 22}, false, true);
@@ -668,6 +671,9 @@ void Ribbon::add_options() {
     button("spiro-outside", tr("Roll outside"), -1, {755, 111, 140, 22});
     button("spiro-deselect", tr("Deselect peg"), -1, {902, 111, 126, 22});
     spiro_scale_ = number("spiro-scale", tr("Scale"), {1040, 36, 228, 28}, .05, 64, 1.35, 2);
+    button("spiro-holes-menu", tr("Choose hole"), -1, {1040, 76, 228, 31}, false, true);
+    button("spiro-load-primary", tr("Load Primary"), -1, {1040, 111, 111, 22});
+    button("spiro-load-alt", tr("Load Alt"), -1, {1157, 111, 111, 22});
     building_page_ = 2;
     button("zoom-in", tr("Zoom in"), 12, {8, 35, 65, 81}, true);
     button("zoom-out", tr("Zoom out"), 12, {76, 35, 65, 81}, true);
@@ -1711,6 +1717,12 @@ void Ribbon::synchronize() {
         if (id == "spiro-deselect") {
             control.set_enabled((*editor).spiro.selected_peg >= 0);
         }
+        if (id == "spiro-holes-menu") {
+            control.set_enabled((*editor).spiro.inserted);
+        }
+        if (id == "spiro-load-primary" || id == "spiro-load-alt") {
+            control.set_enabled((*editor).spiro.selected_peg >= 0);
+        }
         if (id == "spiro-outside") {
             selected = (*editor).spiro.outside;
             control.set_enabled(!(*editor).spiro.rack());
@@ -2133,6 +2145,19 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             (*part).set_enabled(guides ? (*editor).spiro.compatible(i, (*editor).spiro.insert)
                                        : (*editor).spiro.compatible((*editor).spiro.guide, i));
         }
+    } else if (id == "spiro-holes-menu") {
+        const Spirograph& spiro = (*editor).spiro;
+        const int columns = std::max(1, (spiro.hole_count() + 11) / 12);
+        const int rows = (spiro.hole_count() + columns - 1) / columns;
+        width = 280 * columns + 8;
+        height = 8 + 30 * rows;
+        for (int i = 0; i < spiro.hole_count(); ++i) {
+            const std::string label = std::to_string(i + 1) + " · " +
+                (spiro.pegs[i].seated ? tr("Select peg") : tr("Place fine peg"));
+            add_popup_button(*panel, "spiro-hole-" + std::to_string(i), label, -1,
+                             {4.0 + 280 * (i / rows), 4.0 + 30 * (i % rows), 278, 29},
+                             spiro.selected_peg == i);
+        }
     } else if (id == "spiro-brushes-menu") {
         prepare_material_previews();
         width = 436;
@@ -2354,7 +2379,7 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         (*editor).refresh();
         return;
     }
-    if (id.starts_with("spiro-guide-") || id.starts_with("spiro-insert-")) {
+    if (id.starts_with("spiro-guide-") || id.starts_with("spiro-insert-") || id.starts_with("spiro-hole-")) {
         (*editor).spiro_choice(id);
         return;
     }

@@ -686,5 +686,16 @@
   "4× Smooth": "4× 平滑",
   "Line and shape rendering": "线条和形状绘制",
   "Ring 144/96": "圆环 144/96",
-  "Ring 150/105": "圆环 150/105"
+  "Ring 150/105": "圆环 150/105",
+  "Choose hole": "选择孔位",
+  "Select peg": "选择画笔",
+  "Place fine peg": "放置细画笔",
+  "Load Primary": "填充主色",
+  "Load Alt": "填充副色",
+  "Wheel 32": "圆轮 32",
+  "Wheel 42": "圆轮 42",
+  "Wheel 52": "圆轮 52",
+  "Wheel 63": "圆轮 63",
+  "Wheel 75": "圆轮 75",
+  "Wheel 84": "圆轮 84"
 }
