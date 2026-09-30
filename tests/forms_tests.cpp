@@ -1183,7 +1183,7 @@ void desktop_transactions_drop_and_handles() {
 }
 class PreviewPainter final : public gf::Painter {
   public:
-    int pencil_pixels = 0, eraser_discs = 0, lens_samples = 0, guide_lines = 0;
+    int pencil_pixels = 0, eraser_discs = 0, lens_samples = 0, guide_lines = 0, node_hover = 0;
     bool lens_caption = false;
     gf::ImageId image;
     gf::Rect image_bounds;
@@ -1204,6 +1204,10 @@ class PreviewPainter final : public gf::Painter {
         }
     }
     void fill_rounded_rect(gf::Rect rectangle, double radius, gf::Color color) override {
+        if (rectangle.width == 16 && rectangle.height == 16 && radius == 8 &&
+            color.red == 255 && color.green == 220 && color.blue == 130) {
+            ++node_hover;
+        }
         if (color.red == 245 && color.green == 65 && color.blue == 118 && color.alpha < 255 && radius > 0 &&
             rectangle.width == rectangle.height) {
             ++eraser_discs;
@@ -1672,6 +1676,14 @@ void explicit_path_node_editing() {
     require(editor.canvas().effective_cursor() == gf::CursorKind::hand &&
                 !editor.canvas().effective_cursor_images() && editor.document.undo_history.size() == undo,
             "editable node hover lacks a drag cursor or changes history");
+    PreviewPainter hovered;
+    editor.paint_canvas_overlay(hovered, {});
+    require(hovered.node_hover == 1, "hovered path node lacks its visible halo");
+    const gf::Point rotation_handle = editor.canvas().point_to_window(editor.canvas().rotation_handle());
+    window.dispatch_pointer({gf::PointerAction::move, gf::PointerButton::none, rotation_handle});
+    PreviewPainter rotation_hover;
+    editor.paint_canvas_overlay(rotation_hover, {});
+    require(rotation_hover.node_hover == 0, "rotation handle hover retains a stale path-node highlight");
     fixture.pointer(gf::PointerAction::move, 320, 300, gf::PointerButton::none);
     require(editor.canvas().effective_cursor_images() == paint::forms::tool_cursor_images(paint::Tool::Path),
             "leaving a path node does not restore the drawing cursor");

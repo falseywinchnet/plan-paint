@@ -841,6 +841,11 @@ void Editor::pointer(const gf::PointerEvent& event) {
         control_ = gf::has_modifier(event.modifiers, gf::Modifier::control);
         alt_ = gf::has_modifier(event.modifiers, gf::Modifier::alt);
         gf::Point client = (*canvas_).point_from_window(event.position);
+        if (event.action == gf::PointerAction::leave && !(*canvas_).has_pointer_capture()) {
+            cursor_client_.reset();
+        } else {
+            cursor_client_ = client;
+        }
         if (settings.rotate_view) {
             const gf::Point handle = canvas().rotation_handle();
             const bool hit = std::hypot(client.x - handle.x, client.y - handle.y) <= 14;
@@ -900,11 +905,6 @@ void Editor::pointer(const gf::PointerEvent& event) {
                                       static_cast<int>(std::floor(point.y))) ||
              (document.tool == Tool::Stamp && document.stamp.pixels.empty()))) {
             canvas().set_cursor(gf::CursorKind::crosshair);
-        }
-        if (event.action == gf::PointerAction::leave && !(*canvas_).has_pointer_capture()) {
-            cursor_client_.reset();
-        } else {
-            cursor_client_ = client;
         }
         update_cursor_status();
         if (!panning_ && (curve_handle_ >= 0 || path_node_ >= 0 || path_swap_handle_ >= 0 ||
