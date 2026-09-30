@@ -129,15 +129,17 @@ if(APPLE OR WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
       MACOSX_BUNDLE_GUI_IDENTIFIER "org.rainstar.paint.forms.validation")
   endif()
   if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # One producer owns the shared runtime directory even under parallel builds.
-    set(forms_runtime_stamp "${CMAKE_CURRENT_BINARY_DIR}/forms-runtime.stamp")
+    # Follow the executable for custom output directories and multi-config builds.
+    # One producer owns these shared resources even under parallel builds.
+    set(forms_runtime_directory "$<TARGET_FILE_DIR:plan-paint>")
+    set(forms_runtime_stamp "${CMAKE_CURRENT_BINARY_DIR}/forms-runtime-$<CONFIG>.stamp")
     set(forms_runtime_fonts ${toolkit_fonts})
     set(runtime_font_commands)
     foreach(font IN LISTS forms_runtime_fonts)
-      list(APPEND runtime_font_commands COMMAND ${CMAKE_COMMAND} -E copy_if_different "${font}" "${CMAKE_CURRENT_BINARY_DIR}/fonts")
+      list(APPEND runtime_font_commands COMMAND ${CMAKE_COMMAND} -E copy_if_different "${font}" "${forms_runtime_directory}/fonts")
     endforeach()
     add_custom_command(OUTPUT "${forms_runtime_stamp}"
-      COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/fonts"
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${forms_runtime_directory}/fonts"
       ${runtime_font_commands}
       COMMAND ${CMAKE_COMMAND} -E touch "${forms_runtime_stamp}"
       DEPENDS ${forms_runtime_fonts}
@@ -145,7 +147,7 @@ if(APPLE OR WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_custom_target(paint-forms-runtime DEPENDS "${forms_runtime_stamp}")
     if(WIN32)
       add_custom_command(TARGET paint-forms-runtime POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GUIForms::Application>" "${CMAKE_CURRENT_BINARY_DIR}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GUIForms::Application>" "${forms_runtime_directory}"
         VERBATIM)
     endif()
     foreach(forms_target IN ITEMS plan-paint paint-forms-native-tests paint-forms-tests)
@@ -168,8 +170,8 @@ if(APPLE)
   target_sources(plan-paint PRIVATE ${paint_languages})
 else()
   add_custom_target(paint-language-packs ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/languages"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/languages" "${CMAKE_CURRENT_BINARY_DIR}/languages"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:plan-paint>/languages"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/languages" "$<TARGET_FILE_DIR:plan-paint>/languages"
     VERBATIM)
   add_dependencies(plan-paint paint-language-packs)
   install(DIRECTORY "${PROJECT_SOURCE_DIR}/languages/" DESTINATION languages FILES_MATCHING PATTERN "*.json")

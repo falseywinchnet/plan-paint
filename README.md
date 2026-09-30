@@ -2,7 +2,7 @@ To the Holy One, blessed be He, from whom all good things come. We dedicate this
 
 # Plan Paint
 
-[![Windows and Linux builds](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml)
+[![Native platform builds](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/falseywinchnet/plan-paint)](https://github.com/falseywinchnet/plan-paint/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -170,7 +170,7 @@ cmake --build build-forms --parallel
 ctest --test-dir build-forms --output-on-failure
 ```
 
-The [build workflow](.github/workflows/build.yml) builds Windows with MinGW and Linux with musl, runs the native tests, and produces portable packages. Linux packages are also launched on a glibc host without an installed musl loader. `RAINSTAR_LEGACY_UI=ON` explicitly builds the deprecated `plan-paint-legacy` frontend; it is off by default and is not supported or packaged for release. Packaging scripts read the release version from CMake.
+The [build workflow](.github/workflows/build.yml) builds Windows x64 with MinGW, Linux x64 and ARM64 with musl, and macOS ARM64 on a native macOS 26 runner. Each platform runs native tests and produces packages. Linux packages are also launched on a glibc host without an installed musl loader. `RAINSTAR_LEGACY_UI=ON` explicitly builds the deprecated `plan-paint-legacy` frontend; it is off by default and is not supported or packaged for release. Packaging scripts read the release version from CMake.
 
 Tests cover image editing, formats, numerical transforms, transparency, real UI input, display scaling and idle rendering. Run `python3 scripts/check-style.py` before submitting a change. Optional `RAINSTAR_BENCHMARKS=ON` and `RAINSTAR_COMPILER_REPORTS=ON` produce a timing/checksum harness and compiler assembly reports.
 

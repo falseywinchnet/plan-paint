@@ -48,6 +48,12 @@ prerequisites and invocations are in the [workflow](../.github/workflows/build.y
 Windows uses the native GDI host. Mac and Linux use CPU Skia; Linux also uses
 HarfBuzz and FreeType for text. Each package includes its fonts and licenses.
 
+On Windows and Linux, bundled fonts and language packs follow the executable's
+output directory; Windows also copies the GUI.Forms application library there.
+This supports `CMAKE_RUNTIME_OUTPUT_DIRECTORY` and configuration-specific output
+directories. When packaging a custom build layout, pass the directory containing
+the executable as the packaging script's `--build` argument.
+
 ## Platform behavior
 
 | Platform | Window and input host | Desktop integration |
