@@ -105,6 +105,13 @@ paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
   remains available separately.
 - Shaped inserts: oval, long oval, rounded triangle, square, pentagon, hexagon,
   egg, and shield. Each has its own socket arrangement.
+- Quad 60: a four-armed wheel with concave cutouts and ten approximate holes.
+  It rolls along each rounded tip, then pivots between adjacent tip endpoints.
+  It currently supports the inner 96- and 105-tooth kit rings, producing eight
+  and seven repeats. Its fitted size changes by approximately 0.27% between
+  those rings to match the repeating patterns; this is an approximation rather
+  than a measured molded part. Other guides and outside rolling are disabled
+  for this wheel.
 
 **Roll outside** places the insert against the outside of a closed guide,
 producing a different family of curves. Rack 150 always rolls outside; its
@@ -135,6 +142,12 @@ inversion. The same contact model therefore supports both rolling and lifting.
 Compatibility and pen subdivision use bounds from the selected profile,
 including their tighter corners.
 
+Quad uses a separate continuous pose parameter through rolling and pivoting.
+At the middle of a pivot interval both adjacent endpoints touch the ring;
+the supporting endpoint changes without a jump in wheel position or rotation.
+Lifting solves for the same rotation at the new placement. Concave cutouts
+remain empty in both the rendered outline and pointer hit testing.
+
 Integer tooth counts fix the perimeter ratio, so closed-guide patterns return
 to their initial pose after `insert_teeth / gcd(guide_teeth, insert_teeth)`
 guide circuits. The tooth marks visualize the pitch geometry; there is no
@@ -146,7 +159,8 @@ Circular tooth and hole counts follow the illustrated kit and this
 [firsthand inventory of a Deluxe set](https://spirographicart.com/2014/05/02/chart-spirograph-wheels-rings/).
 The spiral socket coordinates are an approximation, not measurements of the
 molded pieces. The Bar, Eye and Triangle 54 follow visually close approximations with verified
-contact and repetition. The Quad is still missing; other experimental profiles remain distinct from the kit. The capsule
+contact and repetition. Quad uses the guide-dependent approximation described above;
+other experimental profiles remain distinct from the kit. The capsule
 rack's width has not been measured from a physical part; the
 catalog is not yet a complete Deluxe replica.
 

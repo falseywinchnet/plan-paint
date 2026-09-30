@@ -707,5 +707,6 @@
   "Eye 60": "Mắt 60",
   "Triangle 54": "Tam giác 54",
   "Editing path nodes and curves": "Sửa nút và đường cong của đường dẫn",
-  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "Chọn Đường dẫn rồi bật «Sửa nút» để kéo các điểm nối bằng nút chuột chính. Nhấp vào đoạn cong có sẵn để hiện các tay nắm hình vuông. Vùng tô vàng nhạt cho biết phần có thể kéo. Nhấp vào chỗ trống không thêm gì. Mỗi lần kéo là một bước Hoàn tác. Tắt «Sửa nút» hoặc chọn «Tiếp tục đường dẫn» để tiếp tục thêm đoạn."
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "Chọn Đường dẫn rồi bật «Sửa nút» để kéo các điểm nối bằng nút chuột chính. Nhấp vào đoạn cong có sẵn để hiện các tay nắm hình vuông. Vùng tô vàng nhạt cho biết phần có thể kéo. Nhấp vào chỗ trống không thêm gì. Mỗi lần kéo là một bước Hoàn tác. Tắt «Sửa nút» hoặc chọn «Tiếp tục đường dẫn» để tiếp tục thêm đoạn.",
+  "Quad 60": "Quad 60"
 }

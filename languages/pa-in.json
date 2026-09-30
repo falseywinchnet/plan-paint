@@ -707,5 +707,6 @@
   "Eye 60": "ਅੱਖ 60",
   "Triangle 54": "ਤਿਕੋਣ 54",
   "Editing path nodes and curves": "ਪਾਥ ਦੇ ਨੋਡ ਅਤੇ ਵਕਰ ਸੋਧਣਾ",
-  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "ਪਾਥ ਚੁਣੋ ਅਤੇ «ਨੋਡ ਸੋਧੋ» ਚਾਲੂ ਕਰਕੇ ਮਾਊਸ ਦੇ ਮੁੱਖ ਬਟਨ ਨਾਲ ਜੋੜਾਂ ਨੂੰ ਖਿੱਚੋ। ਮੌਜੂਦਾ ਵਕਰ ਹਿੱਸੇ ਉੱਤੇ ਕਲਿੱਕ ਕਰਨ ਨਾਲ ਉਸ ਦੇ ਚੌਰਸ ਹੈਂਡਲ ਦਿਖਦੇ ਹਨ। ਹਲਕਾ ਸੁਨਹਿਰੀ ਰੰਗ ਦੱਸਦਾ ਹੈ ਕਿ ਕੀ ਖਿੱਚਿਆ ਜਾ ਸਕਦਾ ਹੈ। ਖਾਲੀ ਥਾਂ ਉੱਤੇ ਕਲਿੱਕ ਕਰਨ ਨਾਲ ਕੁਝ ਨਹੀਂ ਜੁੜਦਾ। ਹਰ ਖਿੱਚ ਇੱਕ ਵਾਪਸੀ ਕਦਮ ਹੈ। ਮੁੜ ਹਿੱਸੇ ਜੋੜਨ ਲਈ «ਨੋਡ ਸੋਧੋ» ਬੰਦ ਕਰੋ ਜਾਂ «ਪਾਥ ਜਾਰੀ ਰੱਖੋ» ਚੁਣੋ।"
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "ਪਾਥ ਚੁਣੋ ਅਤੇ «ਨੋਡ ਸੋਧੋ» ਚਾਲੂ ਕਰਕੇ ਮਾਊਸ ਦੇ ਮੁੱਖ ਬਟਨ ਨਾਲ ਜੋੜਾਂ ਨੂੰ ਖਿੱਚੋ। ਮੌਜੂਦਾ ਵਕਰ ਹਿੱਸੇ ਉੱਤੇ ਕਲਿੱਕ ਕਰਨ ਨਾਲ ਉਸ ਦੇ ਚੌਰਸ ਹੈਂਡਲ ਦਿਖਦੇ ਹਨ। ਹਲਕਾ ਸੁਨਹਿਰੀ ਰੰਗ ਦੱਸਦਾ ਹੈ ਕਿ ਕੀ ਖਿੱਚਿਆ ਜਾ ਸਕਦਾ ਹੈ। ਖਾਲੀ ਥਾਂ ਉੱਤੇ ਕਲਿੱਕ ਕਰਨ ਨਾਲ ਕੁਝ ਨਹੀਂ ਜੁੜਦਾ। ਹਰ ਖਿੱਚ ਇੱਕ ਵਾਪਸੀ ਕਦਮ ਹੈ। ਮੁੜ ਹਿੱਸੇ ਜੋੜਨ ਲਈ «ਨੋਡ ਸੋਧੋ» ਬੰਦ ਕਰੋ ਜਾਂ «ਪਾਥ ਜਾਰੀ ਰੱਖੋ» ਚੁਣੋ।",
+  "Quad 60": "Quad 60"
 }

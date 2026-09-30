@@ -707,5 +707,6 @@
   "Eye 60": "آنکھ 60",
   "Triangle 54": "مثلث 54",
   "Editing path nodes and curves": "پاتھ کے نوڈ اور منحنی حصوں کی تدوین",
-  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "«راستہ» منتخب کریں، پھر «نوڈ میں ترمیم» فعال کر کے ماؤس کے مرکزی بٹن سے جوڑ کھینچیں۔ کسی موجودہ منحنی حصے پر کلک کرنے سے اس کے مربع ہینڈل ظاہر ہوں گے۔ ہلکا سنہری رنگ دکھاتا ہے کہ کیا کھینچا جا سکتا ہے۔ خالی جگہ پر کلک کرنے سے کچھ شامل نہیں ہوتا۔ ہر بار کھینچنا ایک واپسی قدم ہے۔ دوبارہ حصے شامل کرنے کے لیے «نوڈ میں ترمیم» بند کریں یا «راستہ جاری رکھیں» منتخب کریں۔"
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "«راستہ» منتخب کریں، پھر «نوڈ میں ترمیم» فعال کر کے ماؤس کے مرکزی بٹن سے جوڑ کھینچیں۔ کسی موجودہ منحنی حصے پر کلک کرنے سے اس کے مربع ہینڈل ظاہر ہوں گے۔ ہلکا سنہری رنگ دکھاتا ہے کہ کیا کھینچا جا سکتا ہے۔ خالی جگہ پر کلک کرنے سے کچھ شامل نہیں ہوتا۔ ہر بار کھینچنا ایک واپسی قدم ہے۔ دوبارہ حصے شامل کرنے کے لیے «نوڈ میں ترمیم» بند کریں یا «راستہ جاری رکھیں» منتخب کریں۔",
+  "Quad 60": "Quad 60"
 }

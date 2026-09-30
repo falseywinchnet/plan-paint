@@ -2183,6 +2183,10 @@ void spirograph_lift_controls(int guide = 0, int insert = paint::spiro_default_i
     editor.start_spirograph();
     editor.spiro_choice("spiro-guide-" + std::to_string(guide));
     editor.spiro_choice("spiro-insert-" + std::to_string(insert));
+    if (editor.spiro.quad()) {
+        require(!(*require_button(window, "spiro-outside")).enabled(),
+                "Quad exposes unverified outside contact");
+    }
     if (guide == 17) {
         const std::shared_ptr<gf::Button> outside = require_button(window, "spiro-outside");
         require((*outside).selected() && !(*outside).enabled(),
@@ -2232,7 +2236,7 @@ void spirograph_lift_controls(int guide = 0, int insert = paint::spiro_default_i
     editor.spiro_choice("spiro-operate");
     require(editor.spiro_lift && editor.spiro.advance(editor.spiro.angle + .5).empty(),
             "a detached wheel can operate or deposit ink");
-    if (guide == 0) {
+    if (guide == 0 && !editor.spiro.quad()) {
         for (int side = 0; side < 2; ++side) {
             routed_button(window, "spiro-outside");
             require(editor.spiro.detached &&
@@ -3912,11 +3916,15 @@ int main() {
         spirograph_lift_controls(17, 30);
         spirograph_lift_controls(0, 31);
         spirograph_lift_controls(17, 31);
+        spirograph_lift_controls(0, 32);
+        spirograph_lift_controls(16, 32);
         spirograph_resize_controls();
         spirograph_resize_controls(17);
         spirograph_resize_controls(0, 29);
         spirograph_resize_controls(0, 30);
         spirograph_resize_controls(0, 31);
+        spirograph_resize_controls(0, 32);
+        spirograph_resize_controls(16, 32);
         rendering_quality_controls();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();

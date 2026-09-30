@@ -4,11 +4,12 @@
 namespace paint {
 constexpr int spiro_max_holes = 35;
 constexpr int spiro_default_insert = 26; // Wheel 63 in the stable component catalog.
-enum class SpiroProfileKind { Harmonic, Bar, Eye, Triangle };
+enum class SpiroProfileKind { Harmonic, Bar, Eye, Triangle, Quad };
 struct SpiroCurvature {
     double minimum, maximum;
 };
-// Convex pitch curves parameterized by outward normal, with exact arc length.
+// Convex pitch curves use outward normal and exact arc length. Quad uses only
+// point() as a boundary parameter; its nonconvex rolling model is QuadTrack.
 struct SpiroProfile {
     double oval = 0, triangle = 0, square = 0, pentagon = 0, hexagon = 0;
     SpiroProfileKind kind = SpiroProfileKind::Harmonic;
@@ -69,6 +70,7 @@ struct Spirograph {
     int guide_teeth() const;
     double guide_body_radius() const;
     double wheel_radius() const;
+    bool quad() const;
     Point guide_point(double normal) const;
     double guide_normal(double phase) const;
     double guide_arc(double phase) const;

@@ -707,5 +707,6 @@
   "Eye 60": "Jicho 60",
   "Triangle 54": "Pembetatu 54",
   "Editing path nodes and curves": "Kuhariri vifundo na mikunjo ya njia",
-  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "Chagua Njia, kisha washa «Hariri vifundo» ili kuvuta viunganishi kwa kitufe kikuu cha kipanya. Bofya sehemu iliyopinda iliyopo ili kuonyesha vipini vyake vya mraba. Mwangaza wa dhahabu hafifu unaonyesha unachoweza kuvuta. Kubofya eneo tupu hakuongezi chochote. Kila mvuto ni hatua moja ya Tendua. Zima «Hariri vifundo» au chagua «Endeleza njia» ili kuongeza sehemu tena."
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "Chagua Njia, kisha washa «Hariri vifundo» ili kuvuta viunganishi kwa kitufe kikuu cha kipanya. Bofya sehemu iliyopinda iliyopo ili kuonyesha vipini vyake vya mraba. Mwangaza wa dhahabu hafifu unaonyesha unachoweza kuvuta. Kubofya eneo tupu hakuongezi chochote. Kila mvuto ni hatua moja ya Tendua. Zima «Hariri vifundo» au chagua «Endeleza njia» ili kuongeza sehemu tena.",
+  "Quad 60": "Quad 60"
 }

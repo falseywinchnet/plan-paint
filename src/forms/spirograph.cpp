@@ -1,6 +1,7 @@
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
 #include "forms/spirograph_view.hpp"
+#include "spiro_quad.hpp"
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -31,21 +32,21 @@ void contour_shape(gf::Painter& painter, const std::vector<gf::Point>& points,
         bottom = std::max(bottom, point.y);
     }
     if (fill.alpha > 0) {
-        // Convex scan conversion keeps the temporary sheet transparent without overlapping fans.
+        // Even-odd spans preserve the Quad's concave cutouts and avoid overlapping coats.
         const double step = std::max(1.0, (bottom - top) / 600);
         for (double y = top; y < bottom; y += step) {
-            double left = 1e20, right = -1e20;
+            std::vector<double> crossings;
             for (int i = 0; i < static_cast<int>(points.size()); ++i) {
                 const gf::Point a = points[i], b = points[(i + 1) % points.size()];
                 if ((a.y <= y + step * .5 && b.y > y + step * .5) ||
                     (b.y <= y + step * .5 && a.y > y + step * .5)) {
                     const double x = a.x + (b.x - a.x) * (y + step * .5 - a.y) / (b.y - a.y);
-                    left = std::min(left, x);
-                    right = std::max(right, x);
+                    crossings.push_back(x);
                 }
             }
-            if (right > left) {
-                painter.fill_rect({left, y, right - left, step}, fill);
+            std::sort(crossings.begin(), crossings.end());
+            for (std::size_t i = 1; i < crossings.size(); i += 2) {
+                painter.fill_rect({crossings[i - 1], y, crossings[i] - crossings[i - 1], step}, fill);
             }
         }
     }
@@ -74,6 +75,21 @@ double profile_clearance(Point point, Point center, double radius, const SpiroPr
                          double rotation) {
     const double x = (point.x - center.x) * std::cos(rotation) + (point.y - center.y) * std::sin(rotation);
     const double y = -(point.x - center.x) * std::sin(rotation) + (point.y - center.y) * std::cos(rotation);
+    if (profile.kind == SpiroProfileKind::Quad) {
+        bool inside = false;
+        double nearest = 1e20;
+        for (int i = 0; i < 192; ++i) {
+            const Point pa = QuadTrack::boundary(tau * i / 192), pb = QuadTrack::boundary(tau * (i + 1) / 192);
+            const Point a{pa.x * radius, pa.y * radius}, b{pb.x * radius, pb.y * radius};
+            const double dx = b.x - a.x, dy = b.y - a.y;
+            const double t = std::clamp(((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy), 0.0, 1.0);
+            nearest = std::min(nearest, std::hypot(x - a.x - t * dx, y - a.y - t * dy));
+            if ((a.y > y) != (b.y > y) && x < a.x + dx * (y - a.y) / dy) {
+                inside = !inside;
+            }
+        }
+        return inside ? -nearest : nearest;
+    }
     double result = -1e20;
     for (int i = 0; i < 96; ++i) {
         const double a = tau * i / 96;
@@ -236,10 +252,12 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
                       spiro.detached ? gf::Color::rgba(220, 140, 20, 245) :
                                        gf::Color::rgba(15, 110, 215, 220), spiro.detached ? 2.5 : 1.3);
         for (int i = 0; i < part.teeth; ++i) {
-            const double a = part.profile.normal_at_arc(tau * i / part.teeth);
+            const double a = spiro.quad() ? (i / 15) * std::numbers::pi / 2 + .4 * (i % 15) / 14
+                                          : part.profile.normal_at_arc(tau * i / part.teeth);
+            const double normal = spiro.quad() ? a - .2 : a;
             const gf::Point p = profile_point(wheel, r, part.profile, a, rotation);
-            painter.draw_line(polar(p, -1.3 * spiro.scale * zoom, a + rotation),
-                              polar(p, 1.3 * spiro.scale * zoom, a + rotation),
+            painter.draw_line(polar(p, -1.3 * spiro.scale * zoom, normal + rotation),
+                              polar(p, 1.3 * spiro.scale * zoom, normal + rotation),
                               gf::Color::rgba(5, 151, 245, 215), std::max(1.0, 2 * spiro.scale * zoom));
         }
         const double grip = spiro_grip_radius();
@@ -320,7 +338,8 @@ void Editor::spiro_choice(const std::string& id) {
         const double rotation = spiro.wheel_rotation(spiro.angle);
         spiro.outside = !spiro.outside;
         if (!spiro.compatible(spiro.guide, spiro.insert)) {
-            spiro.outside = true;
+            spiro.outside = !spiro.outside;
+            return;
         }
         spiro.angle = 0;
         spiro.rolling_offset = 0;

@@ -1728,7 +1728,7 @@ void Ribbon::synchronize() {
         }
         if (id == "spiro-outside") {
             selected = (*editor).spiro.outside || (*editor).spiro.capsule();
-            control.set_enabled(!(*editor).spiro.rack() && !(*editor).spiro.capsule());
+            control.set_enabled(!(*editor).spiro.rack() && !(*editor).spiro.capsule() && !(*editor).spiro.quad());
         }
         if (id == "spiro-fill") {
             selected = document.tool == Tool::Fill;

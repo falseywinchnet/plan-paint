@@ -707,5 +707,6 @@
   "Eye 60": "眼形 60",
   "Triangle 54": "三角形 54",
   "Editing path nodes and curves": "編輯路徑節點和曲線",
-  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "選擇路徑，然後啟用「編輯節點」，即可用滑鼠主要按鍵拖曳連接點。點選現有的曲線段可顯示其方形控制柄。淺金色醒目提示表示可拖曳的部位。點選空白處不會新增內容。每次拖曳對應一次復原操作。關閉「編輯節點」或選擇「繼續路徑」，即可繼續新增線段。"
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "選擇路徑，然後啟用「編輯節點」，即可用滑鼠主要按鍵拖曳連接點。點選現有的曲線段可顯示其方形控制柄。淺金色醒目提示表示可拖曳的部位。點選空白處不會新增內容。每次拖曳對應一次復原操作。關閉「編輯節點」或選擇「繼續路徑」，即可繼續新增線段。",
+  "Quad 60": "Quad 60"
 }

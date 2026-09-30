@@ -2,6 +2,7 @@
 #include "paint_tools.hpp"
 #include "raster.hpp"
 #include "spirograph.hpp"
+#include "spiro_quad.hpp"
 #include "text.hpp"
 #include <chrono>
 #include <cmath>
@@ -272,6 +273,102 @@ void capsule_rack(const char* output) {
         paint::save_image(image, output);
     }
 }
+void quad_geometry(const char* output) {
+    const double tau = 2 * std::numbers::pi;
+    paint::Image image;
+    if (output) {
+        image.reset(1100, 700);
+    }
+    const paint::QuadTrack small(96), large(105);
+    require(std::abs(large.radius() / small.radius() - 1) < .003,
+            "Quad guide adjustment exceeds the approved approximation");
+    for (int part = 0; part < 2; ++part) {
+        const int teeth = part == 0 ? 96 : 105;
+        const paint::QuadTrack track(teeth);
+        paint::Spirograph s;
+        s.open(1100, 700);
+        s.set_guide(part == 0 ? 0 : 16);
+        s.set_insert(32);
+        s.set_scale(2);
+        s.center = {275.0 + 550 * part, 270};
+        require(s.quad() && s.hole_count() == 10, "Quad catalog or holes are missing");
+        require(!s.compatible(17, 32) && !s.compatible(6, 32), "Quad accepts an unverified guide");
+        const double period = tau * s.closing_turns();
+        for (int i = -240; i <= 240; ++i) {
+            const double phase = i * .023 + .0017;
+            const paint::QuadPose p = track.pose(phase);
+            require(std::abs(distance(p.contact, {}) - teeth) < 1e-9, "Quad contact leaves the guide");
+            for (int b = 0; b < 324; ++b) {
+                const paint::Point edge = paint::QuadTrack::boundary(tau * b / 324);
+                const paint::Point world{p.center.x + track.radius() * (edge.x * std::cos(p.rotation) - edge.y * std::sin(p.rotation)),
+                                         p.center.y + track.radius() * (edge.x * std::sin(p.rotation) + edge.y * std::cos(p.rotation))};
+                require(distance(world, {}) <= teeth + 1e-8, "Quad boundary crosses its ring");
+            }
+            const double epsilon = 1e-7;
+            const paint::QuadPose before = track.pose(phase - epsilon), after = track.pose(phase + epsilon);
+            const double spin = (after.rotation - before.rotation) / (2 * epsilon);
+            const paint::Point velocity{(after.center.x - before.center.x) / (2 * epsilon) - spin * (p.contact.y - p.center.y),
+                                         (after.center.y - before.center.y) / (2 * epsilon) + spin * (p.contact.x - p.center.x)};
+            require(distance(velocity, {}) < .0002, "Quad rolling or pivot contact slips");
+            const double offset = track.offset_for_rotation(phase, -1.234);
+            require(std::abs(track.pose(phase, offset).rotation + 1.234) < 1e-10,
+                    "Quad placement fails to preserve rotation");
+        }
+        for (int q = -12; q <= 12; ++q) {
+            for (double local : {0.0, .4, (.4 + std::numbers::pi / 2) / 2, std::numbers::pi / 2}) {
+                const double phase = (q * std::numbers::pi / 2 + local) * 60 / teeth;
+                const paint::QuadPose a = track.pose(phase - 1e-9), b = track.pose(phase + 1e-9);
+                require(distance(a.center, b.center) < 1e-5 && std::abs(a.rotation - b.rotation) < 1e-7,
+                        "Quad pose jumps at a rolling/pivot boundary");
+            }
+        }
+        for (int h = 0; h < s.hole_count(); ++h) {
+            require(distance(s.hole(h, 0), s.hole(h, period)) < 1e-8, "Quad pattern does not close");
+        }
+        s.angle = .57;
+        const paint::Point original = s.wheel_center(s.angle);
+        const double rotation = s.wheel_rotation(s.angle);
+        s.lift_to({4000, 4000}, 1);
+        require(s.detached && s.advance(1).empty() && s.wheel_rotation(s.angle) == rotation,
+                "Lifted Quad changes rotation or draws");
+        s.lift_to(original, 1);
+        require(!s.detached && distance(original, s.wheel_center(s.angle)) < 1e-6 &&
+                    std::abs(s.wheel_rotation(s.angle) - rotation) < 1e-9,
+                "Quad reseating changes its pose");
+        s.reposition(1.13);
+        require(std::abs(s.wheel_rotation(s.angle) - rotation) < 1e-9, "Quad reposition rotates the wheel");
+        s.angle = 0;
+        s.rolling_offset = 0;
+        s.seat(0, {true, true, part == 0 ? paint::Color{180, 35, 75, 255} : paint::Color{30, 85, 165, 255}, 1});
+        const std::vector<paint::SpiroTrace> traces = s.advance(output ? period : tau);
+        for (const paint::SpiroTrace& trace : traces) {
+            require(distance(trace.start, trace.end) <= .501, "Quad creates long pen chords");
+        }
+        const std::vector<paint::SpiroTrace> reverse = s.advance(0);
+        require(reverse.size() == traces.size(), "Quad reverse motion changes resolution");
+        for (std::size_t i = 0; i < traces.size(); ++i) {
+            require(distance(traces[i].start, reverse[reverse.size() - 1 - i].end) < 1e-8,
+                    "Quad reverse motion does not retrace");
+        }
+        if (output) {
+            const paint::Image base = image;
+            paint::SpirographStroke stroke;
+            stroke.render(image, base, s, traces);
+        }
+    }
+    if (output) {
+        std::vector<paint::Point> outline;
+        for (int i = 0; i < 720; ++i) {
+            const paint::Point p = paint::QuadTrack::boundary(tau * i / 720);
+            outline.push_back({550 + 85 * p.x, 590 + 85 * p.y});
+        }
+        paint::Ink ink;
+        ink.primary = {30, 110, 175, 255};
+        ink.secondary = {210, 237, 251, 255};
+        paint::polygon(image, outline, ink, true, true);
+        paint::save_image(image, output);
+    }
+}
 void extended_geometry() {
     paint::Spirograph s;
     s.open(640, 480);
@@ -280,6 +377,11 @@ void extended_geometry() {
         s.outside = external != 0;
         for (int g = 0; g < static_cast<int>(paint::spiro_guides().size()); ++g) {
             for (int w = 0; w < static_cast<int>(paint::spiro_inserts().size()); ++w) {
+                // Quad uses endpoint pivots, not the convex support-normal model below.
+                // Its independent contact, no-slip and clearance checks are in quad_geometry.
+                if (paint::spiro_inserts()[w].profile.kind == paint::SpiroProfileKind::Quad) {
+                    continue;
+                }
                 if (!s.compatible(g, w)) {
                     continue;
                 }
@@ -582,6 +684,10 @@ int main(int argc, char** argv) {
             deluxe_arc_wheel(30, argv[2]);
             return 0;
         }
+        if (argc == 3 && std::string(argv[1]) == "--quad") {
+            quad_geometry(argv[2]);
+            return 0;
+        }
         if (argc == 3 && std::string(argv[1]) == "--bar") {
             deluxe_arc_wheel(29, argv[2]);
             return 0;
@@ -596,6 +702,7 @@ int main(int argc, char** argv) {
         deluxe_arc_wheel(29, argc > 6 ? argv[6] : nullptr);
         deluxe_arc_wheel(30, nullptr);
         deluxe_arc_wheel(31, nullptr);
+        quad_geometry(nullptr);
         capsule_rack(argc > 5 ? argv[5] : nullptr);
         extended_geometry();
         gel_and_peg_media();

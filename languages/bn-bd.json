@@ -707,5 +707,6 @@
   "Eye 60": "চোখ 60",
   "Triangle 54": "ত্রিভুজ 54",
   "Editing path nodes and curves": "পথের নোড ও বক্ররেখা সম্পাদনা",
-  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "পথ বেছে নিয়ে «নোড সম্পাদনা» চালু করুন। মাউসের প্রধান বোতাম দিয়ে সংযোগবিন্দু টানুন। বিদ্যমান বাঁকা অংশে ক্লিক করলে তার বর্গাকার হাতল দেখা যাবে। হালকা সোনালি চিহ্ন দেখায় কী টানা যাবে। ফাঁকা জায়গায় ক্লিক করলে কিছু যোগ হয় না। প্রতিটি টান একটি পূর্বাবস্থায় ফেরার ধাপ। আবার অংশ যোগ করতে «নোড সম্পাদনা» বন্ধ করুন বা «পথ চালিয়ে যান» বেছে নিন।"
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "পথ বেছে নিয়ে «নোড সম্পাদনা» চালু করুন। মাউসের প্রধান বোতাম দিয়ে সংযোগবিন্দু টানুন। বিদ্যমান বাঁকা অংশে ক্লিক করলে তার বর্গাকার হাতল দেখা যাবে। হালকা সোনালি চিহ্ন দেখায় কী টানা যাবে। ফাঁকা জায়গায় ক্লিক করলে কিছু যোগ হয় না। প্রতিটি টান একটি পূর্বাবস্থায় ফেরার ধাপ। আবার অংশ যোগ করতে «নোড সম্পাদনা» বন্ধ করুন বা «পথ চালিয়ে যান» বেছে নিন।",
+  "Quad 60": "Quad 60"
 }
