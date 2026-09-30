@@ -164,6 +164,11 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
                       1.8);
     painter.draw_line({close.x - 3, close.y + 3}, {close.x + 3, close.y - 3}, gf::Color::rgba(255, 255, 255),
                       1.8);
+    const gf::Point resize = screen(spiro.resize_position());
+    painter.fill_rect({resize.x - 7, resize.y - 7, 14, 14}, gf::Color::rgba(255, 212, 80, 250));
+    painter.stroke_rect({resize.x - 7, resize.y - 7, 14, 14}, gf::Color::rgba(80, 65, 20), 1.3);
+    painter.draw_line({resize.x - 4, resize.y + 4}, {resize.x + 4, resize.y - 4},
+                      gf::Color::rgba(80, 65, 20), 1.5);
     if (spiro.inserted) {
         const gf::Point wheel = screen(spiro.wheel_center(spiro.angle));
         const double r = spiro.wheel_radius() * zoom;
@@ -207,6 +212,15 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
     if (spiro_drag_ == SpiroDrag::Peg) {
         peg_cap(painter, screen(spiro_pointer_), 9, spiro_carried_);
     }
+}
+void Editor::resize_spirograph(double scale) {
+    if (!spiro.active) {
+        return;
+    }
+    release_gesture();
+    spiro.set_scale(scale);
+    (*ribbon_).synchronize();
+    canvas().invalidate(gf::Dirty::paint);
 }
 void Editor::start_spirograph() {
     finish_controls(false);
@@ -354,6 +368,10 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
             }
             if (spiro_drag_ == SpiroDrag::Guide) {
                 spiro.center = {point.x + spiro_grab_.x, point.y + spiro_grab_.y};
+            } else if (spiro_drag_ == SpiroDrag::Resize) {
+                const double radius = std::hypot(point.x - spiro.center.x, point.y - spiro.center.y);
+                spiro.set_scale(std::max(.05, spiro_resize_scale_ * radius / spiro_resize_radius_));
+                (*ribbon_).synchronize();
             } else if (spiro_drag_ == SpiroDrag::Peg) {
                 spiro_pointer_ = point;
                 spiro_target_hole_ = spiro_hole_at(point, true);
@@ -414,10 +432,21 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
                                                           spiro_guides()[spiro.guide].profile, 0) -
                                         6 * spiro.scale) < margin;
     const bool on_close = std::hypot(point.x - close.x, point.y - close.y) * canvas().zoom() < 11;
+    const Point resize = spiro.resize_position();
+    const bool on_resize = std::hypot(point.x - resize.x, point.y - resize.y) * canvas().zoom() < 11;
     const int hole = spiro_hole_at(point, false);
-    if (event.action == gf::PointerAction::down && (on_wheel || on_ring || on_close || hole >= 0)) {
+    if (event.action == gf::PointerAction::down && (on_wheel || on_ring || on_close || on_resize || hole >= 0)) {
         if (on_close) {
             spiro_choice("spiro-close");
+            return true;
+        }
+        if (on_resize && event.button == gf::PointerButton::primary) {
+            release_gesture();
+            spiro_resize_scale_ = spiro.scale;
+            spiro_resize_radius_ = std::max(1e-9, std::hypot(point.x - spiro.center.x, point.y - spiro.center.y));
+            spiro_drag_ = SpiroDrag::Resize;
+            canvas().set_pointer_capture(true);
+            canvas().invalidate(gf::Dirty::paint);
             return true;
         }
         if (document.tool == Tool::Fill && hole >= 0) {
@@ -458,8 +487,8 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
         canvas().invalidate(gf::Dirty::paint);
         return true;
     }
-    if (event.action == gf::PointerAction::move && (on_wheel || on_ring || on_close || hole >= 0)) {
-        canvas().set_cursor(gf::CursorKind::hand);
+    if (event.action == gf::PointerAction::move && (on_wheel || on_ring || on_close || on_resize || hole >= 0)) {
+        canvas().set_cursor(on_resize ? gf::CursorKind::resize_diagonal_down : gf::CursorKind::hand);
     }
     if (event.action == gf::PointerAction::down && spiro.selected_peg >= 0) {
         spiro.selected_peg = -1;

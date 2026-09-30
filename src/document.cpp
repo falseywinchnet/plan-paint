@@ -528,6 +528,7 @@ Ink Document::alternate_ink() const {
     result.transparent_pattern = true;
     result.size = ink.size;
     result.smooth = ink.smooth;
+    result.supersample = ink.supersample;
     return result;
 }
 void Document::commit_path() {
@@ -627,14 +628,16 @@ Image Document::path_image(const Point* next) const {
     }
     Image result = *path.base;
     for (const PathRun& saved : path.runs) {
-        std::vector<Point> run = path_contour(saved.start, saved.count, !saved.continuous);
+        std::vector<Point> run = path_contour(saved.start, saved.count, !saved.continuous,
+                                              saved.ink.smooth && saved.ink.supersample ? 0.03125 : 0.125);
         Ink material = saved.ink;
         polygon(result, run, material, saved.outline, saved.fill, !saved.continuous, saved.body.brush,
                 &saved.body);
     }
     if (path.extending) {
         std::vector<Point> run =
-            path_contour(path.start, path.nodes.size() - path.start, !continuous_path && !next);
+            path_contour(path.start, path.nodes.size() - path.start, !continuous_path && !next,
+                         ink.smooth && ink.supersample ? 0.03125 : 0.125);
         if (next) {
             run.push_back(*next);
         }

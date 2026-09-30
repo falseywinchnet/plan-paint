@@ -176,12 +176,18 @@ void Spirograph::set_guide(int index) {
     if (!compatible(index, insert)) {
         return;
     }
-    scale *= static_cast<double>(spiro_guides()[guide].teeth) / spiro_guides()[index].teeth;
+    set_scale(scale * static_cast<double>(spiro_guides()[guide].teeth) / spiro_guides()[index].teeth);
     guide = index;
     angle = 0;
 }
 double Spirograph::guide_radius() const {
     return spiro_guides().at(guide).teeth * scale;
+}
+void Spirograph::set_scale(double value) {
+    if (!std::isfinite(value) || value <= 0) {
+        throw std::invalid_argument("Spirograph scale must be positive and finite.");
+    }
+    scale = std::clamp(value, .05, 64.0);
 }
 double Spirograph::wheel_radius() const {
     return spiro_inserts().at(insert).teeth * scale;
@@ -212,6 +218,10 @@ Point Spirograph::guide_point(double normal) const {
 Point Spirograph::close_position() const {
     const Point p = guide_point(rack() ? -1.5 : -std::numbers::pi / 4);
     return {p.x + (rack() ? 0 : 9 * scale), p.y - 12 * scale};
+}
+Point Spirograph::resize_position() const {
+    const Point point = guide_point(rack() ? 1.5 : std::numbers::pi / 4);
+    return {point.x + 9 * scale, point.y + 12 * scale};
 }
 double Spirograph::wheel_rotation(double phase) const {
     const double length = rack() ? phase : spiro_guides().at(guide).profile.arc(phase);

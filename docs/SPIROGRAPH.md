@@ -38,6 +38,13 @@ apparatus while keeping the drawing. Each continuous operation is one Undo
 step, including all loaded pegs. Drawing respects the active canvas selection,
 regular guide constraints, and rotated working view.
 
+Use the ribbon's **Scale** field or drag the gold square on the support's lower
+right to enlarge or shrink the apparatus relative to the paper. The scale
+field accepts values from 0.05 to 64 and remains available to keyboard and
+accessibility tools. Resizing keeps the center, rolling phase and loaded pegs;
+pen widths remain in image pixels. It does not resize existing marks or add an
+Undo step. Canvas zoom remains independent of apparatus scale.
+
 ## Component catalog
 
 The catalog includes 16 guides and 23 inserts:

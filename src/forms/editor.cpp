@@ -2127,6 +2127,9 @@ void Editor::execute(const std::string& command) {
             } else {
                 document.shape_fill = !document.shape_fill;
             }
+        } else if (command == "render-crisp" || command == "render-smooth" || command == "render-smooth-4x") {
+            document.ink.smooth = command != "render-crisp";
+            document.ink.supersample = command == "render-smooth-4x";
         } else if (command == "smooth-lines") {
             document.ink.smooth = !document.ink.smooth;
         } else if (command == "alt-carries-body") {

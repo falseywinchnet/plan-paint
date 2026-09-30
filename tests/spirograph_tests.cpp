@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <numbers>
 #include <stdexcept>
 namespace {
@@ -15,6 +16,39 @@ void require(bool value, const char* message) {
 }
 double distance(paint::Point a, paint::Point b) {
     return std::hypot(a.x - b.x, a.y - b.y);
+}
+void apparatus_resize() {
+    paint::Spirograph apparatus;
+    apparatus.open(640, 480);
+    apparatus.seat(0, {true, true, {180, 40, 70, 255}, 3});
+    apparatus.select_peg(0);
+    apparatus.angle = 1.25;
+    const paint::Point before = apparatus.hole(0, apparatus.angle);
+    const paint::Point center = apparatus.center;
+    const double original_scale = apparatus.scale;
+    apparatus.set_scale(original_scale * 2);
+    const paint::Point after = apparatus.hole(0, apparatus.angle);
+    require(distance(after, {center.x + 2 * (before.x - center.x),
+                             center.y + 2 * (before.y - center.y)}) < 1e-9,
+            "resizing does not scale the apparatus around its center");
+    require(apparatus.angle == 1.25 && apparatus.selected_peg == 0 && apparatus.pegs[0].loaded &&
+                apparatus.pegs[0].width == 3 && apparatus.pegs[0].ink.r == 180,
+            "resizing changes phase, selection or loaded pen");
+    for (const double invalid : {0.0, -1.0, std::numeric_limits<double>::infinity(),
+                                  std::numeric_limits<double>::quiet_NaN()}) {
+        bool rejected = false;
+        try {
+            apparatus.set_scale(invalid);
+        } catch (const std::invalid_argument&) {
+            rejected = true;
+        }
+        require(rejected && apparatus.scale == original_scale * 2,
+                "invalid apparatus scale changes valid geometry");
+    }
+    apparatus.set_scale(.001);
+    require(apparatus.scale == .05, "apparatus can shrink below its interaction limit");
+    apparatus.set_scale(1000);
+    require(apparatus.scale == 64, "apparatus scale exceeds its drawing limit");
 }
 void extended_geometry() {
     paint::Spirograph s;
@@ -176,6 +210,7 @@ void draw_gallery(const char* path) {
 } // namespace
 int main(int argc, char** argv) {
     try {
+        apparatus_resize();
         extended_geometry();
         gel_and_peg_media();
         paint::Spirograph s;

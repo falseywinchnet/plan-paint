@@ -34,7 +34,8 @@ Image Document::curve_image(const Point* pending_end) const {
         geometry.set_line(geometry.start, *pending_end);
     }
     Ink stroke_ink = curve.secondary ? alternate_ink() : primary_ink();
-    polygon(result, geometry.samples(), stroke_ink, true, false, false);
+    const double tolerance = stroke_ink.smooth && stroke_ink.supersample ? 0.03125 : 0.125;
+    polygon(result, geometry.samples(tolerance), stroke_ink, true, false, false);
     constrain_selection(result, *curve.base);
     return result;
 }

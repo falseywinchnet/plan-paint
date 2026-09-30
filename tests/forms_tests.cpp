@@ -1762,11 +1762,15 @@ void centered_circle_and_materials() {
     require(editor.document.ink.brush == paint::Brush::Crayon &&
                 editor.document.shape_fill_brush == paint::Brush::Oil,
             "line brush changes independently from fill");
-    routed_button(window, "smooth-lines");
-    require(!editor.document.ink.smooth, "Smooth lines is a visible working toggle in Materials");
+    const std::shared_ptr<gf::ComboBox> rendering =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("render-quality"));
+    require(rendering && (*rendering).visible() && !(*window.find("smooth-lines")).visible(),
+            "Materials must expose exactly one geometry rendering control");
+    (*rendering).set_selected_index(0);
+    require(!editor.document.ink.smooth, "Crisp is a working rendering choice in Materials");
     open_tab(window, "tool-tab");
     require((*window.find("tool-size")).visible() && (*window.find("outline")).visible() &&
-                (*window.find("fill")).visible() && (*window.find("smooth-lines")).visible() &&
+                (*window.find("fill")).visible() && (*window.find("render-quality")).visible() &&
                 !(*window.find("grain-scale")).visible() && !(*window.find("grain-angle")).visible() &&
                 !(*window.find("new-grain")).visible() && !window.find("edge-medium") &&
                 !window.find("fill-medium"),
@@ -1962,6 +1966,58 @@ void spirograph_accessible_pegs() {
     require(editor.spiro.pegs[0].width == 4 && editor.spiro.pegs[0].loaded &&
                 editor.spiro.pegs[0].ink.b == 190 && !editor.canvas().has_pointer_capture(),
             "accessible peg resize loses ink or captures the pointer");
+}
+void rendering_quality_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.new_image(64, 64);
+    editor.document.tool = paint::Tool::Path;
+    editor.refresh();
+    open_tab(*fixture.window, "tool-tab");
+    const std::shared_ptr<gf::ComboBox> quality =
+        std::dynamic_pointer_cast<gf::ComboBox>((*fixture.window).find("render-quality"));
+    require(quality && (*quality).visible() && (*quality).selected_index() == 1,
+            "rendering quality choices are not reachable or Smooth is not the default");
+    (*quality).set_selected_index(2);
+    require(editor.document.ink.smooth && editor.document.ink.supersample,
+            "4x choice does not select supersampling");
+    (*quality).set_selected_index(0);
+    require(!editor.document.ink.smooth && !editor.document.ink.supersample,
+            "Crisp choice does not disable smoothing");
+    (*quality).set_selected_index(1);
+    require(editor.document.ink.smooth && !editor.document.ink.supersample,
+            "Smooth choice does not restore the original rendering");
+}
+void spirograph_resize_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.new_image(640, 480);
+    editor.start_spirograph();
+    editor.spiro.seat(0, {true, true, {180, 40, 70, 255}, 3});
+    editor.spiro.angle = .75;
+    const std::vector<paint::Color> original = editor.document.image.pixels;
+    const std::uint64_t revision = editor.document.revision;
+    const std::shared_ptr<gf::NumericUpDown> scale =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("spiro-scale"));
+    require(scale && (*scale).visible(), "spirograph scale field is not reachable");
+    (*scale).set_value(.8);
+    require(editor.spiro.scale == .8, "spirograph numeric scale does not resize the apparatus");
+    editor.settings.rotate_view = true;
+    editor.rotate_view(.35);
+    const paint::Point handle = editor.spiro.resize_position();
+    const paint::Point center = editor.spiro.center;
+    fixture.drag(handle.x, handle.y, center.x + 1.5 * (handle.x - center.x),
+                 center.y + 1.5 * (handle.y - center.y));
+    require(std::abs(editor.spiro.scale - 1.2) < 1e-8 &&
+                std::abs((*scale).value() - 1.2) < 1e-8 && !editor.canvas().has_pointer_capture(),
+            "rotated-view resize handle loses scale, numeric feedback or pointer release");
+    require(editor.spiro.angle == .75 && editor.spiro.pegs[0].loaded && editor.spiro.pegs[0].width == 3,
+            "apparatus resizing changes the rolling phase or ink");
+    require(editor.document.revision == revision &&
+                std::memcmp(original.data(), editor.document.image.pixels.data(),
+                            original.size() * sizeof(paint::Color)) == 0,
+            "apparatus resizing paints or modifies document history");
 }
 void spirograph_apparatus_and_ink() {
     Fixture fixture;
@@ -3543,6 +3599,8 @@ int main() {
         dither_dialog_and_brush();
         carpet_generator_controls();
         spirograph_accessible_pegs();
+        spirograph_resize_controls();
+        rendering_quality_controls();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();
         independent_color_materials_and_no_color();

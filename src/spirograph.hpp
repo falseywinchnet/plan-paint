@@ -52,10 +52,13 @@ struct Spirograph {
     void set_insert(int index);
     void remove_insert();
     void set_guide(int index);
+    // Resize only the apparatus; phase, pen widths and loaded ink stay unchanged.
+    void set_scale(double value);
     double guide_radius() const;
     double wheel_radius() const;
     Point guide_point(double normal) const;
     Point close_position() const;
+    Point resize_position() const;
     double project(Point point, double near_phase) const;
     bool rack() const;
     bool compatible(int guide_index, int insert_index) const;

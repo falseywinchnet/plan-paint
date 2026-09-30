@@ -45,7 +45,8 @@ int Document::swap_path_segment(PathEdge edge, CurveKind kind) {
     sync_path();
     return selected;
 }
-std::vector<Point> Document::path_contour(std::size_t start, std::size_t count, bool closed) const {
+std::vector<Point> Document::path_contour(std::size_t start, std::size_t count, bool closed,
+                                          double tolerance) const {
     std::vector<Point> result;
     if (count == 0 || start >= path.nodes.size() || count > path.nodes.size() - start) {
         return result;
@@ -58,7 +59,7 @@ std::vector<Point> Document::path_contour(std::size_t start, std::size_t count, 
         for (std::size_t curve = 0; curve < path.segments.size(); ++curve) {
             const PathSegment& segment = path.segments[curve];
             if (segment.first == first && segment.last == last) {
-                const std::vector<Point> samples = segment.geometry.samples();
+                const std::vector<Point> samples = segment.geometry.samples(tolerance);
                 if (samples.size() > 1) {
                     result.insert(result.end(), samples.begin() + 1, samples.end());
                 }
