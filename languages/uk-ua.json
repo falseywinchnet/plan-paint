@@ -703,5 +703,6 @@
   "Bar 40": "Брусок 40",
   "Moving and resizing the Spirograph": "Переміщення та масштабування спірографа",
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Виберіть «Підняти», щоб переміщувати колесо без малювання. Бурштиновий контур означає, що колесо знято з напрямної. Установіть його на напрямну та виберіть «Запустити». «Масштаб» змінює розмір пристрою. Escape скасовує переміщення або зміну розміру.",
-  "Edit nodes": "Редагувати вузли"
+  "Edit nodes": "Редагувати вузли",
+  "Eye 60": "Око 60"
 }

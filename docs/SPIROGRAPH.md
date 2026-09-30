@@ -70,7 +70,7 @@ carries an attached wheel without drawing; only deliberate rolling deposits ink.
 
 ## Component catalog
 
-The catalog includes 18 guides and 30 inserts. The ribbon starts with the two
+The catalog includes 18 guides and 31 inserts. The ribbon starts with the two
 paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
 
 - Paired rings: 144/96 and 150/105, named with outer/inner tooth counts. These
@@ -95,6 +95,10 @@ paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
   40-tooth perimeter. It produces 12-fold repetition in the 96-tooth ring and
   21-fold repetition in the 105-tooth ring. The outline and hole positions are
   approximate; they are not measured molded-part dimensions.
+- Eye 60: a lens-shaped wheel with rounded tips and 13 approximate holes. Its
+  60-tooth perimeter gives eight repeats in the 96-tooth ring and seven in the
+  105-tooth ring, matching the kit pattern chart. The outline uses circular
+  side arcs joined to smaller tip arcs; dimensions are approximate.
 - Shaped inserts: oval, long oval, rounded triangle, square, pentagon, hexagon,
   egg, and shield. Each has its own socket arrangement.
 
@@ -121,11 +125,11 @@ constant along each straight side and turns continuously around the rounded
 ends. Matching arc length gives continuous rolling and supports lifting with
 the wheel's rotation held fixed.
 
-The Bar uses joined circular arcs for its sides, ends and corners. Its tangent
-stays continuous at each join, and its positive curvature permits exact arc
+The Bar and Eye use joined circular arcs for their sides and rounded corners. Their tangents
+stay continuous at each join, and their positive curvature permits exact arc
 inversion. The same contact model therefore supports both rolling and lifting.
 Compatibility and pen subdivision use bounds from the selected profile,
-including the Bar's tighter corners.
+including their tighter corners.
 
 Integer tooth counts fix the perimeter ratio, so closed-guide patterns return
 to their initial pose after `insert_teeth / gcd(guide_teeth, insert_teeth)`
@@ -137,7 +141,7 @@ The paired circular ring counts follow the
 Circular tooth and hole counts follow the illustrated kit and this
 [firsthand inventory of a Deluxe set](https://spirographicart.com/2014/05/02/chart-spirograph-wheels-rings/).
 The spiral socket coordinates are an approximation, not measurements of the
-molded pieces. The Bar follows a visually close approximation with verified
+molded pieces. The Bar and Eye follow visually close approximations with verified
 contact and repetition. The other shaped profiles remain distinct from the kit, and the capsule
 rack's width has not been measured from a physical part; the
 catalog is not yet a complete Deluxe replica.
@@ -163,6 +167,11 @@ The physical kits informed the range of mechanisms, not the code or drawings:
   rack use and outside rolling.
 - [Firsthand Bar wheel demonstration](https://spirographicart.com/2016/06/05/intro-bar-wheel/):
   12-point and 21-point repetition in the two kit rings, matching wheel 40.
+
+- [Manufacturer pattern guide](https://www.worldbrands.es/wp-content/uploads/80979_Spirograph-Guide_v2_EN_COMPLETE_compressed.pdf):
+  page 7 shows eight and seven repeats for the Eye in the 96- and 105-tooth
+  rings. A 60-tooth perimeter is inferred from these two repetition counts;
+  the guide does not print a tooth count on the Eye.
 
 Nested independently moving inserts, concave tracks, and modular track assembly
 remain possible extensions requiring additional motion constraints.

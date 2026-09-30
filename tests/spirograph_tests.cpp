@@ -149,43 +149,47 @@ void deluxe_circular_wheels() {
     }
     require(marked, "full wheel pens produce no rendered output");
 }
-void deluxe_bar(const char* output) {
-    const paint::SpiroInsert& bar = paint::spiro_inserts().at(29);
-    require(bar.teeth == 40 && bar.holes.size() == 9 && !bar.profile.circular(),
-            "Bar must have its own 40-tooth profile and nine holes");
+void deluxe_arc_wheel(int insert, const char* output) {
+    const bool eye = insert == 30;
+    const paint::SpiroInsert& wheel = paint::spiro_inserts().at(insert);
+    require(wheel.teeth == (eye ? 60 : 40) && wheel.holes.size() == (eye ? 13 : 9) && !wheel.profile.circular(),
+            "Deluxe arc wheel has incorrect tooth or hole counts");
     const double tau = 2 * std::numbers::pi;
+    require(distance(wheel.profile.point(-1e-8), wheel.profile.point(1e-8)) < 1e-6,
+            "Arc wheel has a gap across the normal seam");
     for (int i = -1000; i <= 1000; ++i) {
         const double normal = i * .037;
-        require(std::abs(bar.profile.normal_at_arc(bar.profile.arc(normal)) - normal) < 1e-11,
-                "Bar arc map fails to retain complete turns");
-        require(distance(bar.profile.point(normal), bar.profile.point(normal + tau)) < 1e-11,
-                "Bar outline has a discontinuous seam");
-        require(bar.profile.curvature_radius(normal) >= .1 && bar.profile.curvature_radius(normal) <= 2,
-                "Bar curvature escapes its conservative bounds");
-        for (const paint::Point hole : bar.holes) {
-            require(hole.x * std::cos(normal) + hole.y * std::sin(normal) < bar.profile.support(normal) - .02,
-                    "Bar hole leaves its body");
+        require(std::abs(wheel.profile.normal_at_arc(wheel.profile.arc(normal)) - normal) < 1e-11,
+                "Arc wheel arc map fails to retain complete turns");
+        require(distance(wheel.profile.point(normal), wheel.profile.point(normal + tau)) < 1e-11,
+                "Arc wheel outline has a discontinuous seam");
+        require(wheel.profile.curvature_radius(normal) >= (eye ? 4.0 / 60 : .1) && wheel.profile.curvature_radius(normal) <= 2,
+                "Arc wheel curvature escapes its conservative bounds");
+        for (const paint::Point hole : wheel.holes) {
+            require(hole.x * std::cos(normal) + hole.y * std::sin(normal) < wheel.profile.support(normal) - .02,
+                    "Arc wheel hole leaves its body");
         }
     }
     paint::Image image;
     if (output) {
-        image.reset(1100, 560);
+        image.reset(1100, eye ? 760 : 560);
     }
     for (int part = 0; part < 2; ++part) {
         paint::Spirograph s;
         s.open(1100, 560);
         s.set_guide(part == 0 ? 0 : 16);
-        s.set_insert(29);
+        s.set_insert(insert);
         s.center = {275.0 + 550 * part, 280};
         s.set_scale(2);
-        require(s.insert == 29 && s.hole_count() == 9 && s.closing_turns() == (part == 0 ? 5 : 8),
-                "Bar must fit both Deluxe rings and repeat after five/eight circuits");
+        require(s.insert == insert && s.hole_count() == (eye ? 13 : 9) &&
+                    s.closing_turns() == (eye ? (part == 0 ? 5 : 4) : (part == 0 ? 5 : 8)),
+                "Deluxe arc wheel has the wrong closure period in a kit ring");
         const double period = tau * s.closing_turns();
-        require(distance(s.hole(0, 0), s.hole(0, period)) < 1e-9, "Bar pattern fails closure");
+        require(distance(s.hole(0, 0), s.hole(0, period)) < 1e-9, "Arc wheel pattern fails closure");
         s.seat(0, {true, true, part == 0 ? paint::Color{180, 35, 75, 255} : paint::Color{30, 85, 165, 255}, 1});
         const std::vector<paint::SpiroTrace> traces = s.advance(output ? period : tau);
         for (const paint::SpiroTrace& trace : traces) {
-            require(distance(trace.start, trace.end) <= .501, "Bar corners create long pen chords");
+            require(distance(trace.start, trace.end) <= .501, "Arc wheel corners create long pen chords");
         }
         if (output) {
             const paint::Image base = image;
@@ -194,6 +198,27 @@ void deluxe_bar(const char* output) {
         }
     }
     if (output) {
+        if (eye) {
+            std::vector<paint::Point> rim;
+            for (int i = 0; i < 720; ++i) {
+                const paint::Point p = wheel.profile.point(tau * i / 720);
+                rim.push_back({550 + 90 * p.x, 650 + 90 * p.y});
+            }
+            paint::Ink ink;
+            ink.primary = {30, 110, 175, 255};
+            ink.secondary = {210, 237, 251, 255};
+            ink.size = 1;
+            paint::polygon(image, rim, ink, true, true);
+            for (const paint::Point local : wheel.holes) {
+                const paint::Point hole{550 + 90 * local.x, 650 + 90 * local.y};
+                ink.primary = {30, 110, 175, 255};
+                ink.size = 7;
+                paint::stroke(image, hole, hole, ink);
+                ink.primary = {255, 255, 255, 255};
+                ink.size = 4;
+                paint::stroke(image, hole, hole, ink);
+            }
+        }
         paint::save_image(image, output);
     }
 }
@@ -547,8 +572,12 @@ void draw_lift_example(const char* path) {
 } // namespace
 int main(int argc, char** argv) {
     try {
+        if (argc == 3 && std::string(argv[1]) == "--eye") {
+            deluxe_arc_wheel(30, argv[2]);
+            return 0;
+        }
         if (argc == 3 && std::string(argv[1]) == "--bar") {
-            deluxe_bar(argv[2]);
+            deluxe_arc_wheel(29, argv[2]);
             return 0;
         }
         if (argc == 3 && std::string(argv[1]) == "--lift") {
@@ -558,7 +587,8 @@ int main(int argc, char** argv) {
         apparatus_resize();
         paired_ring_tracks();
         deluxe_circular_wheels();
-        deluxe_bar(argc > 6 ? argv[6] : nullptr);
+        deluxe_arc_wheel(29, argc > 6 ? argv[6] : nullptr);
+        deluxe_arc_wheel(30, nullptr);
         capsule_rack(argc > 5 ? argv[5] : nullptr);
         extended_geometry();
         gel_and_peg_media();

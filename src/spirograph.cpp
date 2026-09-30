@@ -8,21 +8,14 @@
 namespace paint {
 namespace {
 constexpr double tau = 2 * std::numbers::pi;
-// Approximate Bar outline: circular side, end and corner arcs. Its perimeter
-// is exactly 2*pi in normalized units, while every curvature radius is positive.
-struct BarPitch {
-    const double end_angle = .2;
-    const double delta = (40 * std::numbers::pi / 2 - 60 * end_angle -
-                          4 * (std::numbers::pi / 2 - end_angle)) / 76;
-    const double alpha = std::numbers::pi / 2 - delta;
-    const std::array<double, 10> normals{0, end_angle, alpha, std::numbers::pi - alpha,
-        std::numbers::pi - end_angle, std::numbers::pi + end_angle, std::numbers::pi + alpha,
-        tau - alpha, tau - end_angle, tau};
-    const std::array<double, 9> radii{1.5, .1, 2, .1, 1.5, .1, 2, .1, 1.5};
-    const double half_width = (60 * (1 - std::cos(end_angle)) +
-        4 * (std::cos(end_angle) - std::sin(delta)) + 80 * std::sin(delta)) / 40;
-    std::array<double, 10> lengths{};
-    BarPitch() {
+// Joined circular arcs with positive curvature and a normalized 2*pi perimeter.
+struct ArcPitch {
+    const std::vector<double> normals, radii;
+    const double half_width;
+    std::vector<double> lengths;
+    ArcPitch(std::vector<double> boundaries, std::vector<double> curvature, double width)
+        : normals(std::move(boundaries)), radii(std::move(curvature)), half_width(width),
+          lengths(radii.size() + 1, 0) {
         for (std::size_t i = 0; i < radii.size(); ++i) {
             lengths[i + 1] = lengths[i] + radii[i] * (normals[i + 1] - normals[i]);
         }
@@ -67,9 +60,35 @@ struct BarPitch {
         return radii.back();
     }
 };
-const BarPitch& bar_pitch() {
-    static const BarPitch pitch;
+const ArcPitch& bar_pitch() {
+    const double end_angle = .2;
+    const double delta = (40 * std::numbers::pi / 2 - 60 * end_angle -
+                         4 * (std::numbers::pi / 2 - end_angle)) / 76;
+    const double alpha = std::numbers::pi / 2 - delta;
+    static const ArcPitch pitch({0, end_angle, alpha, std::numbers::pi - alpha,
+        std::numbers::pi - end_angle, std::numbers::pi + end_angle, std::numbers::pi + alpha,
+        tau - alpha, tau - end_angle, tau}, {1.5, .1, 2, .1, 1.5, .1, 2, .1, 1.5},
+        (60 * (1 - std::cos(end_angle)) + 4 * (std::cos(end_angle) - std::sin(delta)) +
+         80 * std::sin(delta)) / 40);
     return pitch;
+}
+const ArcPitch& eye_pitch() {
+    // Approximate lens: 80-unit sides and 4-unit rounded tips. The corner angle
+    // sets the perimeter to exactly 60 tooth-radius units, matching 8/7 repeats.
+    const double alpha = std::numbers::pi * 20 / 152;
+    static const ArcPitch pitch({0, alpha, std::numbers::pi - alpha,
+        std::numbers::pi + alpha, tau - alpha, tau},
+        {4.0 / 60, 80.0 / 60, 4.0 / 60, 80.0 / 60, 4.0 / 60},
+        (4 + 76 * std::cos(alpha)) / 60);
+    return pitch;
+}
+const ArcPitch& arc_pitch(SpiroProfileKind kind) {
+    return kind == SpiroProfileKind::Eye ? eye_pitch() : bar_pitch();
+}
+std::vector<Point> eye_sockets() {
+    return {{-.96, 0}, {-.78, 0}, {-.60, 0}, {-.42, 0}, {-.24, 0},
+            {.06, .40}, {.10, .22}, {.25, .35}, {.30, .15}, {.45, .28},
+            {.50, .08}, {.65, .20}, {.72, 0}};
 }
 std::vector<Point> bar_sockets() {
     std::vector<Point> result;
@@ -113,8 +132,8 @@ bool SpiroProfile::circular() const {
            pentagon == 0 && hexagon == 0;
 }
 double SpiroProfile::support(double normal) const {
-    if (kind == SpiroProfileKind::Bar) {
-        const Point p = bar_pitch().point(normal);
+    if (kind != SpiroProfileKind::Harmonic) {
+        const Point p = arc_pitch(kind).point(normal);
         return p.x * std::cos(normal) + p.y * std::sin(normal);
     }
     if (circular()) {
@@ -128,8 +147,8 @@ double SpiroProfile::support(double normal) const {
     return value;
 }
 double SpiroProfile::derivative(double normal) const {
-    if (kind == SpiroProfileKind::Bar) {
-        const Point p = bar_pitch().point(normal);
+    if (kind != SpiroProfileKind::Harmonic) {
+        const Point p = arc_pitch(kind).point(normal);
         return -p.x * std::sin(normal) + p.y * std::cos(normal);
     }
     if (circular()) {
@@ -143,8 +162,8 @@ double SpiroProfile::derivative(double normal) const {
     return value;
 }
 double SpiroProfile::curvature_radius(double normal) const {
-    if (kind == SpiroProfileKind::Bar) {
-        return bar_pitch().curvature(normal);
+    if (kind != SpiroProfileKind::Harmonic) {
+        return arc_pitch(kind).curvature(normal);
     }
     if (circular()) {
         return 1;
@@ -158,8 +177,8 @@ double SpiroProfile::curvature_radius(double normal) const {
     return value;
 }
 double SpiroProfile::arc(double normal) const {
-    if (kind == SpiroProfileKind::Bar) {
-        return bar_pitch().arc(normal);
+    if (kind != SpiroProfileKind::Harmonic) {
+        return arc_pitch(kind).arc(normal);
     }
     if (circular()) {
         return normal;
@@ -173,8 +192,8 @@ double SpiroProfile::arc(double normal) const {
     return value;
 }
 double SpiroProfile::normal_at_arc(double length) const {
-    if (kind == SpiroProfileKind::Bar) {
-        return bar_pitch().normal_at_arc(length);
+    if (kind != SpiroProfileKind::Harmonic) {
+        return arc_pitch(kind).normal_at_arc(length);
     }
     if (circular()) {
         return length;
@@ -198,15 +217,17 @@ double SpiroProfile::normal_at_arc(double length) const {
     return x + turns * tau;
 }
 Point SpiroProfile::point(double normal) const {
-    if (kind == SpiroProfileKind::Bar) {
-        return bar_pitch().point(normal);
+    if (kind != SpiroProfileKind::Harmonic) {
+        return arc_pitch(kind).point(normal);
     }
     const double h = support(normal), d = derivative(normal);
     return {h * std::cos(normal) - d * std::sin(normal), h * std::sin(normal) + d * std::cos(normal)};
 }
 SpiroCurvature SpiroProfile::curvature_bounds() const {
-    if (kind == SpiroProfileKind::Bar) {
-        return {.1, 2};
+    if (kind != SpiroProfileKind::Harmonic) {
+        const ArcPitch& pitch = arc_pitch(kind);
+        return {*std::min_element(pitch.radii.begin(), pitch.radii.end()),
+                *std::max_element(pitch.radii.begin(), pitch.radii.end())};
     }
     double difference = 0;
     const std::array<double, 5> coefficients = harmonics(*this);
@@ -267,7 +288,8 @@ const std::vector<SpiroInsert>& spiro_inserts() {
         {"Wheel 63", 63, spiral_sockets(63, 25)},
         {"Wheel 75", 75, spiral_sockets(75, 31)},
         {"Wheel 84", 84, spiral_sockets(84, 35)},
-        {"Bar 40", 40, bar_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Bar}}};
+        {"Bar 40", 40, bar_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Bar}},
+        {"Eye 60", 60, eye_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Eye}}};
     return parts;
 }
 void Spirograph::open(int width, int height) {

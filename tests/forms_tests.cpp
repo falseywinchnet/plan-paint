@@ -3885,9 +3885,12 @@ int main() {
         spirograph_lift_controls(17);
         spirograph_lift_controls(0, 29);
         spirograph_lift_controls(17, 29);
+        spirograph_lift_controls(0, 30);
+        spirograph_lift_controls(17, 30);
         spirograph_resize_controls();
         spirograph_resize_controls(17);
         spirograph_resize_controls(0, 29);
+        spirograph_resize_controls(0, 30);
         rendering_quality_controls();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();
