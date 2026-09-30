@@ -41,6 +41,7 @@ open build-forms/plan-paint.app
 python3 scripts/package-macos.py --gui-forms-sdk build-deps/gui-forms-sdk
 ```
 
+[ci-macos.sh](../scripts/ci-macos.sh) contains the Apple Silicon macOS build,
 [ci-windows.sh](../scripts/ci-windows.sh) contains the MinGW/MSYS2 build and
 [ci-linux.sh](../scripts/ci-linux.sh) contains the Alpine musl build. Their
 prerequisites and invocations are in the [workflow](../.github/workflows/build.yml).

@@ -13,6 +13,25 @@ concurrency:
 permissions:
   contents: write
 jobs:
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch verified GUI.Forms source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/fetch-gui-forms.py --github-cli
+      - name: Install build dependencies
+        run: brew install cmake ninja pkgconf libtiff webp dav1d
+      - name: Build, run native checks and package
+        env:
+          BUILD_JOBS: 3
+        run: sh scripts/ci-macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plan-paint-macos-arm64
+          path: dist/*.pkg
   linux:
     strategy:
       fail-fast: false
