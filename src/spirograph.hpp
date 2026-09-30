@@ -4,7 +4,7 @@
 namespace paint {
 constexpr int spiro_max_holes = 35;
 constexpr int spiro_default_insert = 26; // Wheel 63 in the stable component catalog.
-enum class SpiroProfileKind { Harmonic, Bar, Eye };
+enum class SpiroProfileKind { Harmonic, Bar, Eye, Triangle };
 struct SpiroCurvature {
     double minimum, maximum;
 };

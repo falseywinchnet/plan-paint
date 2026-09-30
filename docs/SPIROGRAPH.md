@@ -70,7 +70,7 @@ carries an attached wheel without drawing; only deliberate rolling deposits ink.
 
 ## Component catalog
 
-The catalog includes 18 guides and 31 inserts. The ribbon starts with the two
+The catalog includes 18 guides and 32 inserts. The ribbon starts with the two
 paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
 
 - Paired rings: 144/96 and 150/105, named with outer/inner tooth counts. These
@@ -99,6 +99,10 @@ paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
   60-tooth perimeter gives eight repeats in the 96-tooth ring and seven in the
   105-tooth ring, matching the kit pattern chart. The outline uses circular
   side arcs joined to smaller tip arcs; dimensions are approximate.
+- Triangle 54: an approximate rounded, unequal triangle with 12 holes, following
+  the manufacturer’s illustrated layout. Its 54-tooth perimeter produces
+  16 repeats in ring 96 and 35 in ring 105. The older experimental Triangle 42
+  remains available separately.
 - Shaped inserts: oval, long oval, rounded triangle, square, pentagon, hexagon,
   egg, and shield. Each has its own socket arrangement.
 
@@ -125,7 +129,7 @@ constant along each straight side and turns continuously around the rounded
 ends. Matching arc length gives continuous rolling and supports lifting with
 the wheel's rotation held fixed.
 
-The Bar and Eye use joined circular arcs for their sides and rounded corners. Their tangents
+The Bar, Eye and Triangle 54 use joined circular arcs for their sides and rounded corners. Their tangents
 stay continuous at each join, and their positive curvature permits exact arc
 inversion. The same contact model therefore supports both rolling and lifting.
 Compatibility and pen subdivision use bounds from the selected profile,
@@ -141,8 +145,8 @@ The paired circular ring counts follow the
 Circular tooth and hole counts follow the illustrated kit and this
 [firsthand inventory of a Deluxe set](https://spirographicart.com/2014/05/02/chart-spirograph-wheels-rings/).
 The spiral socket coordinates are an approximation, not measurements of the
-molded pieces. The Bar and Eye follow visually close approximations with verified
-contact and repetition. The other shaped profiles remain distinct from the kit, and the capsule
+molded pieces. The Bar, Eye and Triangle 54 follow visually close approximations with verified
+contact and repetition. The Quad is still missing; other experimental profiles remain distinct from the kit. The capsule
 rack's width has not been measured from a physical part; the
 catalog is not yet a complete Deluxe replica.
 
@@ -171,7 +175,10 @@ The physical kits informed the range of mechanisms, not the code or drawings:
 - [Manufacturer pattern guide](https://www.worldbrands.es/wp-content/uploads/80979_Spirograph-Guide_v2_EN_COMPLETE_compressed.pdf):
   page 7 shows eight and seven repeats for the Eye in the 96- and 105-tooth
   rings. A 60-tooth perimeter is inferred from these two repetition counts;
-  the guide does not print a tooth count on the Eye.
+  the guide does not print a tooth count on the Eye. Its Triangle examples
+  show 16 and 35 repeats, consistent with the implemented 54-tooth perimeter.
+  The illustrated Triangle has 12 holes and the instructions use hole 11;
+  this differs from the 10 holes listed in the older firsthand inventory.
 
 Nested independently moving inserts, concave tracks, and modular track assembly
 remain possible extensions requiring additional motion constraints.

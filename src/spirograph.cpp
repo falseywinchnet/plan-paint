@@ -82,8 +82,27 @@ const ArcPitch& eye_pitch() {
         (4 + 76 * std::cos(alpha)) / 60);
     return pitch;
 }
+const ArcPitch& triangle_pitch() {
+    // Unequal rounded triangle, with 80-unit sides and 4-unit corners.
+    // The perimeter constraint fixes c-a; closure fixes sin(a)+sin(c).
+    const double b = 1.85, difference = std::numbers::pi * 50 / 76 - b;
+    const double a = std::asin(std::sin(b) / (2 * std::cos(difference / 2))) - difference / 2;
+    const double c = a + difference;
+    static const ArcPitch pitch({0, a, b, std::numbers::pi - c,
+        std::numbers::pi + c, tau - b, tau - a, tau},
+        {4.0 / 54, 80.0 / 54, 4.0 / 54, 80.0 / 54, 4.0 / 54, 80.0 / 54, 4.0 / 54},
+        (84 + 76 * (std::cos(a) - std::cos(b) - std::cos(c))) / 108);
+    return pitch;
+}
 const ArcPitch& arc_pitch(SpiroProfileKind kind) {
+    if (kind == SpiroProfileKind::Triangle) {
+        return triangle_pitch();
+    }
     return kind == SpiroProfileKind::Eye ? eye_pitch() : bar_pitch();
+}
+std::vector<Point> triangle_sockets() {
+    return {{.70, 0}, {.50, -.18}, {.28, -.18}, {.30, 0}, {.28, .18}, {.50, .18},
+            {-.48, -.30}, {-.70, -.30}, {-.48, 0}, {-.70, 0}, {-.48, .30}, {-.70, .30}};
 }
 std::vector<Point> eye_sockets() {
     return {{-.96, 0}, {-.78, 0}, {-.60, 0}, {-.42, 0}, {-.24, 0},
@@ -289,7 +308,8 @@ const std::vector<SpiroInsert>& spiro_inserts() {
         {"Wheel 75", 75, spiral_sockets(75, 31)},
         {"Wheel 84", 84, spiral_sockets(84, 35)},
         {"Bar 40", 40, bar_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Bar}},
-        {"Eye 60", 60, eye_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Eye}}};
+        {"Eye 60", 60, eye_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Eye}},
+        {"Triangle 54", 54, triangle_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Triangle}}};
     return parts;
 }
 void Spirograph::open(int width, int height) {
