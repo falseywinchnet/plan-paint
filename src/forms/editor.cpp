@@ -705,6 +705,8 @@ void Editor::release_gesture() {
     moving_selection_ = false;
     preview_active_ = false;
     curve_handle_ = -1;
+    path_swap_handle_ = -1;
+    path_swap_checkpoint_ = false;
     path_node_ = -1;
     resize_handle_ = -1;
     lasso_.clear();

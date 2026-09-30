@@ -260,6 +260,9 @@ bool Editor::path_swap_pointer(const gf::PointerEvent& event, Point point) {
         return true;
     }
     if (event.action == gf::PointerAction::down && event.button == gf::PointerButton::primary) {
+        if (window()) {
+            static_cast<void>((*window()).request_focus(canvas_));
+        }
         if (path_swap_segment_ >= 0 &&
             static_cast<std::size_t>(path_swap_segment_) < document.path.segments.size()) {
             const CurveGeometry& geometry = document.path.segments[path_swap_segment_].geometry;

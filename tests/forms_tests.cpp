@@ -1714,11 +1714,16 @@ void direct_path_curve_editing() {
         editor.settings.rotate_view = true;
         editor.rotate_view(.25);
         editor.execute("edit-path-nodes");
+        open_tab(*fixture.window, "tool-tab");
+        require((*fixture.window).request_focus((*fixture.window).find("edit-path-nodes")),
+                "curve editing fixture cannot focus the ribbon control");
         const paint::CurveGeometry original = editor.document.path.segments[index].geometry;
         const std::vector<paint::Color> pixels = editor.document.image.pixels;
         const std::size_t undo = editor.document.undo_history.size();
         const paint::Point middle = original.at(.5);
         fixture.click(middle.x, middle.y);
+        require((*fixture.window).focused_control().get() == &editor.canvas(),
+                "selecting a retained curve leaves keyboard focus in the ribbon");
         require(editor.document.path.segments[index].geometry.kind == kind &&
                     editor.document.undo_history.size() == undo &&
                     std::memcmp(pixels.data(), editor.document.image.pixels.data(), pixels.size() * sizeof(paint::Color)) == 0,
@@ -1741,6 +1746,14 @@ void direct_path_curve_editing() {
         require(editor.document.path.segments[index].geometry.kind == kind &&
                     std::memcmp(pixels.data(), editor.document.image.pixels.data(), pixels.size() * sizeof(paint::Color)) == 0,
                 "undo does not restore the retained curve and its pixels");
+        fixture.pointer(gf::PointerAction::down, handle.x, handle.y);
+        fixture.pointer(gf::PointerAction::move, handle.x, handle.y + 20);
+        editor.execute("undo");
+        fixture.pointer(gf::PointerAction::move, handle.x, handle.y + 40, gf::PointerButton::none);
+        fixture.pointer(gf::PointerAction::up, handle.x, handle.y + 40);
+        require(editor.document.undo_history.size() == undo &&
+                    std::memcmp(pixels.data(), editor.document.image.pixels.data(), pixels.size() * sizeof(paint::Color)) == 0,
+                "pointer movement after undo resumes an interrupted curve drag");
         fixture.drag(200, 200, 210, 210);
         require(std::abs(editor.document.path.nodes[0].x - 210) < 1e-8 &&
                     std::abs(editor.document.path.nodes[0].y - 210) < 1e-8,
