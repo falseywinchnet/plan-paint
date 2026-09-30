@@ -1668,6 +1668,13 @@ void explicit_path_node_editing() {
     require(editor.edit_path_nodes, "Edit nodes does not activate");
     const std::size_t count = editor.document.path.nodes.size();
     const std::size_t undo = editor.document.undo_history.size();
+    fixture.pointer(gf::PointerAction::move, 220, 200, gf::PointerButton::none);
+    require(editor.canvas().effective_cursor() == gf::CursorKind::hand &&
+                !editor.canvas().effective_cursor_images() && editor.document.undo_history.size() == undo,
+            "editable node hover lacks a drag cursor or changes history");
+    fixture.pointer(gf::PointerAction::move, 320, 300, gf::PointerButton::none);
+    require(editor.canvas().effective_cursor_images() == paint::forms::tool_cursor_images(paint::Tool::Path),
+            "leaving a path node does not restore the drawing cursor");
     fixture.click(320, 300);
     require(editor.document.path.nodes.size() == count && editor.document.undo_history.size() == undo,
             "blank click in Edit nodes adds geometry or history");
@@ -1730,6 +1737,10 @@ void direct_path_curve_editing() {
                 "selecting a retained curve changes its type, pixels or undo history");
         const paint::Point handle = original.handle(0);
         const double offset = 3 / editor.canvas().zoom();
+        fixture.pointer(gf::PointerAction::move, handle.x + offset, handle.y, gf::PointerButton::none);
+        require(editor.canvas().effective_cursor() == gf::CursorKind::hand &&
+                    !editor.canvas().effective_cursor_images() && editor.document.undo_history.size() == undo,
+                "retained curve handle hover lacks a drag cursor or changes history");
         fixture.click(handle.x + offset, handle.y);
         require(editor.document.undo_history.size() == undo &&
                     std::hypot(editor.document.path.segments[index].geometry.handle(0).x - handle.x,

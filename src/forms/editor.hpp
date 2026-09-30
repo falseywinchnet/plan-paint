@@ -341,6 +341,9 @@ class Editor final : public gui_forms::Control {
     bool path_swap_checkpoint_ = false;
     bool path_swap_pointer(const gui_forms::PointerEvent& event, Point point);
     void paint_path_swap(gui_forms::Painter& painter);
+    int hit_curve_handle(const CurveGeometry& geometry, Point point, double radius) const;
+    int hovered_curve_handle(const CurveGeometry& geometry, double radius) const;
+    int hovered_path_node() const;
     std::optional<CurveKind> guide_swap_kind_;
     int guide_swap_segment_ = -1, guide_swap_handle_ = -1;
     Tool guide_previous_tool_ = Tool::Pencil;

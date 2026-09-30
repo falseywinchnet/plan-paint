@@ -415,11 +415,15 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         }
     }
     if (document.curve.line_set) {
+        const int hovered = hovered_curve_handle(document.curve.geometry, 11);
         for (int index = 0; index < document.curve.geometry.handle_count(); ++index) {
             gf::Point point = screen(document.curve.geometry.handle(index));
             if (index == curve_handle_) {
                 painter.fill_rect({point.x - 9, point.y - 9, 18, 18},
                                   interface_color(*this, gf::Color::rgba(255, 190, 40)));
+            } else if (index == hovered) {
+                painter.fill_rect({point.x - 8, point.y - 8, 16, 16},
+                                  interface_color(*this, gf::Color::rgba(255, 220, 130)));
             }
             if (document.curve.geometry.kind == CurveKind::Bezier) {
                 painter.draw_line(
@@ -430,11 +434,15 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
             painter.stroke_rect({point.x - 5, point.y - 5, 10, 10}, interface_color(*this, gf::Color::rgba(30, 100, 190)), 2);
         }
     }
+    const int hovered_node = hovered_path_node();
     for (std::size_t index = 0; index < document.path.nodes.size(); ++index) {
         gf::Point point = screen(document.path.nodes[index]);
         if (static_cast<int>(index) == path_node_) {
             painter.fill_rounded_rect({point.x - 9, point.y - 9, 18, 18}, 9,
                                       interface_color(*this, gf::Color::rgba(255, 190, 40)));
+        } else if (static_cast<int>(index) == hovered_node) {
+            painter.fill_rounded_rect({point.x - 8, point.y - 8, 16, 16}, 8,
+                                      interface_color(*this, gf::Color::rgba(255, 220, 130)));
         }
         painter.fill_rounded_rect({point.x - 6, point.y - 6, 12, 12}, 6, interface_color(*this, gf::Color::rgba(255, 255, 255)));
         painter.fill_rounded_rect({point.x - 5, point.y - 5, 10, 10}, 5, interface_color(*this, gf::Color::rgba(0, 120, 215)));
@@ -518,6 +526,36 @@ int Editor::hit_path_node(Point point) const {
         }
     }
     return result;
+}
+int Editor::hit_curve_handle(const CurveGeometry& geometry, Point point, double radius) const {
+    int result = -1;
+    for (int index = 0; index < geometry.handle_count(); ++index) {
+        const Point handle = geometry.handle(index);
+        const double distance = std::hypot(handle.x - point.x, handle.y - point.y) * (*canvas_).zoom();
+        if (distance < radius) {
+            radius = distance;
+            result = index;
+        }
+    }
+    return result;
+}
+int Editor::hovered_curve_handle(const CurveGeometry& geometry, double radius) const {
+    if (!cursor_client_ || (*canvas_).has_pointer_capture()) {
+        return -1;
+    }
+    const gui_drawing::PointF point = (*canvas_).client_to_bitmap(*cursor_client_);
+    return hit_curve_handle(geometry, {point.x, point.y}, radius);
+}
+int Editor::hovered_path_node() const {
+    if (!edit_path_nodes || document.tool != Tool::Path || !cursor_client_ || (*canvas_).has_pointer_capture()) {
+        return -1;
+    }
+    if (path_swap_segment_ >= 0 && static_cast<std::size_t>(path_swap_segment_) < document.path.segments.size() &&
+        hovered_curve_handle(document.path.segments[path_swap_segment_].geometry, 10) >= 0) {
+        return -1;
+    }
+    const gui_drawing::PointF point = (*canvas_).client_to_bitmap(*cursor_client_);
+    return hit_path_node({point.x, point.y});
 }
 Point Editor::snap_path_point(Point point) const {
     int index = hit_path_node(point);
@@ -869,9 +907,17 @@ void Editor::pointer(const gf::PointerEvent& event) {
             cursor_client_ = client;
         }
         update_cursor_status();
+        if (!panning_ && (curve_handle_ >= 0 || path_node_ >= 0 || path_swap_handle_ >= 0 ||
+            hovered_path_node() >= 0 ||
+            (document.curve.line_set && hovered_curve_handle(document.curve.geometry, 11) >= 0) ||
+            (document.tool == Tool::Path && (edit_path_nodes || path_swap_kind_) && path_swap_segment_ >= 0 &&
+             static_cast<std::size_t>(path_swap_segment_) < document.path.segments.size() &&
+             hovered_curve_handle(document.path.segments[path_swap_segment_].geometry, 10) >= 0))) {
+            canvas().set_cursor(gf::CursorKind::hand);
+        }
         if (document.tool == Tool::Stamp || document.tool == Tool::Pencil || document.tool == Tool::Eraser ||
             document.tool == Tool::Magnifier || document.tool == Tool::Picker ||
-            document.tool == Tool::Brush || document.tool == Tool::Path) {
+            document.tool == Tool::Brush || document.tool == Tool::Path || document.curve.line_set) {
             (*canvas_).invalidate(gf::Dirty::paint);
         }
         if (document.tool == Tool::Path &&
@@ -1072,16 +1118,7 @@ void Editor::begin(Point point, bool secondary) {
         return;
     }
     if (document.curve.line_set) {
-        int nearest_handle = -1;
-        double nearest_distance = 11;
-        for (int index = 0; index < document.curve.geometry.handle_count(); ++index) {
-            const Point handle = document.curve.geometry.handle(index);
-            const double distance = std::hypot(handle.x - point.x, handle.y - point.y) * (*canvas_).zoom();
-            if (distance < nearest_distance) {
-                nearest_distance = distance;
-                nearest_handle = index;
-            }
-        }
+        const int nearest_handle = hit_curve_handle(document.curve.geometry, point, 11);
         if (nearest_handle >= 0) {
             const Point handle = document.curve.geometry.handle(nearest_handle);
             curve_handle_ = nearest_handle;

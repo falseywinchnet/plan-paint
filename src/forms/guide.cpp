@@ -266,16 +266,7 @@ bool Editor::path_swap_pointer(const gf::PointerEvent& event, Point point) {
         if (path_swap_segment_ >= 0 &&
             static_cast<std::size_t>(path_swap_segment_) < document.path.segments.size()) {
             const CurveGeometry& geometry = document.path.segments[path_swap_segment_].geometry;
-            int nearest_handle = -1;
-            double nearest_distance = 10;
-            for (int index = 0; index < geometry.handle_count(); ++index) {
-                const Point handle = geometry.handle(index);
-                const double distance = std::hypot(point.x - handle.x, point.y - handle.y) * canvas().zoom();
-                if (distance < nearest_distance) {
-                    nearest_handle = index;
-                    nearest_distance = distance;
-                }
-            }
+            const int nearest_handle = hit_curve_handle(geometry, point, 10);
             if (nearest_handle >= 0) {
                 path_swap_handle_ = nearest_handle;
                 const Point handle = geometry.handle(nearest_handle);
@@ -366,11 +357,14 @@ void Editor::paint_path_swap(gf::Painter& painter) {
         return;
     }
     const CurveGeometry& geometry = document.path.segments[path_swap_segment_].geometry;
+    const int hovered = hovered_curve_handle(geometry, 10);
     const gf::Color blue = gf::Color::rgba(30, 110, 190), white = gf::Color::rgba(255, 255, 255);
     for (int index = 0; index < geometry.handle_count(); ++index) {
         const gf::Point point = screen(geometry.handle(index));
         if (index == path_swap_handle_) {
             painter.fill_rect({point.x - 9, point.y - 9, 18, 18}, gf::Color::rgba(255, 190, 40));
+        } else if (index == hovered) {
+            painter.fill_rect({point.x - 8, point.y - 8, 16, 16}, gf::Color::rgba(255, 220, 130));
         }
         if (geometry.kind == CurveKind::Bezier) {
             painter.draw_line(screen(index == 0 ? geometry.start : geometry.end), point, blue, 1);
