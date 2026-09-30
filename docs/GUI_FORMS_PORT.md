@@ -134,17 +134,25 @@ building the SDK. Install that SDK into a separate prefix and configure Paint
 with `CMAKE_PREFIX_PATH` pointing to it. Every packaged release includes its
 matching toolkit library.
 
-## Nested dropdown focus correction
+## Pinned toolkit corrections
 
-The pinned 0.2.3 toolkit source archive is augmented by the hash-verified patch
-listed in `third_party/gui-forms.lock.json`. The fetch script validates both
-the archive and patch, applies the patch in a temporary source directory, and
-records it in `SOURCE_PATCHES.json` before publishing the destination. Git is
+The pinned 0.2.3 toolkit source archive is augmented by the hash-verified patches
+listed in `third_party/gui-forms.lock.json`. The fetch script validates
+the archive and each patch, applies them in a temporary source directory, and
+records them in `SOURCE_PATCHES.json` before publishing the destination. Git is
 required for this source-preparation step.
 
-The patch recognizes the registered popup owner when a separate window overlay
+The nested dropdown patch recognizes the registered popup owner when a separate window overlay
 enters a containing focus scope. It fixes dropdowns inside Paint's color and
 settings dialogs while continuing to reject unrelated popup roots. The toolkit
 change is maintained independently as commit
 `f47893b` and includes repeated open/close, modal containment, focus restoration,
 and owner-unavailability regressions.
+
+Two Windows corrections preserve native interaction. MSAA focus and hit-test
+queries return `CHILDID_SELF` when they identify the queried object, preventing
+accessibility clients from descending through an endless chain of self wrappers.
+Alt+F4 reaches the ordinary Windows close request instead of being consumed as
+an application key. The native regression checks that closing can be cancelled
+before a subsequent request closes the window; Paint retains its existing
+unsaved-document confirmation behavior.
