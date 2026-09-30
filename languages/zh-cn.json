@@ -702,5 +702,6 @@
   "Rack 150": "齿条 150",
   "Bar 40": "条形轮 40",
   "Moving and resizing the Spirograph": "移动和缩放旋轮线工具",
-  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "选择“提起齿轮”可移动轮子而不绘画。琥珀色轮廓表示轮子已离开轨道。将轮子放回导轨，再选择“运转”。“缩放”调整整套装置的大小。Escape 取消移动或缩放。"
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "选择“提起齿轮”可移动轮子而不绘画。琥珀色轮廓表示轮子已离开轨道。将轮子放回导轨，再选择“运转”。“缩放”调整整套装置的大小。Escape 取消移动或缩放。",
+  "Edit nodes": "编辑节点"
 }

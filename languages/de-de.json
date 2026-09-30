@@ -702,5 +702,6 @@
   "Rack 150": "Zahnstange 150",
   "Bar 40": "Balken 40",
   "Moving and resizing the Spirograph": "Spirograph verschieben und skalieren",
-  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Wählen Sie Rad heben, um das Rad ohne Zeichnen zu bewegen. Ein bernsteinfarbener Umriss bedeutet, dass es nicht auf der Führung sitzt. Setzen Sie das Rad auf die Führung und wählen Sie Bedienen. Skalierung ändert die Größe der Vorrichtung. Escape bricht das Verschieben oder Skalieren ab."
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Wählen Sie Rad heben, um das Rad ohne Zeichnen zu bewegen. Ein bernsteinfarbener Umriss bedeutet, dass es nicht auf der Führung sitzt. Setzen Sie das Rad auf die Führung und wählen Sie Bedienen. Skalierung ändert die Größe der Vorrichtung. Escape bricht das Verschieben oder Skalieren ab.",
+  "Edit nodes": "Knoten bearbeiten"
 }

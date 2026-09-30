@@ -702,5 +702,6 @@
   "Rack 150": "Crémaillère 150",
   "Bar 40": "Barre 40",
   "Moving and resizing the Spirograph": "Déplacer et redimensionner le spirographe",
-  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Choisissez Lever roue pour déplacer la roue sans dessiner. Un contour ambré indique que la roue est hors du guide. Placez-la sur le guide, puis choisissez Actionner. Échelle redimensionne le dispositif. Échap annule un déplacement ou un redimensionnement."
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Choisissez Lever roue pour déplacer la roue sans dessiner. Un contour ambré indique que la roue est hors du guide. Placez-la sur le guide, puis choisissez Actionner. Échelle redimensionne le dispositif. Échap annule un déplacement ou un redimensionnement.",
+  "Edit nodes": "Modifier les nœuds"
 }

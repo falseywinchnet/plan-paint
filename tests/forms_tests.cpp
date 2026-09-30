@@ -1648,6 +1648,52 @@ void path_node_drag_and_overlap() {
     require(editor.document.path.nodes.empty() && !white(editor.document.image.get(100, 45)),
             "Escape clears nodes and preserves rasterized artwork");
 }
+void explicit_path_node_editing() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.new_image(640, 480);
+    editor.choose_tool(paint::Tool::Path);
+    fixture.click(220, 200);
+    fixture.click(420, 200);
+    editor.execute("fit");
+    editor.settings.rotate_view = true;
+    editor.rotate_view(.3);
+    open_tab(window, "tool-tab");
+    const std::shared_ptr<gf::CheckBox> mode =
+        std::dynamic_pointer_cast<gf::CheckBox>(window.find("edit-path-nodes"));
+    require(mode && (*mode).visible() && (*mode).semantic_descriptor().name == "Edit nodes",
+            "path editing lacks a visible named control");
+    (*mode).perform_click();
+    require(editor.edit_path_nodes, "Edit nodes does not activate");
+    const std::size_t count = editor.document.path.nodes.size();
+    const std::size_t undo = editor.document.undo_history.size();
+    fixture.click(320, 300);
+    require(editor.document.path.nodes.size() == count && editor.document.undo_history.size() == undo,
+            "blank click in Edit nodes adds geometry or history");
+    fixture.drag(220, 200, 230, 240);
+    require(std::abs(editor.document.path.nodes[0].x - 230) < 1e-8 &&
+                std::abs(editor.document.path.nodes[0].y - 240) < 1e-8 &&
+                editor.document.path.nodes.size() == count && editor.document.undo_history.size() == undo + 1,
+            "left-drag edit in rotated view fails to move exactly one node transaction");
+    editor.execute("undo");
+    require(editor.document.path.nodes[0].x == 220 && editor.document.path.nodes[0].y == 200,
+            "node edit undo loses the original position");
+    editor.choose_tool(paint::Tool::Path);
+    require(!editor.edit_path_nodes && !(*mode).checked(), "Continue path leaves editing mode enabled");
+
+    Fixture curve;
+    paint::forms::Editor& curve_editor = *curve.editor;
+    curve_editor.choose_shape(paint::Shape::Bezier);
+    curve.drag(10, 20, 100, 20);
+    curve_editor.document.curve.geometry.first_control = {50, 50};
+    curve_editor.document.curve.geometry.second_control = {56, 50};
+    curve_editor.document.sync_curve();
+    curve.drag(55, 50, 55, 60);
+    require(curve_editor.document.curve.geometry.first_control.y == 50 &&
+                curve_editor.document.curve.geometry.second_control.y == 60,
+            "overlapping curve hit regions select the earlier handle instead of the nearest");
+}
 void click_move_click_shapes() {
     require(!paint::EditorSettings{}.drag_shapes, "click placement is the default");
     const paint::Shape shapes[] = {paint::Shape::Line, paint::Shape::Rectangle, paint::Shape::Star5,
@@ -3760,6 +3806,7 @@ int main() {
         stamp_scrubs_one_undo_gesture();
         path_hover_snap_and_controls();
         path_node_drag_and_overlap();
+        explicit_path_node_editing();
         click_move_click_shapes();
         centered_closed_shapes();
         centered_circle_and_materials();

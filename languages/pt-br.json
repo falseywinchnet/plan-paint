@@ -702,5 +702,6 @@
   "Rack 150": "Cremalheira 150",
   "Bar 40": "Barra 40",
   "Moving and resizing the Spirograph": "Mover e redimensionar o espirógrafo",
-  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Escolha Erguer roda para mover sem desenhar. Um contorno âmbar indica que a roda está fora da guia. Coloque-a na guia e escolha Operar. Escala redimensiona o conjunto. Escape cancela um movimento ou redimensionamento."
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Escolha Erguer roda para mover sem desenhar. Um contorno âmbar indica que a roda está fora da guia. Coloque-a na guia e escolha Operar. Escala redimensiona o conjunto. Escape cancela um movimento ou redimensionamento.",
+  "Edit nodes": "Editar nós"
 }

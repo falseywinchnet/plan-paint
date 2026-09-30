@@ -739,6 +739,7 @@ void Ribbon::add_options() {
         *this, gf::Delegate<std::optional<std::size_t>>::bind<Ribbon, &Ribbon::render_quality_changed>(*this)));
     building_page_ = 8;
     check("continuous-path", tr("Continuous path"), {12, 65, 210, 25});
+    check("edit-path-nodes", tr("Edit nodes"), {244, 65, 210, 25});
     check("outline", tr("Edge"), {12, 94, 90, 25});
     check("fill", tr("Fill"), {116, 94, 100, 25});
     check("transparent-selection", tr("Transparent selection"), {12, 36, 210, 25});
@@ -1044,7 +1045,7 @@ void Ribbon::show_page() {
             if (id == "render-quality") {
                 visible = tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
             }
-            if (id == "continuous-path") {
+            if (id == "continuous-path" || id == "edit-path-nodes") {
                 visible = tool == Tool::Path;
             }
             if (id == "outline" || id == "fill") {
@@ -1846,6 +1847,7 @@ void Ribbon::synchronize() {
                              : id == "alt-carries-body"      ? document.alt_carries_body
                              : id == "smooth-lines"          ? document.ink.smooth
                              : id == "continuous-path"       ? document.continuous_path
+                             : id == "edit-path-nodes"       ? (*editor).edit_path_nodes
                              : id == "outline"               ? document.shape_outline
                                                              : document.shape_fill);
     }

@@ -417,6 +417,10 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     if (document.curve.line_set) {
         for (int index = 0; index < document.curve.geometry.handle_count(); ++index) {
             gf::Point point = screen(document.curve.geometry.handle(index));
+            if (index == curve_handle_) {
+                painter.fill_rect({point.x - 9, point.y - 9, 18, 18},
+                                  interface_color(*this, gf::Color::rgba(255, 190, 40)));
+            }
             if (document.curve.geometry.kind == CurveKind::Bezier) {
                 painter.draw_line(
                     screen(index == 0 ? document.curve.geometry.start : document.curve.geometry.end), point,
@@ -428,6 +432,10 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
     }
     for (std::size_t index = 0; index < document.path.nodes.size(); ++index) {
         gf::Point point = screen(document.path.nodes[index]);
+        if (static_cast<int>(index) == path_node_) {
+            painter.fill_rounded_rect({point.x - 9, point.y - 9, 18, 18}, 9,
+                                      interface_color(*this, gf::Color::rgba(255, 190, 40)));
+        }
         painter.fill_rounded_rect({point.x - 6, point.y - 6, 12, 12}, 6, interface_color(*this, gf::Color::rgba(255, 255, 255)));
         painter.fill_rounded_rect({point.x - 5, point.y - 5, 10, 10}, 5, interface_color(*this, gf::Color::rgba(0, 120, 215)));
     }
@@ -516,7 +524,7 @@ Point Editor::snap_path_point(Point point) const {
     return index < 0 ? point : document.path.nodes[static_cast<std::size_t>(index)];
 }
 bool Editor::path_preview_point(Point& point) const {
-    if (path_swap_kind_ || document.tool != Tool::Path || !document.path.extending || path_node_ >= 0 ||
+    if (edit_path_nodes || path_swap_kind_ || document.tool != Tool::Path || !document.path.extending || path_node_ >= 0 ||
         !cursor_client_) {
         return false;
     }
@@ -774,6 +782,10 @@ void Editor::choose_tool(Tool tool) {
         finish_controls(false);
     }
     document.tool = tool;
+    if (tool == Tool::Path) {
+        edit_path_nodes = false;
+        path_swap_kind_.reset();
+    }
     apply_tool_cursor(canvas(), tool);
     refresh();
 }
@@ -982,11 +994,12 @@ void Editor::pointer(const gf::PointerEvent& event) {
             if (event.button != gf::PointerButton::primary && event.button != gf::PointerButton::secondary) {
                 return;
             }
-            if (event.button == gf::PointerButton::secondary &&
-                (document.tool == Tool::Path || document.tool == Tool::Stamp)) {
+            if ((event.button == gf::PointerButton::secondary &&
+                 (document.tool == Tool::Path || document.tool == Tool::Stamp)) ||
+                (event.button == gf::PointerButton::primary && document.tool == Tool::Path && edit_path_nodes)) {
                 if (document.tool == Tool::Path) {
                     int node =
-                        document.path.extending && document.path.nodes.size() - document.path.start == 1
+                        !edit_path_nodes && document.path.extending && document.path.nodes.size() - document.path.start == 1
                             ? -1
                             : hit_path_node(point);
                     if (node >= 0) {
@@ -997,6 +1010,9 @@ void Editor::pointer(const gf::PointerEvent& event) {
                         dragging_ = true;
                         (*canvas_).set_pointer_capture(true);
                         refresh();
+                        return;
+                    }
+                    if (edit_path_nodes && event.button == gf::PointerButton::primary) {
                         return;
                     }
                     document.end_path_geometry();
@@ -1054,16 +1070,23 @@ void Editor::begin(Point point, bool secondary) {
         return;
     }
     if (document.curve.line_set) {
+        int nearest_handle = -1;
+        double nearest_distance = 11;
         for (int index = 0; index < document.curve.geometry.handle_count(); ++index) {
-            Point handle = document.curve.geometry.handle(index);
-            if (std::hypot(handle.x - point.x, handle.y - point.y) * (*canvas_).zoom() < 11) {
-                curve_handle_ = index;
-                handle_offset_ = {point.x - handle.x, point.y - handle.y};
-                handle_checkpoint_ = false;
-                dragging_ = true;
-                (*canvas_).set_pointer_capture(true);
-                return;
+            const Point handle = document.curve.geometry.handle(index);
+            const double distance = std::hypot(handle.x - point.x, handle.y - point.y) * (*canvas_).zoom();
+            if (distance < nearest_distance) {
+                nearest_distance = distance;
+                nearest_handle = index;
             }
+        }
+        if (nearest_handle >= 0) {
+            const Point handle = document.curve.geometry.handle(nearest_handle);
+            curve_handle_ = nearest_handle;
+            handle_offset_ = {point.x - handle.x, point.y - handle.y};
+            handle_checkpoint_ = false;
+            dragging_ = true;
+            (*canvas_).set_pointer_capture(true);
         }
         return;
     }
@@ -2136,6 +2159,12 @@ void Editor::execute(const std::string& command) {
             document.alt_carries_body = !document.alt_carries_body;
         } else if (command == "continuous-path") {
             document.continuous_path = !document.continuous_path;
+        } else if (command == "edit-path-nodes") {
+            release_gesture();
+            edit_path_nodes = !edit_path_nodes;
+            if (edit_path_nodes) {
+                path_swap_kind_.reset();
+            }
         } else if (command == "transparent-pattern") {
             document.ink.transparent_pattern = !document.ink.transparent_pattern;
         } else if (command == "transparent-selection") {

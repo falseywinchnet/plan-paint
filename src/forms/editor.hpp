@@ -219,6 +219,7 @@ class Editor final : public gui_forms::Control {
     PaintCanvas& canvas();
     Spirograph spiro;
     bool spiro_lift = false;
+    bool edit_path_nodes = false;
     void start_spirograph();
     void resize_spirograph(double scale);
     void spiro_choice(const std::string& id);
