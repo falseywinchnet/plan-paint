@@ -705,5 +705,7 @@
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "「持ち上げ」を選ぶと、描画せずに歯車を移動できます。琥珀色の輪郭はガイドから外れていることを示します。歯車をガイドに戻してから「操作」を選びます。「倍率」で装置のサイズを変更します。Escape で移動やサイズ変更を取り消します。",
   "Edit nodes": "ノードを編集",
   "Eye 60": "アイ 60",
-  "Triangle 54": "三角形 54"
+  "Triangle 54": "三角形 54",
+  "Editing path nodes and curves": "パスのノードと曲線を編集する",
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "パスを選び、「ノードを編集」を有効にすると、マウスの主ボタンで接続点をドラッグできます。既存の曲線部分をクリックすると、四角いハンドルが表示されます。薄い金色の強調表示はドラッグできる箇所を示します。何もない場所をクリックしても追加されません。1回のドラッグは1回の取り消し操作で戻せます。線分の追加に戻るには、「ノードを編集」を無効にするか「パスを続ける」を選びます。"
 }

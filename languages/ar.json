@@ -705,5 +705,7 @@
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "اختر «رفع العجلة» للتحريك دون رسم. يشير الإطار الكهرماني إلى أن العجلة خارج المسار. ضع العجلة على الدليل ثم اختر «تشغيل». يغيّر «المقياس» حجم الجهاز. يلغي Escape التحريك أو تغيير الحجم.",
   "Edit nodes": "تحرير العقد",
   "Eye 60": "عين 60",
-  "Triangle 54": "مثلث 54"
+  "Triangle 54": "مثلث 54",
+  "Editing path nodes and curves": "تحرير نقاط المسار والمنحنيات",
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "اختر المسار، ثم فعّل «تحرير العقد» لسحب نقاط الوصل بزر الفأرة الأساسي. انقر مقطعًا منحنيًا موجودًا لإظهار مقابضه المربعة. يشير التمييز الذهبي الفاتح إلى ما يمكنك سحبه. النقر في مساحة فارغة لا يضيف شيئًا. كل سحب يمثل خطوة تراجع واحدة. أوقف «تحرير العقد» أو اختر «متابعة المسار» لإضافة مقاطع من جديد."
 }

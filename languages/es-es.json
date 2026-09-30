@@ -705,5 +705,7 @@
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Elija Alzar rueda para mover sin dibujar. Un contorno ámbar indica que la rueda está fuera de la guía. Colóquela en la guía y elija Accionar. Escala cambia el tamaño del conjunto. Escape cancela el movimiento o el cambio de tamaño.",
   "Edit nodes": "Editar nodos",
   "Eye 60": "Ojo 60",
-  "Triangle 54": "Triángulo 54"
+  "Triangle 54": "Triángulo 54",
+  "Editing path nodes and curves": "Editar nodos y curvas de un trazado",
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "Elige Trazado y activa «Editar nodos» para arrastrar las uniones con el botón principal del ratón. Haz clic en un segmento curvo existente para mostrar sus tiradores cuadrados. Un resaltado dorado claro indica qué puedes arrastrar. Los clics en zonas vacías no añaden nada. Cada arrastre es un paso de Deshacer. Desactiva «Editar nodos» o elige «Continuar trazado» para volver a añadir segmentos."
 }

@@ -705,5 +705,7 @@
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Pilih Angkat roda untuk memindahkan tanpa menggambar. Garis tepi kuning jingga menandakan roda berada di luar lintasan. Letakkan roda pada pemandu, lalu pilih Jalankan. Skala mengubah ukuran perangkat. Escape membatalkan pemindahan atau perubahan ukuran.",
   "Edit nodes": "Edit simpul",
   "Eye 60": "Mata 60",
-  "Triangle 54": "Segitiga 54"
+  "Triangle 54": "Segitiga 54",
+  "Editing path nodes and curves": "Mengedit simpul dan kurva jalur",
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "Pilih Jalur, lalu aktifkan «Edit simpul» untuk menyeret simpul dengan tombol utama tetikus. Klik segmen lengkung yang sudah ada untuk menampilkan pegangannya yang berbentuk persegi. Sorotan emas muda menunjukkan bagian yang dapat diseret. Klik pada area kosong tidak menambahkan apa pun. Setiap seretan menjadi satu langkah Urungkan. Nonaktifkan «Edit simpul» atau pilih «Lanjutkan jalur» untuk menambahkan segmen lagi."
 }

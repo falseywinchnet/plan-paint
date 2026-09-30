@@ -705,5 +705,7 @@
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "בחרו „הרמת גלגל” כדי להזיז ללא ציור. קו מתאר בצבע ענבר מציין שהגלגל מחוץ למסילה. הניחו את הגלגל על המוביל ואז בחרו „הפעלה”. „קנה מידה” משנה את גודל המתקן. Escape מבטל הזזה או שינוי גודל.",
   "Edit nodes": "עריכת צמתים",
   "Eye 60": "עין 60",
-  "Triangle 54": "משולש 54"
+  "Triangle 54": "משולש 54",
+  "Editing path nodes and curves": "עריכת צומתי נתיב ועקומות",
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "בחרו «מסלול» והפעילו את «עריכת צמתים» כדי לגרור צמתים בלחצן העכבר הראשי. לחצו על קטע מעוקל קיים כדי להציג את הידיות המרובעות שלו. הדגשה זהובה בהירה מראה מה ניתן לגרור. לחיצה בשטח ריק אינה מוסיפה דבר. כל גרירה היא שלב ביטול אחד. כבו את «עריכת צמתים» או בחרו «המשך מסלול» כדי להוסיף שוב קטעים."
 }

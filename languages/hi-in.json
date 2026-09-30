@@ -705,5 +705,7 @@
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "बिना चित्र बनाए खिसकाने के लिए पहिया उठाएँ चुनें। अंबर रंग की सीमा बताती है कि पहिया पटरी से बाहर है। पहिए को गाइड पर रखें, फिर चलाएँ चुनें। पैमाना पूरे उपकरण का आकार बदलता है। Escape खिसकाना या आकार बदलना रद्द करता है।",
   "Edit nodes": "नोड संपादित करें",
   "Eye 60": "आँख 60",
-  "Triangle 54": "त्रिभुज 54"
+  "Triangle 54": "त्रिभुज 54",
+  "Editing path nodes and curves": "पथ के नोड और वक्र संपादित करना",
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "पथ चुनें, फिर «नोड संपादित करें» चालू करके माउस के मुख्य बटन से जोड़ खींचें। किसी मौजूदा वक्र खंड पर क्लिक करने से उसके चौकोर हैंडल दिखेंगे। हल्का सुनहरा रंग बताता है कि क्या खींचा जा सकता है। खाली जगह पर क्लिक करने से कुछ नहीं जुड़ता। हर खिंचाव एक पूर्ववत चरण है। फिर से खंड जोड़ने के लिए «नोड संपादित करें» बंद करें या «पथ जारी रखें» चुनें।"
 }

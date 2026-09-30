@@ -705,5 +705,7 @@
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Choose Lift wheel to move wheel without drawing. Amber outline mean say wheel no dey for track. Put wheel for guide, then choose Operate. Scale dey change the whole tool size. Escape dey cancel move or size change.",
   "Edit nodes": "Edit nodes",
   "Eye 60": "Eye 60",
-  "Triangle 54": "Triangle 54"
+  "Triangle 54": "Triangle 54",
+  "Editing path nodes and curves": "Edit path nodes and curves",
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "Choose Path, then turn on «Edit nodes» to drag junctions with the main mouse button. Click one curved segment wey dey already to show im square handles. Light-gold highlight go show wetin you fit drag. Click for empty space no go add anything. Each drag na one Undo step. Turn off «Edit nodes» or choose «Continue path» to start to add segments again."
 }

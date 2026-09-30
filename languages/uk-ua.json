@@ -705,5 +705,7 @@
   "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Виберіть «Підняти», щоб переміщувати колесо без малювання. Бурштиновий контур означає, що колесо знято з напрямної. Установіть його на напрямну та виберіть «Запустити». «Масштаб» змінює розмір пристрою. Escape скасовує переміщення або зміну розміру.",
   "Edit nodes": "Редагувати вузли",
   "Eye 60": "Око 60",
-  "Triangle 54": "Трикутник 54"
+  "Triangle 54": "Трикутник 54",
+  "Editing path nodes and curves": "Редагування вузлів і кривих контуру",
+  "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. Click an existing curved segment to reveal its square handles. A pale-gold highlight shows what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes or choose Continue path to add segments again.": "Виберіть «Шлях» і ввімкніть «Редагувати вузли», щоб перетягувати вузли основною кнопкою миші. Клацніть наявний вигнутий сегмент, щоб показати його квадратні маркери. Світло-золоте підсвічування позначає елемент, який можна перетягнути. Клацання на порожньому місці нічого не додають. Кожне перетягування — один крок скасування. Вимкніть «Редагувати вузли» або виберіть «Продовжити шлях», щоб знову додавати сегменти."
 }

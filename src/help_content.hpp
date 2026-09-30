@@ -125,6 +125,11 @@ inline constexpr HelpTopic help_topics[] = {
      "click an active segment between blue junctions, and drag its controls. Right-click to return to "
      "ordinary Path editing.\n\nPath > Freehand shape lets you draw a continuous outline while holding the "
      "mouse button. Release to close and paint it with the current Edge, Fill, Primary and Alt materials."},
+    {"Editing path nodes and curves",
+     "Choose Path, then enable Edit nodes to drag junctions with the primary mouse button. "
+     "Click an existing curved segment to reveal its square handles. A pale-gold highlight shows "
+     "what you can drag. Blank clicks add nothing. Each drag is one Undo step. Turn off Edit nodes "
+     "or choose Continue path to add segments again."},
     {"6. Select, move, copy and paste",
      "Select draws a rectangle around part of the picture. The little arrow beneath Select also offers "
      "Free-form selection: draw a lasso around an object. A canvas selection stays active when you change "
