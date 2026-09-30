@@ -2097,6 +2097,16 @@ void spirograph_lift_controls(int guide = 0, int insert = paint::spiro_default_i
     editor.spiro_choice("spiro-operate");
     require(editor.spiro_lift && editor.spiro.advance(editor.spiro.angle + .5).empty(),
             "a detached wheel can operate or deposit ink");
+    if (guide == 0) {
+        for (int side = 0; side < 2; ++side) {
+            routed_button(window, "spiro-outside");
+            require(editor.spiro.detached &&
+                        std::abs(editor.spiro.wheel_rotation(editor.spiro.angle) - rotation) < 1e-10 &&
+                        std::abs(editor.spiro.detached_center.x - support.x) < 1e-8 &&
+                        std::abs(editor.spiro.detached_center.y - support.y) < 1e-8,
+                    "changing the guide contact side rotates or reseats a lifted wheel");
+        }
+    }
     fixture.pointer(gf::PointerAction::down, support.x, support.y);
     fixture.pointer(gf::PointerAction::move, support.x + 20, support.y + 20);
     window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});

@@ -317,12 +317,19 @@ void Editor::spiro_choice(const std::string& id) {
     } else if (id == "spiro-remove") {
         spiro.remove_insert();
     } else if (id == "spiro-outside") {
+        const double rotation = spiro.wheel_rotation(spiro.angle);
         spiro.outside = !spiro.outside;
         if (!spiro.compatible(spiro.guide, spiro.insert)) {
             spiro.outside = true;
         }
         spiro.angle = 0;
         spiro.rolling_offset = 0;
+        if (spiro.detached) {
+            const double normal = spiro.guide_normal(0) - rotation;
+            const double sign = spiro.exterior() ? -1 : 1;
+            spiro.rolling_offset = spiro_inserts()[spiro.insert].profile.arc(normal) -
+                sign * spiro.guide_radius() / spiro.wheel_radius() * spiro.guide_arc(0);
+        }
     } else if (id == "spiro-deselect") {
         spiro.selected_peg = -1;
     } else if (id == "spiro-center") {
