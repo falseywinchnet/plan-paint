@@ -2162,6 +2162,7 @@ void Editor::execute(const std::string& command) {
         } else if (command == "edit-path-nodes") {
             release_gesture();
             edit_path_nodes = !edit_path_nodes;
+            path_swap_segment_ = path_swap_handle_ = -1;
             if (edit_path_nodes) {
                 path_swap_kind_.reset();
             }

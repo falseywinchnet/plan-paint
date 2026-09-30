@@ -1694,6 +1694,59 @@ void explicit_path_node_editing() {
                 curve_editor.document.curve.geometry.second_control.y == 60,
             "overlapping curve hit regions select the earlier handle instead of the nearest");
 }
+void direct_path_curve_editing() {
+    for (paint::CurveKind kind : {paint::CurveKind::Bezier, paint::CurveKind::Arc}) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.document.new_image(640, 480);
+        editor.choose_tool(paint::Tool::Path);
+        fixture.click(200, 200);
+        fixture.click(400, 200);
+        editor.execute("finish-path");
+        const int index = editor.document.swap_path_segment({0, 1}, kind);
+        require(index >= 0, "curve editing fixture cannot prepare a retained segment");
+        paint::CurveGeometry& initial = editor.document.path.segments[index].geometry;
+        initial.first_control = {250, 150};
+        initial.second_control = {350, 250};
+        initial.bulge = 40;
+        editor.document.sync_path();
+        editor.execute("fit");
+        editor.settings.rotate_view = true;
+        editor.rotate_view(.25);
+        editor.execute("edit-path-nodes");
+        const paint::CurveGeometry original = editor.document.path.segments[index].geometry;
+        const std::vector<paint::Color> pixels = editor.document.image.pixels;
+        const std::size_t undo = editor.document.undo_history.size();
+        const paint::Point middle = original.at(.5);
+        fixture.click(middle.x, middle.y);
+        require(editor.document.path.segments[index].geometry.kind == kind &&
+                    editor.document.undo_history.size() == undo &&
+                    std::memcmp(pixels.data(), editor.document.image.pixels.data(), pixels.size() * sizeof(paint::Color)) == 0,
+                "selecting a retained curve changes its type, pixels or undo history");
+        const paint::Point handle = original.handle(0);
+        const double offset = 3 / editor.canvas().zoom();
+        fixture.click(handle.x + offset, handle.y);
+        require(editor.document.undo_history.size() == undo &&
+                    std::hypot(editor.document.path.segments[index].geometry.handle(0).x - handle.x,
+                               editor.document.path.segments[index].geometry.handle(0).y - handle.y) < 1e-8,
+                "clicking a handle without dragging changes geometry or adds undo");
+        fixture.drag(handle.x + offset, handle.y, handle.x + offset, handle.y + 20);
+        paint::CurveGeometry expected = original;
+        expected.move_handle(0, {handle.x, handle.y + 20});
+        const paint::Point actual = editor.document.path.segments[index].geometry.handle(0);
+        require(std::hypot(actual.x - expected.handle(0).x, actual.y - expected.handle(0).y) < 1e-8 &&
+                    editor.document.undo_history.size() == undo + 1,
+                "direct curve editing loses grab offset or creates more than one undo step");
+        editor.execute("undo");
+        require(editor.document.path.segments[index].geometry.kind == kind &&
+                    std::memcmp(pixels.data(), editor.document.image.pixels.data(), pixels.size() * sizeof(paint::Color)) == 0,
+                "undo does not restore the retained curve and its pixels");
+        fixture.drag(200, 200, 210, 210);
+        require(std::abs(editor.document.path.nodes[0].x - 210) < 1e-8 &&
+                    std::abs(editor.document.path.nodes[0].y - 210) < 1e-8,
+                "curve selection prevents subsequent node editing");
+    }
+}
 void click_move_click_shapes() {
     require(!paint::EditorSettings{}.drag_shapes, "click placement is the default");
     const paint::Shape shapes[] = {paint::Shape::Line, paint::Shape::Rectangle, paint::Shape::Star5,
@@ -3807,6 +3860,7 @@ int main() {
         path_hover_snap_and_controls();
         path_node_drag_and_overlap();
         explicit_path_node_editing();
+        direct_path_curve_editing();
         click_move_click_shapes();
         centered_closed_shapes();
         centered_circle_and_materials();

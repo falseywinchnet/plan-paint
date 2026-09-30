@@ -44,6 +44,8 @@ An extending Path can snap back to any retained node. The preview shows the conn
 
 Enable **Edit nodes** in the Path controls to move retained junctions with the primary mouse button. Clicking empty paper in this mode does not add geometry. The moving node has a gold highlight, and each drag remains one Undo step. Disable Edit nodes or choose **Continue path** to resume adding segments. The existing right-drag shortcut remains available. Curve controls use square handles; the handle being moved is highlighted, and overlapping hit regions select the nearest handle.
 
+In Edit nodes, click an existing curved segment to reveal its handles. Selecting it preserves its Bézier or arc type and does not draw or add an Undo step. Drag a square handle to reshape the curve; clicking a handle without moving it leaves the curve unchanged. Selecting a junction returns to node editing. **Swap segment** remains the command for converting a straight segment or changing its curve type.
+
 In the Path arrow menu, choose **Swap segment**, then Bézier or Arc. Click an existing segment between active blue endpoints. Drag the controls to reshape it, then right-click to return to ordinary Path editing. The endpoints remain part of the path; Undo and Redo retain the active geometry.
 
 ## Atlas painting
