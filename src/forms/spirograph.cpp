@@ -108,6 +108,13 @@ void paint_spiro_part(gf::Painter& painter, gf::Rect bounds, int kind, int index
         return;
     }
     const SpiroProfile& profile = kind == 0 ? spiro_guides()[index].profile : spiro_inserts()[index].profile;
+    if (kind == 0 && spiro_guides()[index].outside_teeth) {
+        const double inner = r * spiro_guides()[index].teeth / spiro_guides()[index].outside_teeth;
+        circle(painter, c, r, gf::Color::rgba(60, 215, 70, 120), r - inner);
+        circle(painter, c, inner, gf::Color::rgba(20, 130, 40), 1);
+        circle(painter, c, r, gf::Color::rgba(20, 130, 40), 1);
+        return;
+    }
     if (kind == 0 && spiro_guides()[index].rack) {
         painter.draw_line({c.x - r * 1.4, c.y}, {c.x + r * 1.4, c.y}, gf::Color::rgba(60, 215, 70, 200), 7);
         for (int i = -6; i <= 6; ++i) {
@@ -143,6 +150,23 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
             painter.draw_line(screen({p.x, p.y - 3 * spiro.scale}), screen({p.x, p.y + 3 * spiro.scale}),
                               gf::Color::rgba(25, 140, 40, 230), std::max(1.0, spiro.scale * zoom));
         }
+    } else if (frame.outside_teeth) {
+        const double inner = frame.teeth * spiro.scale * zoom, outer = spiro.guide_body_radius() * zoom;
+        circle(painter, center, outer, gf::Color::rgba(55, 235, 65, 80), outer - inner);
+        for (int side = 0; side < 2; ++side) {
+            const int teeth = side ? frame.outside_teeth : frame.teeth;
+            const double track = teeth * spiro.scale * zoom;
+            const bool active = (side != 0) == spiro.outside;
+            const gf::Color color = active ? gf::Color::rgba(20, 135, 40, 235)
+                                           : gf::Color::rgba(40, 175, 55, 145);
+            circle(painter, center, track, color, active ? 1.8 : 1);
+            for (int i = 0; i < teeth; ++i) {
+                const double angle = tau * i / teeth + canvas().view_angle;
+                painter.draw_line(polar(center, track - 1.5 * spiro.scale * zoom, angle),
+                                  polar(center, track + 1.5 * spiro.scale * zoom, angle), color,
+                                  std::max(1.0, spiro.scale * zoom));
+            }
+        }
     } else {
         profile_shape(painter, center, radius + rim * .65, frame.profile, canvas().view_angle,
                       gf::Color::rgba(0, 0, 0, 0), gf::Color::rgba(55, 235, 65, 105), rim);
@@ -167,7 +191,7 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
     const gf::Point resize = screen(spiro.resize_position());
     painter.fill_rect({resize.x - 7, resize.y - 7, 14, 14}, gf::Color::rgba(255, 212, 80, 250));
     painter.stroke_rect({resize.x - 7, resize.y - 7, 14, 14}, gf::Color::rgba(80, 65, 20), 1.3);
-    painter.draw_line({resize.x - 4, resize.y + 4}, {resize.x + 4, resize.y - 4},
+    painter.draw_line({resize.x - 4, resize.y - 4}, {resize.x + 4, resize.y + 4},
                       gf::Color::rgba(80, 65, 20), 1.5);
     if (spiro.inserted) {
         const gf::Point wheel = screen(spiro.wheel_center(spiro.angle));
@@ -425,7 +449,12 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
         profile_clearance(point, wheel, spiro.wheel_radius(), spiro_inserts()[spiro.insert].profile,
                           spiro.wheel_rotation(spiro.angle)) < 3 * spiro.scale;
     const double margin = 10 * spiro.scale + 4 / canvas().zoom();
-    const bool on_ring = spiro.rack()
+    const SpiroGuide& frame = spiro_guides()[spiro.guide];
+    const double center_distance = std::hypot(point.x - spiro.center.x, point.y - spiro.center.y);
+    const bool on_ring = frame.outside_teeth
+                             ? center_distance >= frame.teeth * spiro.scale - margin &&
+                                   center_distance <= spiro.guide_body_radius() + margin
+                         : spiro.rack()
                              ? std::abs(point.y - spiro.center.y) < margin &&
                                    std::abs(point.x - spiro.center.x) < 1.5 * spiro.guide_radius() + margin
                              : std::abs(profile_clearance(point, spiro.center, spiro.guide_radius(),

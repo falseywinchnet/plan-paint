@@ -24,6 +24,7 @@ struct SpiroGuide {
     int teeth;
     SpiroProfile profile{};
     bool rack = false;
+    int outside_teeth = 0;
 };
 const std::vector<SpiroGuide>& spiro_guides();
 const std::vector<SpiroInsert>& spiro_inserts();
@@ -55,6 +56,8 @@ struct Spirograph {
     // Resize only the apparatus; phase, pen widths and loaded ink stay unchanged.
     void set_scale(double value);
     double guide_radius() const;
+    int guide_teeth() const;
+    double guide_body_radius() const;
     double wheel_radius() const;
     Point guide_point(double normal) const;
     Point close_position() const;

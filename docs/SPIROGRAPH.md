@@ -47,9 +47,13 @@ Undo step. Canvas zoom remains independent of apparatus scale.
 
 ## Component catalog
 
-The catalog includes 16 guides and 23 inserts:
+The catalog includes 17 guides and 23 inserts:
 
-- Rings: 96, 120, 144, 180, 210, and 240 teeth.
+- Paired rings: 144/96 and 150/105, named with outer/inner tooth counts. These
+  reproduce the Deluxe kit's two circular pitch-track ratios. Both toothed
+  edges are visible; the active edge is darker. Switching **Roll outside**
+  changes the contact track without resizing the physical ring.
+- Additional rings: 120, 144, 180, 210, and 240 teeth.
 - Shaped guides: oval, long oval, rounded triangle, square, pentagon, hexagon,
   egg, and shield.
 - Racks: standard and long straight supports with travel limits.
@@ -80,6 +84,10 @@ to their initial pose after `insert_teeth / gcd(guide_teeth, insert_teeth)`
 guide circuits. The tooth marks visualize the pitch geometry; there is no
 rigid-body collision simulation or accumulating integration slip. These are
 original smooth pitch profiles, not reproductions of commercial molded parts.
+The paired circular ring counts follow the
+[Deluxe guide](https://www.worldbrands.es/wp-content/uploads/80977_SpirographDeluxeGuide_V2_esp_ONLINE_O_LOW_compressed.pdf).
+The insert socket layouts and shaped profiles remain distinct from the kit;
+the catalog is not yet a complete Deluxe replica.
 
 Pen subdivision is bounded to half an image pixel by a curvature-dependent
 speed bound. Per-peg stroke state preserves continuous deposition across mouse

@@ -50,6 +50,46 @@ void apparatus_resize() {
     apparatus.set_scale(1000);
     require(apparatus.scale == 64, "apparatus scale exceeds its drawing limit");
 }
+void paired_ring_tracks() {
+    paint::Spirograph apparatus;
+    apparatus.open(640, 480);
+    int checked = 0;
+    for (int index = 0; index < static_cast<int>(paint::spiro_guides().size()); ++index) {
+        const paint::SpiroGuide& ring = paint::spiro_guides()[index];
+        if (!ring.outside_teeth) {
+            continue;
+        }
+        ++checked;
+        require((ring.teeth == 96 && ring.outside_teeth == 144) ||
+                    (ring.teeth == 105 && ring.outside_teeth == 150),
+                "paired ring has an unverified Deluxe tooth count");
+        apparatus.guide = index;
+        apparatus.set_scale(1);
+        apparatus.outside = false;
+        const paint::Point handle = apparatus.resize_position();
+        const paint::Point close = apparatus.close_position();
+        require(apparatus.guide_teeth() == ring.teeth && apparatus.guide_radius() == ring.teeth,
+                "inside rolling uses the wrong track");
+        apparatus.outside = true;
+        require(apparatus.guide_teeth() == ring.outside_teeth &&
+                    apparatus.guide_radius() == ring.outside_teeth &&
+                    apparatus.guide_body_radius() == ring.outside_teeth &&
+                    distance(handle, apparatus.resize_position()) == 0 &&
+                    distance(close, apparatus.close_position()) == 0,
+                "outside rolling changes the physical ring or uses its inner teeth");
+        const double phase = .73, radius = apparatus.wheel_radius();
+        require(std::abs(distance(apparatus.center, apparatus.wheel_center(phase)) -
+                         (ring.outside_teeth + radius)) < 1e-10,
+                "wheel is not tangent to the outer ring track");
+        require(std::abs(apparatus.wheel_rotation(phase) - std::numbers::pi -
+                         phase * (1 + ring.outside_teeth / radius)) < 1e-10,
+                "outside rolling uses the wrong tooth ratio");
+        const double circuit = 2 * std::numbers::pi * apparatus.closing_turns();
+        require(distance(apparatus.hole(0, 0), apparatus.hole(0, circuit)) < 1e-8,
+                "outside ring track fails to close");
+    }
+    require(checked == 2, "both Deluxe ring tracks must be represented");
+}
 void extended_geometry() {
     paint::Spirograph s;
     s.open(640, 480);
@@ -211,6 +251,7 @@ void draw_gallery(const char* path) {
 int main(int argc, char** argv) {
     try {
         apparatus_resize();
+        paired_ring_tracks();
         extended_geometry();
         gel_and_peg_media();
         paint::Spirograph s;

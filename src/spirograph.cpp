@@ -100,7 +100,7 @@ Point SpiroProfile::point(double normal) const {
     return {h * std::cos(normal) - d * std::sin(normal), h * std::sin(normal) + d * std::cos(normal)};
 }
 const std::vector<SpiroGuide>& spiro_guides() {
-    static const std::vector<SpiroGuide> parts{{"Ring 96", 96},
+    static const std::vector<SpiroGuide> parts{{"Ring 144/96", 96, {}, false, 144},
                                                {"Ring 120", 120},
                                                {"Ring 144", 144},
                                                {"Ring 180", 180},
@@ -115,7 +115,8 @@ const std::vector<SpiroGuide>& spiro_guides() {
                                                {"Egg 288", 288, {.10, .035}},
                                                {"Shield 300", 300, {-.09, .035, .012}},
                                                {"Rack 96", 96, {}, true},
-                                               {"Long rack 144", 144, {}, true}};
+                                               {"Long rack 144", 144, {}, true},
+                                               {"Ring 150/105", 105, {}, false, 150}};
     return parts;
 }
 const std::vector<SpiroInsert>& spiro_inserts() {
@@ -149,7 +150,7 @@ void Spirograph::open(int width, int height) {
     *this = {};
     active = true;
     center = {width * .5, height * .5};
-    scale = std::clamp(std::min(width, height) * .38 / 96.0, .12, 3.0);
+    scale = std::clamp(std::min(width, height) * .38 / 144.0, .12, 3.0);
 }
 void Spirograph::set_insert(int index) {
     if (index < 0 || index >= static_cast<int>(spiro_inserts().size())) {
@@ -176,12 +177,21 @@ void Spirograph::set_guide(int index) {
     if (!compatible(index, insert)) {
         return;
     }
-    set_scale(scale * static_cast<double>(spiro_guides()[guide].teeth) / spiro_guides()[index].teeth);
+    const SpiroGuide& next = spiro_guides()[index];
+    set_scale(guide_body_radius() / (next.outside_teeth ? next.outside_teeth : next.teeth));
     guide = index;
     angle = 0;
 }
 double Spirograph::guide_radius() const {
-    return spiro_guides().at(guide).teeth * scale;
+    return guide_teeth() * scale;
+}
+int Spirograph::guide_teeth() const {
+    const SpiroGuide& frame = spiro_guides().at(guide);
+    return outside && frame.outside_teeth ? frame.outside_teeth : frame.teeth;
+}
+double Spirograph::guide_body_radius() const {
+    const SpiroGuide& frame = spiro_guides().at(guide);
+    return (frame.outside_teeth ? frame.outside_teeth : frame.teeth) * scale;
 }
 void Spirograph::set_scale(double value) {
     if (!std::isfinite(value) || value <= 0) {
@@ -216,11 +226,19 @@ Point Spirograph::guide_point(double normal) const {
     return {center.x + guide_radius() * p.x, center.y + guide_radius() * p.y};
 }
 Point Spirograph::close_position() const {
-    const Point p = guide_point(rack() ? -1.5 : -std::numbers::pi / 4);
+    Point p = guide_point(rack() ? -1.5 : -std::numbers::pi / 4);
+    if (spiro_guides()[guide].outside_teeth) {
+        p = {center.x + guide_body_radius() / std::sqrt(2.0),
+             center.y - guide_body_radius() / std::sqrt(2.0)};
+    }
     return {p.x + (rack() ? 0 : 9 * scale), p.y - 12 * scale};
 }
 Point Spirograph::resize_position() const {
-    const Point point = guide_point(rack() ? 1.5 : std::numbers::pi / 4);
+    Point point = guide_point(rack() ? 1.5 : std::numbers::pi / 4);
+    if (spiro_guides()[guide].outside_teeth) {
+        point = {center.x + guide_body_radius() / std::sqrt(2.0),
+                 center.y + guide_body_radius() / std::sqrt(2.0)};
+    }
     return {point.x + 9 * scale, point.y + 12 * scale};
 }
 double Spirograph::wheel_rotation(double phase) const {
@@ -332,7 +350,7 @@ int Spirograph::closing_turns() const {
     if (rack()) {
         return 0;
     }
-    const int outer = spiro_guides().at(guide).teeth, inner = spiro_inserts().at(insert).teeth;
+    const int outer = guide_teeth(), inner = spiro_inserts().at(insert).teeth;
     return inner / std::gcd(outer, inner);
 }
 bool Spirograph::loaded() const {
