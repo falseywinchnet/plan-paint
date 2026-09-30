@@ -268,7 +268,7 @@ static bool same_material(const Ink& left, const Ink& right) {
            left.transparent_pattern == right.transparent_pattern && left.noise == right.noise &&
            left.grain_scale == right.grain_scale && left.paper_roughness == right.paper_roughness &&
            left.pigment_load == right.pigment_load && left.material_angle == right.material_angle &&
-           left.smooth == right.smooth && left.size == right.size &&
+           left.smooth == right.smooth && left.supersample == right.supersample && left.size == right.size &&
            static_cast<bool>(left.alternate) == static_cast<bool>(right.alternate) &&
            (!left.alternate || same_material(*left.alternate, *right.alternate));
 }
@@ -597,17 +597,20 @@ std::shared_ptr<gf::NumericUpDown> Ribbon::number(const std::string& id, const s
                                                   double value, int decimals) {
     std::shared_ptr<gf::Label> label = gf::make_control<gf::Label>(gf::StableId(id + "-label"), text);
     (*label).set_font({gf::FontRole::control, 14, 400, false});
-    option(label, {bounds.x, bounds.y, 113, bounds.height});
+    const double label_width = id == "spiro-scale" ? 70 : 113;
+    option(label, {bounds.x, bounds.y, label_width, bounds.height});
     std::shared_ptr<gf::NumericUpDown> control = gf::make_control<gf::NumericUpDown>(gf::StableId(id));
     (*control).set_range(minimum, maximum);
     (*control).set_decimal_places(static_cast<std::uint8_t>(decimals));
     (*control).set_increment(decimals ? 0.05 : 1);
     (*control).set_value(value);
     (*control).set_accessible_name(text);
-    option(control, {bounds.x + 113, bounds.y, bounds.width - 113, bounds.height});
+    option(control, {bounds.x + label_width, bounds.y, bounds.width - label_width, bounds.height});
     subscriptions_.push_back((*control).value_changed().subscribe(
         *this, id.starts_with("gradient-")
                    ? gf::Delegate<double>::bind<Ribbon, &Ribbon::gradient_number_changed>(*this)
+               : id == "spiro-scale"
+                   ? gf::Delegate<double>::bind<Ribbon, &Ribbon::spiro_scale_changed>(*this)
                    : gf::Delegate<double>::bind<Ribbon, &Ribbon::options_changed>(*this)));
     return control;
 }
@@ -642,29 +645,37 @@ void Ribbon::spiro_button(const std::string& id, const std::string& text, int ki
 void Ribbon::add_options() {
     building_page_ = 128;
     for (int i = 0; i < 2; ++i) {
-        spiro_button("spiro-guide-" + std::to_string(i), tr(spiro_guides()[i].name), 0, i,
-                     {10 + i * 115.0, 35, 105, 76});
+        const int guide = i == 0 ? 0 : 16;
+        spiro_button("spiro-guide-" + std::to_string(guide), tr(spiro_guides()[guide].name), 0, guide,
+                     {10 + i * 95.0, 35, 87, 76});
     }
+    const int tray_inserts[] = {1, spiro_default_insert, 2};
     for (int i = 0; i < 3; ++i) {
-        spiro_button("spiro-insert-" + std::to_string(i), tr(spiro_inserts()[i].name), 1, i,
-                     {270 + i * 108.0, 35, 100, 76});
+        const int insert = tray_inserts[i];
+        spiro_button("spiro-insert-" + std::to_string(insert), tr(spiro_inserts()[insert].name), 1, insert,
+                     {220 + i * 88.0, 35, 80, 76});
     }
-    button("spiro-guides-menu", tr("More"), -1, {10, 111, 220, 22}, false, true);
-    button("spiro-inserts-menu", tr("More"), -1, {270, 111, 316, 22}, false, true);
+    button("spiro-guides-menu", tr("More"), -1, {10, 111, 182, 22}, false, true);
+    button("spiro-inserts-menu", tr("More"), -1, {220, 111, 256, 22}, false, true);
     for (int i = 0; i < 3; ++i) {
         spiro_button("spiro-peg-" + std::to_string(1 << i),
                      i == 0   ? tr("Fine peg")
                      : i == 1 ? tr("Medium peg")
                               : tr("Bold peg"),
-                     2, i, {625 + i * 95.0, 35, 87, 76});
+                     2, i, {500 + i * 80.0, 35, 72, 76});
     }
-    button("spiro-fill", tr("Fill pegs"), 8, {932, 35, 155, 31});
-    button("spiro-operate", tr("Operate"), -1, {1095, 35, 173, 31});
-    button("spiro-remove", tr("Remove insert"), -1, {932, 76, 155, 31});
-    button("spiro-center", tr("Center guide"), -1, {1095, 76, 173, 31});
-    button("spiro-brushes-menu", tr("Peg medium"), -1, {625, 111, 277, 22}, false, true);
-    button("spiro-outside", tr("Roll outside"), -1, {932, 111, 155, 22});
-    button("spiro-deselect", tr("Deselect peg"), -1, {1095, 111, 173, 22});
+    button("spiro-fill", tr("Fill pegs"), 8, {755, 35, 140, 31});
+    button("spiro-operate", tr("Operate"), -1, {902, 35, 126, 31});
+    button("spiro-remove", tr("Remove insert"), -1, {755, 76, 140, 31});
+    button("spiro-center", tr("Center guide"), -1, {902, 76, 126, 31});
+    button("spiro-brushes-menu", tr("Peg medium"), -1, {500, 111, 232, 22}, false, true);
+    button("spiro-outside", tr("Roll outside"), -1, {755, 111, 140, 22});
+    button("spiro-deselect", tr("Deselect peg"), -1, {902, 111, 126, 22});
+    spiro_scale_ = number("spiro-scale", tr("Scale"), {1040, 36, 140, 28}, .05, 64, 1.35, 2);
+    button("spiro-lift", tr("Lift wheel"), -1, {1186, 36, 82, 28});
+    button("spiro-holes-menu", tr("Choose hole"), -1, {1040, 76, 228, 31}, false, true);
+    button("spiro-load-primary", tr("Load Primary"), -1, {1040, 111, 111, 22});
+    button("spiro-load-alt", tr("Load Alt"), -1, {1157, 111, 111, 22});
     building_page_ = 2;
     button("zoom-in", tr("Zoom in"), 12, {8, 35, 65, 81}, true);
     button("zoom-out", tr("Zoom out"), 12, {76, 35, 65, 81}, true);
@@ -719,8 +730,16 @@ void Ribbon::add_options() {
     check("soft-eraser", tr("Soft eraser"), {12, 65, 210, 25});
     building_page_ = 12;
     check("smooth-lines", tr("Smooth lines"), {244, 36, 210, 25});
+    render_quality_ = gf::make_control<gf::ComboBox>(gf::StableId("render-quality"));
+    (*render_quality_).set_items({tr("Crisp"), tr("Smooth"), tr("4× Smooth")});
+    (*render_quality_).set_selected_index(1);
+    (*render_quality_).set_accessible_name(tr("Line and shape rendering"));
+    option(render_quality_, {244, 36, 210, 28});
+    subscriptions_.push_back((*render_quality_).selected_index_changed().subscribe(
+        *this, gf::Delegate<std::optional<std::size_t>>::bind<Ribbon, &Ribbon::render_quality_changed>(*this)));
     building_page_ = 8;
     check("continuous-path", tr("Continuous path"), {12, 65, 210, 25});
+    check("edit-path-nodes", tr("Edit nodes"), {244, 65, 210, 25});
     check("outline", tr("Edge"), {12, 94, 90, 25});
     check("fill", tr("Fill"), {116, 94, 100, 25});
     check("transparent-selection", tr("Transparent selection"), {12, 36, 210, 25});
@@ -983,6 +1002,13 @@ void Ribbon::show_page() {
         gf::Control& control = *option_controls_[i];
         std::string id(control.stable_id().value());
         bool visible = (option_pages_[i] & page_) != 0;
+        const bool geometry = tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
+        if (id == "render-quality") {
+            visible = visible && geometry;
+        }
+        if (id == "smooth-lines") {
+            visible = visible && !geometry;
+        }
         if (page_ == 8 && visible) {
             if (id == "transparent-pattern") {
                 visible = false;
@@ -1014,10 +1040,12 @@ void Ribbon::show_page() {
                           (*editor).document.ink.brush == Brush::Airbrush;
             }
             if (id == "smooth-lines") {
-                visible =
-                    material && (tool != Tool::Brush || (*editor).brush_family == BrushFamily::Additive);
+                visible = tool == Tool::Brush && (*editor).brush_family == BrushFamily::Additive;
             }
-            if (id == "continuous-path") {
+            if (id == "render-quality") {
+                visible = tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
+            }
+            if (id == "continuous-path" || id == "edit-path-nodes") {
                 visible = tool == Tool::Path;
             }
             if (id == "outline" || id == "fill") {
@@ -1051,6 +1079,13 @@ void Ribbon::mix_effect_changed(std::optional<std::size_t> index) {
         (*editor).refresh();
     }
 }
+void Ribbon::render_quality_changed(std::optional<std::size_t> index) {
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    if (!synchronizing_ && editor && index && *index < 3) {
+        const char* commands[] = {"render-crisp", "render-smooth", "render-smooth-4x"};
+        (*editor).execute(commands[*index]);
+    }
+}
 void Ribbon::picker_mode_changed(std::optional<std::size_t> index) {
     const std::shared_ptr<Editor> editor = editor_.lock();
     if (!synchronizing_ && editor) {
@@ -1063,6 +1098,12 @@ void Ribbon::word_art_changed(std::optional<std::size_t> index) {
     if (!synchronizing_ && editor) {
         (*editor).text.style.word_art = static_cast<WordArt>(index.value_or(0));
         (*editor).refresh();
+    }
+}
+void Ribbon::spiro_scale_changed(double value) {
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    if (!synchronizing_ && editor) {
+        (*editor).resize_spirograph(value);
     }
 }
 void Ribbon::options_changed(double) {
@@ -1379,7 +1420,7 @@ void Ribbon::arrange(gf::Rect bounds) {
         gf::Rect rectangle = (*control).requested_bounds();
         if (page_ == 4) {
             std::string id((*control).stable_id().value());
-            if (id == "smooth-lines") {
+            if (id == "smooth-lines" || id == "render-quality") {
                 rectangle = {140, 111, 190, 22};
             }
         }
@@ -1476,7 +1517,7 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
                            : std::vector<std::string>{tr("Tool settings")};
         const std::vector<double> edges = selection      ? std::vector<double>{0, 230, 496, 764, 906, width}
                                           : page_ == 16  ? std::vector<double>{0, 455, 690, 920, 1062, 1280}
-                                          : page_ == 128 ? std::vector<double>{0, 250, 605, 915, 1280}
+                                          : page_ == 128 ? std::vector<double>{0, 210, 490, 745, 1280}
                                           : page_ == 256 ? std::vector<double>{0, 150, 620, 1280}
                                           : page_ == 2   ? std::vector<double>{0, 220, 390, 620}
                                           : page_ == 4   ? std::vector<double>{0, 132, 660, 974, width}
@@ -1679,19 +1720,29 @@ void Ribbon::synchronize() {
         if (id == "spiro-deselect") {
             control.set_enabled((*editor).spiro.selected_peg >= 0);
         }
+        if (id == "spiro-holes-menu") {
+            control.set_enabled((*editor).spiro.inserted);
+        }
+        if (id == "spiro-load-primary" || id == "spiro-load-alt") {
+            control.set_enabled((*editor).spiro.selected_peg >= 0);
+        }
         if (id == "spiro-outside") {
-            selected = (*editor).spiro.outside;
-            control.set_enabled(!(*editor).spiro.rack());
+            selected = (*editor).spiro.outside || (*editor).spiro.capsule();
+            control.set_enabled(!(*editor).spiro.rack() && !(*editor).spiro.capsule() && !(*editor).spiro.quad());
         }
         if (id == "spiro-fill") {
             selected = document.tool == Tool::Fill;
         }
         if (id == "spiro-operate") {
-            selected = document.tool == Tool::Spirograph;
+            selected = document.tool == Tool::Spirograph && !(*editor).spiro_lift;
+        }
+        if (id == "spiro-lift") {
+            selected = document.tool == Tool::Spirograph && (*editor).spiro_lift;
         }
         if (id.starts_with("spiro-peg-") || id == "spiro-remove" || id == "spiro-clear-pegs" ||
-            id == "spiro-operate" || id == "spiro-fill") {
-            control.set_enabled((*editor).spiro.inserted);
+            id == "spiro-operate" || id == "spiro-fill" || id == "spiro-lift") {
+            control.set_enabled((*editor).spiro.inserted &&
+                                (id != "spiro-operate" || !(*editor).spiro.detached));
         }
         if (id == "gradient-linear") {
             selected = (*editor).fill_gradient.kind == GradientKind::Linear;
@@ -1720,6 +1771,7 @@ void Ribbon::synchronize() {
         ordered_tab_page_ = page_;
     }
     synchronizing_ = true;
+    (*spiro_scale_).set_value((*editor).spiro.scale);
     const Ink& material = (*editor).spiro.selected_peg >= 0
                               ? (*editor).spiro.pegs[(*editor).spiro.selected_peg].effect
                           : secondary_color_ ? document.alt_ink
@@ -1729,6 +1781,7 @@ void Ribbon::synchronize() {
     (*load_).set_value(material.pigment_load);
     (*angle_).set_value(material.material_angle);
     (*tool_size_).set_value(document.ink.size);
+    (*render_quality_).set_selected_index(!document.ink.smooth ? 0 : document.ink.supersample ? 2 : 1);
     (*picker_mode_).set_selected_index(static_cast<std::size_t>((*editor).picker_mode));
     (*text_size_).set_value((*editor).text.style.size);
     (*stamp_width_).set_value((*editor).stamp_width);
@@ -1794,6 +1847,7 @@ void Ribbon::synchronize() {
                              : id == "alt-carries-body"      ? document.alt_carries_body
                              : id == "smooth-lines"          ? document.ink.smooth
                              : id == "continuous-path"       ? document.continuous_path
+                             : id == "edit-path-nodes"       ? (*editor).edit_path_nodes
                              : id == "outline"               ? document.shape_outline
                                                              : document.shape_fill);
     }
@@ -2099,6 +2153,19 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             (*part).set_enabled(guides ? (*editor).spiro.compatible(i, (*editor).spiro.insert)
                                        : (*editor).spiro.compatible((*editor).spiro.guide, i));
         }
+    } else if (id == "spiro-holes-menu") {
+        const Spirograph& spiro = (*editor).spiro;
+        const int columns = std::max(1, (spiro.hole_count() + 11) / 12);
+        const int rows = (spiro.hole_count() + columns - 1) / columns;
+        width = 280 * columns + 8;
+        height = 8 + 30 * rows;
+        for (int i = 0; i < spiro.hole_count(); ++i) {
+            const std::string label = std::to_string(i + 1) + " · " +
+                (spiro.pegs[i].seated ? tr("Select peg") : tr("Place fine peg"));
+            add_popup_button(*panel, "spiro-hole-" + std::to_string(i), label, -1,
+                             {4.0 + 280 * (i / rows), 4.0 + 30 * (i % rows), 278, 29},
+                             spiro.selected_peg == i);
+        }
     } else if (id == "spiro-brushes-menu") {
         prepare_material_previews();
         width = 436;
@@ -2320,7 +2387,7 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         (*editor).refresh();
         return;
     }
-    if (id.starts_with("spiro-guide-") || id.starts_with("spiro-insert-")) {
+    if (id.starts_with("spiro-guide-") || id.starts_with("spiro-insert-") || id.starts_with("spiro-hole-")) {
         (*editor).spiro_choice(id);
         return;
     }

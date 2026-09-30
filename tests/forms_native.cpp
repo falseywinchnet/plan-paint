@@ -11,6 +11,19 @@
 #endif
 namespace {
 namespace gf = gui_forms;
+struct NativeRecoveryDirectory {
+    std::filesystem::path path = std::filesystem::temp_directory_path() /
+        ("plan-paint-native-recovery-" + std::to_string(paint::recovery_time_ms()));
+    NativeRecoveryDirectory() {
+        if (!std::filesystem::create_directory(path)) {
+            throw std::runtime_error("Could not create an isolated native recovery directory");
+        }
+    }
+    ~NativeRecoveryDirectory() {
+        std::error_code error;
+        std::filesystem::remove_all(path, error);
+    }
+};
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
@@ -385,6 +398,9 @@ struct WindowsFixtureReady {
 } // namespace
 int main(int argc, char** argv) {
     try {
+        // Outlive the editor and its recovery worker. Never inspect or retire
+        // recovery snapshots belonging to an ordinary application session.
+        NativeRecoveryDirectory recovery;
         NativeExercise exercise;
         exercise.keep_open = argc > 1;
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
@@ -403,6 +419,7 @@ int main(int argc, char** argv) {
         exercise.bugs = argc > 1 && std::string(argv[1]) == "--bugs";
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));
+        (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
         options.initial_size = exercise.compact ? gf::Size{800, 600} : gf::Size{1280, 820};
@@ -429,7 +446,9 @@ int main(int argc, char** argv) {
             std::rethrow_exception(result.callback_exception);
         }
         if (!result.accepted() || !exercise.entered) {
-            throw std::runtime_error("Native application startup failed");
+            throw std::runtime_error("Native application startup failed: error=" +
+                std::to_string(static_cast<int>(result.error)) + " native_exit=" +
+                std::to_string(result.native_exit_code) + " ready=" + std::to_string(exercise.entered));
         }
         std::cout << "Native GUI.Forms Paint: host, input, capture, painting model, curve, history and close "
                      "passed\n";

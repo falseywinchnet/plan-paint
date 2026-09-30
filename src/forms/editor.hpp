@@ -218,7 +218,10 @@ class Editor final : public gui_forms::Control {
     void complete_deferred_save();
     PaintCanvas& canvas();
     Spirograph spiro;
+    bool spiro_lift = false;
+    bool edit_path_nodes = false;
     void start_spirograph();
+    void resize_spirograph(double scale);
     void spiro_choice(const std::string& id);
     void spiro_tray_pointer(int width, const gui_forms::PointerEvent& event);
     void cancel_spiro_drag();
@@ -315,9 +318,13 @@ class Editor final : public gui_forms::Control {
     Point text_drag_start_;
     void paint_atlas_overlay(gui_forms::Painter& painter);
     void paint_tool_preview(gui_forms::Painter& painter);
-    enum class SpiroDrag { None, Guide, Wheel, PegPending, Peg };
+    enum class SpiroDrag { None, Guide, Resize, Wheel, Lift, PegPending, Peg };
     SpiroDrag spiro_drag_ = SpiroDrag::None;
-    Point spiro_grab_{}, spiro_pointer_{};
+    Point spiro_grab_{}, spiro_pointer_{}, spiro_drag_center_{};
+    double spiro_resize_scale_ = 1, spiro_resize_radius_ = 1;
+    double spiro_lift_angle_ = 0, spiro_lift_offset_ = 0;
+    bool spiro_lift_detached_ = false;
+    Point spiro_lift_center_{};
     SpirographStroke spiro_stroke_;
     SpiroPeg spiro_carried_{};
     int spiro_origin_hole_ = -1, spiro_target_hole_ = -1;
@@ -325,6 +332,7 @@ class Editor final : public gui_forms::Control {
     void paint_spiro_overlay(gui_forms::Painter& painter);
     bool spiro_pointer(const gui_forms::PointerEvent& event, Point point);
     int spiro_hole_at(Point point, bool empty_only) const;
+    double spiro_grip_radius() const;
     void drop_spiro_peg();
     void paint_guide_overlay(gui_forms::Painter& painter);
     bool guide_pointer(const gui_forms::PointerEvent& event, Point point);
@@ -333,6 +341,9 @@ class Editor final : public gui_forms::Control {
     bool path_swap_checkpoint_ = false;
     bool path_swap_pointer(const gui_forms::PointerEvent& event, Point point);
     void paint_path_swap(gui_forms::Painter& painter);
+    int hit_curve_handle(const CurveGeometry& geometry, Point point, double radius) const;
+    int hovered_curve_handle(const CurveGeometry& geometry, double radius) const;
+    int hovered_path_node() const;
     std::optional<CurveKind> guide_swap_kind_;
     int guide_swap_segment_ = -1, guide_swap_handle_ = -1;
     Tool guide_previous_tool_ = Tool::Pencil;

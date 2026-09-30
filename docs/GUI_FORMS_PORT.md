@@ -41,11 +41,18 @@ open build-forms/plan-paint.app
 python3 scripts/package-macos.py --gui-forms-sdk build-deps/gui-forms-sdk
 ```
 
+[ci-macos.sh](../scripts/ci-macos.sh) contains the Apple Silicon macOS build,
 [ci-windows.sh](../scripts/ci-windows.sh) contains the MinGW/MSYS2 build and
 [ci-linux.sh](../scripts/ci-linux.sh) contains the Alpine musl build. Their
 prerequisites and invocations are in the [workflow](../.github/workflows/build.yml).
 Windows uses the native GDI host. Mac and Linux use CPU Skia; Linux also uses
 HarfBuzz and FreeType for text. Each package includes its fonts and licenses.
+
+On Windows and Linux, bundled fonts and language packs follow the executable's
+output directory; Windows also copies the GUI.Forms application library there.
+This supports `CMAKE_RUNTIME_OUTPUT_DIRECTORY` and configuration-specific output
+directories. When packaging a custom build layout, pass the directory containing
+the executable as the packaging script's `--build` argument.
 
 ## Platform behavior
 
@@ -127,17 +134,25 @@ building the SDK. Install that SDK into a separate prefix and configure Paint
 with `CMAKE_PREFIX_PATH` pointing to it. Every packaged release includes its
 matching toolkit library.
 
-## Nested dropdown focus correction
+## Pinned toolkit corrections
 
-The pinned 0.2.3 toolkit source archive is augmented by the hash-verified patch
-listed in `third_party/gui-forms.lock.json`. The fetch script validates both
-the archive and patch, applies the patch in a temporary source directory, and
-records it in `SOURCE_PATCHES.json` before publishing the destination. Git is
+The pinned 0.2.3 toolkit source archive is augmented by the hash-verified patches
+listed in `third_party/gui-forms.lock.json`. The fetch script validates
+the archive and each patch, applies them in a temporary source directory, and
+records them in `SOURCE_PATCHES.json` before publishing the destination. Git is
 required for this source-preparation step.
 
-The patch recognizes the registered popup owner when a separate window overlay
+The nested dropdown patch recognizes the registered popup owner when a separate window overlay
 enters a containing focus scope. It fixes dropdowns inside Paint's color and
 settings dialogs while continuing to reject unrelated popup roots. The toolkit
 change is maintained independently as commit
 `f47893b` and includes repeated open/close, modal containment, focus restoration,
 and owner-unavailability regressions.
+
+Two Windows corrections preserve native interaction. MSAA focus and hit-test
+queries return `CHILDID_SELF` when they identify the queried object, preventing
+accessibility clients from descending through an endless chain of self wrappers.
+Alt+F4 reaches the ordinary Windows close request instead of being consumed as
+an application key. The native regression checks that closing can be cancelled
+before a subsequent request closes the window; Paint retains its existing
+unsaved-document confirmation behavior.

@@ -33,6 +33,14 @@
       "file": "third_party/gui-forms-patches/windows-fallback-captions.patch",
       "sha256": "e953467d86b9cda806aa4c954de0c0e9473dff920e9cc03e596b10bbedcb8bba",
       "upstream_commit": "f2249fa9e1cc9a980e6ee09daae60f3010a9e450"
+    },
+    {
+      "file": "third_party/gui-forms-patches/windows-accessibility-self-reference.patch",
+      "sha256": "369ea568b8ce79da75aa85ebaa49783717babe523e8338b6b435853db4ce06a9"
+    },
+    {
+      "file": "third_party/gui-forms-patches/windows-alt-f4.patch",
+      "sha256": "84b30ecf9f0b6978570e7db887a407e1fa02c475ce282ff46a8c487b935c61df"
     }
   ]
 }

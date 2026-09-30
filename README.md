@@ -2,7 +2,7 @@ To the Holy One, blessed be He, from whom all good things come. We dedicate this
 
 # Plan Paint
 
-[![Windows and Linux builds](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml)
+[![Native platform builds](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/falseywinchnet/plan-paint/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/falseywinchnet/plan-paint)](https://github.com/falseywinchnet/plan-paint/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -16,14 +16,20 @@ Plan Paint 1.1 on Apple Silicon Mac. This picture was drawn in the native applic
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.2/plan-paint-1.1.2-macos-arm64.pkg) | macOS 26 or newer. Install, then open Plan Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.2/plan-paint-1.1.2-windows-x64.zip) | Extract the folder and run `plan-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.2/plan-paint-1.1.2-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Plan Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.2/plan-paint-1.1.2-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.3/plan-paint-1.1.3-macos-arm64.pkg) | macOS 26 or newer. Install, then open Plan Paint from Applications. |
+| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.3/plan-paint-1.1.3-windows-x64.zip) | Extract the folder and run `plan-paint.exe`. |
+| Linux x64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.3/plan-paint-1.1.3-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Plan Paint`. |
+| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.3/plan-paint-1.1.3-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
 
-[Release notes](https://github.com/falseywinchnet/plan-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.2/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
+[Release notes](https://github.com/falseywinchnet/plan-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.3/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
+
+## New in 1.1.3
+
+Choose Crisp, Smooth or 4× Smooth for lines, polygons and paths. Edit nodes and directly select curve handles with clearer hover feedback. The expanded Spirograph catalog adds Deluxe-style wheels, free lifting, and apparatus resizing without ink.
+
+See the [1.1.3 release notes](docs/releases/1.1.3.md) for controls, wheel approximations and platform details.
 
 ## New in 1.1.2
 
@@ -131,7 +137,7 @@ The [file and codec audit](docs/SECURITY_AUDIT_2026-09-19.md) and [memory-leak a
 - **See before you mark.** The pencil previews its exact pixel, the round pink eraser offers hard and soft edges, and the magnifier enlarges the hovered region. Click to zoom around the pointer, up to 1600%.
 - **Work with materials.** Procedural watercolor, oil, bristles, crayon, graphite, pastel and charcoal respond to paper tooth, grain scale and paint load. Choose independent Primary and Alt brushes and patterns together in the Materials ribbon. No Color makes either material transparent.
 - **Control the workspace.** Click the selected ribbon tab to collapse or reopen it. File > Settings saves the wheel and trackpad scroll distance; scrolling keeps the viewport center within the canvas.
-- **Follow a path.** Connect new segments to any earlier junction and keep drawing through loops. **Right-drag a junction** to move it. Click a junction to begin a branch, or click empty canvas to begin another run after right-clicking to end the current one. **Undo** removes one node and its segment at a time; **Redo** restores them. **Escape** or choosing another tool releases the nodes.
+- **Follow a path.** Connect new segments to any earlier junction and keep drawing through loops. Enable **Edit nodes** in the Path controls to move junctions with a left-drag; the active node is highlighted. Click an existing curved segment to reveal its handles without converting it. Right-dragging a junction also works. Turn Edit nodes off, or choose **Continue path**, to add segments again. Click a junction to begin a branch, or click empty canvas to begin another run after right-clicking to end the current one. **Undo** removes one node and its segment at a time; **Redo** restores them. **Escape** or choosing another tool releases the nodes.
 - **Stamp an object.** Choose from 39 stamp masks, including stars, arrows, hearts, callouts and curves, and print repeated copies. **R** rotates, **Shift+R** rotates backward, and **+ / −** changes size. Drag the Scale and Angle labels in the Stamp ribbon to scrub their values. **Right-click**, **Escape**, or **Stamp → Lift a new stamp** clears the sample so the next click chooses another source.
 - **Turn and reshape.** Drag the round handle at a selection's upper-right corner to rotate freely; hold **Shift** for 15-degree steps. Lasso an object and choose **Selection → Mesh** to stretch it with control points.
 
@@ -170,7 +176,7 @@ cmake --build build-forms --parallel
 ctest --test-dir build-forms --output-on-failure
 ```
 
-The [build workflow](.github/workflows/build.yml) builds Windows with MinGW and Linux with musl, runs the native tests, and produces portable packages. Linux packages are also launched on a glibc host without an installed musl loader. `RAINSTAR_LEGACY_UI=ON` explicitly builds the deprecated `plan-paint-legacy` frontend; it is off by default and is not supported or packaged for release. Packaging scripts read the release version from CMake.
+The [build workflow](.github/workflows/build.yml) builds Windows x64 with MinGW, Linux x64 and ARM64 with musl, and macOS ARM64 on a native macOS 26 runner. Each platform runs native tests and produces packages. Linux packages are also launched on a glibc host without an installed musl loader. `RAINSTAR_LEGACY_UI=ON` explicitly builds the deprecated `plan-paint-legacy` frontend; it is off by default and is not supported or packaged for release. Packaging scripts read the release version from CMake.
 
 Tests cover image editing, formats, numerical transforms, transparency, real UI input, display scaling and idle rendering. Run `python3 scripts/check-style.py` before submitting a change. Optional `RAINSTAR_BENCHMARKS=ON` and `RAINSTAR_COMPILER_REPORTS=ON` produce a timing/checksum harness and compiler assembly reports.
 
@@ -191,3 +197,4 @@ Original code, documentation and artwork are [MIT licensed](LICENSE), copyright 
 Plan Paint is an independent implementation. Microsoft and Windows are trademarks of Microsoft Corporation; no Microsoft Paint source code or icon assets are included.
 
 The native application is implemented in `src/forms/`; shared image editing and file-format code live in `src/`. The earlier comparison interface remains in `src/app*` and is excluded from the default build. See [resource measurements](docs/PERFORMANCE.md) for package, startup and memory details.
+

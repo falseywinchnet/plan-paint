@@ -159,19 +159,27 @@ struct Ink {
     int size = 3;
     bool transparent_pattern = false;
     bool smooth = true;
+    bool supersample = false;
     std::uint32_t noise = 1;
     double grain_scale = 1.0;
     double paper_roughness = 0.65;
     double pigment_load = 0.65;
     double material_angle = -20.0;
 };
+// Temporary raster coordinates mapped back to the original paper for materials.
+struct RasterSpace {
+    int scale = 1;
+    int x = 0, y = 0;
+    int paper_x(int value) const;
+    int paper_y(int value) const;
+};
 bool solid_material(const Ink& ink);
 void select_brush(Ink& ink, Brush brush);
 void select_pattern(Ink& ink, Pattern pattern);
 Ink pencil_ink(Ink ink);
 Color patterned(const Ink& ink, int x, int y);
-void dab(Image& image, Point point, const Ink& ink);
-void stroke(Image& image, Point start, Point end, const Ink& ink);
+void dab(Image& image, Point point, const Ink& ink, RasterSpace space = {});
+void stroke(Image& image, Point start, Point end, const Ink& ink, RasterSpace space = {});
 void pixel_line(Image& image, Point start, Point end, const Ink& ink);
 void flood(Image& image, int x, int y, const Ink& ink);
 bool inside_polygon(const std::vector<Point>& points, double x, double y);

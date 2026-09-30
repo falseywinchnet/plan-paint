@@ -1,4 +1,5 @@
 #include "spirograph.hpp"
+#include "spiro_quad.hpp"
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -8,6 +9,121 @@
 namespace paint {
 namespace {
 constexpr double tau = 2 * std::numbers::pi;
+const QuadTrack& quad_track(int teeth) {
+    static const QuadTrack ring96(96), ring105(105);
+    return teeth == 105 ? ring105 : ring96;
+}
+// Joined circular arcs with positive curvature and a normalized 2*pi perimeter.
+struct ArcPitch {
+    const std::vector<double> normals, radii;
+    const double half_width;
+    std::vector<double> lengths;
+    ArcPitch(std::vector<double> boundaries, std::vector<double> curvature, double width)
+        : normals(std::move(boundaries)), radii(std::move(curvature)), half_width(width),
+          lengths(radii.size() + 1, 0) {
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            lengths[i + 1] = lengths[i] + radii[i] * (normals[i + 1] - normals[i]);
+        }
+    }
+    Point point(double normal) const {
+        const double phase = normal - tau * std::floor(normal / tau);
+        Point p{half_width, 0};
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            const double finish = std::min(phase, normals[i + 1]);
+            if (finish > normals[i]) {
+                p.x += radii[i] * (std::cos(finish) - std::cos(normals[i]));
+                p.y += radii[i] * (std::sin(finish) - std::sin(normals[i]));
+            }
+        }
+        return p;
+    }
+    double arc(double normal) const {
+        const double turns = std::floor(normal / tau), phase = normal - turns * tau;
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            if (phase <= normals[i + 1]) {
+                return turns * tau + lengths[i] + radii[i] * (phase - normals[i]);
+            }
+        }
+        return (turns + 1) * tau;
+    }
+    double normal_at_arc(double length) const {
+        const double turns = std::floor(length / tau), phase = length - turns * tau;
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            if (phase <= lengths[i + 1]) {
+                return turns * tau + normals[i] + (phase - lengths[i]) / radii[i];
+            }
+        }
+        return (turns + 1) * tau;
+    }
+    double curvature(double normal) const {
+        const double phase = normal - tau * std::floor(normal / tau);
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            if (phase <= normals[i + 1]) {
+                return radii[i];
+            }
+        }
+        return radii.back();
+    }
+};
+const ArcPitch& bar_pitch() {
+    const double end_angle = .2;
+    const double delta = (40 * std::numbers::pi / 2 - 60 * end_angle -
+                         4 * (std::numbers::pi / 2 - end_angle)) / 76;
+    const double alpha = std::numbers::pi / 2 - delta;
+    static const ArcPitch pitch({0, end_angle, alpha, std::numbers::pi - alpha,
+        std::numbers::pi - end_angle, std::numbers::pi + end_angle, std::numbers::pi + alpha,
+        tau - alpha, tau - end_angle, tau}, {1.5, .1, 2, .1, 1.5, .1, 2, .1, 1.5},
+        (60 * (1 - std::cos(end_angle)) + 4 * (std::cos(end_angle) - std::sin(delta)) +
+         80 * std::sin(delta)) / 40);
+    return pitch;
+}
+const ArcPitch& eye_pitch() {
+    // Approximate lens: 80-unit sides and 4-unit rounded tips. The corner angle
+    // sets the perimeter to exactly 60 tooth-radius units, matching 8/7 repeats.
+    const double alpha = std::numbers::pi * 20 / 152;
+    static const ArcPitch pitch({0, alpha, std::numbers::pi - alpha,
+        std::numbers::pi + alpha, tau - alpha, tau},
+        {4.0 / 60, 80.0 / 60, 4.0 / 60, 80.0 / 60, 4.0 / 60},
+        (4 + 76 * std::cos(alpha)) / 60);
+    return pitch;
+}
+const ArcPitch& triangle_pitch() {
+    // Unequal rounded triangle, with 80-unit sides and 4-unit corners.
+    // The perimeter constraint fixes c-a; closure fixes sin(a)+sin(c).
+    const double b = 1.85, difference = std::numbers::pi * 50 / 76 - b;
+    const double a = std::asin(std::sin(b) / (2 * std::cos(difference / 2))) - difference / 2;
+    const double c = a + difference;
+    static const ArcPitch pitch({0, a, b, std::numbers::pi - c,
+        std::numbers::pi + c, tau - b, tau - a, tau},
+        {4.0 / 54, 80.0 / 54, 4.0 / 54, 80.0 / 54, 4.0 / 54, 80.0 / 54, 4.0 / 54},
+        (84 + 76 * (std::cos(a) - std::cos(b) - std::cos(c))) / 108);
+    return pitch;
+}
+const ArcPitch& arc_pitch(SpiroProfileKind kind) {
+    if (kind == SpiroProfileKind::Quad) {
+        throw std::logic_error("Quad uses endpoint-pivot motion, not a convex arc map");
+    }
+    if (kind == SpiroProfileKind::Triangle) {
+        return triangle_pitch();
+    }
+    return kind == SpiroProfileKind::Eye ? eye_pitch() : bar_pitch();
+}
+std::vector<Point> triangle_sockets() {
+    return {{.70, 0}, {.50, -.18}, {.28, -.18}, {.30, 0}, {.28, .18}, {.50, .18},
+            {-.48, -.30}, {-.70, -.30}, {-.48, 0}, {-.70, 0}, {-.48, .30}, {-.70, .30}};
+}
+std::vector<Point> eye_sockets() {
+    return {{-.96, 0}, {-.78, 0}, {-.60, 0}, {-.42, 0}, {-.24, 0},
+            {.06, .40}, {.10, .22}, {.25, .35}, {.30, .15}, {.45, .28},
+            {.50, .08}, {.65, .20}, {.72, 0}};
+}
+std::vector<Point> bar_sockets() {
+    std::vector<Point> result;
+    for (int i = 0; i < 9; ++i) {
+        result.push_back({-bar_pitch().half_width + (8 + 9.0 * i) / 40, 0});
+    }
+    return result;
+}
 std::array<double, 5> harmonics(const SpiroProfile& p) {
     return {p.oval, p.triangle, p.square, p.pentagon, p.hexagon};
 }
@@ -23,11 +139,30 @@ std::vector<Point> sockets(int count) {
     }
     return result;
 }
+std::vector<Point> spiral_sockets(int teeth, int count) {
+    // Approximate the kit's inward spiral, not dimensioned manufacturing coordinates.
+    // Keep a constant radial step and roughly constant distance between adjacent holes.
+    std::vector<Point> result;
+    double angle = -std::numbers::pi / 2;
+    for (int i = 0; i < count; ++i) {
+        const double radius = teeth - 10.0 - 2 * i;
+        result.push_back({radius * std::cos(angle) / teeth, radius * std::sin(angle) / teeth});
+        if (i + 1 < count) {
+            angle += 2 * std::asin(std::sqrt(117 / (4 * radius * (radius - 2))));
+        }
+    }
+    return result;
+}
 } // namespace
 bool SpiroProfile::circular() const {
-    return oval == 0 && triangle == 0 && square == 0 && pentagon == 0 && hexagon == 0;
+    return kind == SpiroProfileKind::Harmonic && oval == 0 && triangle == 0 && square == 0 &&
+           pentagon == 0 && hexagon == 0;
 }
 double SpiroProfile::support(double normal) const {
+    if (kind != SpiroProfileKind::Harmonic) {
+        const Point p = arc_pitch(kind).point(normal);
+        return p.x * std::cos(normal) + p.y * std::sin(normal);
+    }
     if (circular()) {
         return 1;
     }
@@ -39,6 +174,10 @@ double SpiroProfile::support(double normal) const {
     return value;
 }
 double SpiroProfile::derivative(double normal) const {
+    if (kind != SpiroProfileKind::Harmonic) {
+        const Point p = arc_pitch(kind).point(normal);
+        return -p.x * std::sin(normal) + p.y * std::cos(normal);
+    }
     if (circular()) {
         return 0;
     }
@@ -50,6 +189,9 @@ double SpiroProfile::derivative(double normal) const {
     return value;
 }
 double SpiroProfile::curvature_radius(double normal) const {
+    if (kind != SpiroProfileKind::Harmonic) {
+        return arc_pitch(kind).curvature(normal);
+    }
     if (circular()) {
         return 1;
     }
@@ -62,6 +204,9 @@ double SpiroProfile::curvature_radius(double normal) const {
     return value;
 }
 double SpiroProfile::arc(double normal) const {
+    if (kind != SpiroProfileKind::Harmonic) {
+        return arc_pitch(kind).arc(normal);
+    }
     if (circular()) {
         return normal;
     }
@@ -74,6 +219,9 @@ double SpiroProfile::arc(double normal) const {
     return value;
 }
 double SpiroProfile::normal_at_arc(double length) const {
+    if (kind != SpiroProfileKind::Harmonic) {
+        return arc_pitch(kind).normal_at_arc(length);
+    }
     if (circular()) {
         return length;
     }
@@ -96,11 +244,30 @@ double SpiroProfile::normal_at_arc(double length) const {
     return x + turns * tau;
 }
 Point SpiroProfile::point(double normal) const {
+    if (kind == SpiroProfileKind::Quad) {
+        return QuadTrack::boundary(normal);
+    }
+    if (kind != SpiroProfileKind::Harmonic) {
+        return arc_pitch(kind).point(normal);
+    }
     const double h = support(normal), d = derivative(normal);
     return {h * std::cos(normal) - d * std::sin(normal), h * std::sin(normal) + d * std::cos(normal)};
 }
+SpiroCurvature SpiroProfile::curvature_bounds() const {
+    if (kind != SpiroProfileKind::Harmonic) {
+        const ArcPitch& pitch = arc_pitch(kind);
+        return {*std::min_element(pitch.radii.begin(), pitch.radii.end()),
+                *std::max_element(pitch.radii.begin(), pitch.radii.end())};
+    }
+    double difference = 0;
+    const std::array<double, 5> coefficients = harmonics(*this);
+    for (int i = 0; i < 5; ++i) {
+        difference += std::abs(coefficients[i]) * ((i + 2) * (i + 2) - 1);
+    }
+    return {1 - difference, 1 + difference};
+}
 const std::vector<SpiroGuide>& spiro_guides() {
-    static const std::vector<SpiroGuide> parts{{"Ring 96", 96},
+    static const std::vector<SpiroGuide> parts{{"Ring 144/96", 96, {}, false, 144},
                                                {"Ring 120", 120},
                                                {"Ring 144", 144},
                                                {"Ring 180", 180},
@@ -115,26 +282,28 @@ const std::vector<SpiroGuide>& spiro_guides() {
                                                {"Egg 288", 288, {.10, .035}},
                                                {"Shield 300", 300, {-.09, .035, .012}},
                                                {"Rack 96", 96, {}, true},
-                                               {"Long rack 144", 144, {}, true}};
+                                               {"Long rack 144", 144, {}, true},
+                                               {"Ring 150/105", 105, {}, false, 150},
+                                               {"Rack 150", 150, {}, false, 0, 25}};
     return parts;
 }
 const std::vector<SpiroInsert>& spiro_inserts() {
     static const std::vector<SpiroInsert> parts{
         {"Wheel 36", 36, {{.28, 0}, {.54, 0}, {.8, 0}, {-.4, .4}, {-.5, -.3}}},
-        {"Wheel 40", 40, {{.25, 0}, {.52, 0}, {.8, 0}, {-.32, .38}, {-.4, -.4}, {.1, -.65}}},
-        {"Wheel 48", 48, sockets(7)},
+        {"Wheel 40", 40, spiral_sockets(40, 13)},
+        {"Wheel 48", 48, spiral_sockets(48, 17)},
         {"Wheel 12", 12, sockets(3)},
         {"Wheel 18", 18, sockets(4)},
-        {"Wheel 24", 24, sockets(5)},
-        {"Wheel 30", 30, sockets(6)},
+        {"Wheel 24", 24, spiral_sockets(24, 5)},
+        {"Wheel 30", 30, spiral_sockets(30, 8)},
         {"Prime 31", 31, sockets(6)},
         {"Prime 37", 37, sockets(7)},
-        {"Wheel 45", 45, sockets(7)},
-        {"Wheel 56", 56, sockets(8)},
-        {"Wheel 60", 60, sockets(8)},
+        {"Wheel 45", 45, spiral_sockets(45, 16)},
+        {"Wheel 56", 56, spiral_sockets(56, 21)},
+        {"Wheel 60", 60, spiral_sockets(60, 23)},
         {"Wheel 64", 64, sockets(8)},
-        {"Wheel 72", 72, sockets(8)},
-        {"Wheel 80", 80, sockets(8)},
+        {"Wheel 72", 72, spiral_sockets(72, 29)},
+        {"Wheel 80", 80, spiral_sockets(80, 33)},
         {"Oval 36", 36, sockets(6), {.18}},
         {"Long oval 40", 40, sockets(6), {.25}},
         {"Triangle 42", 42, sockets(7), {0, .07}},
@@ -142,14 +311,26 @@ const std::vector<SpiroInsert>& spiro_inserts() {
         {"Pentagon 48", 48, sockets(7), {0, 0, 0, .022}},
         {"Hexagon 48", 48, sockets(8), {0, 0, 0, 0, .015}},
         {"Egg 40", 40, sockets(6), {.10, .035}},
-        {"Shield 42", 42, sockets(7), {-.09, .035, .012}}};
+        {"Shield 42", 42, sockets(7), {-.09, .035, .012}},
+        {"Wheel 32", 32, spiral_sockets(32, 9)},
+        {"Wheel 42", 42, spiral_sockets(42, 14)},
+        {"Wheel 52", 52, spiral_sockets(52, 19)},
+        {"Wheel 63", 63, spiral_sockets(63, 25)},
+        {"Wheel 75", 75, spiral_sockets(75, 31)},
+        {"Wheel 84", 84, spiral_sockets(84, 35)},
+        {"Bar 40", 40, bar_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Bar}},
+        {"Eye 60", 60, eye_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Eye}},
+        {"Triangle 54", 54, triangle_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Triangle}},
+        {"Quad 60", 60, {{.80, 0}, {.60, 0}, {.40, 0}, {.20, 0}, {0, -.25},
+                         {0, .25}, {0, .50}, {0, .75}, {-.25, 0}, {-.50, 0}},
+         {0, 0, 0, 0, 0, SpiroProfileKind::Quad}}};
     return parts;
 }
 void Spirograph::open(int width, int height) {
     *this = {};
     active = true;
     center = {width * .5, height * .5};
-    scale = std::clamp(std::min(width, height) * .38 / 96.0, .12, 3.0);
+    scale = std::clamp(std::min(width, height) * .38 / 144.0, .12, 3.0);
 }
 void Spirograph::set_insert(int index) {
     if (index < 0 || index >= static_cast<int>(spiro_inserts().size())) {
@@ -161,11 +342,14 @@ void Spirograph::set_insert(int index) {
     insert = index;
     selected_peg = -1;
     inserted = true;
+    detached = false;
     angle = 0;
+    rolling_offset = 0;
     pegs = {};
 }
 void Spirograph::remove_insert() {
     inserted = false;
+    detached = false;
     selected_peg = -1;
     pegs = {};
 }
@@ -176,64 +360,223 @@ void Spirograph::set_guide(int index) {
     if (!compatible(index, insert)) {
         return;
     }
-    scale *= static_cast<double>(spiro_guides()[guide].teeth) / spiro_guides()[index].teeth;
+    const SpiroGuide& next = spiro_guides()[index];
+    set_scale(guide_body_radius() / (next.outside_teeth ? next.outside_teeth : next.teeth));
     guide = index;
+    detached = false;
     angle = 0;
+    rolling_offset = 0;
 }
 double Spirograph::guide_radius() const {
-    return spiro_guides().at(guide).teeth * scale;
+    return guide_teeth() * scale;
+}
+int Spirograph::guide_teeth() const {
+    const SpiroGuide& frame = spiro_guides().at(guide);
+    return outside && frame.outside_teeth ? frame.outside_teeth : frame.teeth;
+}
+double Spirograph::guide_body_radius() const {
+    const SpiroGuide& frame = spiro_guides().at(guide);
+    return (frame.outside_teeth ? frame.outside_teeth : frame.teeth) * scale;
+}
+void Spirograph::set_scale(double value) {
+    if (!std::isfinite(value) || value <= 0) {
+        throw std::invalid_argument("Spirograph scale must be positive and finite.");
+    }
+    scale = std::clamp(value, .05, 64.0);
 }
 double Spirograph::wheel_radius() const {
+    if (quad()) {
+        return quad_track(guide_teeth()).radius() * scale;
+    }
     return spiro_inserts().at(insert).teeth * scale;
+}
+bool Spirograph::quad() const {
+    return spiro_inserts().at(insert).profile.kind == SpiroProfileKind::Quad;
 }
 bool Spirograph::rack() const {
     return spiro_guides().at(guide).rack;
 }
+bool Spirograph::capsule() const {
+    return spiro_guides().at(guide).cap_radius > 0;
+}
+bool Spirograph::exterior() const {
+    return outside || rack() || capsule();
+}
 bool Spirograph::compatible(int g, int w) const {
-    if (outside || spiro_guides().at(g).rack) {
+    if (spiro_inserts().at(w).profile.kind == SpiroProfileKind::Quad) {
+        return !outside && (g == 0 || g == 16);
+    }
+    if (outside || spiro_guides().at(g).rack || spiro_guides().at(g).cap_radius > 0) {
         return true;
     }
     // A conservative curvature bound prevents an insert from cutting across its frame.
-    double lower = 1, upper = 1;
-    const std::array<double, 5> gc = harmonics(spiro_guides().at(g).profile),
-                                ic = harmonics(spiro_inserts().at(w).profile);
-    for (int i = 0; i < 5; ++i) {
-        const double factor = (i + 2) * (i + 2) - 1;
-        lower -= std::abs(gc[i]) * factor;
-        upper += std::abs(ic[i]) * factor;
-    }
+    const double lower = spiro_guides().at(g).profile.curvature_bounds().minimum;
+    const double upper = spiro_inserts().at(w).profile.curvature_bounds().maximum;
     const double minimum = lower * spiro_guides().at(g).teeth, maximum = upper * spiro_inserts().at(w).teeth;
     return minimum > maximum + 1;
 }
 Point Spirograph::guide_point(double normal) const {
+    if (capsule()) {
+        const double radius = spiro_guides()[guide].cap_radius * scale;
+        const double half = std::numbers::pi * (guide_radius() - radius) / 2;
+        const double arc = (normal - tau * std::floor(normal / tau)) * guide_radius();
+        const double quarter = std::numbers::pi * radius / 2;
+        if (arc < quarter) {
+            return {center.x + half + radius * std::cos(arc / radius),
+                    center.y + radius * std::sin(arc / radius)};
+        }
+        if (arc < quarter + 2 * half) {
+            return {center.x + half - (arc - quarter), center.y + radius};
+        }
+        if (arc < 3 * quarter + 2 * half) {
+            const double angle = std::numbers::pi / 2 + (arc - quarter - 2 * half) / radius;
+            return {center.x - half + radius * std::cos(angle), center.y + radius * std::sin(angle)};
+        }
+        if (arc < 3 * quarter + 4 * half) {
+            return {center.x - half + (arc - 3 * quarter - 2 * half), center.y - radius};
+        }
+        const double angle = 3 * std::numbers::pi / 2 + (arc - 3 * quarter - 4 * half) / radius;
+        return {center.x + half + radius * std::cos(angle), center.y + radius * std::sin(angle)};
+    }
     const Point p = rack() ? Point{normal, 0} : spiro_guides().at(guide).profile.point(normal);
     return {center.x + guide_radius() * p.x, center.y + guide_radius() * p.y};
 }
+double Spirograph::guide_normal(double phase) const {
+    if (rack()) {
+        return std::numbers::pi / 2;
+    }
+    if (!capsule()) {
+        return phase + (outside ? std::numbers::pi : 0);
+    }
+    const double radius = spiro_guides()[guide].cap_radius / guide_teeth();
+    const double half = std::numbers::pi * (1 - radius) / 2;
+    const double turns = std::floor(phase / tau), arc = phase - turns * tau;
+    const double quarter = std::numbers::pi * radius / 2;
+    double normal = 0;
+    if (arc < quarter) {
+        normal = arc / radius;
+    } else if (arc < quarter + 2 * half) {
+        normal = std::numbers::pi / 2;
+    } else if (arc < 3 * quarter + 2 * half) {
+        normal = std::numbers::pi / 2 + (arc - quarter - 2 * half) / radius;
+    } else if (arc < 3 * quarter + 4 * half) {
+        normal = 3 * std::numbers::pi / 2;
+    } else {
+        normal = 3 * std::numbers::pi / 2 + (arc - 3 * quarter - 4 * half) / radius;
+    }
+    return normal + turns * tau + std::numbers::pi;
+}
+double Spirograph::guide_arc(double phase) const {
+    return rack() || capsule() ? phase : spiro_guides().at(guide).profile.arc(phase);
+}
 Point Spirograph::close_position() const {
-    const Point p = guide_point(rack() ? -1.5 : -std::numbers::pi / 4);
+    if (capsule()) {
+        const double cap = spiro_guides()[guide].cap_radius * scale;
+        return {center.x + std::numbers::pi * (guide_radius() - cap) / 2 + cap + 9 * scale,
+                center.y - cap - 12 * scale};
+    }
+    Point p = guide_point(rack() ? -1.5 : -std::numbers::pi / 4);
+    if (spiro_guides()[guide].outside_teeth) {
+        p = {center.x + guide_body_radius() / std::sqrt(2.0),
+             center.y - guide_body_radius() / std::sqrt(2.0)};
+    }
     return {p.x + (rack() ? 0 : 9 * scale), p.y - 12 * scale};
 }
+Point Spirograph::resize_position() const {
+    if (capsule()) {
+        const double cap = spiro_guides()[guide].cap_radius * scale;
+        return {center.x + std::numbers::pi * (guide_radius() - cap) / 2 + cap + 9 * scale,
+                center.y + cap + 12 * scale};
+    }
+    Point point = guide_point(rack() ? 1.5 : std::numbers::pi / 4);
+    if (spiro_guides()[guide].outside_teeth) {
+        point = {center.x + guide_body_radius() / std::sqrt(2.0),
+                 center.y + guide_body_radius() / std::sqrt(2.0)};
+    }
+    return {point.x + 9 * scale, point.y + 12 * scale};
+}
 double Spirograph::wheel_rotation(double phase) const {
-    const double length = rack() ? phase : spiro_guides().at(guide).profile.arc(phase);
-    const double sign = outside || rack() ? -1 : 1;
+    if (quad()) {
+        return quad_track(guide_teeth()).pose(phase, rolling_offset).rotation;
+    }
+    const double length = guide_arc(phase);
+    const double sign = exterior() ? -1 : 1;
     const double normal =
-        spiro_inserts().at(insert).profile.normal_at_arc(sign * guide_radius() / wheel_radius() * length);
-    return (rack() ? std::numbers::pi / 2 : phase + (outside ? std::numbers::pi : 0)) - normal;
+        spiro_inserts().at(insert).profile.normal_at_arc(sign * guide_radius() / wheel_radius() * length +
+                                                       rolling_offset);
+    return guide_normal(phase) - normal;
 }
 Point Spirograph::wheel_center(double phase) const {
-    const double rotation = wheel_rotation(phase);
+    if (detached) {
+        return detached_center;
+    }
+    if (quad()) {
+        const Point p = quad_track(guide_teeth()).pose(phase, rolling_offset).center;
+        return {center.x + scale * p.x, center.y + scale * p.y};
+    }
+    return wheel_center(phase, wheel_rotation(phase));
+}
+Point Spirograph::wheel_center(double phase, double rotation) const {
+    if (quad()) {
+        const QuadTrack& track = quad_track(guide_teeth());
+        const Point p = track.pose(phase, track.offset_for_rotation(phase, rotation)).center;
+        return {center.x + scale * p.x, center.y + scale * p.y};
+    }
     const double normal =
-        (rack() ? std::numbers::pi / 2 : phase + (outside ? std::numbers::pi : 0)) - rotation;
+        guide_normal(phase) - rotation;
     const Point p = rotated(spiro_inserts().at(insert).profile.point(normal), rotation);
     const Point contact = guide_point(phase);
     return {contact.x - wheel_radius() * p.x, contact.y - wheel_radius() * p.y};
 }
-double Spirograph::project(Point point, double near_phase) const {
-    const bool circle = spiro_inserts()[insert].profile.circular();
-    if (rack() && circle) {
-        return std::clamp((point.x - center.x) / guide_radius(), -1.5, 1.5);
+void Spirograph::reposition(double phase) {
+    if (!std::isfinite(phase) || !std::isfinite(angle) || std::abs(phase - angle) > 100 * std::numbers::pi) {
+        throw std::invalid_argument("Invalid spirograph placement");
     }
-    if (!rack() && circle && spiro_guides()[guide].profile.circular()) {
+    if (!active || !inserted) {
+        return;
+    }
+    if (rack()) {
+        phase = std::clamp(phase, -1.5, 1.5);
+    }
+    const double rotation = wheel_rotation(angle);
+    if (quad()) {
+        rolling_offset = quad_track(guide_teeth()).offset_for_rotation(phase, rotation);
+        angle = phase;
+        detached = false;
+        return;
+    }
+    const double normal = guide_normal(phase) - rotation;
+    const double length = guide_arc(phase);
+    const double sign = exterior() ? -1 : 1;
+    rolling_offset = spiro_inserts().at(insert).profile.arc(normal) - sign * guide_radius() / wheel_radius() * length;
+    angle = phase;
+    detached = false;
+}
+void Spirograph::lift_to(Point point, double tolerance) {
+    if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
+        !std::isfinite(tolerance) || tolerance < 0) {
+        throw std::invalid_argument("Invalid spirograph lift position");
+    }
+    if (!active || !inserted) {
+        return;
+    }
+    const double phase = project(point, angle, true);
+    const Point contact_center = wheel_center(phase, wheel_rotation(angle));
+    if (std::hypot(point.x - contact_center.x, point.y - contact_center.y) <= tolerance) {
+        reposition(phase);
+    } else {
+        detached = true;
+        detached_center = point;
+    }
+}
+double Spirograph::project(Point point, double near_phase, bool lifted) const {
+    const bool circle = spiro_inserts()[insert].profile.circular();
+    const double rotation = wheel_rotation(angle);
+    if (rack() && (circle || lifted)) {
+        const Point origin = wheel_center(0, rotation);
+        return std::clamp((point.x - origin.x) / guide_radius(), -1.5, 1.5);
+    }
+    if (!rack() && !capsule() && circle && spiro_guides()[guide].profile.circular()) {
         return near_phase +
                std::remainder(std::atan2(point.y - center.y, point.x - center.x) - near_phase, tau);
     }
@@ -243,7 +586,7 @@ double Spirograph::project(Point point, double near_phase) const {
     constexpr int samples = 48;
     for (int i = -samples; i <= samples; ++i) {
         const double a = rack() ? 1.5 * i / samples : near_phase + std::numbers::pi * i / samples;
-        const Point c = wheel_center(a);
+        const Point c = lifted ? wheel_center(a, rotation) : wheel_center(a);
         const double d = std::hypot(c.x - point.x, c.y - point.y);
         if (d < distance) {
             distance = d;
@@ -257,7 +600,8 @@ double Spirograph::project(Point point, double near_phase) const {
     }
     for (int i = 0; i < 40; ++i) {
         const double a = (2 * lo + hi) / 3, b = (lo + 2 * hi) / 3;
-        const Point ca = wheel_center(a), cb = wheel_center(b);
+        const Point ca = lifted ? wheel_center(a, rotation) : wheel_center(a);
+        const Point cb = lifted ? wheel_center(b, rotation) : wheel_center(b);
         if (std::hypot(ca.x - point.x, ca.y - point.y) < std::hypot(cb.x - point.x, cb.y - point.y)) {
             hi = b;
         } else {
@@ -322,7 +666,7 @@ int Spirograph::closing_turns() const {
     if (rack()) {
         return 0;
     }
-    const int outer = spiro_guides().at(guide).teeth, inner = spiro_inserts().at(insert).teeth;
+    const int outer = guide_teeth(), inner = spiro_inserts().at(insert).teeth;
     return inner / std::gcd(outer, inner);
 }
 bool Spirograph::loaded() const {
@@ -356,6 +700,9 @@ bool Spirograph::fill(int index, Color ink) {
     return true;
 }
 std::vector<SpiroTrace> Spirograph::advance(double target) {
+    if (detached) {
+        return {};
+    }
     if (!std::isfinite(target) || !std::isfinite(angle) || !std::isfinite(scale) || scale <= 0 ||
         std::abs(target - angle) > 100 * std::numbers::pi) {
         throw std::invalid_argument("Invalid spirograph motion");
@@ -371,14 +718,12 @@ std::vector<SpiroTrace> Spirograph::advance(double target) {
     // Bound pen travel to half an image pixel, including the insert's counter-rotation.
     const SpiroProfile& gp = spiro_guides()[guide].profile;
     const SpiroProfile& ip = spiro_inserts()[insert].profile;
-    double guide_curvature = 1, insert_curvature = 1;
-    const std::array<double, 5> gc = harmonics(gp), ic = harmonics(ip);
-    for (int i = 0; i < 5; ++i) {
-        const double factor = (i + 2) * (i + 2) - 1;
-        guide_curvature += std::abs(gc[i]) * factor;
-        insert_curvature -= std::abs(ic[i]) * factor;
-    }
-    const double speed = gp.circular() && ip.circular() && !rack()
+    const double guide_curvature = gp.curvature_bounds().maximum;
+    const double insert_curvature = quad() ? 1 : ip.curvature_bounds().minimum;
+    const double speed = quad() ? 6 * guide_radius() : capsule()
+                             ? 2.5 * (wheel_radius() * guide_teeth() / spiro_guides()[guide].cap_radius +
+                                      guide_radius() / insert_curvature)
+                         : gp.circular() && ip.circular() && !rack()
                              ? 2 * (guide_radius() + (outside ? wheel_radius() : -wheel_radius()))
                              : 2.5 * (wheel_radius() + guide_radius() * guide_curvature / insert_curvature);
     const double count = std::ceil(std::abs(delta) * speed / .5);
@@ -410,7 +755,7 @@ std::vector<SpiroTrace> Spirograph::advance(double target) {
 }
 void SpirographStroke::clear() {
     scratch_ = {};
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < spiro_max_holes; ++i) {
         std::unordered_map<int, Color> released;
         layers_[i].swap(released);
         material_[i].clear();

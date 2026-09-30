@@ -165,7 +165,8 @@ struct Document {
     void move_path_node(std::size_t index, Point point);
     std::vector<PathEdge> path_edges() const;
     int swap_path_segment(PathEdge edge, CurveKind kind);
-    std::vector<Point> path_contour(std::size_t start, std::size_t count, bool closed) const;
+    std::vector<Point> path_contour(std::size_t start, std::size_t count, bool closed,
+                                    double tolerance = 0.125) const;
     void sync_path();
     void restore_path(const EditablePath& previous);
     Image path_image(const Point* next = nullptr) const;
