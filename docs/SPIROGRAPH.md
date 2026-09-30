@@ -66,7 +66,7 @@ from the old one, and remains a separate Undo step.
 
 ## Component catalog
 
-The catalog includes 17 guides and 29 inserts. The ribbon starts with the two
+The catalog includes 18 guides and 29 inserts. The ribbon starts with the two
 paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
 
 - Paired rings: 144/96 and 150/105, named with outer/inner tooth counts. These
@@ -76,7 +76,10 @@ paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
 - Additional rings: 120, 144, 180, 210, and 240 teeth.
 - Shaped guides: oval, long oval, rounded triangle, square, pentagon, hexagon,
   egg, and shield.
-- Racks: standard and long straight supports with travel limits.
+- Rack 150: a closed capsule with straight sides and rounded ends. Wheels roll
+  around its full 150-tooth perimeter. Its proportions are approximate: the
+  rounded-end pitch radius uses 25 tooth-radius units. The original standard
+  and long straight supports remain available with travel limits.
 - Deluxe circular inserts: 24, 30, 32, 40, 42, 45, 48, 52, 56, 60, 63, 72,
   75, 80 and 84 teeth. They have respectively 5, 8, 9, 13, 14, 16, 17, 19,
   21, 23, 25, 29, 31, 33 and 35 holes in approximate inward spirals. Every
@@ -88,7 +91,9 @@ paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
   egg, and shield. Each has its own socket arrangement.
 
 **Roll outside** places the insert against the outside of a closed guide,
-producing a different family of curves. Racks roll along a straight segment.
+producing a different family of curves. Rack 150 always rolls outside; its
+outside control is selected and disabled. The older straight racks roll along
+a bounded segment.
 Inside combinations are conservatively checked for curvature clearance;
 incompatible parts are disabled. Returning from outside to inside requires a
 compatible pair. Changing the guide preserves its approximate displayed size
@@ -96,13 +101,17 @@ by rescaling the entire apparatus, including the insert.
 
 ## Contact model
 
-Each closed pitch curve uses a support function
+The shaped rings and inserts use a support function
 `h(n) = 1 + sum(a[k] cos(k*n))`, with positive curvature radius `h + h''`.
 Its boundary is `h*n + h'*t`; its arc length has an analytic integral. An
 invertible arc map matches the distances traveled on the guide and insert,
 then aligns their contact normals. This determines both translation and
 rotation, including asymmetric shapes. Circles use the exact familiar radius
-ratio as a fast path. Racks use the same arc matching against a straight line.
+ratio as a fast path. The straight racks match arc length against a line.
+Rack 150 uses distance around a capsule as its phase: its contact normal stays
+constant along each straight side and turns continuously around the rounded
+ends. Matching arc length gives continuous rolling and supports lifting with
+the wheel's rotation held fixed.
 
 Integer tooth counts fix the perimeter ratio, so closed-guide patterns return
 to their initial pose after `insert_teeth / gcd(guide_teeth, insert_teeth)`
@@ -114,7 +123,8 @@ The paired circular ring counts follow the
 Circular tooth and hole counts follow the illustrated kit and this
 [firsthand inventory of a Deluxe set](https://spirographicart.com/2014/05/02/chart-spirograph-wheels-rings/).
 The spiral socket coordinates are an approximation, not measurements of the
-molded pieces. Shaped profiles and racks remain distinct from the kit; the
+molded pieces. Shaped profiles remain distinct from the kit, and the capsule
+rack's width has not been measured from a physical part; the
 catalog is not yet a complete Deluxe replica.
 
 Pen subdivision is bounded to half an image pixel by a curvature-dependent

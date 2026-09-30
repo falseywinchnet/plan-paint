@@ -148,6 +148,56 @@ void deluxe_circular_wheels() {
     }
     require(marked, "full wheel pens produce no rendered output");
 }
+void capsule_rack(const char* output) {
+    paint::Spirograph s;
+    s.open(1100, 650);
+    s.set_guide(17);
+    s.set_insert(27); // Deluxe wheel 75.
+    s.set_scale(1.3);
+    require(s.capsule() && !s.rack() && s.exterior() && s.guide_teeth() == 150 && s.closing_turns() == 1,
+            "capsule rack must have a closed 150-tooth exterior track");
+    const double tau = 2 * std::numbers::pi, cap = 25 * s.scale;
+    const double half = std::numbers::pi * (s.guide_radius() - cap) / 2;
+    const paint::Point right = s.guide_point(0), left = s.guide_point(std::numbers::pi);
+    require(std::abs(right.x - s.center.x - half - cap) < 1e-9 &&
+                std::abs(left.x - s.center.x + half + cap) < 1e-9,
+            "capsule rounded ends have the wrong extent");
+    double perimeter = 0;
+    for (int i = 1; i <= 20000; ++i) {
+        perimeter += distance(s.guide_point(tau * (i - 1) / 20000), s.guide_point(tau * i / 20000));
+    }
+    require(std::abs(perimeter - tau * s.guide_radius()) < .001,
+            "capsule perimeter changes the tooth pitch");
+    for (const double phase : {0.0, std::numbers::pi / 12, 11 * std::numbers::pi / 12,
+                               13 * std::numbers::pi / 12, 23 * std::numbers::pi / 12, tau}) {
+        const double epsilon = 1e-7;
+        require(distance(s.guide_point(phase - epsilon), s.guide_point(phase + epsilon)) < .001 &&
+                    std::abs(s.wheel_rotation(phase - epsilon) - s.wheel_rotation(phase + epsilon)) < .0001,
+                "capsule contact or wheel orientation jumps at a segment boundary");
+    }
+    s.seat(0, {true, true, {190, 44, 75, 255}, 1});
+    s.seat(8, {true, true, {24, 99, 181, 255}, 1});
+    const std::vector<paint::SpiroTrace> traces = s.advance(tau);
+    require(std::abs(s.angle - tau) < 1e-12, "capsule still clamps travel at a straight rack endpoint");
+    for (const paint::SpiroTrace& trace : traces) {
+        require(distance(trace.start, trace.end) <= .501, "capsule corners produce coarse pen chords");
+    }
+    if (output) {
+        paint::Image image;
+        image.reset(1100, 650);
+        for (const paint::SpiroTrace& trace : traces) {
+            paint::Ink ink;
+            ink.primary = trace.ink;
+            paint::stroke(image, trace.start, trace.end, ink);
+        }
+        paint::Ink guide;
+        guide.primary = {40, 150, 70, 255};
+        for (int i = 1; i <= 600; ++i) {
+            paint::stroke(image, s.guide_point(tau * (i - 1) / 600), s.guide_point(tau * i / 600), guide);
+        }
+        paint::save_image(image, output);
+    }
+}
 void extended_geometry() {
     paint::Spirograph s;
     s.open(640, 480);
@@ -172,7 +222,7 @@ void extended_geometry() {
                     const paint::Point c = s.wheel_center(a), contact = s.guide_point(a);
                     const double rotation = s.wheel_rotation(a);
                     const double normal =
-                        (s.rack() ? std::numbers::pi / 2 : a + (external ? std::numbers::pi : 0)) - rotation;
+                        s.guide_normal(a) - rotation;
                     const paint::Point local = profile.point(normal);
                     const paint::Point world{c.x + s.wheel_radius() * (local.x * std::cos(rotation) -
                                                                        local.y * std::sin(rotation)),
@@ -187,7 +237,7 @@ void extended_geometry() {
                         (after.x - before.x) / (2 * epsilon) - spin * (contact.y - c.y),
                         (after.y - before.y) / (2 * epsilon) + spin * (contact.x - c.x)};
                     require(std::hypot(velocity.x, velocity.y) < 3e-4, "noncircular rolling contact slips");
-                    if (!external && !s.rack()) {
+                    if (!s.exterior()) {
                         const paint::SpiroProfile& frame = paint::spiro_guides()[g].profile;
                         for (int q = 0; q < 32; ++q) {
                             const paint::Point edge = profile.point(q * 2 * std::numbers::pi / 32);
@@ -427,6 +477,7 @@ int main(int argc, char** argv) {
         apparatus_resize();
         paired_ring_tracks();
         deluxe_circular_wheels();
+        capsule_rack(argc > 5 ? argv[5] : nullptr);
         extended_geometry();
         gel_and_peg_media();
         paint::Spirograph s;

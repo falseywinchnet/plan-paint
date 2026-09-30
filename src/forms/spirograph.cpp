@@ -23,30 +23,20 @@ gf::Point profile_point(gf::Point center, double radius, const SpiroProfile& pro
     const double c = std::cos(rotation), sn = std::sin(rotation);
     return {center.x + radius * (p.x * c - p.y * sn), center.y + radius * (p.x * sn + p.y * c)};
 }
-void profile_shape(gf::Painter& painter, gf::Point center, double r, const SpiroProfile& profile,
-                   double rotation, gf::Color fill, gf::Color edge, double width) {
-    if (profile.circular()) {
-        if (fill.alpha > 0) {
-            disc(painter, center, r, fill);
-        }
-        circle(painter, center, r, edge, width);
-        return;
-    }
-    std::vector<gf::Point> points;
-    double top = center.y, bottom = center.y;
-    for (int i = 0; i < 96; ++i) {
-        const gf::Point p = profile_point(center, r, profile, tau * i / 96, rotation);
-        points.push_back(p);
-        top = std::min(top, p.y);
-        bottom = std::max(bottom, p.y);
+void contour_shape(gf::Painter& painter, const std::vector<gf::Point>& points,
+                   gf::Color fill, gf::Color edge, double width) {
+    double top = points.front().y, bottom = top;
+    for (const gf::Point point : points) {
+        top = std::min(top, point.y);
+        bottom = std::max(bottom, point.y);
     }
     if (fill.alpha > 0) {
         // Convex scan conversion keeps the temporary sheet transparent without overlapping fans.
         const double step = std::max(1.0, (bottom - top) / 600);
         for (double y = top; y < bottom; y += step) {
             double left = 1e20, right = -1e20;
-            for (int i = 0; i < 96; ++i) {
-                const gf::Point a = points[i], b = points[(i + 1) % 96];
+            for (int i = 0; i < static_cast<int>(points.size()); ++i) {
+                const gf::Point a = points[i], b = points[(i + 1) % points.size()];
                 if ((a.y <= y + step * .5 && b.y > y + step * .5) ||
                     (b.y <= y + step * .5 && a.y > y + step * .5)) {
                     const double x = a.x + (b.x - a.x) * (y + step * .5 - a.y) / (b.y - a.y);
@@ -59,10 +49,27 @@ void profile_shape(gf::Painter& painter, gf::Point center, double r, const Spiro
             }
         }
     }
-    for (int i = 0; i < 96; ++i) {
-        painter.draw_line(points[i], points[(i + 1) % 96], edge, width);
+    for (int i = 0; i < static_cast<int>(points.size()); ++i) {
+        painter.draw_line(points[i], points[(i + 1) % points.size()], edge, width);
     }
 }
+void profile_shape(gf::Painter& painter, gf::Point center, double r, const SpiroProfile& profile,
+                   double rotation, gf::Color fill, gf::Color edge, double width) {
+    if (profile.circular()) {
+        if (fill.alpha > 0) {
+            disc(painter, center, r, fill);
+        }
+        circle(painter, center, r, edge, width);
+        return;
+    }
+    std::vector<gf::Point> points;
+    for (int i = 0; i < 96; ++i) {
+        const gf::Point p = profile_point(center, r, profile, tau * i / 96, rotation);
+        points.push_back(p);
+    }
+    contour_shape(painter, points, fill, edge, width);
+}
+
 double profile_clearance(Point point, Point center, double radius, const SpiroProfile& profile,
                          double rotation) {
     const double x = (point.x - center.x) * std::cos(rotation) + (point.y - center.y) * std::sin(rotation);
@@ -108,6 +115,16 @@ void paint_spiro_part(gf::Painter& painter, gf::Rect bounds, int kind, int index
         return;
     }
     const SpiroProfile& profile = kind == 0 ? spiro_guides()[index].profile : spiro_inserts()[index].profile;
+    if (kind == 0 && spiro_guides()[index].cap_radius > 0) {
+        const SpiroGuide& frame = spiro_guides()[index];
+        const double extent = std::numbers::pi * (frame.teeth - frame.cap_radius) / 2 + frame.cap_radius;
+        const double cap = 1.4 * r * frame.cap_radius / extent;
+        painter.fill_rounded_rect({c.x - 1.4 * r, c.y - cap, 2.8 * r, 2 * cap}, cap,
+                                  gf::Color::rgba(60, 215, 70, 150));
+        painter.stroke_rounded_rect({c.x - 1.4 * r, c.y - cap, 2.8 * r, 2 * cap}, cap,
+                                    gf::Color::rgba(20, 130, 40), 1);
+        return;
+    }
     if (kind == 0 && spiro_guides()[index].outside_teeth) {
         const double inner = r * spiro_guides()[index].teeth / spiro_guides()[index].outside_teeth;
         circle(painter, c, r, gf::Color::rgba(60, 215, 70, 120), r - inner);
@@ -148,6 +165,21 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
         for (int i = 0; i <= marks; ++i) {
             const Point p = spiro.guide_point(-1.5 + 3.0 * i / marks);
             painter.draw_line(screen({p.x, p.y - 3 * spiro.scale}), screen({p.x, p.y + 3 * spiro.scale}),
+                              gf::Color::rgba(25, 140, 40, 230), std::max(1.0, spiro.scale * zoom));
+        }
+    } else if (spiro.capsule()) {
+        std::vector<gf::Point> contour;
+        for (int i = 0; i < 600; ++i) {
+            contour.push_back(screen(spiro.guide_point(tau * i / 600)));
+        }
+        contour_shape(painter, contour, gf::Color::rgba(55, 235, 65, 80),
+                      gf::Color::rgba(25, 145, 40, 210), 1.3);
+        for (int i = 0; i < frame.teeth; ++i) {
+            const double phase = tau * i / frame.teeth;
+            const gf::Point p = screen(spiro.guide_point(phase));
+            const double normal = spiro.guide_normal(phase) + canvas().view_angle;
+            painter.draw_line(polar(p, -1.5 * spiro.scale * zoom, normal),
+                              polar(p, 1.5 * spiro.scale * zoom, normal),
                               gf::Color::rgba(25, 140, 40, 230), std::max(1.0, spiro.scale * zoom));
         }
     } else if (frame.outside_teeth) {
@@ -491,7 +523,12 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
     const double margin = 10 * spiro.scale + 4 / canvas().zoom();
     const SpiroGuide& frame = spiro_guides()[spiro.guide];
     const double center_distance = std::hypot(point.x - spiro.center.x, point.y - spiro.center.y);
-    const bool on_ring = frame.outside_teeth
+    const double cap = frame.cap_radius * spiro.scale;
+    const double half = std::numbers::pi * (spiro.guide_radius() - cap) / 2;
+    const bool on_ring = spiro.capsule()
+                             ? std::hypot(std::max(0.0, std::abs(point.x - spiro.center.x) - half),
+                                          point.y - spiro.center.y) < cap + margin
+                         : frame.outside_teeth
                              ? center_distance >= frame.teeth * spiro.scale - margin &&
                                    center_distance <= spiro.guide_body_radius() + margin
                          : spiro.rack()

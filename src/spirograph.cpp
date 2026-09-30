@@ -130,7 +130,8 @@ const std::vector<SpiroGuide>& spiro_guides() {
                                                {"Shield 300", 300, {-.09, .035, .012}},
                                                {"Rack 96", 96, {}, true},
                                                {"Long rack 144", 144, {}, true},
-                                               {"Ring 150/105", 105, {}, false, 150}};
+                                               {"Ring 150/105", 105, {}, false, 150},
+                                               {"Rack 150", 150, {}, false, 0, 25}};
     return parts;
 }
 const std::vector<SpiroInsert>& spiro_inserts() {
@@ -227,8 +228,14 @@ double Spirograph::wheel_radius() const {
 bool Spirograph::rack() const {
     return spiro_guides().at(guide).rack;
 }
+bool Spirograph::capsule() const {
+    return spiro_guides().at(guide).cap_radius > 0;
+}
+bool Spirograph::exterior() const {
+    return outside || rack() || capsule();
+}
 bool Spirograph::compatible(int g, int w) const {
-    if (outside || spiro_guides().at(g).rack) {
+    if (outside || spiro_guides().at(g).rack || spiro_guides().at(g).cap_radius > 0) {
         return true;
     }
     // A conservative curvature bound prevents an insert from cutting across its frame.
@@ -244,10 +251,65 @@ bool Spirograph::compatible(int g, int w) const {
     return minimum > maximum + 1;
 }
 Point Spirograph::guide_point(double normal) const {
+    if (capsule()) {
+        const double radius = spiro_guides()[guide].cap_radius * scale;
+        const double half = std::numbers::pi * (guide_radius() - radius) / 2;
+        const double arc = (normal - tau * std::floor(normal / tau)) * guide_radius();
+        const double quarter = std::numbers::pi * radius / 2;
+        if (arc < quarter) {
+            return {center.x + half + radius * std::cos(arc / radius),
+                    center.y + radius * std::sin(arc / radius)};
+        }
+        if (arc < quarter + 2 * half) {
+            return {center.x + half - (arc - quarter), center.y + radius};
+        }
+        if (arc < 3 * quarter + 2 * half) {
+            const double angle = std::numbers::pi / 2 + (arc - quarter - 2 * half) / radius;
+            return {center.x - half + radius * std::cos(angle), center.y + radius * std::sin(angle)};
+        }
+        if (arc < 3 * quarter + 4 * half) {
+            return {center.x - half + (arc - 3 * quarter - 2 * half), center.y - radius};
+        }
+        const double angle = 3 * std::numbers::pi / 2 + (arc - 3 * quarter - 4 * half) / radius;
+        return {center.x + half + radius * std::cos(angle), center.y + radius * std::sin(angle)};
+    }
     const Point p = rack() ? Point{normal, 0} : spiro_guides().at(guide).profile.point(normal);
     return {center.x + guide_radius() * p.x, center.y + guide_radius() * p.y};
 }
+double Spirograph::guide_normal(double phase) const {
+    if (rack()) {
+        return std::numbers::pi / 2;
+    }
+    if (!capsule()) {
+        return phase + (outside ? std::numbers::pi : 0);
+    }
+    const double radius = spiro_guides()[guide].cap_radius / guide_teeth();
+    const double half = std::numbers::pi * (1 - radius) / 2;
+    const double turns = std::floor(phase / tau), arc = phase - turns * tau;
+    const double quarter = std::numbers::pi * radius / 2;
+    double normal = 0;
+    if (arc < quarter) {
+        normal = arc / radius;
+    } else if (arc < quarter + 2 * half) {
+        normal = std::numbers::pi / 2;
+    } else if (arc < 3 * quarter + 2 * half) {
+        normal = std::numbers::pi / 2 + (arc - quarter - 2 * half) / radius;
+    } else if (arc < 3 * quarter + 4 * half) {
+        normal = 3 * std::numbers::pi / 2;
+    } else {
+        normal = 3 * std::numbers::pi / 2 + (arc - 3 * quarter - 4 * half) / radius;
+    }
+    return normal + turns * tau + std::numbers::pi;
+}
+double Spirograph::guide_arc(double phase) const {
+    return rack() || capsule() ? phase : spiro_guides().at(guide).profile.arc(phase);
+}
 Point Spirograph::close_position() const {
+    if (capsule()) {
+        const double cap = spiro_guides()[guide].cap_radius * scale;
+        return {center.x + std::numbers::pi * (guide_radius() - cap) / 2 + cap + 9 * scale,
+                center.y - cap - 12 * scale};
+    }
     Point p = guide_point(rack() ? -1.5 : -std::numbers::pi / 4);
     if (spiro_guides()[guide].outside_teeth) {
         p = {center.x + guide_body_radius() / std::sqrt(2.0),
@@ -256,6 +318,11 @@ Point Spirograph::close_position() const {
     return {p.x + (rack() ? 0 : 9 * scale), p.y - 12 * scale};
 }
 Point Spirograph::resize_position() const {
+    if (capsule()) {
+        const double cap = spiro_guides()[guide].cap_radius * scale;
+        return {center.x + std::numbers::pi * (guide_radius() - cap) / 2 + cap + 9 * scale,
+                center.y + cap + 12 * scale};
+    }
     Point point = guide_point(rack() ? 1.5 : std::numbers::pi / 4);
     if (spiro_guides()[guide].outside_teeth) {
         point = {center.x + guide_body_radius() / std::sqrt(2.0),
@@ -264,19 +331,19 @@ Point Spirograph::resize_position() const {
     return {point.x + 9 * scale, point.y + 12 * scale};
 }
 double Spirograph::wheel_rotation(double phase) const {
-    const double length = rack() ? phase : spiro_guides().at(guide).profile.arc(phase);
-    const double sign = outside || rack() ? -1 : 1;
+    const double length = guide_arc(phase);
+    const double sign = exterior() ? -1 : 1;
     const double normal =
         spiro_inserts().at(insert).profile.normal_at_arc(sign * guide_radius() / wheel_radius() * length +
                                                        rolling_offset);
-    return (rack() ? std::numbers::pi / 2 : phase + (outside ? std::numbers::pi : 0)) - normal;
+    return guide_normal(phase) - normal;
 }
 Point Spirograph::wheel_center(double phase) const {
     return wheel_center(phase, wheel_rotation(phase));
 }
 Point Spirograph::wheel_center(double phase, double rotation) const {
     const double normal =
-        (rack() ? std::numbers::pi / 2 : phase + (outside ? std::numbers::pi : 0)) - rotation;
+        guide_normal(phase) - rotation;
     const Point p = rotated(spiro_inserts().at(insert).profile.point(normal), rotation);
     const Point contact = guide_point(phase);
     return {contact.x - wheel_radius() * p.x, contact.y - wheel_radius() * p.y};
@@ -292,9 +359,9 @@ void Spirograph::reposition(double phase) {
         phase = std::clamp(phase, -1.5, 1.5);
     }
     const double rotation = wheel_rotation(angle);
-    const double normal = (rack() ? std::numbers::pi / 2 : phase + (outside ? std::numbers::pi : 0)) - rotation;
-    const double length = rack() ? phase : spiro_guides().at(guide).profile.arc(phase);
-    const double sign = outside || rack() ? -1 : 1;
+    const double normal = guide_normal(phase) - rotation;
+    const double length = guide_arc(phase);
+    const double sign = exterior() ? -1 : 1;
     rolling_offset = spiro_inserts().at(insert).profile.arc(normal) - sign * guide_radius() / wheel_radius() * length;
     angle = phase;
 }
@@ -305,7 +372,7 @@ double Spirograph::project(Point point, double near_phase, bool lifted) const {
         const Point origin = wheel_center(0, rotation);
         return std::clamp((point.x - origin.x) / guide_radius(), -1.5, 1.5);
     }
-    if (!rack() && circle && spiro_guides()[guide].profile.circular()) {
+    if (!rack() && !capsule() && circle && spiro_guides()[guide].profile.circular()) {
         return near_phase +
                std::remainder(std::atan2(point.y - center.y, point.x - center.x) - near_phase, tau);
     }
@@ -451,7 +518,10 @@ std::vector<SpiroTrace> Spirograph::advance(double target) {
         guide_curvature += std::abs(gc[i]) * factor;
         insert_curvature -= std::abs(ic[i]) * factor;
     }
-    const double speed = gp.circular() && ip.circular() && !rack()
+    const double speed = capsule()
+                             ? 2.5 * (wheel_radius() * guide_teeth() / spiro_guides()[guide].cap_radius +
+                                      guide_radius() / insert_curvature)
+                         : gp.circular() && ip.circular() && !rack()
                              ? 2 * (guide_radius() + (outside ? wheel_radius() : -wheel_radius()))
                              : 2.5 * (wheel_radius() + guide_radius() * guide_curvature / insert_curvature);
     const double count = std::ceil(std::abs(delta) * speed / .5);

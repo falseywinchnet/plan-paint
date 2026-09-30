@@ -2040,12 +2040,22 @@ void rendering_quality_controls() {
     require(editor.document.ink.smooth && !editor.document.ink.supersample,
             "Smooth choice does not restore the original rendering");
 }
-void spirograph_lift_controls() {
+void spirograph_lift_controls(int guide = 0) {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
     gf::Window& window = *fixture.window;
     editor.document.new_image(640, 480);
     editor.start_spirograph();
+    editor.spiro_choice("spiro-guide-" + std::to_string(guide));
+    if (guide == 17) {
+        const std::shared_ptr<gf::Button> outside = require_button(window, "spiro-outside");
+        require((*outside).selected() && !(*outside).enabled(),
+                "closed rack must expose its fixed outside contact mode");
+        const paint::Point center = editor.spiro.center;
+        fixture.drag(center.x, center.y, center.x + 12, center.y + 9);
+        require(editor.spiro.center.x == center.x + 12 && editor.spiro.center.y == center.y + 9,
+                "closed rack body cannot be picked up and translated");
+    }
     editor.spiro.seat(0, {true, true, {170, 30, 80, 255}, 3});
     editor.spiro.angle = .31;
     editor.settings.rotate_view = true;
@@ -2089,12 +2099,13 @@ void spirograph_lift_controls() {
     require(std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
             "the first stroke after a lift is not independently undoable");
 }
-void spirograph_resize_controls() {
+void spirograph_resize_controls(int guide = 0) {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
     gf::Window& window = *fixture.window;
     editor.document.new_image(640, 480);
     editor.start_spirograph();
+    editor.spiro_choice("spiro-guide-" + std::to_string(guide));
     editor.spiro.seat(0, {true, true, {180, 40, 70, 255}, 3});
     editor.spiro.angle = .75;
     const std::vector<paint::Color> original = editor.document.image.pixels;
@@ -3702,7 +3713,9 @@ int main() {
         carpet_generator_controls();
         spirograph_accessible_pegs();
         spirograph_lift_controls();
+        spirograph_lift_controls(17);
         spirograph_resize_controls();
+        spirograph_resize_controls(17);
         rendering_quality_controls();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();

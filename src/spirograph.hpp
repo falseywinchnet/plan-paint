@@ -27,6 +27,8 @@ struct SpiroGuide {
     SpiroProfile profile{};
     bool rack = false;
     int outside_teeth = 0;
+    // Rounded-end rack radius in tooth-radius units; zero uses the support profile.
+    double cap_radius = 0;
 };
 const std::vector<SpiroGuide>& spiro_guides();
 const std::vector<SpiroInsert>& spiro_inserts();
@@ -62,6 +64,10 @@ struct Spirograph {
     double guide_body_radius() const;
     double wheel_radius() const;
     Point guide_point(double normal) const;
+    double guide_normal(double phase) const;
+    double guide_arc(double phase) const;
+    bool capsule() const;
+    bool exterior() const;
     Point close_position() const;
     Point resize_position() const;
     double project(Point point, double near_phase, bool lifted = false) const;
