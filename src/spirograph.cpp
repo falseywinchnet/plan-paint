@@ -183,6 +183,7 @@ void Spirograph::set_insert(int index) {
     selected_peg = -1;
     inserted = true;
     angle = 0;
+    rolling_offset = 0;
     pegs = {};
 }
 void Spirograph::remove_insert() {
@@ -201,6 +202,7 @@ void Spirograph::set_guide(int index) {
     set_scale(guide_body_radius() / (next.outside_teeth ? next.outside_teeth : next.teeth));
     guide = index;
     angle = 0;
+    rolling_offset = 0;
 }
 double Spirograph::guide_radius() const {
     return guide_teeth() * scale;
@@ -265,21 +267,43 @@ double Spirograph::wheel_rotation(double phase) const {
     const double length = rack() ? phase : spiro_guides().at(guide).profile.arc(phase);
     const double sign = outside || rack() ? -1 : 1;
     const double normal =
-        spiro_inserts().at(insert).profile.normal_at_arc(sign * guide_radius() / wheel_radius() * length);
+        spiro_inserts().at(insert).profile.normal_at_arc(sign * guide_radius() / wheel_radius() * length +
+                                                       rolling_offset);
     return (rack() ? std::numbers::pi / 2 : phase + (outside ? std::numbers::pi : 0)) - normal;
 }
 Point Spirograph::wheel_center(double phase) const {
-    const double rotation = wheel_rotation(phase);
+    return wheel_center(phase, wheel_rotation(phase));
+}
+Point Spirograph::wheel_center(double phase, double rotation) const {
     const double normal =
         (rack() ? std::numbers::pi / 2 : phase + (outside ? std::numbers::pi : 0)) - rotation;
     const Point p = rotated(spiro_inserts().at(insert).profile.point(normal), rotation);
     const Point contact = guide_point(phase);
     return {contact.x - wheel_radius() * p.x, contact.y - wheel_radius() * p.y};
 }
-double Spirograph::project(Point point, double near_phase) const {
+void Spirograph::reposition(double phase) {
+    if (!std::isfinite(phase) || !std::isfinite(angle) || std::abs(phase - angle) > 100 * std::numbers::pi) {
+        throw std::invalid_argument("Invalid spirograph placement");
+    }
+    if (!active || !inserted) {
+        return;
+    }
+    if (rack()) {
+        phase = std::clamp(phase, -1.5, 1.5);
+    }
+    const double rotation = wheel_rotation(angle);
+    const double normal = (rack() ? std::numbers::pi / 2 : phase + (outside ? std::numbers::pi : 0)) - rotation;
+    const double length = rack() ? phase : spiro_guides().at(guide).profile.arc(phase);
+    const double sign = outside || rack() ? -1 : 1;
+    rolling_offset = spiro_inserts().at(insert).profile.arc(normal) - sign * guide_radius() / wheel_radius() * length;
+    angle = phase;
+}
+double Spirograph::project(Point point, double near_phase, bool lifted) const {
     const bool circle = spiro_inserts()[insert].profile.circular();
-    if (rack() && circle) {
-        return std::clamp((point.x - center.x) / guide_radius(), -1.5, 1.5);
+    const double rotation = wheel_rotation(angle);
+    if (rack() && (circle || lifted)) {
+        const Point origin = wheel_center(0, rotation);
+        return std::clamp((point.x - origin.x) / guide_radius(), -1.5, 1.5);
     }
     if (!rack() && circle && spiro_guides()[guide].profile.circular()) {
         return near_phase +
@@ -291,7 +315,7 @@ double Spirograph::project(Point point, double near_phase) const {
     constexpr int samples = 48;
     for (int i = -samples; i <= samples; ++i) {
         const double a = rack() ? 1.5 * i / samples : near_phase + std::numbers::pi * i / samples;
-        const Point c = wheel_center(a);
+        const Point c = lifted ? wheel_center(a, rotation) : wheel_center(a);
         const double d = std::hypot(c.x - point.x, c.y - point.y);
         if (d < distance) {
             distance = d;
@@ -305,7 +329,8 @@ double Spirograph::project(Point point, double near_phase) const {
     }
     for (int i = 0; i < 40; ++i) {
         const double a = (2 * lo + hi) / 3, b = (lo + 2 * hi) / 3;
-        const Point ca = wheel_center(a), cb = wheel_center(b);
+        const Point ca = lifted ? wheel_center(a, rotation) : wheel_center(a);
+        const Point cb = lifted ? wheel_center(b, rotation) : wheel_center(b);
         if (std::hypot(ca.x - point.x, ca.y - point.y) < std::hypot(cb.x - point.x, cb.y - point.y)) {
             hi = b;
         } else {

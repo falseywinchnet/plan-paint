@@ -55,6 +55,15 @@ accessibility tools. Resizing keeps the center, rolling phase and loaded pegs;
 pen widths remain in image pixels. It does not resize existing marks or add an
 Undo step. Canvas zoom remains independent of apparatus scale.
 
+Choose **Lift wheel** to pick up the insert and place it at another contact
+point on the current ring or rack. Drag its center grip or an empty part of
+its body. The wheel keeps its current rotation and loaded pens; the guide
+stays in place, and the move deposits no ink. It remains constrained to the
+guide so it can resume rolling from the new contact. **Escape** during the
+drag restores the previous placement. Choose **Operate** to roll and draw
+again. The next stroke starts at the new location without a connecting line
+from the old one, and remains a separate Undo step.
+
 ## Component catalog
 
 The catalog includes 17 guides and 29 inserts. The ribbon starts with the two

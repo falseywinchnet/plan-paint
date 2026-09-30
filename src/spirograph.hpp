@@ -48,7 +48,7 @@ struct Spirograph {
     bool active = false, inserted = true;
     int guide = 0, insert = spiro_default_insert, selected_peg = -1;
     bool outside = false;
-    double scale = 1.35, angle = 0;
+    double scale = 1.35, angle = 0, rolling_offset = 0;
     Point center{};
     std::array<SpiroPeg, spiro_max_holes> pegs{};
     void open(int width, int height);
@@ -64,7 +64,9 @@ struct Spirograph {
     Point guide_point(double normal) const;
     Point close_position() const;
     Point resize_position() const;
-    double project(Point point, double near_phase) const;
+    double project(Point point, double near_phase, bool lifted = false) const;
+    // Move along the guide without rolling or drawing; resume rolling from the new contact.
+    void reposition(double phase);
     bool rack() const;
     bool compatible(int guide_index, int insert_index) const;
     bool select_peg(int index);
@@ -73,6 +75,7 @@ struct Spirograph {
     void refresh_peg(int index);
     double wheel_rotation(double phase) const;
     Point wheel_center(double phase) const;
+    Point wheel_center(double phase, double rotation) const;
     Point hole(int index, double phase) const;
     int hole_count() const;
     int closing_turns() const;

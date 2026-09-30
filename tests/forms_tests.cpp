@@ -2040,6 +2040,55 @@ void rendering_quality_controls() {
     require(editor.document.ink.smooth && !editor.document.ink.supersample,
             "Smooth choice does not restore the original rendering");
 }
+void spirograph_lift_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.new_image(640, 480);
+    editor.start_spirograph();
+    editor.spiro.seat(0, {true, true, {170, 30, 80, 255}, 3});
+    editor.spiro.angle = .31;
+    editor.settings.rotate_view = true;
+    editor.rotate_view(.4);
+    const double rotation = editor.spiro.wheel_rotation(editor.spiro.angle);
+    const paint::Point support = editor.spiro.center;
+    const std::uint64_t revision = editor.document.revision;
+    const std::vector<paint::Color> blank = editor.document.image.pixels;
+    routed_button(window, "spiro-lift");
+    require(editor.spiro_lift && (*require_button(window, "spiro-lift")).selected(),
+            "Lift wheel does not expose its active mode");
+    paint::Point from = editor.spiro.wheel_center(editor.spiro.angle);
+    paint::Point to = editor.spiro.wheel_center(1.23, rotation);
+    fixture.drag(from.x, from.y, to.x, to.y);
+    require(std::abs(editor.spiro.angle - 1.23) < 1e-6 &&
+                std::abs(editor.spiro.wheel_rotation(editor.spiro.angle) - rotation) < 1e-10 &&
+                editor.spiro.center.x == support.x && editor.spiro.center.y == support.y &&
+                editor.spiro.pegs[0].loaded && editor.spiro.pegs[0].width == 3,
+            "lifting fails to preserve rotation, guide position or the loaded pen");
+    const double placed_angle = editor.spiro.angle, placed_offset = editor.spiro.rolling_offset;
+    from = editor.spiro.wheel_center(editor.spiro.angle);
+    to = editor.spiro.wheel_center(-.8, rotation);
+    fixture.pointer(gf::PointerAction::down, from.x, from.y);
+    fixture.pointer(gf::PointerAction::move, to.x, to.y);
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(editor.spiro.angle == placed_angle && editor.spiro.rolling_offset == placed_offset &&
+                !editor.canvas().has_pointer_capture(),
+            "Escape does not restore a lifted wheel's previous placement");
+    require(editor.document.revision == revision &&
+                std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
+            "lifting a loaded wheel draws ink or changes history");
+    routed_button(window, "spiro-operate");
+    require(!editor.spiro_lift, "Operate leaves the wheel in lift mode");
+    from = editor.spiro.wheel_center(editor.spiro.angle);
+    to = editor.spiro.wheel_center(editor.spiro.angle + .25);
+    fixture.drag(from.x, from.y, to.x, to.y);
+    require(editor.document.revision != revision &&
+                std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) != 0,
+            "rolling after placement does not resume drawing");
+    editor.execute("undo");
+    require(std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
+            "the first stroke after a lift is not independently undoable");
+}
 void spirograph_resize_controls() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -3652,6 +3701,7 @@ int main() {
         dither_dialog_and_brush();
         carpet_generator_controls();
         spirograph_accessible_pegs();
+        spirograph_lift_controls();
         spirograph_resize_controls();
         rendering_quality_controls();
         spirograph_apparatus_and_ink();

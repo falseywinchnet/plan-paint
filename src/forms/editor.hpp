@@ -218,6 +218,7 @@ class Editor final : public gui_forms::Control {
     void complete_deferred_save();
     PaintCanvas& canvas();
     Spirograph spiro;
+    bool spiro_lift = false;
     void start_spirograph();
     void resize_spirograph(double scale);
     void spiro_choice(const std::string& id);
@@ -316,10 +317,11 @@ class Editor final : public gui_forms::Control {
     Point text_drag_start_;
     void paint_atlas_overlay(gui_forms::Painter& painter);
     void paint_tool_preview(gui_forms::Painter& painter);
-    enum class SpiroDrag { None, Guide, Resize, Wheel, PegPending, Peg };
+    enum class SpiroDrag { None, Guide, Resize, Wheel, Lift, PegPending, Peg };
     SpiroDrag spiro_drag_ = SpiroDrag::None;
     Point spiro_grab_{}, spiro_pointer_{};
     double spiro_resize_scale_ = 1, spiro_resize_radius_ = 1;
+    double spiro_lift_angle_ = 0, spiro_lift_offset_ = 0;
     SpirographStroke spiro_stroke_;
     SpiroPeg spiro_carried_{};
     int spiro_origin_hole_ = -1, spiro_target_hole_ = -1;

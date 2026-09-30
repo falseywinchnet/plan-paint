@@ -163,6 +163,7 @@ void extended_geometry() {
                 s.guide = g;
                 s.insert = w;
                 s.angle = 0;
+                s.rolling_offset = 0;
                 s.pegs = {};
                 ++checked;
                 const paint::SpiroProfile& profile = paint::spiro_inserts()[w].profile;
@@ -220,6 +221,33 @@ void extended_geometry() {
                 const double target = s.rack() ? .25 : .27;
                 const double projected = s.project(s.wheel_center(target), .2);
                 require(std::abs(projected - target) < 1e-6, "pointer projection misses nearby wheel center");
+                const double rotation = s.wheel_rotation(s.angle), destination = -.83;
+                const paint::Point expected_center = s.wheel_center(destination, rotation);
+                const double placement = s.project(expected_center, s.angle, true);
+                require(std::abs(placement - destination) < 1e-6,
+                        "lift projection misses a placement with the wheel's rotation held fixed");
+                const paint::Point guide_center = s.center;
+                s.reposition(placement);
+                require(std::abs(s.wheel_rotation(s.angle) - rotation) < 1e-10 &&
+                            distance(s.wheel_center(s.angle), expected_center) < 1e-5 &&
+                            distance(s.center, guide_center) == 0 && s.pegs[0].loaded,
+                        "lifting rotates the wheel, moves the guide or loses its loaded pen");
+                const double epsilon = 1e-5;
+                const paint::Point contact = s.guide_point(s.angle), c = s.wheel_center(s.angle);
+                const paint::Point before = s.wheel_center(s.angle - epsilon), after = s.wheel_center(s.angle + epsilon);
+                const double spin = (s.wheel_rotation(s.angle + epsilon) - s.wheel_rotation(s.angle - epsilon)) / (2 * epsilon);
+                const paint::Point velocity{(after.x - before.x) / (2 * epsilon) - spin * (contact.y - c.y),
+                                            (after.y - before.y) / (2 * epsilon) + spin * (contact.x - c.x)};
+                require(std::hypot(velocity.x, velocity.y) < 3e-4,
+                        "resuming after a lift breaks no-slip contact");
+                const paint::Point pen = s.hole(0, s.angle);
+                if (!s.rack()) {
+                    require(distance(pen, s.hole(0, s.angle + 2 * std::numbers::pi * s.closing_turns())) < 1e-7,
+                            "repositioned wheel no longer closes its pattern");
+                }
+                const std::vector<paint::SpiroTrace> resumed = s.advance(s.angle + .04);
+                require(!resumed.empty() && distance(resumed.front().start, pen) < 1e-9,
+                        "resumed ink draws a connector from the wheel's old position");
             }
         }
     }
@@ -344,6 +372,55 @@ void draw_circular_catalog(const char* path) {
     }
     paint::save_image(image, path);
 }
+void diagram_circle(paint::Image& image, paint::Point center, double radius, paint::Color color) {
+    std::vector<paint::Point> points;
+    for (int i = 0; i < 256; ++i) {
+        const double angle = i * 2 * std::numbers::pi / 256;
+        points.push_back({center.x + radius * std::cos(angle), center.y + radius * std::sin(angle)});
+    }
+    paint::Ink ink;
+    ink.primary = color;
+    paint::polygon(image, points, ink, true, false);
+}
+void draw_lift_example(const char* path) {
+    paint::Image image;
+    image.reset(900, 450);
+    paint::TextStyle label;
+    label.size = 17;
+    for (int panel = 0; panel < 2; ++panel) {
+        paint::Spirograph wheel;
+        wheel.open(450, 450);
+        wheel.center = {225.0 + 450 * panel, 245};
+        wheel.scale = 1.25;
+        wheel.angle = .31;
+        if (panel) {
+            wheel.reposition(1.23);
+        }
+        const double placement = wheel.angle;
+        const paint::Point center = wheel.wheel_center(placement), first = wheel.hole(0, placement);
+        wheel.seat(0, {true, true, {150, 45, 85, 255}, 1});
+        const paint::Image base = image;
+        paint::SpirographStroke stroke;
+        stroke.render(image, base, wheel, wheel.advance(placement + 2 * std::numbers::pi * wheel.closing_turns()));
+        wheel.angle = placement;
+        diagram_circle(image, wheel.center, wheel.guide_radius(), {70, 135, 80, 255});
+        diagram_circle(image, wheel.center, wheel.guide_body_radius(), {140, 185, 145, 255});
+        diagram_circle(image, center, wheel.wheel_radius(), {15, 110, 190, 255});
+        paint::Ink ink;
+        ink.primary = {15, 110, 190, 255};
+        ink.size = 2;
+        paint::stroke(image, center, first, ink);
+        for (int i = 0; i < wheel.hole_count(); ++i) {
+            const paint::Point hole = wheel.hole(i, placement);
+            ink.size = i == 0 ? 6 : 3;
+            paint::stroke(image, hole, hole, ink);
+        }
+        paint::draw_text(image, {panel * 450.0 + 24, 24},
+                         panel ? "Lifted, same wheel rotation" : "Original placement", label,
+                         {20, 45, 65, 255}, {}, "");
+    }
+    paint::save_image(image, path);
+}
 } // namespace
 int main(int argc, char** argv) {
     try {
@@ -401,6 +478,9 @@ int main(int argc, char** argv) {
         }
         if (argc > 3) {
             draw_circular_catalog(argv[3]);
+        }
+        if (argc > 4) {
+            draw_lift_example(argv[4]);
         }
         if (argc > 1) {
             paint::Image image;

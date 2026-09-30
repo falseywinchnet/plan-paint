@@ -597,14 +597,15 @@ std::shared_ptr<gf::NumericUpDown> Ribbon::number(const std::string& id, const s
                                                   double value, int decimals) {
     std::shared_ptr<gf::Label> label = gf::make_control<gf::Label>(gf::StableId(id + "-label"), text);
     (*label).set_font({gf::FontRole::control, 14, 400, false});
-    option(label, {bounds.x, bounds.y, 113, bounds.height});
+    const double label_width = id == "spiro-scale" ? 70 : 113;
+    option(label, {bounds.x, bounds.y, label_width, bounds.height});
     std::shared_ptr<gf::NumericUpDown> control = gf::make_control<gf::NumericUpDown>(gf::StableId(id));
     (*control).set_range(minimum, maximum);
     (*control).set_decimal_places(static_cast<std::uint8_t>(decimals));
     (*control).set_increment(decimals ? 0.05 : 1);
     (*control).set_value(value);
     (*control).set_accessible_name(text);
-    option(control, {bounds.x + 113, bounds.y, bounds.width - 113, bounds.height});
+    option(control, {bounds.x + label_width, bounds.y, bounds.width - label_width, bounds.height});
     subscriptions_.push_back((*control).value_changed().subscribe(
         *this, id.starts_with("gradient-")
                    ? gf::Delegate<double>::bind<Ribbon, &Ribbon::gradient_number_changed>(*this)
@@ -670,7 +671,8 @@ void Ribbon::add_options() {
     button("spiro-brushes-menu", tr("Peg medium"), -1, {500, 111, 232, 22}, false, true);
     button("spiro-outside", tr("Roll outside"), -1, {755, 111, 140, 22});
     button("spiro-deselect", tr("Deselect peg"), -1, {902, 111, 126, 22});
-    spiro_scale_ = number("spiro-scale", tr("Scale"), {1040, 36, 228, 28}, .05, 64, 1.35, 2);
+    spiro_scale_ = number("spiro-scale", tr("Scale"), {1040, 36, 140, 28}, .05, 64, 1.35, 2);
+    button("spiro-lift", tr("Lift wheel"), -1, {1186, 36, 82, 28});
     button("spiro-holes-menu", tr("Choose hole"), -1, {1040, 76, 228, 31}, false, true);
     button("spiro-load-primary", tr("Load Primary"), -1, {1040, 111, 111, 22});
     button("spiro-load-alt", tr("Load Alt"), -1, {1157, 111, 111, 22});
@@ -1731,10 +1733,13 @@ void Ribbon::synchronize() {
             selected = document.tool == Tool::Fill;
         }
         if (id == "spiro-operate") {
-            selected = document.tool == Tool::Spirograph;
+            selected = document.tool == Tool::Spirograph && !(*editor).spiro_lift;
+        }
+        if (id == "spiro-lift") {
+            selected = document.tool == Tool::Spirograph && (*editor).spiro_lift;
         }
         if (id.starts_with("spiro-peg-") || id == "spiro-remove" || id == "spiro-clear-pegs" ||
-            id == "spiro-operate" || id == "spiro-fill") {
+            id == "spiro-operate" || id == "spiro-fill" || id == "spiro-lift") {
             control.set_enabled((*editor).spiro.inserted);
         }
         if (id == "gradient-linear") {
