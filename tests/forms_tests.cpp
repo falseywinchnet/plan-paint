@@ -2040,13 +2040,14 @@ void rendering_quality_controls() {
     require(editor.document.ink.smooth && !editor.document.ink.supersample,
             "Smooth choice does not restore the original rendering");
 }
-void spirograph_lift_controls(int guide = 0) {
+void spirograph_lift_controls(int guide = 0, int insert = paint::spiro_default_insert) {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
     gf::Window& window = *fixture.window;
     editor.document.new_image(640, 480);
     editor.start_spirograph();
     editor.spiro_choice("spiro-guide-" + std::to_string(guide));
+    editor.spiro_choice("spiro-insert-" + std::to_string(insert));
     if (guide == 17) {
         const std::shared_ptr<gf::Button> outside = require_button(window, "spiro-outside");
         require((*outside).selected() && !(*outside).enabled(),
@@ -2099,13 +2100,14 @@ void spirograph_lift_controls(int guide = 0) {
     require(std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
             "the first stroke after a lift is not independently undoable");
 }
-void spirograph_resize_controls(int guide = 0) {
+void spirograph_resize_controls(int guide = 0, int insert = paint::spiro_default_insert) {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
     gf::Window& window = *fixture.window;
     editor.document.new_image(640, 480);
     editor.start_spirograph();
     editor.spiro_choice("spiro-guide-" + std::to_string(guide));
+    editor.spiro_choice("spiro-insert-" + std::to_string(insert));
     editor.spiro.seat(0, {true, true, {180, 40, 70, 255}, 3});
     editor.spiro.angle = .75;
     const std::vector<paint::Color> original = editor.document.image.pixels;
@@ -3714,8 +3716,11 @@ int main() {
         spirograph_accessible_pegs();
         spirograph_lift_controls();
         spirograph_lift_controls(17);
+        spirograph_lift_controls(0, 29);
+        spirograph_lift_controls(17, 29);
         spirograph_resize_controls();
         spirograph_resize_controls(17);
+        spirograph_resize_controls(0, 29);
         rendering_quality_controls();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();

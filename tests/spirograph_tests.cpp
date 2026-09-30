@@ -9,6 +9,7 @@
 #include <limits>
 #include <numbers>
 #include <stdexcept>
+#include <string>
 namespace {
 void require(bool value, const char* message) {
     if (!value) {
@@ -148,6 +149,54 @@ void deluxe_circular_wheels() {
     }
     require(marked, "full wheel pens produce no rendered output");
 }
+void deluxe_bar(const char* output) {
+    const paint::SpiroInsert& bar = paint::spiro_inserts().at(29);
+    require(bar.teeth == 40 && bar.holes.size() == 9 && !bar.profile.circular(),
+            "Bar must have its own 40-tooth profile and nine holes");
+    const double tau = 2 * std::numbers::pi;
+    for (int i = -1000; i <= 1000; ++i) {
+        const double normal = i * .037;
+        require(std::abs(bar.profile.normal_at_arc(bar.profile.arc(normal)) - normal) < 1e-11,
+                "Bar arc map fails to retain complete turns");
+        require(distance(bar.profile.point(normal), bar.profile.point(normal + tau)) < 1e-11,
+                "Bar outline has a discontinuous seam");
+        require(bar.profile.curvature_radius(normal) >= .1 && bar.profile.curvature_radius(normal) <= 2,
+                "Bar curvature escapes its conservative bounds");
+        for (const paint::Point hole : bar.holes) {
+            require(hole.x * std::cos(normal) + hole.y * std::sin(normal) < bar.profile.support(normal) - .02,
+                    "Bar hole leaves its body");
+        }
+    }
+    paint::Image image;
+    if (output) {
+        image.reset(1100, 560);
+    }
+    for (int part = 0; part < 2; ++part) {
+        paint::Spirograph s;
+        s.open(1100, 560);
+        s.set_guide(part == 0 ? 0 : 16);
+        s.set_insert(29);
+        s.center = {275.0 + 550 * part, 280};
+        s.set_scale(2);
+        require(s.insert == 29 && s.hole_count() == 9 && s.closing_turns() == (part == 0 ? 5 : 8),
+                "Bar must fit both Deluxe rings and repeat after five/eight circuits");
+        const double period = tau * s.closing_turns();
+        require(distance(s.hole(0, 0), s.hole(0, period)) < 1e-9, "Bar pattern fails closure");
+        s.seat(0, {true, true, part == 0 ? paint::Color{180, 35, 75, 255} : paint::Color{30, 85, 165, 255}, 1});
+        const std::vector<paint::SpiroTrace> traces = s.advance(output ? period : tau);
+        for (const paint::SpiroTrace& trace : traces) {
+            require(distance(trace.start, trace.end) <= .501, "Bar corners create long pen chords");
+        }
+        if (output) {
+            const paint::Image base = image;
+            paint::SpirographStroke stroke;
+            stroke.render(image, base, s, traces);
+        }
+    }
+    if (output) {
+        paint::save_image(image, output);
+    }
+}
 void capsule_rack(const char* output) {
     paint::Spirograph s;
     s.open(1100, 650);
@@ -185,11 +234,9 @@ void capsule_rack(const char* output) {
     if (output) {
         paint::Image image;
         image.reset(1100, 650);
-        for (const paint::SpiroTrace& trace : traces) {
-            paint::Ink ink;
-            ink.primary = trace.ink;
-            paint::stroke(image, trace.start, trace.end, ink);
-        }
+        const paint::Image base = image;
+        paint::SpirographStroke stroke;
+        stroke.render(image, base, s, traces);
         paint::Ink guide;
         guide.primary = {40, 150, 70, 255};
         for (int i = 1; i <= 600; ++i) {
@@ -218,7 +265,8 @@ void extended_geometry() {
                 ++checked;
                 const paint::SpiroProfile& profile = paint::spiro_inserts()[w].profile;
                 for (int i = 0; i < 16; ++i) {
-                    const double a = .013 + i * .33, epsilon = 1e-5;
+                    // Tight Bar corners need a smaller difference step; keep the same slip tolerance.
+                    const double a = .013 + i * .33, epsilon = 1e-6;
                     const paint::Point c = s.wheel_center(a), contact = s.guide_point(a);
                     const double rotation = s.wheel_rotation(a);
                     const double normal =
@@ -236,7 +284,12 @@ void extended_geometry() {
                     const paint::Point velocity{
                         (after.x - before.x) / (2 * epsilon) - spin * (contact.y - c.y),
                         (after.y - before.y) / (2 * epsilon) + spin * (contact.x - c.x)};
-                    require(std::hypot(velocity.x, velocity.y) < 3e-4, "noncircular rolling contact slips");
+                    if (std::hypot(velocity.x, velocity.y) >= 3e-4) {
+                        throw std::runtime_error("noncircular rolling contact slips: guide=" + std::to_string(g) +
+                            " insert=" + std::to_string(w) + " phase=" + std::to_string(a) +
+                            " external=" + std::to_string(external) + " speed=" +
+                            std::to_string(std::hypot(velocity.x, velocity.y)));
+                    }
                     if (!s.exterior()) {
                         const paint::SpiroProfile& frame = paint::spiro_guides()[g].profile;
                         for (int q = 0; q < 32; ++q) {
@@ -282,7 +335,7 @@ void extended_geometry() {
                             distance(s.wheel_center(s.angle), expected_center) < 1e-5 &&
                             distance(s.center, guide_center) == 0 && s.pegs[0].loaded,
                         "lifting rotates the wheel, moves the guide or loses its loaded pen");
-                const double epsilon = 1e-5;
+                const double epsilon = 1e-6;
                 const paint::Point contact = s.guide_point(s.angle), c = s.wheel_center(s.angle);
                 const paint::Point before = s.wheel_center(s.angle - epsilon), after = s.wheel_center(s.angle + epsilon);
                 const double spin = (s.wheel_rotation(s.angle + epsilon) - s.wheel_rotation(s.angle - epsilon)) / (2 * epsilon);
@@ -474,9 +527,14 @@ void draw_lift_example(const char* path) {
 } // namespace
 int main(int argc, char** argv) {
     try {
+        if (argc == 3 && std::string(argv[1]) == "--bar") {
+            deluxe_bar(argv[2]);
+            return 0;
+        }
         apparatus_resize();
         paired_ring_tracks();
         deluxe_circular_wheels();
+        deluxe_bar(argc > 6 ? argv[6] : nullptr);
         capsule_rack(argc > 5 ? argv[5] : nullptr);
         extended_geometry();
         gel_and_peg_media();

@@ -8,6 +8,76 @@
 namespace paint {
 namespace {
 constexpr double tau = 2 * std::numbers::pi;
+// Approximate Bar outline: circular side, end and corner arcs. Its perimeter
+// is exactly 2*pi in normalized units, while every curvature radius is positive.
+struct BarPitch {
+    const double end_angle = .2;
+    const double delta = (40 * std::numbers::pi / 2 - 60 * end_angle -
+                          4 * (std::numbers::pi / 2 - end_angle)) / 76;
+    const double alpha = std::numbers::pi / 2 - delta;
+    const std::array<double, 10> normals{0, end_angle, alpha, std::numbers::pi - alpha,
+        std::numbers::pi - end_angle, std::numbers::pi + end_angle, std::numbers::pi + alpha,
+        tau - alpha, tau - end_angle, tau};
+    const std::array<double, 9> radii{1.5, .1, 2, .1, 1.5, .1, 2, .1, 1.5};
+    const double half_width = (60 * (1 - std::cos(end_angle)) +
+        4 * (std::cos(end_angle) - std::sin(delta)) + 80 * std::sin(delta)) / 40;
+    std::array<double, 10> lengths{};
+    BarPitch() {
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            lengths[i + 1] = lengths[i] + radii[i] * (normals[i + 1] - normals[i]);
+        }
+    }
+    Point point(double normal) const {
+        const double phase = normal - tau * std::floor(normal / tau);
+        Point p{half_width, 0};
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            const double finish = std::min(phase, normals[i + 1]);
+            if (finish > normals[i]) {
+                p.x += radii[i] * (std::cos(finish) - std::cos(normals[i]));
+                p.y += radii[i] * (std::sin(finish) - std::sin(normals[i]));
+            }
+        }
+        return p;
+    }
+    double arc(double normal) const {
+        const double turns = std::floor(normal / tau), phase = normal - turns * tau;
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            if (phase <= normals[i + 1]) {
+                return turns * tau + lengths[i] + radii[i] * (phase - normals[i]);
+            }
+        }
+        return (turns + 1) * tau;
+    }
+    double normal_at_arc(double length) const {
+        const double turns = std::floor(length / tau), phase = length - turns * tau;
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            if (phase <= lengths[i + 1]) {
+                return turns * tau + normals[i] + (phase - lengths[i]) / radii[i];
+            }
+        }
+        return (turns + 1) * tau;
+    }
+    double curvature(double normal) const {
+        const double phase = normal - tau * std::floor(normal / tau);
+        for (std::size_t i = 0; i < radii.size(); ++i) {
+            if (phase <= normals[i + 1]) {
+                return radii[i];
+            }
+        }
+        return radii.back();
+    }
+};
+const BarPitch& bar_pitch() {
+    static const BarPitch pitch;
+    return pitch;
+}
+std::vector<Point> bar_sockets() {
+    std::vector<Point> result;
+    for (int i = 0; i < 9; ++i) {
+        result.push_back({-bar_pitch().half_width + (8 + 9.0 * i) / 40, 0});
+    }
+    return result;
+}
 std::array<double, 5> harmonics(const SpiroProfile& p) {
     return {p.oval, p.triangle, p.square, p.pentagon, p.hexagon};
 }
@@ -39,9 +109,14 @@ std::vector<Point> spiral_sockets(int teeth, int count) {
 }
 } // namespace
 bool SpiroProfile::circular() const {
-    return oval == 0 && triangle == 0 && square == 0 && pentagon == 0 && hexagon == 0;
+    return kind == SpiroProfileKind::Harmonic && oval == 0 && triangle == 0 && square == 0 &&
+           pentagon == 0 && hexagon == 0;
 }
 double SpiroProfile::support(double normal) const {
+    if (kind == SpiroProfileKind::Bar) {
+        const Point p = bar_pitch().point(normal);
+        return p.x * std::cos(normal) + p.y * std::sin(normal);
+    }
     if (circular()) {
         return 1;
     }
@@ -53,6 +128,10 @@ double SpiroProfile::support(double normal) const {
     return value;
 }
 double SpiroProfile::derivative(double normal) const {
+    if (kind == SpiroProfileKind::Bar) {
+        const Point p = bar_pitch().point(normal);
+        return -p.x * std::sin(normal) + p.y * std::cos(normal);
+    }
     if (circular()) {
         return 0;
     }
@@ -64,6 +143,9 @@ double SpiroProfile::derivative(double normal) const {
     return value;
 }
 double SpiroProfile::curvature_radius(double normal) const {
+    if (kind == SpiroProfileKind::Bar) {
+        return bar_pitch().curvature(normal);
+    }
     if (circular()) {
         return 1;
     }
@@ -76,6 +158,9 @@ double SpiroProfile::curvature_radius(double normal) const {
     return value;
 }
 double SpiroProfile::arc(double normal) const {
+    if (kind == SpiroProfileKind::Bar) {
+        return bar_pitch().arc(normal);
+    }
     if (circular()) {
         return normal;
     }
@@ -88,6 +173,9 @@ double SpiroProfile::arc(double normal) const {
     return value;
 }
 double SpiroProfile::normal_at_arc(double length) const {
+    if (kind == SpiroProfileKind::Bar) {
+        return bar_pitch().normal_at_arc(length);
+    }
     if (circular()) {
         return length;
     }
@@ -110,8 +198,22 @@ double SpiroProfile::normal_at_arc(double length) const {
     return x + turns * tau;
 }
 Point SpiroProfile::point(double normal) const {
+    if (kind == SpiroProfileKind::Bar) {
+        return bar_pitch().point(normal);
+    }
     const double h = support(normal), d = derivative(normal);
     return {h * std::cos(normal) - d * std::sin(normal), h * std::sin(normal) + d * std::cos(normal)};
+}
+SpiroCurvature SpiroProfile::curvature_bounds() const {
+    if (kind == SpiroProfileKind::Bar) {
+        return {.1, 2};
+    }
+    double difference = 0;
+    const std::array<double, 5> coefficients = harmonics(*this);
+    for (int i = 0; i < 5; ++i) {
+        difference += std::abs(coefficients[i]) * ((i + 2) * (i + 2) - 1);
+    }
+    return {1 - difference, 1 + difference};
 }
 const std::vector<SpiroGuide>& spiro_guides() {
     static const std::vector<SpiroGuide> parts{{"Ring 144/96", 96, {}, false, 144},
@@ -164,7 +266,8 @@ const std::vector<SpiroInsert>& spiro_inserts() {
         {"Wheel 52", 52, spiral_sockets(52, 19)},
         {"Wheel 63", 63, spiral_sockets(63, 25)},
         {"Wheel 75", 75, spiral_sockets(75, 31)},
-        {"Wheel 84", 84, spiral_sockets(84, 35)}};
+        {"Wheel 84", 84, spiral_sockets(84, 35)},
+        {"Bar 40", 40, bar_sockets(), {0, 0, 0, 0, 0, SpiroProfileKind::Bar}}};
     return parts;
 }
 void Spirograph::open(int width, int height) {
@@ -239,14 +342,8 @@ bool Spirograph::compatible(int g, int w) const {
         return true;
     }
     // A conservative curvature bound prevents an insert from cutting across its frame.
-    double lower = 1, upper = 1;
-    const std::array<double, 5> gc = harmonics(spiro_guides().at(g).profile),
-                                ic = harmonics(spiro_inserts().at(w).profile);
-    for (int i = 0; i < 5; ++i) {
-        const double factor = (i + 2) * (i + 2) - 1;
-        lower -= std::abs(gc[i]) * factor;
-        upper += std::abs(ic[i]) * factor;
-    }
+    const double lower = spiro_guides().at(g).profile.curvature_bounds().minimum;
+    const double upper = spiro_inserts().at(w).profile.curvature_bounds().maximum;
     const double minimum = lower * spiro_guides().at(g).teeth, maximum = upper * spiro_inserts().at(w).teeth;
     return minimum > maximum + 1;
 }
@@ -511,13 +608,8 @@ std::vector<SpiroTrace> Spirograph::advance(double target) {
     // Bound pen travel to half an image pixel, including the insert's counter-rotation.
     const SpiroProfile& gp = spiro_guides()[guide].profile;
     const SpiroProfile& ip = spiro_inserts()[insert].profile;
-    double guide_curvature = 1, insert_curvature = 1;
-    const std::array<double, 5> gc = harmonics(gp), ic = harmonics(ip);
-    for (int i = 0; i < 5; ++i) {
-        const double factor = (i + 2) * (i + 2) - 1;
-        guide_curvature += std::abs(gc[i]) * factor;
-        insert_curvature -= std::abs(ic[i]) * factor;
-    }
+    const double guide_curvature = gp.curvature_bounds().maximum;
+    const double insert_curvature = ip.curvature_bounds().minimum;
     const double speed = capsule()
                              ? 2.5 * (wheel_radius() * guide_teeth() / spiro_guides()[guide].cap_radius +
                                       guide_radius() / insert_curvature)

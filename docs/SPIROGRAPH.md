@@ -66,7 +66,7 @@ from the old one, and remains a separate Undo step.
 
 ## Component catalog
 
-The catalog includes 18 guides and 29 inserts. The ribbon starts with the two
+The catalog includes 18 guides and 30 inserts. The ribbon starts with the two
 paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
 
 - Paired rings: 144/96 and 150/105, named with outer/inner tooth counts. These
@@ -87,6 +87,10 @@ paired rings and circular wheels 40, 63 and 48; wheel 63 is initially inserted.
   the largest wheel remains within the window at the standard ribbon size.
 - Additional circular inserts: 12, 18, 31, 36, 37 and 64 teeth; the prime
   counts support longer repeating patterns.
+- Bar 40: an approximate rounded rectangular wheel with nine holes and a
+  40-tooth perimeter. It produces 12-fold repetition in the 96-tooth ring and
+  21-fold repetition in the 105-tooth ring. The outline and hole positions are
+  approximate; they are not measured molded-part dimensions.
 - Shaped inserts: oval, long oval, rounded triangle, square, pentagon, hexagon,
   egg, and shield. Each has its own socket arrangement.
 
@@ -101,7 +105,7 @@ by rescaling the entire apparatus, including the insert.
 
 ## Contact model
 
-The shaped rings and inserts use a support function
+Most shaped rings and inserts use a support function
 `h(n) = 1 + sum(a[k] cos(k*n))`, with positive curvature radius `h + h''`.
 Its boundary is `h*n + h'*t`; its arc length has an analytic integral. An
 invertible arc map matches the distances traveled on the guide and insert,
@@ -113,6 +117,12 @@ constant along each straight side and turns continuously around the rounded
 ends. Matching arc length gives continuous rolling and supports lifting with
 the wheel's rotation held fixed.
 
+The Bar uses joined circular arcs for its sides, ends and corners. Its tangent
+stays continuous at each join, and its positive curvature permits exact arc
+inversion. The same contact model therefore supports both rolling and lifting.
+Compatibility and pen subdivision use bounds from the selected profile,
+including the Bar's tighter corners.
+
 Integer tooth counts fix the perimeter ratio, so closed-guide patterns return
 to their initial pose after `insert_teeth / gcd(guide_teeth, insert_teeth)`
 guide circuits. The tooth marks visualize the pitch geometry; there is no
@@ -123,7 +133,8 @@ The paired circular ring counts follow the
 Circular tooth and hole counts follow the illustrated kit and this
 [firsthand inventory of a Deluxe set](https://spirographicart.com/2014/05/02/chart-spirograph-wheels-rings/).
 The spiral socket coordinates are an approximation, not measurements of the
-molded pieces. Shaped profiles remain distinct from the kit, and the capsule
+molded pieces. The Bar follows a visually close approximation with verified
+contact and repetition. The other shaped profiles remain distinct from the kit, and the capsule
 rack's width has not been measured from a physical part; the
 catalog is not yet a complete Deluxe replica.
 
@@ -146,6 +157,8 @@ The physical kits informed the range of mechanisms, not the code or drawings:
   racks and oblong supports.
 - [PlayMonster Art Studio instructions](https://playmonster.com/wp-content/uploads/2021/10/artstudio-instructions.pdf):
   rack use and outside rolling.
+- [Firsthand Bar wheel demonstration](https://spirographicart.com/2016/06/05/intro-bar-wheel/):
+  12-point and 21-point repetition in the two kit rings, matching wheel 40.
 
 Nested independently moving inserts, concave tracks, and modular track assembly
 remain possible extensions requiring additional motion constraints.

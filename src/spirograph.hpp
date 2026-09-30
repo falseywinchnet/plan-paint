@@ -4,9 +4,14 @@
 namespace paint {
 constexpr int spiro_max_holes = 35;
 constexpr int spiro_default_insert = 26; // Wheel 63 in the stable component catalog.
+enum class SpiroProfileKind { Harmonic, Bar };
+struct SpiroCurvature {
+    double minimum, maximum;
+};
 // Convex pitch curves parameterized by outward normal, with exact arc length.
 struct SpiroProfile {
     double oval = 0, triangle = 0, square = 0, pentagon = 0, hexagon = 0;
+    SpiroProfileKind kind = SpiroProfileKind::Harmonic;
     bool circular() const;
     double support(double normal) const;
     double derivative(double normal) const;
@@ -14,6 +19,7 @@ struct SpiroProfile {
     double arc(double normal) const;
     double normal_at_arc(double arc) const;
     Point point(double normal) const;
+    SpiroCurvature curvature_bounds() const;
 };
 struct SpiroInsert {
     const char* name;
