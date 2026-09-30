@@ -314,6 +314,9 @@ inline constexpr HelpTopic help_topics[] = {
      "center to operate it; loaded pegs draw as it follows the guide.\n\n"
      "Move the support by dragging its body; the red close button removes it. Removing an insert clears "
      "its pegs. Tools that dismiss an ordinary guide also dismiss the spirograph, keeping its drawn lines."},
+    {"Moving and resizing the Spirograph",
+     "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel "
+     "on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize."},
     {"Your own pattern canvas",
      "Materials includes a custom tile alongside the pattern gallery. Choose Edit custom pattern "
      "to open its separate canvas. Left draws black; right draws white. The repeating preview shows "

@@ -700,5 +700,7 @@
   "Wheel 84": "圓輪 84",
   "Lift wheel": "提起齒輪",
   "Rack 150": "齒條 150",
-  "Bar 40": "條形輪 40"
+  "Bar 40": "條形輪 40",
+  "Moving and resizing the Spirograph": "移動和縮放旋輪線工具",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "選擇「提起齒輪」可移動輪子而不繪畫。琥珀色輪廓表示輪子已離開軌道。將輪子放回導軌，再選擇「運轉」。「縮放」調整整套裝置的大小。Escape 取消移動或縮放。"
 }

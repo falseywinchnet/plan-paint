@@ -700,5 +700,7 @@
   "Wheel 84": "عجلة 84",
   "Lift wheel": "رفع العجلة",
   "Rack 150": "مسطرة مسننة 150",
-  "Bar 40": "قضيب 40"
+  "Bar 40": "قضيب 40",
+  "Moving and resizing the Spirograph": "تحريك السبيروغراف وتغيير حجمه",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "اختر «رفع العجلة» للتحريك دون رسم. يشير الإطار الكهرماني إلى أن العجلة خارج المسار. ضع العجلة على الدليل ثم اختر «تشغيل». يغيّر «المقياس» حجم الجهاز. يلغي Escape التحريك أو تغيير الحجم."
 }

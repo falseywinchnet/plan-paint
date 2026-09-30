@@ -700,5 +700,7 @@
   "Wheel 84": "Bánh xe 84",
   "Lift wheel": "Nhấc bánh",
   "Rack 150": "Thanh răng 150",
-  "Bar 40": "Thanh 40"
+  "Bar 40": "Thanh 40",
+  "Moving and resizing the Spirograph": "Di chuyển và đổi kích thước Spirograph",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Chọn Nhấc bánh để di chuyển mà không vẽ. Viền màu hổ phách cho biết bánh xe đã rời đường dẫn. Đặt bánh xe lên đường dẫn rồi chọn Vận hành. Tỷ lệ đổi kích thước cả bộ dụng cụ. Escape hủy di chuyển hoặc đổi kích thước."
 }

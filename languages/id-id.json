@@ -700,5 +700,7 @@
   "Wheel 84": "Roda 84",
   "Lift wheel": "Angkat roda",
   "Rack 150": "Rak bergigi 150",
-  "Bar 40": "Batang 40"
+  "Bar 40": "Batang 40",
+  "Moving and resizing the Spirograph": "Memindahkan dan mengubah ukuran Spirograph",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Pilih Angkat roda untuk memindahkan tanpa menggambar. Garis tepi kuning jingga menandakan roda berada di luar lintasan. Letakkan roda pada pemandu, lalu pilih Jalankan. Skala mengubah ukuran perangkat. Escape membatalkan pemindahan atau perubahan ukuran."
 }

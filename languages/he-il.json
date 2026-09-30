@@ -700,5 +700,7 @@
   "Wheel 84": "גלגל 84",
   "Lift wheel": "הרמת גלגל",
   "Rack 150": "מסילת שיניים 150",
-  "Bar 40": "מוט 40"
+  "Bar 40": "מוט 40",
+  "Moving and resizing the Spirograph": "הזזה ושינוי גודל של הספירוגרף",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "בחרו „הרמת גלגל” כדי להזיז ללא ציור. קו מתאר בצבע ענבר מציין שהגלגל מחוץ למסילה. הניחו את הגלגל על המוביל ואז בחרו „הפעלה”. „קנה מידה” משנה את גודל המתקן. Escape מבטל הזזה או שינוי גודל."
 }

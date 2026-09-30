@@ -700,5 +700,7 @@
   "Wheel 84": "চাকা 84",
   "Lift wheel": "চাকা তুলুন",
   "Rack 150": "র‍্যাক 150",
-  "Bar 40": "বার 40"
+  "Bar 40": "বার 40",
+  "Moving and resizing the Spirograph": "স্পাইরোগ্রাফ সরানো ও আকার বদলানো",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "না এঁকে সরাতে চাকা তুলুন বেছে নিন। অ্যাম্বার রঙের সীমানা বোঝায় চাকা পথের বাইরে আছে। চাকাটি গাইডে রাখুন, তারপর চালান বেছে নিন। স্কেল পুরো যন্ত্রের আকার বদলায়। Escape সরানো বা আকার বদলানো বাতিল করে।"
 }

@@ -700,5 +700,7 @@
   "Wheel 84": "Gurudumu 84",
   "Lift wheel": "Inua gurudumu",
   "Rack 150": "Reli ya meno 150",
-  "Bar 40": "Upau 40"
+  "Bar 40": "Upau 40",
+  "Moving and resizing the Spirograph": "Kusogeza na kubadili ukubwa wa Spirograph",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Chagua Inua gurudumu ili kusogeza bila kuchora. Mpaka wa rangi ya kaharabu unaonyesha kuwa gurudumu liko nje ya njia. Weka gurudumu kwenye mwongozo, kisha chagua Endesha. Kipimo hubadili ukubwa wa kifaa. Escape hughairi kusogeza au kubadili ukubwa."
 }

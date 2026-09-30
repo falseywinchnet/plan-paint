@@ -700,5 +700,7 @@
   "Wheel 84": "歯車 84",
   "Lift wheel": "持ち上げ",
   "Rack 150": "ラック 150",
-  "Bar 40": "バー 40"
+  "Bar 40": "バー 40",
+  "Moving and resizing the Spirograph": "スピログラフの移動とサイズ変更",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "「持ち上げ」を選ぶと、描画せずに歯車を移動できます。琥珀色の輪郭はガイドから外れていることを示します。歯車をガイドに戻してから「操作」を選びます。「倍率」で装置のサイズを変更します。Escape で移動やサイズ変更を取り消します。"
 }

@@ -700,5 +700,7 @@
   "Wheel 84": "Ruota 84",
   "Lift wheel": "Alza ruota",
   "Rack 150": "Cremagliera 150",
-  "Bar 40": "Barra 40"
+  "Bar 40": "Barra 40",
+  "Moving and resizing the Spirograph": "Spostare e ridimensionare lo spirografo",
+  "Choose Lift wheel to move without drawing. An amber outline means off track. Place the wheel on the guide, then choose Operate. Scale resizes the apparatus. Escape cancels a move or resize.": "Scegli Alza ruota per spostare senza disegnare. Un contorno ambrato indica che la ruota è fuori dalla guida. Posizionala sulla guida, poi scegli Aziona. Scala ridimensiona il dispositivo. Esc annulla uno spostamento o un ridimensionamento."
 }
