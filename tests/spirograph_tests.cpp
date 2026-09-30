@@ -262,6 +262,21 @@ void extended_geometry() {
                 s.angle = 0;
                 s.rolling_offset = 0;
                 s.pegs = {};
+                const paint::Point seated_center = s.wheel_center(0);
+                const double seated_rotation = s.wheel_rotation(0);
+                s.seat(0, {true, true, {180, 30, 70, 255}, 2});
+                s.lift_to({4000, 4000}, 1);
+                require(s.detached && distance(s.wheel_center(0), {4000, 4000}) < 1e-10 &&
+                            s.advance(.5).empty() && s.angle == 0 &&
+                            s.wheel_rotation(0) == seated_rotation,
+                        "detached wheel changes pose or deposits ink");
+                s.lift_to(seated_center, 1);
+                require(!s.detached && distance(s.wheel_center(s.angle), seated_center) < 1e-6 &&
+                            std::abs(s.wheel_rotation(s.angle) - seated_rotation) < 1e-9 && s.pegs[0].loaded,
+                        "reseating changes wheel rotation, position or ink");
+                s.angle = 0;
+                s.rolling_offset = 0;
+                s.pegs = {};
                 ++checked;
                 const paint::SpiroProfile& profile = paint::spiro_inserts()[w].profile;
                 for (int i = 0; i < 16; ++i) {
@@ -487,17 +502,20 @@ void diagram_circle(paint::Image& image, paint::Point center, double radius, pai
 }
 void draw_lift_example(const char* path) {
     paint::Image image;
-    image.reset(900, 450);
+    image.reset(1350, 450);
     paint::TextStyle label;
     label.size = 17;
-    for (int panel = 0; panel < 2; ++panel) {
+    for (int panel = 0; panel < 3; ++panel) {
         paint::Spirograph wheel;
         wheel.open(450, 450);
         wheel.center = {225.0 + 450 * panel, 245};
         wheel.scale = 1.25;
         wheel.angle = .31;
         if (panel) {
-            wheel.reposition(1.23);
+            wheel.lift_to({90.0 + 450 * panel, 140}, 12);
+            if (panel == 2) {
+                wheel.lift_to(wheel.wheel_center(1.23, wheel.wheel_rotation(wheel.angle)), 12);
+            }
         }
         const double placement = wheel.angle;
         const paint::Point center = wheel.wheel_center(placement), first = wheel.hole(0, placement);
@@ -508,7 +526,8 @@ void draw_lift_example(const char* path) {
         wheel.angle = placement;
         diagram_circle(image, wheel.center, wheel.guide_radius(), {70, 135, 80, 255});
         diagram_circle(image, wheel.center, wheel.guide_body_radius(), {140, 185, 145, 255});
-        diagram_circle(image, center, wheel.wheel_radius(), {15, 110, 190, 255});
+        diagram_circle(image, center, wheel.wheel_radius(),
+                       wheel.detached ? paint::Color{220, 140, 20, 255} : paint::Color{15, 110, 190, 255});
         paint::Ink ink;
         ink.primary = {15, 110, 190, 255};
         ink.size = 2;
@@ -519,7 +538,8 @@ void draw_lift_example(const char* path) {
             paint::stroke(image, hole, hole, ink);
         }
         paint::draw_text(image, {panel * 450.0 + 24, 24},
-                         panel ? "Lifted, same wheel rotation" : "Original placement", label,
+                         panel == 0 ? "Original placement" : panel == 1 ? "Lifted off track: no ink" :
+                                                                           "Reseated, same rotation", label,
                          {20, 45, 65, 255}, {}, "");
     }
     paint::save_image(image, path);
@@ -529,6 +549,10 @@ int main(int argc, char** argv) {
     try {
         if (argc == 3 && std::string(argv[1]) == "--bar") {
             deluxe_bar(argv[2]);
+            return 0;
+        }
+        if (argc == 3 && std::string(argv[1]) == "--lift") {
+            draw_lift_example(argv[2]);
             return 0;
         }
         apparatus_resize();

@@ -1740,7 +1740,8 @@ void Ribbon::synchronize() {
         }
         if (id.starts_with("spiro-peg-") || id == "spiro-remove" || id == "spiro-clear-pegs" ||
             id == "spiro-operate" || id == "spiro-fill" || id == "spiro-lift") {
-            control.set_enabled((*editor).spiro.inserted);
+            control.set_enabled((*editor).spiro.inserted &&
+                                (id != "spiro-operate" || !(*editor).spiro.detached));
         }
         if (id == "gradient-linear") {
             selected = (*editor).fill_gradient.kind == GradientKind::Linear;

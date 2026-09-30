@@ -286,12 +286,14 @@ void Spirograph::set_insert(int index) {
     insert = index;
     selected_peg = -1;
     inserted = true;
+    detached = false;
     angle = 0;
     rolling_offset = 0;
     pegs = {};
 }
 void Spirograph::remove_insert() {
     inserted = false;
+    detached = false;
     selected_peg = -1;
     pegs = {};
 }
@@ -305,6 +307,7 @@ void Spirograph::set_guide(int index) {
     const SpiroGuide& next = spiro_guides()[index];
     set_scale(guide_body_radius() / (next.outside_teeth ? next.outside_teeth : next.teeth));
     guide = index;
+    detached = false;
     angle = 0;
     rolling_offset = 0;
 }
@@ -436,6 +439,9 @@ double Spirograph::wheel_rotation(double phase) const {
     return guide_normal(phase) - normal;
 }
 Point Spirograph::wheel_center(double phase) const {
+    if (detached) {
+        return detached_center;
+    }
     return wheel_center(phase, wheel_rotation(phase));
 }
 Point Spirograph::wheel_center(double phase, double rotation) const {
@@ -461,6 +467,24 @@ void Spirograph::reposition(double phase) {
     const double sign = exterior() ? -1 : 1;
     rolling_offset = spiro_inserts().at(insert).profile.arc(normal) - sign * guide_radius() / wheel_radius() * length;
     angle = phase;
+    detached = false;
+}
+void Spirograph::lift_to(Point point, double tolerance) {
+    if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
+        !std::isfinite(tolerance) || tolerance < 0) {
+        throw std::invalid_argument("Invalid spirograph lift position");
+    }
+    if (!active || !inserted) {
+        return;
+    }
+    const double phase = project(point, angle, true);
+    const Point contact_center = wheel_center(phase, wheel_rotation(angle));
+    if (std::hypot(point.x - contact_center.x, point.y - contact_center.y) <= tolerance) {
+        reposition(phase);
+    } else {
+        detached = true;
+        detached_center = point;
+    }
 }
 double Spirograph::project(Point point, double near_phase, bool lifted) const {
     const bool circle = spiro_inserts()[insert].profile.circular();
@@ -593,6 +617,9 @@ bool Spirograph::fill(int index, Color ink) {
     return true;
 }
 std::vector<SpiroTrace> Spirograph::advance(double target) {
+    if (detached) {
+        return {};
+    }
     if (!std::isfinite(target) || !std::isfinite(angle) || !std::isfinite(scale) || scale <= 0 ||
         std::abs(target - angle) > 100 * std::numbers::pi) {
         throw std::invalid_argument("Invalid spirograph motion");

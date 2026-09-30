@@ -319,9 +319,11 @@ class Editor final : public gui_forms::Control {
     void paint_tool_preview(gui_forms::Painter& painter);
     enum class SpiroDrag { None, Guide, Resize, Wheel, Lift, PegPending, Peg };
     SpiroDrag spiro_drag_ = SpiroDrag::None;
-    Point spiro_grab_{}, spiro_pointer_{};
+    Point spiro_grab_{}, spiro_pointer_{}, spiro_drag_center_{};
     double spiro_resize_scale_ = 1, spiro_resize_radius_ = 1;
     double spiro_lift_angle_ = 0, spiro_lift_offset_ = 0;
+    bool spiro_lift_detached_ = false;
+    Point spiro_lift_center_{};
     SpirographStroke spiro_stroke_;
     SpiroPeg spiro_carried_{};
     int spiro_origin_hole_ = -1, spiro_target_hole_ = -1;

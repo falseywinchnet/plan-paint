@@ -2088,6 +2088,28 @@ void spirograph_lift_controls(int guide = 0, int insert = paint::spiro_default_i
     require(editor.document.revision == revision &&
                 std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
             "lifting a loaded wheel draws ink or changes history");
+    from = editor.spiro.wheel_center(editor.spiro.angle);
+    fixture.drag(from.x, from.y, support.x, support.y);
+    require(editor.spiro.detached && !(*require_button(window, "spiro-operate")).enabled() &&
+                std::hypot(editor.spiro.wheel_center(editor.spiro.angle).x - support.x,
+                           editor.spiro.wheel_center(editor.spiro.angle).y - support.y) < 1e-8,
+            "lifted wheel cannot be placed freely off its track");
+    editor.spiro_choice("spiro-operate");
+    require(editor.spiro_lift && editor.spiro.advance(editor.spiro.angle + .5).empty(),
+            "a detached wheel can operate or deposit ink");
+    fixture.pointer(gf::PointerAction::down, support.x, support.y);
+    fixture.pointer(gf::PointerAction::move, support.x + 20, support.y + 20);
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(editor.spiro.detached && std::abs(editor.spiro.detached_center.x - support.x) < 1e-8 &&
+                std::abs(editor.spiro.detached_center.y - support.y) < 1e-8,
+            "Escape fails to restore a previously detached placement");
+    to = editor.spiro.wheel_center(1.23, rotation);
+    fixture.drag(support.x, support.y, to.x, to.y);
+    require(!editor.spiro.detached && (*require_button(window, "spiro-operate")).enabled() &&
+                std::abs(editor.spiro.wheel_rotation(editor.spiro.angle) - rotation) < 1e-10 &&
+                editor.document.revision == revision &&
+                std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
+            "reseating loses rotation, remains disabled, or draws ink");
     routed_button(window, "spiro-operate");
     require(!editor.spiro_lift, "Operate leaves the wheel in lift mode");
     from = editor.spiro.wheel_center(editor.spiro.angle);
@@ -2128,6 +2150,27 @@ void spirograph_resize_controls(int guide = 0, int insert = paint::spiro_default
             "rotated-view resize handle loses scale, numeric feedback or pointer release");
     require(editor.spiro.angle == .75 && editor.spiro.pegs[0].loaded && editor.spiro.pegs[0].width == 3,
             "apparatus resizing changes the rolling phase or ink");
+    const paint::Point resized_handle = editor.spiro.resize_position();
+    fixture.pointer(gf::PointerAction::down, resized_handle.x, resized_handle.y);
+    fixture.pointer(gf::PointerAction::move, center.x + .7 * (resized_handle.x - center.x),
+                    center.y + .7 * (resized_handle.y - center.y));
+    require(std::abs(editor.spiro.scale - .84) < 1e-8, "pending resize did not start");
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(std::abs(editor.spiro.scale - 1.2) < 1e-8 &&
+                std::abs((*scale).value() - 1.2) < 1e-8 && !editor.canvas().has_pointer_capture(),
+            "Escape fails to restore apparatus size, scale feedback or capture");
+    const paint::Point body = guide == 17 ? paint::Point{center.x, center.y} :
+        paint::Point{center.x - (editor.spiro.guide_radius() + editor.spiro.guide_body_radius()) / 2,
+                     center.y};
+    fixture.pointer(gf::PointerAction::down, body.x, body.y);
+    fixture.pointer(gf::PointerAction::move, body.x + 25, body.y - 17);
+    require(std::abs(editor.spiro.center.x - center.x - 25) < 1e-8 &&
+                std::abs(editor.spiro.center.y - center.y + 17) < 1e-8,
+            "pending apparatus movement did not start");
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(std::abs(editor.spiro.center.x - center.x) < 1e-8 &&
+                std::abs(editor.spiro.center.y - center.y) < 1e-8 && !editor.canvas().has_pointer_capture(),
+            "Escape fails to restore apparatus position or capture");
     require(editor.document.revision == revision &&
                 std::memcmp(original.data(), editor.document.image.pixels.data(),
                             original.size() * sizeof(paint::Color)) == 0,

@@ -233,7 +233,8 @@ void Editor::paint_spiro_overlay(gf::Painter& painter) {
         profile_shape(painter, {wheel.x + 1, wheel.y + 2}, r, part.profile, rotation,
                       gf::Color::rgba(15, 45, 90, 25), gf::Color::rgba(15, 45, 90, 50), 1);
         profile_shape(painter, wheel, r, part.profile, rotation, gf::Color::rgba(0, 170, 255, 70),
-                      gf::Color::rgba(15, 110, 215, 220), 1.3);
+                      spiro.detached ? gf::Color::rgba(220, 140, 20, 245) :
+                                       gf::Color::rgba(15, 110, 215, 220), spiro.detached ? 2.5 : 1.3);
         for (int i = 0; i < part.teeth; ++i) {
             const double a = part.profile.normal_at_arc(tau * i / part.teeth);
             const gf::Point p = profile_point(wheel, r, part.profile, a, rotation);
@@ -333,6 +334,9 @@ void Editor::spiro_choice(const std::string& id) {
         spiro_lift = false;
         document.tool = Tool::Fill;
     } else if (id == "spiro-operate") {
+        if (spiro.detached) {
+            return;
+        }
         spiro_lift = false;
         document.tool = Tool::Spirograph;
     } else if (id == "spiro-lift") {
@@ -376,9 +380,23 @@ int Editor::spiro_hole_at(Point point, bool empty_only) const {
     return best;
 }
 void Editor::cancel_spiro_drag() {
+    if (spiro_drag_ == SpiroDrag::Guide && spiro.active) {
+        spiro.center = spiro_drag_center_;
+    }
+    if (spiro_drag_ == SpiroDrag::Resize && spiro.active) {
+        spiro.set_scale(spiro_resize_scale_);
+        if (ribbon_) {
+            (*ribbon_).synchronize();
+        }
+    }
     if (spiro_drag_ == SpiroDrag::Lift && spiro.active) {
         spiro.angle = spiro_lift_angle_;
         spiro.rolling_offset = spiro_lift_offset_;
+        spiro.detached = spiro_lift_detached_;
+        spiro.detached_center = spiro_lift_center_;
+        if (ribbon_) {
+            (*ribbon_).synchronize();
+        }
     }
     if (spiro_drag_ == SpiroDrag::Peg && spiro_origin_hole_ >= 0 && spiro.active) {
         spiro.seat(spiro_origin_hole_, spiro_carried_);
@@ -473,7 +491,8 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
                 }
             } else if (spiro_drag_ == SpiroDrag::Lift) {
                 const Point target_point{point.x + spiro_grab_.x, point.y + spiro_grab_.y};
-                spiro.reposition(spiro.project(target_point, spiro.angle, true));
+                spiro.lift_to(target_point, 12 / canvas().zoom());
+                (*ribbon_).synchronize();
             } else {
                 const Point target_point{point.x + spiro_grab_.x, point.y + spiro_grab_.y};
                 if (spiro.rack() ||
@@ -583,9 +602,12 @@ bool Editor::spiro_pointer(const gf::PointerEvent& event, Point point) {
             spiro_drag_ = spiro_lift ? SpiroDrag::Lift : SpiroDrag::Wheel;
             spiro_lift_angle_ = spiro.angle;
             spiro_lift_offset_ = spiro.rolling_offset;
+            spiro_lift_detached_ = spiro.detached;
+            spiro_lift_center_ = spiro.detached_center;
             spiro_grab_ = {wheel.x - point.x, wheel.y - point.y};
         } else {
             spiro_drag_ = SpiroDrag::Guide;
+            spiro_drag_center_ = spiro.center;
             spiro_grab_ = {spiro.center.x - point.x, spiro.center.y - point.y};
         }
         if (window()) {

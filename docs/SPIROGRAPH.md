@@ -54,15 +54,19 @@ field accepts values from 0.05 to 64 and remains available to keyboard and
 accessibility tools. Resizing keeps the center, rolling phase and loaded pegs;
 pen widths remain in image pixels. It does not resize existing marks or add an
 Undo step. Canvas zoom remains independent of apparatus scale.
+Escape during a support move or resize restores the position or size from
+before that gesture, including the Scale field.
 
-Choose **Lift wheel** to pick up the insert and place it at another contact
-point on the current ring or rack. Drag its center grip or an empty part of
-its body. The wheel keeps its current rotation and loaded pens; the guide
-stays in place, and the move deposits no ink. It remains constrained to the
-guide so it can resume rolling from the new contact. **Escape** during the
-drag restores the previous placement. Choose **Operate** to roll and draw
-again. The next stroke starts at the new location without a connecting line
-from the old one, and remains a separate Undo step.
+Choose **Lift wheel** to pick up the insert without drawing. Drag its center
+grip or an empty part of its body anywhere on the paper. The wheel keeps its
+current rotation and loaded pens; the guide stays in place. An amber outline
+means the wheel is off the track, and **Operate** is disabled. Bring it within
+12 screen pixels of a valid contact position to seat it on the current ring
+or rack. **Escape** during a drag restores the previous placement, including
+an off-track position. Choose **Operate** after seating to roll and draw again.
+The next stroke starts at the new location without a connecting line from
+the old one, and remains a separate Undo step. Moving or resizing the support
+carries an attached wheel without drawing; only deliberate rolling deposits ink.
 
 ## Component catalog
 

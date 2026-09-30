@@ -53,11 +53,11 @@ struct SpiroTrace {
     int peg = 0;
 };
 struct Spirograph {
-    bool active = false, inserted = true;
+    bool active = false, inserted = true, detached = false;
     int guide = 0, insert = spiro_default_insert, selected_peg = -1;
     bool outside = false;
     double scale = 1.35, angle = 0, rolling_offset = 0;
-    Point center{};
+    Point center{}, detached_center{};
     std::array<SpiroPeg, spiro_max_holes> pegs{};
     void open(int width, int height);
     void set_insert(int index);
@@ -79,6 +79,8 @@ struct Spirograph {
     double project(Point point, double near_phase, bool lifted = false) const;
     // Move along the guide without rolling or drawing; resume rolling from the new contact.
     void reposition(double phase);
+    // Lift freely; seat only when the center is within tolerance of the track.
+    void lift_to(Point point, double tolerance);
     bool rack() const;
     bool compatible(int guide_index, int insert_index) const;
     bool select_peg(int index);
