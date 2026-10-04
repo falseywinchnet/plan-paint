@@ -136,11 +136,18 @@ matching toolkit library.
 
 ## Pinned toolkit corrections
 
-The pinned 0.2.3 toolkit source archive is augmented by the hash-verified patches
-listed in `third_party/gui-forms.lock.json`. The fetch script validates
-the archive and each patch, applies them in a temporary source directory, and
-records them in `SOURCE_PATCHES.json` before publishing the destination. Git is
-required for this source-preparation step.
+Plan Paint 1.1.4 pins GUI.Forms commit `814ef16a714c4d8f9f75b3a80fcb36b1888a21c8`
+from the `gui_forms` directory of `falseywinchnet/file_manager`. The source archive
+is attached to the 1.1.4 release and verified against `third_party/gui-forms.lock.json`.
+It incorporates all eight corrections previously applied as separate patches;
+the current lock requires no additional patches. Historical patch files remain
+available for reproducing older releases.
+
+The Windows host alternates input and ordinary queue turns within bounded
+batches, while preserving translated-character ordering before later keyboard
+input. Native paint bounds are included even when logical damage is already
+pending, preventing uncovered pixel edges and missed exposures. The optional
+transactional DIB development backend remains disabled in release builds.
 
 The nested dropdown patch recognizes the registered popup owner when a separate window overlay
 enters a containing focus scope. It fixes dropdowns inside Paint's color and

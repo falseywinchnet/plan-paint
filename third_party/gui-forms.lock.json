@@ -1,46 +1,10 @@
 {
   "repository": "falseywinchnet/plan-paint",
-  "release": "v0.2.3",
-  "asset": "gui-forms-native-source-64248bcc06a1.tar.gz",
-  "commit": "64248bcc06a1",
-  "sha256": "a368e03180a10911ff1316a4a0880028a4880bdbcf531456bd4ec35d0ace5a0f",
-  "patches": [
-    {
-      "file": "third_party/gui-forms-patches/nested-popup-focus.patch",
-      "sha256": "d3cb3e464622209400373c8e048b9757d099a837a9a99acd6638d21782d22b8a",
-      "upstream_commit": "f47893be9f8c1b1079a24b7d3641b3ae9184ccea"
-    },
-    {
-      "file": "third_party/gui-forms-patches/custom-cursors.patch",
-      "sha256": "75a6812dc5e869c0390da1aacca011f3a7bfc4f098e6aadbc4e9173a74b41127",
-      "upstream_commit": "dd061741d6f4633ace4dea2fa04cc5f88f251e07"
-    },
-    {
-      "file": "third_party/gui-forms-patches/windows-cursor-resource-test.patch",
-      "sha256": "14b79d4df6788fe9b0d693ca51834d5e81026d9b1baf42d0cf064b610f9e8077"
-    },
-    {
-      "file": "third_party/gui-forms-patches/accessibility-languages.patch",
-      "sha256": "36cadbae2fc8aa3e3ed52ce9c42eba4ab5bd968903d911758b307c015577a9f8",
-      "upstream_commit": "eeb9e24d72627917094b9fdf19d6eb5bda50e8d6"
-    },
-    {
-      "file": "third_party/gui-forms-patches/mapped-fonts-dropdown-scroll.patch",
-      "sha256": "5935e00d27ffb7b6d1b9546e5170994339d9a540359c3a4f78a16a78efff466f",
-      "upstream_commit": "538ff4734109644ca7fe45cf7e6e13c9ae2d0966"
-    },
-    {
-      "file": "third_party/gui-forms-patches/windows-fallback-captions.patch",
-      "sha256": "e953467d86b9cda806aa4c954de0c0e9473dff920e9cc03e596b10bbedcb8bba",
-      "upstream_commit": "f2249fa9e1cc9a980e6ee09daae60f3010a9e450"
-    },
-    {
-      "file": "third_party/gui-forms-patches/windows-accessibility-self-reference.patch",
-      "sha256": "369ea568b8ce79da75aa85ebaa49783717babe523e8338b6b435853db4ce06a9"
-    },
-    {
-      "file": "third_party/gui-forms-patches/windows-alt-f4.patch",
-      "sha256": "84b30ecf9f0b6978570e7db887a407e1fa02c475ce282ff46a8c487b935c61df"
-    }
-  ]
+  "release": "v1.1.4",
+  "asset": "gui-forms-native-source-814ef16a714c.tar.gz",
+  "commit": "814ef16a714c4d8f9f75b3a80fcb36b1888a21c8",
+  "sha256": "7f19a55e54a1c07e439bec8585d1c9eddccb013b18fa911b324e022ecaa4db4b",
+  "upstream_repository": "falseywinchnet/file_manager",
+  "upstream_path": "gui_forms",
+  "patches": []
 }
