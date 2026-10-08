@@ -10,7 +10,7 @@ enum class MixEffect {
     Braid,
     SupportLens,
     Rooms,
-    Holonomy,
+    ContourRelief,
     Blur,
     Sharpen,
     Smudge

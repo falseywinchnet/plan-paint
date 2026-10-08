@@ -91,6 +91,31 @@ Support support_at(const Image& image, int x, int y, int dx, int dy, int reach, 
 }
 Color mix_pixel(const Image& image, int x, int y, Point origin, Point motion, MixEffect effect, double scale,
                 double phase, bool wrap) {
+    if (effect == MixEffect::ContourRelief) {
+        const Color original = image.get(x, y);
+        if (original.a == 0) { return original; }
+        const Lab center = to_oklab(original);
+        const int reach = std::max(1, static_cast<int>(scale / 8));
+        double gx = 0, gy = 0;
+        // A Sobel footprint follows the image's lightness contours. Transparent
+        // neighbours contribute the centre height, so hidden RGB cannot cast shadows.
+        for (int row = -1; row <= 1; ++row) {
+            for (int column = -1; column <= 1; ++column) {
+                if (row == 0 && column == 0) { continue; }
+                const Color sample = bounded_pixel(image, x + column * reach, y + row * reach, wrap);
+                const double height = (to_oklab(sample).l - center.l) * sample.a / 255.0;
+                gx += column * (row == 0 ? 2 : 1) * height / 4;
+                gy += row * (column == 0 ? 2 : 1) * height / 4;
+            }
+        }
+        // Phase rotates a directional light, starting above and to the left.
+        const double angle = phase - 3 * std::numbers::pi / 4;
+        const double relief = 0.22 * std::tanh(3 * (gx * std::cos(angle) + gy * std::sin(angle)));
+        if (std::abs(relief) < 1e-12) { return original; }
+        Color result = from_oklab({std::clamp(center.l + relief, 0.0, 1.0), center.a, center.b});
+        result.a = original.a;
+        return result;
+    }
     const double u = (x - origin.x) / scale, v = (y - origin.y) / scale;
     double dx = 0, dy = 0, hue = 0, chroma = 0, lightness = 0, fold = 0;
     if (effect == MixEffect::Blur || effect == MixEffect::Sharpen) {
@@ -151,16 +176,6 @@ Color mix_pixel(const Image& image, int x, int y, Point origin, Point motion, Mi
             const double b = std::cos(0.71 * phase - 2.1 * std::floor(u * 2) + 1.3 * std::floor(v * 2));
             dx = 0.35 * bx + a * (0.45 + h.spread) + b * tx;
             dy = 0.35 * by + b * (0.45 + vertical.spread) + a * ty;
-        } else if (effect == MixEffect::Holonomy) {
-            const double solid_angle =
-                tau * (u * v + 0.35 * spread) + 3 * h.signed_mean * vertical.signed_mean;
-            const double angle = phase + solid_angle + std::atan2(by, bx);
-            dx = std::cos(angle) * bx - std::sin(angle) * by + (0.45 + cancel) * std::sin(angle) * rx;
-            dy = std::sin(angle) * bx + std::cos(angle) * by - (0.45 + cancel) * std::sin(angle) * ry;
-            hue = 0.20 * std::sin(solid_angle);
-            chroma = 0.13 * std::cos(angle);
-            lightness = 0.19 * std::sin(angle);
-            fold = 0.38 * std::cos(solid_angle);
         }
         dx *= scale * 0.18;
         dy *= scale * 0.18;
@@ -172,8 +187,6 @@ Color mix_pixel(const Image& image, int x, int y, Point origin, Point motion, Mi
         const double a = gain * (c * lab.a - s * lab.b), b = gain * (s * lab.a + c * lab.b);
         if (effect == MixEffect::Counterflow) {
             lab.l += lightness + 0.30 * fold * std::sin(tau * (lab.l + hue));
-        } else if (effect == MixEffect::Holonomy) {
-            lab.l = 0.5 + (lab.l - 0.5) * c + lightness + 0.20 * fold;
         } else {
             lab.l += lightness + 0.36 * fold * std::sin(2 * tau * lab.l + hue * tau);
             lab.l -= std::floor(lab.l);
@@ -188,7 +201,7 @@ Color mix_pixel(const Image& image, int x, int y, Point origin, Point motion, Mi
 const char* mix_effect_name(MixEffect effect) {
     static const std::array<const char*, 10> names{"Ripples",       "Glass tile",   "Wigner counterflow",
                                                    "Support braid", "Support lens", "Moving rooms",
-                                                   "Holonomy",      "Blur",         "Sharpen",
+                                                   "Contour relief", "Blur",         "Sharpen",
                                                    "Smudge"};
     return names.at(static_cast<std::size_t>(effect));
 }
@@ -480,7 +493,8 @@ void TransformStroke::segment(Image& image, Point start, Point end, double diame
             const Color replacement =
                 mix_pixel(base_, px, py, origin_, {end.x - origin_.x, end.y - origin_.y}, effect,
                           std::max(2.0, scale), phase, wrap);
-            image.pixels[index] = interpolate_pixel(base_.pixels[index], replacement, amount);
+            image.pixels[index] = equal(base_.pixels[index], replacement)
+                ? base_.pixels[index] : interpolate_pixel(base_.pixels[index], replacement, amount);
         }
     }
 }

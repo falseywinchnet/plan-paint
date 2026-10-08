@@ -2096,6 +2096,36 @@ void dither_dialog_and_brush() {
     editor.execute("undo");
     require(std::memcmp(before.pixels.data(),editor.document.image.pixels.data(),before.pixels.size()*sizeof(paint::Color))==0,"Dither brush stroke undoes once");
 }
+void glitter_menu_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.brush_family = paint::BrushFamily::Mix;
+    editor.document.ink.pattern = paint::Pattern::None;
+    editor.document.ink.size = 3;
+    open_tab(window, "home-tab");
+    window.perform_layout();
+    const gf::Rect bounds = (*window.find("brush-menu")).absolute_bounds();
+    const gf::Point arrow{bounds.x + bounds.width / 2, bounds.bottom() - 5};
+    window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, arrow});
+    window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, arrow});
+    window.perform_layout();
+    routed_button(window, "popup-family-glitter");
+    require(editor.brush_family == paint::BrushFamily::Additive && editor.glitter &&
+            editor.document.tool == paint::Tool::Brush && editor.document.ink.brush == paint::Brush::Airbrush &&
+            editor.document.ink.pattern == paint::Pattern::Solid && editor.document.ink.size >= 24,
+            "Fine glitter shortcut must select a usable glitter spray from another brush family");
+    require((*window.find("spray-glitter")).visible(), "glitter shortcut must expose its toggle");
+    const paint::Image before = editor.document.image;
+    fixture.drag(24, 32, 100, 32);
+    require(std::memcmp(before.pixels.data(), editor.document.image.pixels.data(), before.pixels.size() * 4) != 0,
+            "glitter shortcut must paint");
+    editor.execute("undo");
+    require(std::memcmp(before.pixels.data(), editor.document.image.pixels.data(), before.pixels.size() * 4) == 0,
+            "glitter stroke must undo in one step");
+    routed_button(window, "spray-glitter");
+    require(!editor.glitter, "Fine glitter toggle must return to plain spray");
+}
 void carpet_generator_controls() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -3957,6 +3987,7 @@ int main() {
         centered_circle_and_materials();
         gradient_fill_controls_and_undo();
         dither_dialog_and_brush();
+        glitter_menu_controls();
         carpet_generator_controls();
         spirograph_accessible_pegs();
         spirograph_lift_controls();
