@@ -28,7 +28,14 @@ void PaintCanvas::on_frame(gf::FrameTime) {
 gf::SemanticDescriptor PaintCanvas::semantic_descriptor() const {
     std::shared_ptr<Editor> editor = editor_.lock();
     if (!editor || !(*editor).text.active) {
-        return RasterCanvas::semantic_descriptor();
+        gf::SemanticDescriptor descriptor = RasterCanvas::semantic_descriptor();
+        if (display_surface_) {
+            const gf::LiveSurfaceSnapshot snapshot = (*display_surface_).snapshot();
+            descriptor.value = std::to_string(snapshot.description.width) + " x " +
+                std::to_string(snapshot.description.height) + " at " + std::to_string(zoom() * 100) + "%";
+            descriptor.exposed = true;
+        }
+        return descriptor;
     }
     gf::SemanticDescriptor descriptor;
     descriptor.role = gf::SemanticRole::text_box;

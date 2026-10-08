@@ -32,22 +32,22 @@ gf::Rect PaintCanvas::bitmap_to_client(gui_drawing::RectI pixels) const noexcept
             (bottom - top) * zoom()};
 }
 gf::Rect PaintCanvas::view_bounds() const noexcept {
-    const std::shared_ptr<gui_drawing::Bitmap> image = bitmap();
+    const gf::LiveSurfaceFrame image = display_surface_ ? (*display_surface_).acquire_latest() : gf::LiveSurfaceFrame{};
     if (!image) {
         return {};
     }
     const gf::Rect bounds =
-        bitmap_to_client({0, 0, static_cast<int>((*image).width()), static_cast<int>((*image).height())});
+        bitmap_to_client({0, 0, static_cast<int>(image.width()), static_cast<int>(image.height())});
     return {bounds.x / zoom() + view_origin().x, bounds.y / zoom() + view_origin().y, bounds.width / zoom(),
             bounds.height / zoom()};
 }
 gf::Point PaintCanvas::rotation_handle() const noexcept {
-    const std::shared_ptr<gui_drawing::Bitmap> image = bitmap();
+    const gf::LiveSurfaceFrame image = display_surface_ ? (*display_surface_).acquire_latest() : gf::LiveSurfaceFrame{};
     if (!image) {
         return {-100, -100};
     }
     const gf::Rect viewport = client_rectangle();
-    const double width = (*image).width(), height = (*image).height();
+    const double width = image.width(), height = image.height();
     // Prefer the upper-right corner, then another visible corner. Never cover
     // artwork when panning puts that corner beyond the viewport.
     for (int corner = 0; corner < 4; ++corner) {
@@ -139,6 +139,9 @@ void PaintCanvas::on_detaching_from_window(gf::Window& former_window) noexcept {
     loaded_backing_ = CanvasBacking::Count;
     display_request_.disconnect();
     preparation_request_.disconnect();
+    viewport_surface_.reset();
+    viewport_source_.reset();
+    viewport_generation_ = 0;
     RasterCanvas::on_detaching_from_window(former_window);
 }
 void PaintCanvas::on_dispose() noexcept {
@@ -162,6 +165,9 @@ void PaintCanvas::on_dispose() noexcept {
     atlas_revision_ = 0;
     backing_ = {};
     loaded_backing_ = CanvasBacking::Count;
+    display_surface_.reset();
+    viewport_surface_.reset();
+    viewport_source_.reset();
     RasterCanvas::on_dispose();
 }
 void PaintCanvas::on_paint(gf::Painter& painter, gf::Rect damage) {
@@ -182,15 +188,16 @@ void PaintCanvas::on_paint(gf::Painter& painter, gf::Rect damage) {
         paint_rotated(painter, *editor);
         return;
     }
-    std::shared_ptr<gui_drawing::Bitmap> image = bitmap();
+    const gf::LiveSurfaceFrame image = display_surface_ ? (*display_surface_).acquire_latest() : gf::LiveSurfaceFrame{};
     if (image) {
         gf::Rect sheet = RasterCanvas::bitmap_to_client(
-            {0, 0, static_cast<int>((*image).width()), static_cast<int>((*image).height())});
+            {0, 0, static_cast<int>(image.width()), static_cast<int>(image.height())});
         painter.draw_box_shadow(sheet, 0, {1.5, 2.5}, 6, 0, gf::Color::rgba(42, 53, 67, 75));
         painter.stroke_rect({sheet.x - 0.5, sheet.y - 0.5, sheet.width + 1, sheet.height + 1},
                             gf::Color::rgba(93, 111, 130, 155), 1);
     }
-    RasterCanvas::on_paint(painter, damage);
+    paint_display(painter);
+    static_cast<void>(damage);
     if (editor) {
         paint_atlas_context(painter, *editor);
     }
@@ -367,9 +374,7 @@ void Editor::paint_tool_preview(gf::Painter& painter) {
     }
     painter.restore();
 }
-} // namespace paint::forms
 
-namespace paint::forms {
 namespace {
 struct DisplayDeadline {
     std::weak_ptr<PaintCanvas> canvas;
@@ -677,5 +682,92 @@ void PaintCanvas::paint_rotated(gf::Painter& painter, const Editor&) {
                                view_error.empty() ? tr("Preparing CONV view…") : view_error,
                                {gf::FontRole::control, 12, 400, false}, gf::Color::rgba(45, 63, 81));
     }
+}
+
+void PaintCanvas::set_transparency_colors(gf::Color first, gf::Color second) {
+    if (transparency_first_ == first && transparency_second_ == second) { return; }
+    viewport_generation_ = 0;
+    transparency_first_ = first;
+    transparency_second_ = second;
+    invalidate(gf::Dirty::paint);
+}
+void PaintCanvas::paint_display(gf::Painter& painter) {
+    if (!display_surface_) { return; }
+    const gf::LiveSurfaceFrame frame = (*display_surface_).acquire_latest();
+    if (!frame) { return; }
+    const gf::Rect sheet = RasterCanvas::bitmap_to_client(
+        {0, 0, static_cast<int>(frame.width()), static_cast<int>(frame.height())});
+    const gf::Rect visible = gf::Rect::intersection(sheet, client_rectangle());
+    if (visible.empty()) { return; }
+    const double device_scale = window() ? (*window()).scale() : 1.0;
+    const gf::Point window_origin = point_to_window({0, 0});
+    const double sheet_x = (window_origin.x + sheet.x) * device_scale;
+    const double sheet_y = (window_origin.y + sheet.y) * device_scale;
+    if (frame.opaque() && std::abs(zoom() * device_scale - 1.0) < 1e-10 &&
+        std::abs(sheet_x - std::round(sheet_x)) < 1e-10 &&
+        std::abs(sheet_y - std::round(sheet_y)) < 1e-10) {
+        // Native-order, pixel-aligned opaque artwork needs no viewport conversion.
+        painter.save();
+        painter.clip_rect(visible);
+        painter.draw_live_surface(display_surface_, sheet);
+        painter.restore();
+        return;
+    }
+    const double left = std::ceil((window_origin.x + visible.x) * device_scale);
+    const double top = std::ceil((window_origin.y + visible.y) * device_scale);
+    const int width = static_cast<int>(std::floor((window_origin.x + visible.right()) * device_scale) - left);
+    const int height = static_cast<int>(std::floor((window_origin.y + visible.bottom()) * device_scale) - top);
+    if (width <= 0 || height <= 0) { return; }
+    const gf::Rect destination{left / device_scale - window_origin.x, top / device_scale - window_origin.y,
+        width / device_scale, height / device_scale};
+    const gf::LiveSurfacePixelFormat format = gf::native_live_surface_pixel_format();
+    if (!viewport_surface_ || viewport_generation_ != frame.generation() || viewport_source_ != display_surface_ ||
+        viewport_bounds_ != destination || viewport_zoom_ != zoom() || viewport_origin_.x != view_origin().x ||
+        viewport_origin_.y != view_origin().y || viewport_scale_ != device_scale) {
+        if (!viewport_surface_ || (*viewport_surface_).snapshot().description.width != static_cast<unsigned>(width) ||
+            (*viewport_surface_).snapshot().description.height != static_cast<unsigned>(height)) {
+            viewport_surface_ = gf::LiveSurface::create({static_cast<unsigned>(width), static_cast<unsigned>(height),
+                format, gf::default_live_surface_buffer_count, true});
+        }
+        gf::LiveSurfaceWriteLease write = (*viewport_surface_).try_acquire_write();
+        if (!write) {
+            viewport_surface_ = gf::LiveSurface::create({static_cast<unsigned>(width), static_cast<unsigned>(height),
+                format, gf::default_live_surface_buffer_count, true});
+            write = (*viewport_surface_).try_acquire_write();
+        }
+        const bool bgra = format == gf::LiveSurfacePixelFormat::bgra32_premultiplied_srgb;
+        const double tile = transparency_cell_size() > 0 ? transparency_cell_size() : 12.0;
+        for (int y = 0; y < height; ++y) {
+            const double cy = destination.y + (y + 0.5) / device_scale;
+            const int sy = std::clamp(static_cast<int>(std::floor(cy / zoom() + view_origin().y)),
+                0, static_cast<int>(frame.height()) - 1);
+            std::byte* row = write.pixels().data() + y * write.row_bytes();
+            for (int x = 0; x < width; ++x) {
+                const double cx = destination.x + (x + 0.5) / device_scale;
+                const int sx = std::clamp(static_cast<int>(std::floor(cx / zoom() + view_origin().x)),
+                    0, static_cast<int>(frame.width()) - 1);
+                const std::byte* pixel = frame.pixels().data() + sy * frame.row_bytes() + sx * 4;
+                const bool second = ((static_cast<int>((cx - visible.x) / tile) +
+                                      static_cast<int>((cy - visible.y) / tile)) & 1) == 0;
+                const gf::Color background = second ? transparency_second_ : transparency_first_;
+                const unsigned inverse = 255U - std::to_integer<unsigned>(pixel[3]);
+                row[x * 4] = static_cast<std::byte>(std::to_integer<unsigned>(pixel[0]) +
+                    ((bgra ? background.blue : background.red) * inverse + 127U) / 255U);
+                row[x * 4 + 1] = static_cast<std::byte>(std::to_integer<unsigned>(pixel[1]) +
+                    (background.green * inverse + 127U) / 255U);
+                row[x * 4 + 2] = static_cast<std::byte>(std::to_integer<unsigned>(pixel[2]) +
+                    ((bgra ? background.red : background.blue) * inverse + 127U) / 255U);
+                row[x * 4 + 3] = std::byte{255};
+            }
+        }
+        static_cast<void>(write.publish());
+        viewport_generation_ = frame.generation();
+        viewport_source_ = display_surface_;
+        viewport_bounds_ = destination;
+        viewport_zoom_ = zoom();
+        viewport_origin_ = view_origin();
+        viewport_scale_ = device_scale;
+    }
+    painter.draw_live_surface(viewport_surface_, destination);
 }
 } // namespace paint::forms

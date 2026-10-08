@@ -20,6 +20,7 @@
 #include <gui_forms/application.hpp>
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
+#include <gui_forms/live_surface.hpp>
 #include <gui_forms/controls/menu_strip/menu_strip.hpp>
 #include <gui_forms/controls/panel/combo_box/combo_box.hpp>
 #include <gui_forms/controls/range_control/track_bar/track_bar.hpp>
@@ -34,6 +35,9 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
   public:
     PaintCanvas(gui_forms::StableId id, std::weak_ptr<Editor> editor);
     ~PaintCanvas() override;
+    void publish_pixels(const Image& source, Rect damage);
+    std::shared_ptr<gui_forms::LiveSurface> display_surface() const { return display_surface_; }
+    void set_transparency_colors(gui_forms::Color first, gui_forms::Color second);
     void publish_source(const Image& source, Rect damage);
     void poll_view();
     void prepare_display();
@@ -78,6 +82,15 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
 
   private:
     friend class Editor;
+    std::shared_ptr<gui_forms::LiveSurface> display_surface_, viewport_surface_, viewport_source_;
+    std::uint64_t viewport_generation_ = 0;
+    gui_forms::Rect viewport_bounds_;
+    gui_drawing::PointF viewport_origin_;
+    double viewport_zoom_ = 0, viewport_scale_ = 0;
+    std::size_t translucent_pixels_ = 0;
+    gui_forms::Color transparency_first_ = gui_forms::Color::rgba(246, 247, 249);
+    gui_forms::Color transparency_second_ = gui_forms::Color::rgba(211, 215, 220);
+    void paint_display(gui_forms::Painter& painter);
     CanvasWorkStatistics work_statistics_;
     gui_forms::FrameRequestToken display_request_, preparation_request_;
     gui_forms::FrameTime next_display_{}, preparation_deadline_{};

@@ -171,18 +171,30 @@ Reshape uses a triangle mesh and rejects folds. Final antialiasing uses bounded 
 
 ## Build
 
-Requires **C++20**, **CMake 3.24+**, the pinned **GUI.Forms SDK**, **libtiff**, **libwebp**, and **dav1d**. CMake downloads pinned libavif, LunaSVG (with PlutoVG) and TinyXML-2 sources. GUI.Forms supplies native window hosts, controls, input, dialogs, fonts and CPU rendering. The default application does not link SDL, ImGui or GTK.
+Development builds use **C++20**, **LLVM 22.1.8**, **CMake 3.25+**, Ninja and
+Python 3.11+. The standalone GUI.Forms source and its published compiler caches
+are pinned in `third_party/gui-forms.lock.json`. Paint consumes the standard
+`GUIForms::Application` and shared `Threading` targets. libtiff, libwebp and
+dav1d supply image codecs; CMake fetches the other pinned import dependencies.
 
-Fetch the checksum-verified toolkit source, build and install its SDK, then build Paint against that installation. The complete recipes are in [Native build and platform notes](docs/GUI_FORMS_PORT.md). With an installed SDK:
+See [Native build and platform notes](docs/GUI_FORMS_PORT.md) for prerequisites,
+cache imports, macOS runtime handling and the complete platform commands.
+With the matching compiler and dependencies installed on Windows:
 
 ```sh
-cmake -S . -B build-forms -DCMAKE_BUILD_TYPE=Release \
-  -DGUIForms_DIR=/path/to/sdk/lib/cmake/GUIForms
-cmake --build build-forms --parallel
-ctest --test-dir build-forms --output-on-failure
+python3 scripts/fetch-gui-forms.py
+python3 scripts/restore-toolkit-cache.py windows-x64
+sh scripts/native-build.sh configure windows-x64
+cmake --build .build/native/app --parallel 2
+cmake --build .build/native/app --target check
+cmake --build .build/native/app --target paint-package
 ```
 
-The [build workflow](.github/workflows/build.yml) builds Windows x64 with MinGW, Linux x64 and ARM64 with musl, and macOS ARM64 on a native macOS 26 runner. Each platform runs native tests and produces packages. Linux packages are also launched on a glibc host without an installed musl loader. `RAINSTAR_LEGACY_UI=ON` explicitly builds the deprecated `plan-paint-legacy` frontend; it is off by default and is not supported or packaged for release. Packaging scripts read the release version from CMake.
+The [build workflow](.github/workflows/build.yml) runs separate native Windows
+x64, macOS arm64, Linux x64 and Linux arm64 jobs. New Linux builds target Ubuntu
+24.04's ABI; existing release downloads above retain their original requirements.
+The normal canvas uses an opaque GUI.Forms live buffer at physical pixel
+resolution while preserving document transparency and nearest-neighbor zoom.
 
 Tests cover image editing, formats, numerical transforms, transparency, real UI input, display scaling and idle rendering. Run `python3 scripts/check-style.py` before submitting a change. Optional `RAINSTAR_BENCHMARKS=ON` and `RAINSTAR_COMPILER_REPORTS=ON` produce a timing/checksum harness and compiler assembly reports.
 

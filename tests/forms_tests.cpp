@@ -248,7 +248,7 @@ void startup_file_opens_after_window_attachment() {
     require((*editor).document.image.width == 41 && (*editor).document.image.height == 23 &&
                 paint::equal((*editor).document.image.get(9, 7), {63, 141, 207, 128}),
             "startup preserves decoded dimensions and straight RGBA");
-    require((*(*editor).canvas().bitmap()).width() == 41 &&
+    require((*(*editor).canvas().display_surface()).snapshot().description.width == 41 &&
                 (*editor).canvas().last_resource_error() == gf::ImageResourceError::none,
             "startup publishes the image only after the canvas has a window");
     std::filesystem::remove(path);
@@ -259,18 +259,19 @@ void display_preserves_document_and_hidden_rgb() {
     document.image.set(2, 2, {231, 17, 63, 0});
     document.image.set(3, 2, {201, 41, 99, 128});
     (*fixture.editor).refresh();
-    gf::RasterCanvas& canvas = (*fixture.editor).canvas();
-    gui_drawing::BitmapLockView view = (*canvas.bitmap()).lock(gui_drawing::BitmapLockMode::read);
-    const std::byte* pixel = view.data + 2 * view.row_bytes + 3 * 4;
-    require(pixel[0] == std::byte{50} && pixel[1] == std::byte{21} && pixel[2] == std::byte{101} &&
+    paint::forms::PaintCanvas& canvas = (*fixture.editor).canvas();
+    gf::LiveSurfaceFrame view = (*canvas.display_surface()).acquire_latest();
+    const std::byte* pixel = view.pixels().data() + 2 * view.row_bytes() + 3 * 4;
+    const bool bgra = view.pixel_format() == gf::LiveSurfacePixelFormat::bgra32_premultiplied_srgb;
+    require(pixel[bgra ? 0 : 2] == std::byte{50} && pixel[1] == std::byte{21} && pixel[bgra ? 2 : 0] == std::byte{101} &&
                 pixel[3] == std::byte{128},
             "rounded premultiplied BGRA presentation");
-    (*canvas.bitmap()).unlock(view.token);
+    view = {};
     require(paint::equal(document.image.get(2, 2), {231, 17, 63, 0}),
             "hidden straight RGBA survives presentation");
-    std::uint64_t generation = (*canvas.bitmap()).generation();
+    std::uint64_t generation = (*canvas.display_surface()).snapshot().published_generation;
     (*fixture.editor).refresh();
-    require((*canvas.bitmap()).generation() == generation,
+    require((*canvas.display_surface()).snapshot().published_generation == generation,
             "unchanged presentation does not mutate bitmap generation");
 }
 void captured_stroke_undo_and_right_color() {
@@ -1189,6 +1190,12 @@ class PreviewPainter final : public gf::Painter {
     gf::Rect image_bounds;
     std::vector<gf::ImageId> painted_images;
     std::vector<gf::Point> text_caret_points;
+    std::shared_ptr<gf::LiveSurface> live;
+    gf::Rect live_bounds;
+    void draw_live_surface(std::shared_ptr<gf::LiveSurface> surface, gf::Rect bounds, double) override {
+        live = std::move(surface);
+        live_bounds = bounds;
+    }
     void save() override {}
     void restore() override {}
     void translate(gf::Point) override {}
@@ -1234,6 +1241,49 @@ class PreviewPainter final : public gf::Painter {
         painted_images.push_back(id);
     }
 };
+void live_canvas_damage_opacity_and_reuse() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    paint::forms::PaintCanvas& canvas = editor.canvas();
+    paint::Image source;
+    source.reset(8, 8, {20, 70, 110, 255});
+    canvas.publish_pixels(source, {});
+    const gf::LiveSurfaceFrame retained = (*canvas.display_surface()).acquire_latest();
+    require(retained.opaque(), "opaque source advertises only fully opaque pixels");
+    source.set(1, 1, {230, 20, 90, 0});
+    canvas.publish_pixels(source, {1, 1, 1, 1});
+    gf::LiveSurfaceFrame edited = (*canvas.display_surface()).acquire_latest();
+    require(!edited.opaque() && edited.pixels()[edited.row_bytes() + 7] == std::byte{0},
+            "partial alpha edit removes the opaque promise");
+    require(retained.pixels()[retained.row_bytes() + 7] == std::byte{255},
+            "published frames remain immutable while a reader holds them");
+    require(edited.pixels()[3] == std::byte{255}, "partial update preserves untouched pixels");
+    canvas.set_view(8, {0, 0});
+    PreviewPainter first;
+    canvas.on_paint(first, canvas.client_rectangle());
+    require(first.live != nullptr, "canvas presents through LiveSurface");
+    const gf::LiveSurfaceFrame opaque = (*first.live).acquire_latest();
+    require(opaque.opaque() && opaque.width() == 64 && opaque.height() == 64,
+            "zoomed viewport is sampled at physical pixel size");
+    for (std::size_t i = 3; i < opaque.pixels().size(); i += 4) {
+        require(opaque.pixels()[i] == std::byte{255}, "checkerboard composition is completely opaque");
+    }
+    const std::size_t offset = 9 * opaque.row_bytes() + 9 * 4;
+    const bool bgra = opaque.pixel_format() == gf::LiveSurfacePixelFormat::bgra32_premultiplied_srgb;
+    require(opaque.pixels()[offset + (bgra ? 2 : 0)] == std::byte{211} &&
+            opaque.pixels()[offset + 1] == std::byte{215} &&
+            opaque.pixels()[offset + (bgra ? 0 : 2)] == std::byte{220},
+            "transparent source shows checkerboard rather than hidden RGB");
+    require(opaque.pixels()[0] == opaque.pixels()[7 * 4], "8x zoom preserves nearest-neighbor pixel blocks");
+    PreviewPainter repeat;
+    canvas.on_paint(repeat, canvas.client_rectangle());
+    require((*repeat.live).snapshot().published_generation == opaque.generation(),
+            "unchanged repaint reuses the published viewport");
+    source.set(1, 1, {20, 70, 110, 255});
+    canvas.publish_pixels(source, {1, 1, 1, 1});
+    require((*canvas.display_surface()).acquire_latest().opaque(), "last transparent pixel restores opaque mode");
+    fixture.window.reset();
+}
 void text_caret_deadlines_damage_only_the_transformed_caret() {
     for (int transformed = 0; transformed < 2; ++transformed) {
         Fixture fixture;
@@ -1540,11 +1590,10 @@ void restored_help_and_selection_workflows() {
     require(!editor.show_help && editor.canvas().client_rectangle().width == width, "F1 closes book");
 }
 bool display_white(paint::forms::Editor& editor, int x, int y) {
-    std::shared_ptr<gui_drawing::Bitmap> bitmap = editor.canvas().bitmap();
-    gui_drawing::BitmapLockView view = (*bitmap).lock(gui_drawing::BitmapLockMode::read);
-    const std::byte* pixel = view.data + y * view.row_bytes + x * 4;
+    gf::LiveSurfaceFrame view = (*editor.canvas().display_surface()).acquire_latest();
+    const std::byte* pixel = view.pixels().data() + y * view.row_bytes() + x * 4;
     bool result = pixel[0] == std::byte{255} && pixel[1] == std::byte{255} && pixel[2] == std::byte{255};
-    (*bitmap).unlock(view.token);
+
     return result;
 }
 void path_hover_snap_and_controls() {
@@ -1563,18 +1612,19 @@ void path_hover_snap_and_controls() {
     fixture.click(95, 50);
     fixture.pointer(gf::PointerAction::move, 19, 23, gf::PointerButton::none);
     paint::Image snapped = editor.document.image;
-    gui_drawing::BitmapLockView display = (*editor.canvas().bitmap()).lock(gui_drawing::BitmapLockMode::read);
+    gf::LiveSurfaceFrame display = (*editor.canvas().display_surface()).acquire_latest();
     for (int y = 0; y < snapped.height; ++y) {
         for (int x = 0; x < snapped.width; ++x) {
-            const std::byte* pixel = display.data + y * display.row_bytes + x * 4;
+            const std::byte* pixel = display.pixels().data() + y * display.row_bytes() + x * 4;
             paint::Color expected = snapped.get(x, y);
-            require(pixel[0] == static_cast<std::byte>(expected.b) &&
+            const bool bgra = display.pixel_format() == gf::LiveSurfacePixelFormat::bgra32_premultiplied_srgb;
+            require(pixel[bgra ? 0 : 2] == static_cast<std::byte>(expected.b) &&
                         pixel[1] == static_cast<std::byte>(expected.g) &&
-                        pixel[2] == static_cast<std::byte>(expected.r),
+                        pixel[bgra ? 2 : 0] == static_cast<std::byte>(expected.r),
                     "hovering a retained junction preserves the old run without a false closing segment");
         }
     }
-    (*editor.canvas().bitmap()).unlock(display.token);
+    display = {};
     fixture.click(19, 23);
     require(editor.document.path.nodes.back().x == 15 && editor.document.path.nodes.back().y == 20,
             "click snaps to the same anchor shown by the floating preview");
@@ -3875,6 +3925,7 @@ int main() {
         stamp_material_union_and_menu_toggle();
         dialog_clipboard_and_close_contracts();
         display_preserves_document_and_hidden_rgb();
+        live_canvas_damage_opacity_and_reuse();
         startup_file_opens_after_window_attachment();
         captured_stroke_undo_and_right_color();
         solid_primary_keeps_alternate_drawing();

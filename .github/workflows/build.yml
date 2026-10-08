@@ -5,92 +5,171 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
-concurrency:
-  group: native-${{ github.ref }}
-  cancel-in-progress: true
-# GitHub restricts draft-release asset reads to a token with contents write.
-# The token is supplied only to the verified source-download step.
 permissions:
-  contents: write
+  contents: read
+concurrency:
+  group: native-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
-  macos:
-    runs-on: macos-26
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - name: Fetch verified GUI.Forms source
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/fetch-gui-forms.py --github-cli
-      - name: Install build dependencies
-        run: brew install cmake ninja pkgconf libtiff webp dav1d
-      - name: Build, run native checks and package
-        env:
-          BUILD_JOBS: 3
-        run: sh scripts/ci-macos.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: plan-paint-macos-arm64
-          path: dist/*.pkg
-  linux:
+  application:
     strategy:
       fail-fast: false
       matrix:
         include:
+          - runner: windows-2022
+            platform: windows-x64
+            shell: 'msys2 {0}'
+          - runner: macos-15
+            platform: macos-arm64
+            shell: bash
           - runner: ubuntu-24.04
-            arch: x64
-            musl: x86_64
+            platform: linux-x64
+            shell: bash
           - runner: ubuntu-24.04-arm
-            arch: arm64
-            musl: aarch64
+            platform: linux-arm64
+            shell: bash
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    env:
+      BUILD_JOBS: 2
+      CC: clang
+      CXX: clang++
+      OBJCXX: clang++
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CMAKE_OBJCXX_COMPILER_LAUNCHER: ccache
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch verified GUI.Forms source
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/fetch-gui-forms.py --github-cli
-      - name: Build and verify the musl package on Linux ${{ matrix.arch }}
-        run: docker run --rm -e BUILD_JOBS=4 -v "$PWD:/work" -w /work alpine:3.24.2 sh scripts/ci-linux.sh
-      - name: Launch the package on the glibc host
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-          test ! -e /lib/ld-musl-${{ matrix.musl }}.so.1
-          set +e
-          xvfb-run -a timeout 3 'dist/PlanPaint/Plan Paint'
-          result=$?
-          set -e
-          test "$result" = 124
-          GUI_FORMS_FONT_DIR="$PWD/dist/PlanPaint/bin/fonts" xvfb-run -a \
-            "$PWD/dist/PlanPaint/lib/ld-musl-${{ matrix.musl }}.so.1" \
-            --library-path "$PWD/dist/PlanPaint/lib" "$PWD/build-linux/paint-forms-native-tests"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: plan-paint-linux-${{ matrix.arch }}
-          path: dist/*.tar.gz
-  windows:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-      - name: Fetch verified GUI.Forms source
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python scripts/fetch-gui-forms.py --github-cli
       - uses: msys2/setup-msys2@v2
+        if: runner.os == 'Windows'
         with:
-          msystem: MINGW64
+          msystem: CLANG64
           update: true
           install: >-
-            mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-ninja mingw-w64-x86_64-python
-            mingw-w64-x86_64-pkgconf mingw-w64-x86_64-libtiff
-            mingw-w64-x86_64-libwebp mingw-w64-x86_64-dav1d
-            git
-      - name: Build, run native checks and package
-        shell: msys2 {0}
-        run: sh scripts/ci-windows.sh
+            mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake
+            mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-python
+            mingw-w64-clang-x86_64-ccache mingw-w64-clang-x86_64-winpthreads
+            mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libtiff
+            mingw-w64-clang-x86_64-libwebp mingw-w64-clang-x86_64-dav1d git
+      - name: Install macOS compiler and codecs
+        if: runner.os == 'macOS'
+        run: |
+          brew install ninja llvm@22 ccache pkgconf libtiff webp dav1d
+          echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
+          echo "GUI_FORMS_LLVM_RUNTIME=$PWD/.build/toolchain/llvm-22.1.8-macos14" >> "$GITHUB_ENV"
+      - name: Install Linux compiler and desktop libraries
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key -o "$RUNNER_TEMP/llvm-key.asc"
+          sudo install -m 0644 "$RUNNER_TEMP/llvm-key.asc" /usr/share/keyrings/apt-llvm.asc
+          echo 'deb [signed-by=/usr/share/keyrings/apt-llvm.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' | sudo tee /etc/apt/sources.list.d/llvm-22.list
+          sudo apt-get update
+          sudo apt-get install -y clang-22 ninja-build generate-ninja ccache pkg-config \
+            libx11-dev libxcursor-dev libatk1.0-dev libatk-bridge2.0-dev \
+            libtiff-dev libwebp-dev libdav1d-dev patchelf xvfb ghostscript
+          echo /usr/lib/llvm-22/bin >> "$GITHUB_PATH"
+      - name: Verify compiler and fetch pinned standalone toolkit
+        run: |
+          clang --version | head -n 1 | grep '22.1.8'
+          python3 scripts/fetch-gui-forms.py
+      - uses: actions/cache/restore@v4
+        id: objects
+        with:
+          path: .ccache
+          key: paint-llvm22-v1-${{ matrix.platform }}-${{ github.sha }}
+          restore-keys: paint-llvm22-v1-${{ matrix.platform }}-
+      - name: Import verified toolkit compiler cache and macOS runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/restore-toolkit-cache.py '${{ matrix.platform }}'
+      - name: Configure compiler cache
+        run: |
+          cache_dir="$PWD/.ccache"
+          cache_base="$PWD"
+          if command -v cygpath >/dev/null; then
+            cache_dir="$(cygpath -m "$cache_dir")"
+            cache_base="$(cygpath -m "$cache_base")"
+          fi
+          echo "CCACHE_DIR=$cache_dir" >> "$GITHUB_ENV"
+          echo "CCACHE_BASEDIR=$cache_base" >> "$GITHUB_ENV"
+          echo "CCACHE_COMPILERCHECK=content" >> "$GITHUB_ENV"
+          ccache --zero-stats
+      - uses: actions/cache@v4
+        with:
+          path: |
+            gui_forms/third_party/harfbuzz
+            gui_forms/third_party/freetype
+            .build/native/app/_deps/*-src
+          key: paint-sources-v1-${{ matrix.platform }}-${{ hashFiles('third_party/gui-forms.lock.json', 'CMakeLists.txt', 'cmake/ImportFormats.cmake') }}
+      - name: Identify renderer environment
+        if: runner.os != 'Windows'
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, os, shutil, subprocess
+          from pathlib import Path
+          identity = subprocess.check_output(['clang', '--version']) + os.environ.get('ImageVersion', '').encode()
+          identity += hashlib.sha256(Path(shutil.which('clang')).read_bytes()).digest()
+          runtime = Path(os.environ.get('GUI_FORMS_LLVM_RUNTIME', '.build/no-runtime')) / 'runtime-manifest.json'
+          if runtime.exists(): identity += runtime.read_bytes()
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('PAINT_RENDERER_ENV=' + hashlib.sha256(identity).hexdigest() + '\n')
+          PYTHON
+      - uses: actions/cache@v4
+        if: runner.os != 'Windows'
+        with:
+          path: gui_forms/third_party/skia
+          key: paint-skia-llvm22-v1-${{ matrix.platform }}-${{ env.PAINT_RENDERER_ENV }}-${{ hashFiles('gui_forms/third_party/*skia*') }}
+      - name: Build CPU renderer
+        if: runner.os != 'Windows'
+        run: |
+          if [ ! -f gui_forms/third_party/skia/out/paint/libskia.a ]; then
+            GUI_FORMS_SYSTEM_BUILD_TOOLS=1 sh gui_forms/third_party/fetch_skia_cpu.sh
+            if [ "${{ runner.os }}" = macOS ]; then
+              sh gui_forms/third_party/build_skia_cpu.sh "$PWD/gui_forms/third_party/skia/out/paint"
+            else
+              sh gui_forms/third_party/build_skia_cpu_linux.sh "$PWD/gui_forms/third_party/skia/out/paint"
+            fi
+          fi
+      - name: Configure application
+        run: sh scripts/native-build.sh configure '${{ matrix.platform }}'
+      - name: Build application and tests
+        run: sh scripts/native-build.sh build '${{ matrix.platform }}'
+      - uses: actions/cache/save@v4
+        if: steps.objects.outputs.cache-hit != 'true'
+        with:
+          path: .ccache
+          key: ${{ steps.objects.outputs.cache-primary-key }}
+      - name: Test application
+        run: |
+          if [ "${{ runner.os }}" = Linux ]; then
+            xvfb-run -a sh scripts/native-build.sh test '${{ matrix.platform }}'
+          else
+            sh scripts/native-build.sh test '${{ matrix.platform }}'
+          fi
+      - name: Package application
+        run: sh scripts/native-build.sh package '${{ matrix.platform }}'
+      - name: Exercise packaged native window
+        run: |
+          if [ "${{ runner.os }}" = Linux ]; then
+            xvfb-run -a python3 scripts/smoke-package.py 'dist/PlanPaint/Plan Paint'
+          elif [ "${{ runner.os }}" = macOS ]; then
+            python3 scripts/smoke-package.py 'dist/Plan Paint.app/Contents/MacOS/plan-paint'
+          else
+            python3 scripts/smoke-package.py dist/PlanPaint/plan-paint.exe
+          fi
       - uses: actions/upload-artifact@v4
         with:
-          name: plan-paint-windows-x64
-          path: dist/*.zip
+          name: plan-paint-${{ matrix.platform }}
+          path: |
+            dist/*.zip
+            dist/*.pkg
+            dist/*.tar.gz
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-checks-${{ matrix.platform }}
+          path: .build/native/app/Testing/Temporary/LastTest.log

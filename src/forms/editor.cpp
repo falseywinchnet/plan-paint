@@ -89,7 +89,9 @@ Image validated_clipboard_image(const gf::HostImage& source) {
 }
 } // namespace
 PaintCanvas::PaintCanvas(gf::StableId id, std::weak_ptr<Editor> editor)
-    : RasterCanvas(std::move(id)), editor_(std::move(editor)) {}
+    : RasterCanvas(std::move(id)), editor_(std::move(editor)) {
+    set_style(gf::ControlStyles::opaque, true);
+}
 void PaintCanvas::on_pointer(gf::PointerEvent& event) {
     std::shared_ptr<Editor> editor = editor_.lock();
     if (!editor) {

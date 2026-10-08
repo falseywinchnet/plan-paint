@@ -8,3 +8,9 @@ imgui.ini
 
 __pycache__/
 *.py[cod]
+
+/gui_forms/
+/.build/
+/.ccache/
+/cache-manifest.json
+/gui-forms-cache-*.tar.gz

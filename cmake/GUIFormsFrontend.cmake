@@ -1,10 +1,33 @@
+set(RAINSTAR_TOOLKIT_SOURCE_DIR "" CACHE PATH "Pinned standalone GUI.Forms source")
+if(RAINSTAR_TOOLKIT_SOURCE_DIR)
+  set(GUI_FORMS_BUILD_GALLERY OFF CACHE BOOL "" FORCE)
+  set(GUI_FORMS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(GUI_FORMS_ENABLE_HARFBUZZ_TEXT ON CACHE BOOL "" FORCE)
+  if(WIN32)
+    set(GUI_FORMS_ENABLE_SKIA OFF CACHE BOOL "" FORCE)
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(GUI_FORMS_ENABLE_LINUX_HOST ON CACHE BOOL "" FORCE)
+  endif()
+  add_subdirectory("${RAINSTAR_TOOLKIT_SOURCE_DIR}" toolkit EXCLUDE_FROM_ALL)
+  set(GUIForms_FONT_DIR "${RAINSTAR_TOOLKIT_SOURCE_DIR}/assets/fonts")
+else()
 # Keep the explicitly selected SDK ahead of ambient /usr/local headers. Mixing
 # installed GUI.Forms headers from another SDK with these libraries breaks ABI.
 set(CMAKE_NO_SYSTEM_FROM_IMPORTED ON)
-find_package(GUIForms 0.1 CONFIG REQUIRED COMPONENTS Application)
+find_package(GUIForms 0.1 CONFIG REQUIRED COMPONENTS Application Threading)
 set_property(TARGET GUIForms::Application PROPERTY IMPORTED_NO_SYSTEM TRUE)
 include(CheckCXXSourceCompiles)
 set(CMAKE_REQUIRED_LIBRARIES GUIForms::Application)
+check_cxx_source_compiles("#include <gui_forms/live_surface.hpp>
+int main() {
+  gui_forms::LiveSurfaceDescription description{2, 2};
+  description.opaque = true;
+  description.pixel_format = gui_forms::native_live_surface_pixel_format();
+  return gui_forms::LiveSurface::create(description) ? 0 : 1;
+}" RAINSTAR_LIVE_SURFACE)
+if(NOT RAINSTAR_LIVE_SURFACE)
+  message(FATAL_ERROR "Plan Paint requires the pinned standalone GUI.Forms LiveSurface API.")
+endif()
 check_cxx_source_compiles("#include <gui_forms/canvas.hpp>
 #include <type_traits>
 static_assert(!std::is_final_v<gui_forms::RasterCanvas>);
@@ -55,6 +78,7 @@ if(NOT RAINSTAR_RIBBON_CONTROLS)
 endif()
 if(NOT RAINSTAR_SCROLLING_LAYOUT)
   message(FATAL_ERROR "Plan Paint requires the GUI.Forms scrolling-layout, keyboard, and diagonal-cursor extensions. See docs/GUI_FORMS_PORT.md.")
+endif()
 endif()
 add_library(paint_forms STATIC src/forms/canvas_controls.cpp src/forms/gradient_controls.cpp src/forms/recovery.cpp src/forms/interface_theme.cpp src/cursors/tool_cursors.cpp src/forms/editor.cpp src/forms/pattern_canvas.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/carpet_dialog.cpp src/forms/dither_dialog.cpp src/forms/text.cpp src/forms/warp.cpp src/forms/atlas.cpp src/forms/selection.cpp src/forms/help.cpp src/forms/surface.cpp src/forms/guide.cpp src/forms/spirograph.cpp)
 target_link_libraries(paint_forms PUBLIC paint_core GUIForms::Application)
@@ -146,8 +170,9 @@ if(APPLE OR WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
       VERBATIM)
     add_custom_target(paint-forms-runtime DEPENDS "${forms_runtime_stamp}")
     if(WIN32)
+      add_dependencies(paint-forms-runtime GUIForms::Application GUIForms::Threading)
       add_custom_command(TARGET paint-forms-runtime POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GUIForms::Application>" "${forms_runtime_directory}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:GUIForms::Application>" "$<TARGET_FILE:GUIForms::Threading>" "${forms_runtime_directory}"
         VERBATIM)
     endif()
     foreach(forms_target IN ITEMS plan-paint paint-forms-native-tests paint-forms-tests)
@@ -175,4 +200,28 @@ else()
     VERBATIM)
   add_dependencies(plan-paint paint-language-packs)
   install(DIRECTORY "${PROJECT_SOURCE_DIR}/languages/" DESTINATION languages FILES_MATCHING PATTERN "*.json")
+endif()
+
+if(Python3_Interpreter_FOUND)
+  if(RAINSTAR_TOOLKIT_SOURCE_DIR)
+    set(paint_package_toolkit "${RAINSTAR_TOOLKIT_SOURCE_DIR}")
+  else()
+    get_filename_component(paint_package_toolkit "${GUIForms_FONT_DIR}/../../.." ABSOLUTE)
+  endif()
+  if(WIN32)
+    get_filename_component(paint_compiler_runtime "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    set(paint_package_script windows)
+    set(paint_package_arguments --runtime-dir "${paint_compiler_runtime}")
+  elseif(APPLE)
+    set(paint_package_script macos)
+    set(paint_package_arguments --runtime "$ENV{GUI_FORMS_LLVM_RUNTIME}")
+  else()
+    set(paint_package_script linux)
+  endif()
+  add_custom_target(paint-package
+    COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/package-${paint_package_script}.py"
+      --build "${CMAKE_BINARY_DIR}" --gui-forms-sdk "${paint_package_toolkit}" ${paint_package_arguments}
+    DEPENDS plan-paint
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    USES_TERMINAL)
 endif()

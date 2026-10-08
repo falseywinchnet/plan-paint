@@ -1,9 +1,11 @@
 #include "codecs.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <gui_forms/timer.hpp>
+#include <gui_forms/paint_framebuffer.hpp>
 #include <iostream>
 #include <stdexcept>
 #ifdef _WIN32
@@ -250,6 +252,36 @@ struct NativeExercise {
         entered = true;
     }
     bool entered = false;
+    void inspect_frame(gf::Window& window) {
+        const gf::Size size{1280, 820};
+        std::unique_ptr<gf::PaintFramebuffer> framebuffer = window.create_framebuffer(size, window.scale());
+        if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
+            throw std::runtime_error("Native framebuffer is unavailable");
+        }
+        static_cast<void>(window.paint((*framebuffer).painter(), {0, 0, size.width, size.height}));
+        (*framebuffer).end();
+        const bool bgra = (*framebuffer).channel_order() == gf::FramebufferChannelOrder::bgra;
+        paint::Image image;
+        image.reset(static_cast<int>((*framebuffer).width()), static_cast<int>((*framebuffer).height()), {});
+        for (int y = 0; y < image.height; ++y) {
+            const std::byte* row = (*framebuffer).pixels().data() + y * (*framebuffer).row_bytes();
+            for (int x = 0; x < image.width; ++x) {
+                image.set(x, y, {std::to_integer<std::uint8_t>(row[x * 4 + (bgra ? 2 : 0)]),
+                    std::to_integer<std::uint8_t>(row[x * 4 + 1]),
+                    std::to_integer<std::uint8_t>(row[x * 4 + (bgra ? 0 : 2)]), 255});
+            }
+        }
+        const gf::Rect pixel = (*editor).canvas().bitmap_to_client({120, 120, 1, 1});
+        const gf::Point sample = (*editor).canvas().point_to_window(
+            {pixel.x + pixel.width / 2, pixel.y + pixel.height / 2});
+        const paint::Color actual = image.get(static_cast<int>(sample.x * window.scale()),
+                                              static_cast<int>(sample.y * window.scale()));
+        if (!paint::equal(actual, (*editor).document.image.get(120, 120))) {
+            throw std::runtime_error("Native live canvas pixels differ from the edited document");
+        }
+        const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
+        if (capture && *capture) { paint::save_image(image, capture); }
+    }
     void stroke(gf::Window& window, paint::Point first, paint::Point last) {
         gf::RasterCanvas& canvas = (*editor).canvas();
         gui_drawing::PointF origin = canvas.view_origin();
@@ -374,6 +406,7 @@ struct NativeExercise {
         if (!document.curve.line_set || document.undo_history.size() < 5) {
             throw std::runtime_error("Native editor did not retain curve and history");
         }
+        inspect_frame(window);
         entered = true;
         if (!keep_open && !handle.request_close().accepted()) {
             throw std::runtime_error("Native close request rejected");

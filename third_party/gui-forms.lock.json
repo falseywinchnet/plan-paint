@@ -1,10 +1,24 @@
 {
-  "repository": "falseywinchnet/plan-paint",
-  "release": "v1.1.4",
-  "asset": "gui-forms-native-source-814ef16a714c.tar.gz",
-  "commit": "814ef16a714c4d8f9f75b3a80fcb36b1888a21c8",
-  "sha256": "7f19a55e54a1c07e439bec8585d1c9eddccb013b18fa911b324e022ecaa4db4b",
-  "upstream_repository": "falseywinchnet/file_manager",
-  "upstream_path": "gui_forms",
-  "patches": []
+  "repository": "falseywinchnet/gui_forms",
+  "commit": "f2c44ff6f902292d29eb096a01ff77ea2645d982",
+  "cache_release": "build-f2c44ff6f902292d29eb096a01ff77ea2645d982",
+  "compiler": "22.1.8",
+  "caches": {
+    "linux-arm64": {
+      "asset": "gui-forms-cache-linux-arm64.tar.gz",
+      "sha256": "54207ff36411dff7c70389bfcd2eab93954f0e56381af3bc9bcf4a669c973fe2"
+    },
+    "linux-x64": {
+      "asset": "gui-forms-cache-linux-x64.tar.gz",
+      "sha256": "1c048b27efd42a6d576c4d62a962037d8a7fba121e0ceca892909018d9dcafb6"
+    },
+    "macos-arm64": {
+      "asset": "gui-forms-cache-macos-arm64.tar.gz",
+      "sha256": "921b9acaf7b98672a7fe28be3900482ff576aa8d21c643e7e302421b1778539c"
+    },
+    "windows-x64": {
+      "asset": "gui-forms-cache-windows-x64.tar.gz",
+      "sha256": "46bb582dfd4ae96a92d007752a61106eae4c1c2ba7dbe122f6d7661cecdda72d"
+    }
+  }
 }

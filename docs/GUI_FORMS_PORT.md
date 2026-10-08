@@ -1,58 +1,85 @@
 # Plan Paint native build
 
-GUI.Forms is the primary frontend in Plan Paint 1.0. The SDL/ImGui frontend is deprecated and excluded from release packages.
+Plan Paint consumes the standalone [GUI.Forms repository](https://github.com/falseywinchnet/gui_forms)
+at the revision in `third_party/gui-forms.lock.json`. This lock also records the
+provider's tested cache release and the SHA-256 of each platform archive.
+Application sources link `GUIForms::Application`; its shared `GUIForms::Threading`
+dependency is shipped alongside it. Never also link static Core, Controls or
+Drawing into the native application.
 
+## Toolchain and source
 
-Plan Paint 1.0 uses GUI.Forms by default. The executable links the installed
-`GUIForms::Application` target and Paint's document, raster, material, CONV and
-format libraries. It does not link SDL, ImGui or GTK. The deprecated SDL/ImGui
-frontend remains available with `RAINSTAR_LEGACY_UI=ON`.
+Use CMake 3.25+, Ninja, Python 3.11+ and LLVM **22.1.8**. Install libtiff,
+libwebp and dav1d development packages for the same toolchain. Paint builds
+pinned libavif, LunaSVG/PlutoVG and TinyXML-2 from source. The native scripts
+also build the reduced TIFF codec profile from source.
 
-## Build the SDK and application
+| Platform | Compiler distribution | Build/runtime contract |
+| --- | --- | --- |
+| Windows x64 | MSYS2 CLANG64 | Windows 10, clang/libc++ and winpthreads |
+| macOS arm64 | Homebrew llvm@22 | macOS 14 target with GUI.Forms' matched LLVM runtime |
+| Linux x64 / arm64 | apt.llvm.org LLVM 22 on Ubuntu 24.04 | Ubuntu 24.04 system ABI, X11/XWayland |
 
-The release includes a checksum-pinned GUI.Forms source snapshot. The fetch
-command is an explicit development step; the installed application never fetches
-source or dependencies. Python 3.10 or newer is required for the packaging tools.
+Put the selected compiler first in PATH and use `clang`/`clang++` for C,
+C++ and Objective-C++. A new compiler requires a fresh build directory.
+Do not mix MINGW64 GCC headers with CLANG64 libc++ headers.
 
 ```sh
 python3 scripts/fetch-gui-forms.py
+python3 scripts/restore-toolkit-cache.py windows-x64
+sh scripts/native-build.sh configure windows-x64
+cmake --build .build/native/app --parallel 2
+cmake --build .build/native/app --target check
+cmake --build .build/native/app --target paint-package
+python3 scripts/smoke-package.py dist/PlanPaint/plan-paint.exe
 ```
 
-On Apple Silicon macOS, install CMake, Ninja and the codec development libraries,
-fetch the toolkit's pinned rendering dependencies, and install an SDK:
+The source fetcher refuses an existing checkout with a different revision or
+tracked modifications. The cache importer verifies both the locked archive
+digest and its source revision before extraction. A missing release or GitHub
+CLI is a cache miss; a corrupt or mismatched payload is rejected. The toolkit
+source is still compiled and Paint's own tests always run.
 
-```sh
-brew install cmake ninja libtiff webp dav1d
-sh build-deps/gui-forms/third_party/fetch_skia_cpu.sh
-sh build-deps/gui-forms/third_party/fetch_text_stack.sh
-cmake -S build-deps/gui-forms -B build-deps/gui-forms-build \
-  -DCMAKE_BUILD_TYPE=Release -DGUI_FORMS_BUILD_GALLERY=OFF \
-  -DGUI_FORMS_ENABLE_MACOS_HOST=ON \
-  -DCMAKE_INSTALL_PREFIX="$PWD/build-deps/gui-forms-sdk"
-cmake --build build-deps/gui-forms-build --parallel 4
-ctest --test-dir build-deps/gui-forms-build --output-on-failure
-cmake --install build-deps/gui-forms-build
-cmake -S . -B build-forms -DCMAKE_BUILD_TYPE=Release -DRAINSTAR_BUNDLED_TIFF=ON \
-  -DGUIForms_DIR="$PWD/build-deps/gui-forms-sdk/lib/cmake/GUIForms" \
-  -DCMAKE_PREFIX_PATH=/opt/homebrew
-cmake --build build-forms --parallel 4
-ctest --test-dir build-forms --output-on-failure
-open build-forms/plan-paint.app
-python3 scripts/package-macos.py --gui-forms-sdk build-deps/gui-forms-sdk
-```
+The shared `scripts/native-build.sh` recipe accepts `configure`, `build`,
+`test`, `package` or `all`, followed by a platform name from the table
+(`windows-x64`, `macos-arm64`, `linux-x64`, `linux-arm64`). `PAINT_BUILD_DIR`
+selects an alternative build directory and `BUILD_JOBS` controls concurrency.
+The `ci-*.sh` wrappers call this same recipe. The workflow supplies dependencies,
+imports the provider cache, caches fetched dependency sources and Skia, then
+saves compiler objects immediately after a successful build.
 
-[ci-macos.sh](../scripts/ci-macos.sh) contains the Apple Silicon macOS build,
-[ci-windows.sh](../scripts/ci-windows.sh) contains the MinGW/MSYS2 build and
-[ci-linux.sh](../scripts/ci-linux.sh) contains the Alpine musl build. Their
-prerequisites and invocations are in the [workflow](../.github/workflows/build.yml).
-Windows uses the native GDI host. Mac and Linux use CPU Skia; Linux also uses
-HarfBuzz and FreeType for text. Each package includes its fonts and licenses.
+Before configuring macOS or Linux, fetch and build the toolkit's CPU Skia
+archive into `gui_forms/third_party/skia/out/paint`, using
+`third_party/build_skia_cpu.sh` or `third_party/build_skia_cpu_linux.sh`.
+The [workflow](../.github/workflows/build.yml) contains the complete commands.
+Linux tests and the packaged startup check run under Xvfb.
 
-On Windows and Linux, bundled fonts and language packs follow the executable's
-output directory; Windows also copies the GUI.Forms application library there.
-This supports `CMAKE_RUNTIME_OUTPUT_DIRECTORY` and configuration-specific output
-directories. When packaging a custom build layout, pass the directory containing
-the executable as the packaging script's `--build` argument.
+On macOS set `GUI_FORMS_LLVM_RUNTIME` to
+`$PWD/.build/toolchain/llvm-22.1.8-macos14` before importing the cache.
+The importer uses the provider's runtime validator and rebuilds from its
+pinned LLVM source when necessary. Homebrew's prebuilt libc++ is not the
+application runtime. Packaging follows the dependency closure, copies the
+runtime notices and rejects binaries whose minimum exceeds macOS 14.
+Codec libraries must also satisfy that minimum; a successful build on a
+newer machine alone does not establish macOS 14 compatibility.
+
+Compiler caches live in `.ccache`, with `CCACHE_BASEDIR` at the workspace and
+`CCACHE_COMPILERCHECK=content`. All C/C++/Objective-C++ launchers use ccache.
+Headers, compiler content and options retain normal validation. Compiler or
+SDK differences legitimately miss. No cache hit substitutes for platform tests.
+
+For an already installed matching SDK, omit `RAINSTAR_TOOLKIT_SOURCE_DIR` and
+set `GUIForms_DIR` to its `lib/cmake/GUIForms` directory. Use its same LLVM
+22 toolchain and runtime. Configuration checks the required LiveSurface and
+native control APIs. Source builds use public toolkit targets directly and
+do not rebuild its gallery or proving tests. Toolkit tests are the provider's
+responsibility; Paint's editing, numerical and native-host tests are consumer gates.
+
+Windows build outputs stage both toolkit DLLs beside Paint and its UI tests.
+Packaging computes the transitive runtime closure. Fonts are selected from
+`packaging/fonts.txt`, with their notices, from either toolkit source or SDK.
+`RAINSTAR_LEGACY_UI=ON` retains the deprecated SDL/ImGui frontend for historical
+comparison; it is excluded from release packages.
 
 ## Platform behavior
 
@@ -71,19 +98,25 @@ orientation, margins and pixel quadrants. Physical printer output and every
 scanner/desktop combination have not been verified. Missing optional desktop
 services produce an error rather than reporting success.
 
-Linux archives bundle their musl loader, complete shared-library closure, fonts
-and X11 locale data. Run the top-level `Plan Paint` launcher and retain the
-complete directory. They can start on a glibc system without an installed musl
-loader. No package manager or network connection is needed to draw, use help,
+New Linux builds target the GUI.Forms Ubuntu 24.04 ABI. Their archives bundle
+application libraries, fonts and X11 locale data; glibc and its loader remain
+system dependencies. Run the top-level `Plan Paint` launcher and retain the
+complete directory. Previously released 1.1.4 musl archives are unchanged. No package manager or network connection is needed to draw, use help,
 open or save pictures. The Mac application is signed ad hoc; the installer is
 unsigned and not Developer ID notarized.
 
 ## Document and display ownership
 
 Paint retains straight-alpha RGBA pixels, meaningful RGB under zero alpha,
-selection state, tool transactions, undo history and format metadata. Only its
-display cache is premultiplied BGRA. The GUI.Forms `RasterCanvas` owns tiled
-presentation and clipping; small strokes publish bounded bitmap edits.
+selection state, tool transactions, undo history and format metadata. Its display cache uses GUI.Forms `LiveSurface` leases in the native channel
+order. Small strokes update only the changed source region, preserving the
+previous frame. An opaque viewport buffer composites transparency and samples
+zoom at physical pixel resolution, preserving nearest-neighbor pixel edges
+on Windows, macOS and Linux. Unchanged repaints reuse this buffer.
+The canvas declares opaque control coverage because it paints its entire
+background. Document alpha and hidden RGB remain unchanged. Rotated views
+and selection overlays retain registered transparent images: the pinned
+Windows live presenter copies instead of blending these surfaces.
 Selections and shape previews publish the composed image. While a selection is
 rotating or resizing, a separate viewport-bounded overlay shows the transformed
 pixels immediately. Its temporary bilinear display samples never enter document
@@ -122,44 +155,6 @@ and accept actual open/save dialogs. Native app screenshots and interactive
 checks complement these tests; a headless test result alone is not a claim that
 every desktop service or window-manager configuration was exercised.
 
-## Source layout and toolkit snapshot
 
-Application UI code lives in `src/forms/`. The shared document, raster tools,
-CONV transforms and codecs live in `src/`; the deprecated SDL/ImGui frontend remains
-available for historical comparison and is excluded from the default build.
-
-The pinned GUI.Forms snapshot includes optional font packs, shared font storage
-and macOS exposure handling. Fetch it with `scripts/fetch-gui-forms.py` before
-building the SDK. Install that SDK into a separate prefix and configure Paint
-with `CMAKE_PREFIX_PATH` pointing to it. Every packaged release includes its
-matching toolkit library.
-
-## Pinned toolkit corrections
-
-Plan Paint 1.1.4 pins GUI.Forms commit `814ef16a714c4d8f9f75b3a80fcb36b1888a21c8`
-from the `gui_forms` directory of `falseywinchnet/file_manager`. The source archive
-is attached to the 1.1.4 release and verified against `third_party/gui-forms.lock.json`.
-It incorporates all eight corrections previously applied as separate patches;
-the current lock requires no additional patches. Historical patch files remain
-available for reproducing older releases.
-
-The Windows host alternates input and ordinary queue turns within bounded
-batches, while preserving translated-character ordering before later keyboard
-input. Native paint bounds are included even when logical damage is already
-pending, preventing uncovered pixel edges and missed exposures. The optional
-transactional DIB development backend remains disabled in release builds.
-
-The nested dropdown patch recognizes the registered popup owner when a separate window overlay
-enters a containing focus scope. It fixes dropdowns inside Paint's color and
-settings dialogs while continuing to reject unrelated popup roots. The toolkit
-change is maintained independently as commit
-`f47893b` and includes repeated open/close, modal containment, focus restoration,
-and owner-unavailability regressions.
-
-Two Windows corrections preserve native interaction. MSAA focus and hit-test
-queries return `CHILDID_SELF` when they identify the queried object, preventing
-accessibility clients from descending through an endless chain of self wrappers.
-Alt+F4 reaches the ordinary Windows close request instead of being consumed as
-an application key. The native regression checks that closing can be cancelled
-before a subsequent request closes the window; Paint retains its existing
-unsaved-document confirmation behavior.
+Author: Astra
+Sponsor: Rainstar

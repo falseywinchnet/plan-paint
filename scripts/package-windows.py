@@ -3,6 +3,7 @@
 from pathlib import Path
 from release_version import project_version
 from font_pack import copy_fonts
+from toolkit_resources import copy_toolkit_notices
 import argparse
 import hashlib
 import json
@@ -61,7 +62,7 @@ def main():
     for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"): shutil.copy2(ROOT / name, bundle)
     shutil.copy2(ROOT / "packaging/README.txt", bundle / "README.txt")
     shutil.copytree(ROOT / "packaging/licenses", bundle / "licenses")
-    shutil.copytree(args.gui_forms_sdk / "share/licenses/GUIForms", bundle / "licenses/GUIForms")
+    copy_toolkit_notices(args.gui_forms_sdk, bundle / "licenses/GUIForms")
     manifest = {"version": args.version, "architecture": "x64", "frontend": "GUI.Forms",
                 "files": {str(path.relative_to(bundle)): hashlib.sha256(path.read_bytes()).hexdigest()
                           for path in sorted(bundle.rglob("*")) if path.is_file()}}
