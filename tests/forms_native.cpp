@@ -258,7 +258,7 @@ struct NativeExercise {
         if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
             throw std::runtime_error("Native framebuffer is unavailable");
         }
-        static_cast<void>(window.paint((*framebuffer).painter(), {0, 0, size.width, size.height}));
+        const bool painted = window.paint((*framebuffer).painter(), {0, 0, size.width, size.height}).has_value();
         (*framebuffer).end();
         const bool bgra = (*framebuffer).channel_order() == gf::FramebufferChannelOrder::bgra;
         paint::Image image;
@@ -276,11 +276,16 @@ struct NativeExercise {
             {pixel.x + pixel.width / 2, pixel.y + pixel.height / 2});
         const paint::Color actual = image.get(static_cast<int>(sample.x * window.scale()),
                                               static_cast<int>(sample.y * window.scale()));
-        if (!paint::equal(actual, (*editor).document.image.get(120, 120))) {
-            throw std::runtime_error("Native live canvas pixels differ from the edited document");
-        }
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
+        const paint::Color expected = (*editor).document.image.get(120, 120);
+        if (!painted || !paint::equal(actual, expected)) {
+            throw std::runtime_error("Native live canvas pixels differ: painted=" + std::to_string(painted) +
+                " sample=" + std::to_string(sample.x) + "," + std::to_string(sample.y) +
+                " scale=" + std::to_string(window.scale()) +
+                " actual=" + std::to_string(actual.r) + "," + std::to_string(actual.g) + "," + std::to_string(actual.b) +
+                " expected=" + std::to_string(expected.r) + "," + std::to_string(expected.g) + "," + std::to_string(expected.b));
+        }
     }
     void stroke(gf::Window& window, paint::Point first, paint::Point last) {
         gf::RasterCanvas& canvas = (*editor).canvas();

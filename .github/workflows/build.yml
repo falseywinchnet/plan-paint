@@ -118,7 +118,8 @@ jobs:
           with open(os.environ['GITHUB_ENV'], 'a') as output:
               output.write('PAINT_RENDERER_ENV=' + hashlib.sha256(identity).hexdigest() + '\n')
           PYTHON
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
+        id: renderer-cache
         if: runner.os != 'Windows'
         with:
           path: gui_forms/third_party/skia
@@ -135,6 +136,11 @@ jobs:
               sh gui_forms/third_party/build_skia_cpu_linux.sh "$PWD/gui_forms/third_party/skia/out/paint"
             fi
           fi
+      - uses: actions/cache/save@v4
+        if: runner.os != 'Windows' && steps.renderer-cache.outputs.cache-hit != 'true'
+        with:
+          path: gui_forms/third_party/skia
+          key: ${{ steps.renderer-cache.outputs.cache-primary-key }}
       - name: Configure application
         run: sh scripts/native-build.sh configure '${{ matrix.platform }}'
       - name: Build application and tests
@@ -146,6 +152,7 @@ jobs:
           key: ${{ steps.objects.outputs.cache-primary-key }}
       - name: Test application
         run: |
+          export PAINT_NATIVE_CAPTURE="$PWD/.build/native/native-canvas.png"
           if [ "${{ runner.os }}" = Linux ]; then
             xvfb-run -a sh scripts/native-build.sh test '${{ matrix.platform }}'
           else
@@ -174,4 +181,7 @@ jobs:
         if: always()
         with:
           name: native-checks-${{ matrix.platform }}
-          path: .build/native/app/Testing/Temporary/LastTest.log
+          path: |
+            .build/native/app/Testing/Temporary/LastTest.log
+            .build/native/native-canvas.png
+          include-hidden-files: true

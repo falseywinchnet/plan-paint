@@ -209,7 +209,15 @@ add_test(NAME paint-codec-security COMMAND paint-codec-security-tests)
 # boundaries. Keep numerical semantics intact: no fast-math flags are enabled.
 include(CheckIPOSupported)
 check_ipo_supported(RESULT RAINSTAR_IPO_SUPPORTED OUTPUT RAINSTAR_IPO_ERROR)
-set(paint_optimized_targets paint_core)
+# Tests consume the same IPO archives and must enable the matching linker mode.
+get_property(paint_build_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+set(paint_check_targets)
+foreach(target IN LISTS paint_build_targets)
+  if(target MATCHES "^paint-.*tests$" OR target STREQUAL "paint-tests")
+    list(APPEND paint_check_targets ${target})
+  endif()
+endforeach()
+set(paint_optimized_targets paint_core ${paint_check_targets})
 if(RAINSTAR_GUI_FORMS)
   list(APPEND paint_optimized_targets paint_forms plan-paint)
 endif()
@@ -227,13 +235,6 @@ foreach(target IN LISTS paint_optimized_targets)
 endforeach()
 
 # The native recipe and local developers use the same build/check/package targets.
-get_property(paint_build_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
-set(paint_check_targets)
-foreach(target IN LISTS paint_build_targets)
-  if(target MATCHES "^paint-.*tests$" OR target STREQUAL "paint-tests")
-    list(APPEND paint_check_targets ${target})
-  endif()
-endforeach()
 if(Python3_Interpreter_FOUND)
   add_custom_target(check
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure --timeout 180
