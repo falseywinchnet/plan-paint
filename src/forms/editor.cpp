@@ -89,7 +89,9 @@ Image validated_clipboard_image(const gf::HostImage& source) {
 }
 } // namespace
 PaintCanvas::PaintCanvas(gf::StableId id, std::weak_ptr<Editor> editor)
-    : RasterCanvas(std::move(id)), editor_(std::move(editor)) {}
+    : RasterCanvas(std::move(id)), editor_(std::move(editor)) {
+    set_style(gf::ControlStyles::opaque, true);
+}
 void PaintCanvas::on_pointer(gf::PointerEvent& event) {
     std::shared_ptr<Editor> editor = editor_.lock();
     if (!editor) {
@@ -415,8 +417,16 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
         }
     }
     if (document.curve.line_set) {
+        const int hovered = hovered_curve_handle(document.curve.geometry, 11);
         for (int index = 0; index < document.curve.geometry.handle_count(); ++index) {
             gf::Point point = screen(document.curve.geometry.handle(index));
+            if (index == curve_handle_) {
+                painter.fill_rect({point.x - 9, point.y - 9, 18, 18},
+                                  interface_color(*this, gf::Color::rgba(255, 190, 40)));
+            } else if (index == hovered) {
+                painter.fill_rect({point.x - 8, point.y - 8, 16, 16},
+                                  interface_color(*this, gf::Color::rgba(255, 220, 130)));
+            }
             if (document.curve.geometry.kind == CurveKind::Bezier) {
                 painter.draw_line(
                     screen(index == 0 ? document.curve.geometry.start : document.curve.geometry.end), point,
@@ -426,8 +436,16 @@ void Editor::paint_canvas_overlay(gf::Painter& painter, gf::Rect) {
             painter.stroke_rect({point.x - 5, point.y - 5, 10, 10}, interface_color(*this, gf::Color::rgba(30, 100, 190)), 2);
         }
     }
+    const int hovered_node = hovered_path_node();
     for (std::size_t index = 0; index < document.path.nodes.size(); ++index) {
         gf::Point point = screen(document.path.nodes[index]);
+        if (static_cast<int>(index) == path_node_) {
+            painter.fill_rounded_rect({point.x - 9, point.y - 9, 18, 18}, 9,
+                                      interface_color(*this, gf::Color::rgba(255, 190, 40)));
+        } else if (static_cast<int>(index) == hovered_node) {
+            painter.fill_rounded_rect({point.x - 8, point.y - 8, 16, 16}, 8,
+                                      interface_color(*this, gf::Color::rgba(255, 220, 130)));
+        }
         painter.fill_rounded_rect({point.x - 6, point.y - 6, 12, 12}, 6, interface_color(*this, gf::Color::rgba(255, 255, 255)));
         painter.fill_rounded_rect({point.x - 5, point.y - 5, 10, 10}, 5, interface_color(*this, gf::Color::rgba(0, 120, 215)));
     }
@@ -511,12 +529,42 @@ int Editor::hit_path_node(Point point) const {
     }
     return result;
 }
+int Editor::hit_curve_handle(const CurveGeometry& geometry, Point point, double radius) const {
+    int result = -1;
+    for (int index = 0; index < geometry.handle_count(); ++index) {
+        const Point handle = geometry.handle(index);
+        const double distance = std::hypot(handle.x - point.x, handle.y - point.y) * (*canvas_).zoom();
+        if (distance < radius) {
+            radius = distance;
+            result = index;
+        }
+    }
+    return result;
+}
+int Editor::hovered_curve_handle(const CurveGeometry& geometry, double radius) const {
+    if (!cursor_client_ || (*canvas_).has_pointer_capture()) {
+        return -1;
+    }
+    const gui_drawing::PointF point = (*canvas_).client_to_bitmap(*cursor_client_);
+    return hit_curve_handle(geometry, {point.x, point.y}, radius);
+}
+int Editor::hovered_path_node() const {
+    if (!edit_path_nodes || document.tool != Tool::Path || !cursor_client_ || (*canvas_).has_pointer_capture()) {
+        return -1;
+    }
+    if (path_swap_segment_ >= 0 && static_cast<std::size_t>(path_swap_segment_) < document.path.segments.size() &&
+        hovered_curve_handle(document.path.segments[path_swap_segment_].geometry, 10) >= 0) {
+        return -1;
+    }
+    const gui_drawing::PointF point = (*canvas_).client_to_bitmap(*cursor_client_);
+    return hit_path_node({point.x, point.y});
+}
 Point Editor::snap_path_point(Point point) const {
     int index = hit_path_node(point);
     return index < 0 ? point : document.path.nodes[static_cast<std::size_t>(index)];
 }
 bool Editor::path_preview_point(Point& point) const {
-    if (path_swap_kind_ || document.tool != Tool::Path || !document.path.extending || path_node_ >= 0 ||
+    if (edit_path_nodes || path_swap_kind_ || document.tool != Tool::Path || !document.path.extending || path_node_ >= 0 ||
         !cursor_client_) {
         return false;
     }
@@ -697,6 +745,8 @@ void Editor::release_gesture() {
     moving_selection_ = false;
     preview_active_ = false;
     curve_handle_ = -1;
+    path_swap_handle_ = -1;
+    path_swap_checkpoint_ = false;
     path_node_ = -1;
     resize_handle_ = -1;
     lasso_.clear();
@@ -774,6 +824,10 @@ void Editor::choose_tool(Tool tool) {
         finish_controls(false);
     }
     document.tool = tool;
+    if (tool == Tool::Path) {
+        edit_path_nodes = false;
+        path_swap_kind_.reset();
+    }
     apply_tool_cursor(canvas(), tool);
     refresh();
 }
@@ -789,6 +843,11 @@ void Editor::pointer(const gf::PointerEvent& event) {
         control_ = gf::has_modifier(event.modifiers, gf::Modifier::control);
         alt_ = gf::has_modifier(event.modifiers, gf::Modifier::alt);
         gf::Point client = (*canvas_).point_from_window(event.position);
+        if (event.action == gf::PointerAction::leave && !(*canvas_).has_pointer_capture()) {
+            cursor_client_.reset();
+        } else {
+            cursor_client_ = client;
+        }
         if (settings.rotate_view) {
             const gf::Point handle = canvas().rotation_handle();
             const bool hit = std::hypot(client.x - handle.x, client.y - handle.y) <= 14;
@@ -849,15 +908,18 @@ void Editor::pointer(const gf::PointerEvent& event) {
              (document.tool == Tool::Stamp && document.stamp.pixels.empty()))) {
             canvas().set_cursor(gf::CursorKind::crosshair);
         }
-        if (event.action == gf::PointerAction::leave && !(*canvas_).has_pointer_capture()) {
-            cursor_client_.reset();
-        } else {
-            cursor_client_ = client;
-        }
         update_cursor_status();
+        if (!panning_ && (curve_handle_ >= 0 || path_node_ >= 0 || path_swap_handle_ >= 0 ||
+            hovered_path_node() >= 0 ||
+            (document.curve.line_set && hovered_curve_handle(document.curve.geometry, 11) >= 0) ||
+            (document.tool == Tool::Path && (edit_path_nodes || path_swap_kind_) && path_swap_segment_ >= 0 &&
+             static_cast<std::size_t>(path_swap_segment_) < document.path.segments.size() &&
+             hovered_curve_handle(document.path.segments[path_swap_segment_].geometry, 10) >= 0))) {
+            canvas().set_cursor(gf::CursorKind::hand);
+        }
         if (document.tool == Tool::Stamp || document.tool == Tool::Pencil || document.tool == Tool::Eraser ||
             document.tool == Tool::Magnifier || document.tool == Tool::Picker ||
-            document.tool == Tool::Brush || document.tool == Tool::Path) {
+            document.tool == Tool::Brush || document.tool == Tool::Path || document.curve.line_set) {
             (*canvas_).invalidate(gf::Dirty::paint);
         }
         if (document.tool == Tool::Path &&
@@ -982,11 +1044,12 @@ void Editor::pointer(const gf::PointerEvent& event) {
             if (event.button != gf::PointerButton::primary && event.button != gf::PointerButton::secondary) {
                 return;
             }
-            if (event.button == gf::PointerButton::secondary &&
-                (document.tool == Tool::Path || document.tool == Tool::Stamp)) {
+            if ((event.button == gf::PointerButton::secondary &&
+                 (document.tool == Tool::Path || document.tool == Tool::Stamp)) ||
+                (event.button == gf::PointerButton::primary && document.tool == Tool::Path && edit_path_nodes)) {
                 if (document.tool == Tool::Path) {
                     int node =
-                        document.path.extending && document.path.nodes.size() - document.path.start == 1
+                        !edit_path_nodes && document.path.extending && document.path.nodes.size() - document.path.start == 1
                             ? -1
                             : hit_path_node(point);
                     if (node >= 0) {
@@ -997,6 +1060,9 @@ void Editor::pointer(const gf::PointerEvent& event) {
                         dragging_ = true;
                         (*canvas_).set_pointer_capture(true);
                         refresh();
+                        return;
+                    }
+                    if (edit_path_nodes && event.button == gf::PointerButton::primary) {
                         return;
                     }
                     document.end_path_geometry();
@@ -1054,16 +1120,14 @@ void Editor::begin(Point point, bool secondary) {
         return;
     }
     if (document.curve.line_set) {
-        for (int index = 0; index < document.curve.geometry.handle_count(); ++index) {
-            Point handle = document.curve.geometry.handle(index);
-            if (std::hypot(handle.x - point.x, handle.y - point.y) * (*canvas_).zoom() < 11) {
-                curve_handle_ = index;
-                handle_offset_ = {point.x - handle.x, point.y - handle.y};
-                handle_checkpoint_ = false;
-                dragging_ = true;
-                (*canvas_).set_pointer_capture(true);
-                return;
-            }
+        const int nearest_handle = hit_curve_handle(document.curve.geometry, point, 11);
+        if (nearest_handle >= 0) {
+            const Point handle = document.curve.geometry.handle(nearest_handle);
+            curve_handle_ = nearest_handle;
+            handle_offset_ = {point.x - handle.x, point.y - handle.y};
+            handle_checkpoint_ = false;
+            dragging_ = true;
+            (*canvas_).set_pointer_capture(true);
         }
         return;
     }
@@ -2127,12 +2191,22 @@ void Editor::execute(const std::string& command) {
             } else {
                 document.shape_fill = !document.shape_fill;
             }
+        } else if (command == "render-crisp" || command == "render-smooth" || command == "render-smooth-4x") {
+            document.ink.smooth = command != "render-crisp";
+            document.ink.supersample = command == "render-smooth-4x";
         } else if (command == "smooth-lines") {
             document.ink.smooth = !document.ink.smooth;
         } else if (command == "alt-carries-body") {
             document.alt_carries_body = !document.alt_carries_body;
         } else if (command == "continuous-path") {
             document.continuous_path = !document.continuous_path;
+        } else if (command == "edit-path-nodes") {
+            release_gesture();
+            edit_path_nodes = !edit_path_nodes;
+            path_swap_segment_ = path_swap_handle_ = -1;
+            if (edit_path_nodes) {
+                path_swap_kind_.reset();
+            }
         } else if (command == "transparent-pattern") {
             document.ink.transparent_pattern = !document.ink.transparent_pattern;
         } else if (command == "transparent-selection") {

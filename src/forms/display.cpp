@@ -52,7 +52,73 @@ void publish_image(const Image& source, gui_forms::RasterCanvas& canvas, Rect da
     publish_pixels(source, canvas, damage);
 }
 void publish_image(const Image& source, PaintCanvas& canvas, Rect damage) {
-    publish_pixels(source, canvas, damage);
+    canvas.publish_pixels(source, damage);
     canvas.publish_source(source, damage);
+}
+void PaintCanvas::publish_pixels(const Image& source, Rect damage) {
+    if (source.width <= 0 || source.height <= 0) { return; }
+    const gui_forms::LiveSurfacePixelFormat format = gui_forms::native_live_surface_pixel_format();
+    gui_forms::LiveSurfaceFrame previous = display_surface_ ? (*display_surface_).acquire_latest()
+                                                          : gui_forms::LiveSurfaceFrame{};
+    bool replacement = !previous || previous.width() != static_cast<unsigned>(source.width) ||
+                       previous.height() != static_cast<unsigned>(source.height);
+    if (replacement || damage.w <= 0 || damage.h <= 0) {
+        damage = {0, 0, source.width, source.height};
+    }
+    const int right = std::clamp(damage.x + damage.w, 0, source.width);
+    const int bottom = std::clamp(damage.y + damage.h, 0, source.height);
+    damage.x = std::clamp(damage.x, 0, source.width);
+    damage.y = std::clamp(damage.y, 0, source.height);
+    damage.w = right - damage.x;
+    damage.h = bottom - damage.y;
+    if (damage.w <= 0 || damage.h <= 0) { return; }
+    std::size_t translucent = replacement ? 0 : translucent_pixels_;
+    const bool bgra = format == gui_forms::LiveSurfacePixelFormat::bgra32_premultiplied_srgb;
+    bool changed = replacement;
+    for (int y = damage.y; y < bottom; ++y) {
+        for (int x = damage.x; x < right; ++x) {
+            const Color color = source.get(x, y);
+            if (!replacement) {
+                const std::byte* pixel = previous.pixels().data() + y * previous.row_bytes() + x * 4;
+                if (pixel[3] != std::byte{255}) { --translucent; }
+                changed = changed || pixel[0] != static_cast<std::byte>(((bgra ? color.b : color.r) * color.a + 127U) / 255U) ||
+                    pixel[1] != static_cast<std::byte>((color.g * color.a + 127U) / 255U) ||
+                    pixel[2] != static_cast<std::byte>(((bgra ? color.r : color.b) * color.a + 127U) / 255U) ||
+                    pixel[3] != static_cast<std::byte>(color.a);
+            }
+            if (color.a != 255) { ++translucent; }
+        }
+    }
+    if (!changed) { return; }
+    const bool opaque = translucent == 0;
+    if (replacement || previous.opaque() != opaque) {
+        display_surface_ = gui_forms::LiveSurface::create({static_cast<unsigned>(source.width),
+            static_cast<unsigned>(source.height), format, gui_forms::default_live_surface_buffer_count, opaque});
+        replacement = true;
+        damage = {0, 0, source.width, source.height};
+    }
+    gui_forms::LiveSurfaceWriteLease write = (*display_surface_).try_acquire_write(!replacement);
+    // A held native read lease must never make an editing update disappear.
+    if (!write) {
+        display_surface_ = gui_forms::LiveSurface::create({static_cast<unsigned>(source.width),
+            static_cast<unsigned>(source.height), format, gui_forms::default_live_surface_buffer_count, opaque});
+        write = (*display_surface_).try_acquire_write();
+        damage = {0, 0, source.width, source.height};
+    }
+    if (!write) { throw std::runtime_error(tr("Canvas resource synchronization failed")); }
+    for (int y = damage.y; y < damage.y + damage.h; ++y) {
+        std::byte* row = write.pixels().data() + y * write.row_bytes();
+        for (int x = damage.x; x < damage.x + damage.w; ++x) {
+            const Color color = source.get(x, y);
+            row[x * 4] = static_cast<std::byte>(((bgra ? color.b : color.r) * color.a + 127U) / 255U);
+            row[x * 4 + 1] = static_cast<std::byte>((color.g * color.a + 127U) / 255U);
+            row[x * 4 + 2] = static_cast<std::byte>(((bgra ? color.r : color.b) * color.a + 127U) / 255U);
+            row[x * 4 + 3] = static_cast<std::byte>(color.a);
+        }
+    }
+    static_cast<void>(write.publish({static_cast<double>(damage.x), static_cast<double>(damage.y),
+        static_cast<double>(damage.w), static_cast<double>(damage.h)}));
+    translucent_pixels_ = translucent;
+    invalidate(gui_forms::Dirty::paint | gui_forms::Dirty::semantics);
 }
 } // namespace paint::forms

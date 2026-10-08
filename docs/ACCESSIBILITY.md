@@ -21,3 +21,12 @@ Language selection is under Settings. The list shows all available choices when 
 When the interface is not English, **Help! English!** appears beside Help on the ribbon. Its confirmation stays in English. Choose OK to save English as the application language, save any unfinished picture, then restart Plan Paint. Cancel leaves the language unchanged. This action does not close the picture or restart the application automatically.
 
 The CPU text stack resolves bidirectional text before shaping, preserves UTF-8 source offsets, and wraps unspaced CJK text at grapheme boundaries when it exceeds a line. Bundled fallback fonts cover the supplied scripts. Right-to-left help and dialog labels align right; the entire ribbon arrangement is not mirrored.
+
+## Windows focus traversal
+
+The pinned GUI.Forms patches include an MSAA self-reference correction. A focused
+control returns `CHILDID_SELF` when queried about its own focus or hit target.
+Returning a newly allocated wrapper for the same control could cause Windows
+UI Automation to recurse indefinitely and leave the application unresponsive.
+The toolkit regression checks focus descent and self hit-testing. The patch is
+verified by checksum when fetching the toolkit source.

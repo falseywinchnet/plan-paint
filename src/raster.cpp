@@ -174,10 +174,16 @@ static std::uint32_t noise_at(int x, int y, std::uint32_t seed) {
     value = (value ^ (value >> 13)) * 1274126177u;
     return value ^ (value >> 16);
 }
-void dab(Image& image, Point point, const Ink& ink) {
+int RasterSpace::paper_x(int value) const {
+    return x + static_cast<int>(std::floor(static_cast<double>(value) / scale));
+}
+int RasterSpace::paper_y(int value) const {
+    return y + static_cast<int>(std::floor(static_cast<double>(value) / scale));
+}
+void dab(Image& image, Point point, const Ink& ink, RasterSpace space) {
     if (textured_brush(ink.brush)) {
         MaterialStroke coat;
-        coat.segment(image, point, point, ink);
+        coat.segment(image, point, point, ink, space);
         return;
     }
     if (ink.size == 1) {
@@ -185,6 +191,7 @@ void dab(Image& image, Point point, const Ink& ink) {
         point.y = std::round(point.y);
     }
     double radius = std::max(0.5, ink.size * 0.5);
+    const MaterialSurface material(ink, ink.brush, space);
     int left = std::max(0, static_cast<int>(std::floor(point.x - radius)));
     int top = std::max(0, static_cast<int>(std::floor(point.y - radius)));
     int right = std::min(image.width - 1, static_cast<int>(std::ceil(point.x + radius)));
@@ -194,35 +201,36 @@ void dab(Image& image, Point point, const Ink& ink) {
             double dx = x - point.x, dy = y - point.y;
             bool hit = dx * dx + dy * dy <= radius * radius;
             if (ink.brush == Brush::Calligraphy) {
-                hit = std::abs(dx + dy) < std::max(1.0, radius * 0.3) && std::abs(dx - dy) <= radius * 1.4;
+                hit = std::abs(dx + dy) < std::max(double(space.scale), radius * 0.3) && std::abs(dx - dy) <= radius * 1.4;
             } else if (ink.brush == Brush::CalligraphyLeft) {
-                hit = std::abs(dx - dy) < std::max(1.0, radius * 0.3) && std::abs(dx + dy) <= radius * 1.4;
+                hit = std::abs(dx - dy) < std::max(double(space.scale), radius * 0.3) && std::abs(dx + dy) <= radius * 1.4;
             } else if (ink.brush == Brush::Marker) {
                 hit = std::abs(dx) < radius && std::abs(dy) < radius;
             }
             if (!hit) {
                 continue;
             }
-            std::uint32_t noise = noise_at(x, y, ink.noise);
+            std::uint32_t noise = noise_at(space.paper_x(x), space.paper_y(y), ink.noise);
             if (ink.brush == Brush::Airbrush && noise % 100 > 18) {
                 continue;
             }
-            Color color = patterned(ink, x, y);
+            Color color = space.scale == 1 ? patterned(ink, x, y)
+                                          : material.sample(x, y, 32.0 * space.scale);
             image.blend(x, y, color);
         }
     }
 }
-void stroke(Image& image, Point start, Point end, const Ink& ink) {
+void stroke(Image& image, Point start, Point end, const Ink& ink, RasterSpace space) {
     if (ink.brush == Brush::Round || textured_brush(ink.brush)) {
         MaterialStroke coat;
-        coat.segment(image, start, end, ink);
+        coat.segment(image, start, end, ink, space);
         return;
     }
     double dx = end.x - start.x, dy = end.y - start.y;
     int steps = std::max(1, static_cast<int>(std::ceil(std::hypot(dx, dy) * 1.5)));
     for (int i = 0; i <= steps; ++i) {
         Point point{start.x + dx * i / steps, start.y + dy * i / steps};
-        dab(image, point, ink);
+        dab(image, point, ink, space);
     }
 }
 void EraserStroke::clear() {
@@ -372,8 +380,9 @@ bool inside_polygon(const std::vector<Point>& points, double x, double y) {
     }
     return inside;
 }
-void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, bool outline, bool fill,
-             bool closed, Brush fill_brush, const Ink* fill_material) {
+static void polygon_native(Image& image, const std::vector<Point>& points, const Ink& ink,
+                           bool outline, bool fill, bool closed, Brush fill_brush,
+                           const Ink* fill_material, RasterSpace space) {
     if (points.empty()) {
         return;
     }
@@ -385,23 +394,103 @@ void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, boo
         if (fill_material) {
             fill_ink = *fill_material;
         }
-        material_fill(image, points, fill_ink, fill_brush, outline ? &boundary : nullptr);
+        material_fill(image, points, fill_ink, fill_brush, outline ? &boundary : nullptr, space);
     }
     if (outline) {
         if (ink.brush == Brush::Round || textured_brush(ink.brush)) {
             MaterialStroke coat(&boundary);
             for (std::size_t i = 1; i < points.size(); ++i) {
-                coat.segment(image, points[i - 1], points[i], ink);
+                coat.segment(image, points[i - 1], points[i], ink, space);
             }
             if (closed && points.size() > 2) {
-                coat.segment(image, points.back(), points.front(), ink);
+                coat.segment(image, points.back(), points.front(), ink, space);
             }
         } else {
             for (std::size_t i = 1; i < points.size(); ++i) {
-                stroke(image, points[i - 1], points[i], ink);
+                stroke(image, points[i - 1], points[i], ink, space);
             }
             if (closed && points.size() > 2) {
-                stroke(image, points.back(), points.front(), ink);
+                stroke(image, points.back(), points.front(), ink, space);
+            }
+        }
+    }
+}
+static Ink enlarged_ink(const Ink& ink) {
+    Ink result = ink;
+    result.size *= 4;
+    result.supersample = false;
+    if (ink.alternate) {
+        result.alternate = std::make_shared<const Ink>(enlarged_ink(*ink.alternate));
+    }
+    return result;
+}
+void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, bool outline, bool fill,
+             bool closed, Brush fill_brush, const Ink* fill_material) {
+    if (!ink.smooth || !ink.supersample || points.empty()) {
+        polygon_native(image, points, ink, outline, fill, closed, fill_brush, fill_material, {});
+        return;
+    }
+    double left = points.front().x, right = left, top = points.front().y, bottom = top;
+    for (const Point point : points) {
+        if (!std::isfinite(point.x) || !std::isfinite(point.y)) {
+            return;
+        }
+        left = std::min(left, point.x);
+        right = std::max(right, point.x);
+        top = std::min(top, point.y);
+        bottom = std::max(bottom, point.y);
+    }
+    const double padding = outline ? ink.size + 2.0 : 2.0;
+    const int x0 = static_cast<int>(std::clamp(std::floor(left - padding), 0.0, double(image.width)));
+    const int y0 = static_cast<int>(std::clamp(std::floor(top - padding), 0.0, double(image.height)));
+    const int x1 = static_cast<int>(std::clamp(std::ceil(right + padding), 0.0, double(image.width)));
+    const int y1 = static_cast<int>(std::clamp(std::ceil(bottom + padding), 0.0, double(image.height)));
+    const Ink enlarged = enlarged_ink(ink);
+    const Ink body = enlarged_ink(fill_material ? *fill_material : ink);
+    // The halo exceeds the bounded material-distance field. Each tile therefore
+    // sees the same pigment depth as an uninterrupted high-resolution render.
+    constexpr int tile_size = 96, halo = 32;
+    std::vector<Point> local(points.size());
+    for (int y = y0; y < y1; y += tile_size) {
+        for (int x = x0; x < x1; x += tile_size) {
+            const int width = std::min(tile_size, x1 - x), height = std::min(tile_size, y1 - y);
+            const RasterSpace space{4, x - halo, y - halo};
+            Image tile;
+            tile.reset((width + halo * 2) * 4, (height + halo * 2) * 4, {0, 0, 0, 0});
+            for (int ty = 0; ty < tile.height; ++ty) {
+                for (int tx = 0; tx < tile.width; ++tx) {
+                    tile.set(tx, ty, image.get(space.paper_x(tx), space.paper_y(ty)));
+                }
+            }
+            for (std::size_t i = 0; i < points.size(); ++i) {
+                local[i] = {(points[i].x - space.x) * 4 + 1.5,
+                            (points[i].y - space.y) * 4 + 1.5};
+            }
+            polygon_native(tile, local, enlarged, outline, fill, closed, fill_brush,
+                           fill_material ? &body : nullptr, space);
+            for (int py = 0; py < height; ++py) {
+                for (int px = 0; px < width; ++px) {
+                    const Color original = image.get(x + px, y + py);
+                    int alpha = 0, red = 0, green = 0, blue = 0;
+                    bool changed = false;
+                    for (int sy = 0; sy < 4; ++sy) {
+                        for (int sx = 0; sx < 4; ++sx) {
+                            const Color sample = tile.get((px + halo) * 4 + sx, (py + halo) * 4 + sy);
+                            changed = changed || !equal(sample, original);
+                            alpha += sample.a;
+                            red += sample.r * sample.a;
+                            green += sample.g * sample.a;
+                            blue += sample.b * sample.a;
+                        }
+                    }
+                    if (changed && alpha > 0) {
+                        image.set(x + px, y + py,
+                                  {static_cast<std::uint8_t>((red + alpha / 2) / alpha),
+                                   static_cast<std::uint8_t>((green + alpha / 2) / alpha),
+                                   static_cast<std::uint8_t>((blue + alpha / 2) / alpha),
+                                   static_cast<std::uint8_t>((alpha + 8) / 16)});
+                    }
+                }
             }
         }
     }

@@ -248,7 +248,7 @@ void startup_file_opens_after_window_attachment() {
     require((*editor).document.image.width == 41 && (*editor).document.image.height == 23 &&
                 paint::equal((*editor).document.image.get(9, 7), {63, 141, 207, 128}),
             "startup preserves decoded dimensions and straight RGBA");
-    require((*(*editor).canvas().bitmap()).width() == 41 &&
+    require((*(*editor).canvas().display_surface()).snapshot().description.width == 41 &&
                 (*editor).canvas().last_resource_error() == gf::ImageResourceError::none,
             "startup publishes the image only after the canvas has a window");
     std::filesystem::remove(path);
@@ -259,18 +259,19 @@ void display_preserves_document_and_hidden_rgb() {
     document.image.set(2, 2, {231, 17, 63, 0});
     document.image.set(3, 2, {201, 41, 99, 128});
     (*fixture.editor).refresh();
-    gf::RasterCanvas& canvas = (*fixture.editor).canvas();
-    gui_drawing::BitmapLockView view = (*canvas.bitmap()).lock(gui_drawing::BitmapLockMode::read);
-    const std::byte* pixel = view.data + 2 * view.row_bytes + 3 * 4;
-    require(pixel[0] == std::byte{50} && pixel[1] == std::byte{21} && pixel[2] == std::byte{101} &&
+    paint::forms::PaintCanvas& canvas = (*fixture.editor).canvas();
+    gf::LiveSurfaceFrame view = (*canvas.display_surface()).acquire_latest();
+    const std::byte* pixel = view.pixels().data() + 2 * view.row_bytes() + 3 * 4;
+    const bool bgra = view.pixel_format() == gf::LiveSurfacePixelFormat::bgra32_premultiplied_srgb;
+    require(pixel[bgra ? 0 : 2] == std::byte{50} && pixel[1] == std::byte{21} && pixel[bgra ? 2 : 0] == std::byte{101} &&
                 pixel[3] == std::byte{128},
             "rounded premultiplied BGRA presentation");
-    (*canvas.bitmap()).unlock(view.token);
+    view = {};
     require(paint::equal(document.image.get(2, 2), {231, 17, 63, 0}),
             "hidden straight RGBA survives presentation");
-    std::uint64_t generation = (*canvas.bitmap()).generation();
+    std::uint64_t generation = (*canvas.display_surface()).snapshot().published_generation;
     (*fixture.editor).refresh();
-    require((*canvas.bitmap()).generation() == generation,
+    require((*canvas.display_surface()).snapshot().published_generation == generation,
             "unchanged presentation does not mutate bitmap generation");
 }
 void captured_stroke_undo_and_right_color() {
@@ -1183,12 +1184,18 @@ void desktop_transactions_drop_and_handles() {
 }
 class PreviewPainter final : public gf::Painter {
   public:
-    int pencil_pixels = 0, eraser_discs = 0, lens_samples = 0, guide_lines = 0;
+    int pencil_pixels = 0, eraser_discs = 0, lens_samples = 0, guide_lines = 0, node_hover = 0;
     bool lens_caption = false;
     gf::ImageId image;
     gf::Rect image_bounds;
     std::vector<gf::ImageId> painted_images;
     std::vector<gf::Point> text_caret_points;
+    std::shared_ptr<gf::LiveSurface> live;
+    gf::Rect live_bounds;
+    void draw_live_surface(std::shared_ptr<gf::LiveSurface> surface, gf::Rect bounds, double) override {
+        live = std::move(surface);
+        live_bounds = bounds;
+    }
     void save() override {}
     void restore() override {}
     void translate(gf::Point) override {}
@@ -1204,6 +1211,10 @@ class PreviewPainter final : public gf::Painter {
         }
     }
     void fill_rounded_rect(gf::Rect rectangle, double radius, gf::Color color) override {
+        if (rectangle.width == 16 && rectangle.height == 16 && radius == 8 &&
+            color.red == 255 && color.green == 220 && color.blue == 130) {
+            ++node_hover;
+        }
         if (color.red == 245 && color.green == 65 && color.blue == 118 && color.alpha < 255 && radius > 0 &&
             rectangle.width == rectangle.height) {
             ++eraser_discs;
@@ -1230,6 +1241,49 @@ class PreviewPainter final : public gf::Painter {
         painted_images.push_back(id);
     }
 };
+void live_canvas_damage_opacity_and_reuse() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    paint::forms::PaintCanvas& canvas = editor.canvas();
+    paint::Image source;
+    source.reset(8, 8, {20, 70, 110, 255});
+    canvas.publish_pixels(source, {});
+    const gf::LiveSurfaceFrame retained = (*canvas.display_surface()).acquire_latest();
+    require(retained.opaque(), "opaque source advertises only fully opaque pixels");
+    source.set(1, 1, {230, 20, 90, 0});
+    canvas.publish_pixels(source, {1, 1, 1, 1});
+    gf::LiveSurfaceFrame edited = (*canvas.display_surface()).acquire_latest();
+    require(!edited.opaque() && edited.pixels()[edited.row_bytes() + 7] == std::byte{0},
+            "partial alpha edit removes the opaque promise");
+    require(retained.pixels()[retained.row_bytes() + 7] == std::byte{255},
+            "published frames remain immutable while a reader holds them");
+    require(edited.pixels()[3] == std::byte{255}, "partial update preserves untouched pixels");
+    canvas.set_view(8, {0, 0});
+    PreviewPainter first;
+    canvas.on_paint(first, canvas.client_rectangle());
+    require(first.live != nullptr, "canvas presents through LiveSurface");
+    const gf::LiveSurfaceFrame opaque = (*first.live).acquire_latest();
+    require(opaque.opaque() && opaque.width() == 64 && opaque.height() == 64,
+            "zoomed viewport is sampled at physical pixel size");
+    for (std::size_t i = 3; i < opaque.pixels().size(); i += 4) {
+        require(opaque.pixels()[i] == std::byte{255}, "checkerboard composition is completely opaque");
+    }
+    const std::size_t offset = 9 * opaque.row_bytes() + 9 * 4;
+    const bool bgra = opaque.pixel_format() == gf::LiveSurfacePixelFormat::bgra32_premultiplied_srgb;
+    require(opaque.pixels()[offset + (bgra ? 2 : 0)] == std::byte{211} &&
+            opaque.pixels()[offset + 1] == std::byte{215} &&
+            opaque.pixels()[offset + (bgra ? 0 : 2)] == std::byte{220},
+            "transparent source shows checkerboard rather than hidden RGB");
+    require(opaque.pixels()[0] == opaque.pixels()[7 * 4], "8x zoom preserves nearest-neighbor pixel blocks");
+    PreviewPainter repeat;
+    canvas.on_paint(repeat, canvas.client_rectangle());
+    require((*repeat.live).snapshot().published_generation == opaque.generation(),
+            "unchanged repaint reuses the published viewport");
+    source.set(1, 1, {20, 70, 110, 255});
+    canvas.publish_pixels(source, {1, 1, 1, 1});
+    require((*canvas.display_surface()).acquire_latest().opaque(), "last transparent pixel restores opaque mode");
+    fixture.window.reset();
+}
 void text_caret_deadlines_damage_only_the_transformed_caret() {
     for (int transformed = 0; transformed < 2; ++transformed) {
         Fixture fixture;
@@ -1536,11 +1590,10 @@ void restored_help_and_selection_workflows() {
     require(!editor.show_help && editor.canvas().client_rectangle().width == width, "F1 closes book");
 }
 bool display_white(paint::forms::Editor& editor, int x, int y) {
-    std::shared_ptr<gui_drawing::Bitmap> bitmap = editor.canvas().bitmap();
-    gui_drawing::BitmapLockView view = (*bitmap).lock(gui_drawing::BitmapLockMode::read);
-    const std::byte* pixel = view.data + y * view.row_bytes + x * 4;
+    gf::LiveSurfaceFrame view = (*editor.canvas().display_surface()).acquire_latest();
+    const std::byte* pixel = view.pixels().data() + y * view.row_bytes() + x * 4;
     bool result = pixel[0] == std::byte{255} && pixel[1] == std::byte{255} && pixel[2] == std::byte{255};
-    (*bitmap).unlock(view.token);
+
     return result;
 }
 void path_hover_snap_and_controls() {
@@ -1559,18 +1612,19 @@ void path_hover_snap_and_controls() {
     fixture.click(95, 50);
     fixture.pointer(gf::PointerAction::move, 19, 23, gf::PointerButton::none);
     paint::Image snapped = editor.document.image;
-    gui_drawing::BitmapLockView display = (*editor.canvas().bitmap()).lock(gui_drawing::BitmapLockMode::read);
+    gf::LiveSurfaceFrame display = (*editor.canvas().display_surface()).acquire_latest();
     for (int y = 0; y < snapped.height; ++y) {
         for (int x = 0; x < snapped.width; ++x) {
-            const std::byte* pixel = display.data + y * display.row_bytes + x * 4;
+            const std::byte* pixel = display.pixels().data() + y * display.row_bytes() + x * 4;
             paint::Color expected = snapped.get(x, y);
-            require(pixel[0] == static_cast<std::byte>(expected.b) &&
+            const bool bgra = display.pixel_format() == gf::LiveSurfacePixelFormat::bgra32_premultiplied_srgb;
+            require(pixel[bgra ? 0 : 2] == static_cast<std::byte>(expected.b) &&
                         pixel[1] == static_cast<std::byte>(expected.g) &&
-                        pixel[2] == static_cast<std::byte>(expected.r),
+                        pixel[bgra ? 2 : 0] == static_cast<std::byte>(expected.r),
                     "hovering a retained junction preserves the old run without a false closing segment");
         }
     }
-    (*editor.canvas().bitmap()).unlock(display.token);
+    display = {};
     fixture.click(19, 23);
     require(editor.document.path.nodes.back().x == 15 && editor.document.path.nodes.back().y == 20,
             "click snaps to the same anchor shown by the floating preview");
@@ -1647,6 +1701,137 @@ void path_node_drag_and_overlap() {
     require(window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape}), "Escape commits path");
     require(editor.document.path.nodes.empty() && !white(editor.document.image.get(100, 45)),
             "Escape clears nodes and preserves rasterized artwork");
+}
+void explicit_path_node_editing() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.new_image(640, 480);
+    editor.choose_tool(paint::Tool::Path);
+    fixture.click(220, 200);
+    fixture.click(420, 200);
+    editor.execute("fit");
+    editor.settings.rotate_view = true;
+    editor.rotate_view(.3);
+    open_tab(window, "tool-tab");
+    const std::shared_ptr<gf::CheckBox> mode =
+        std::dynamic_pointer_cast<gf::CheckBox>(window.find("edit-path-nodes"));
+    require(mode && (*mode).visible() && (*mode).semantic_descriptor().name == "Edit nodes",
+            "path editing lacks a visible named control");
+    (*mode).perform_click();
+    require(editor.edit_path_nodes, "Edit nodes does not activate");
+    const std::size_t count = editor.document.path.nodes.size();
+    const std::size_t undo = editor.document.undo_history.size();
+    fixture.pointer(gf::PointerAction::move, 220, 200, gf::PointerButton::none);
+    require(editor.canvas().effective_cursor() == gf::CursorKind::hand &&
+                !editor.canvas().effective_cursor_images() && editor.document.undo_history.size() == undo,
+            "editable node hover lacks a drag cursor or changes history");
+    PreviewPainter hovered;
+    editor.paint_canvas_overlay(hovered, {});
+    require(hovered.node_hover == 1, "hovered path node lacks its visible halo");
+    const gf::Point rotation_handle = editor.canvas().point_to_window(editor.canvas().rotation_handle());
+    window.dispatch_pointer({gf::PointerAction::move, gf::PointerButton::none, rotation_handle});
+    PreviewPainter rotation_hover;
+    editor.paint_canvas_overlay(rotation_hover, {});
+    require(rotation_hover.node_hover == 0, "rotation handle hover retains a stale path-node highlight");
+    fixture.pointer(gf::PointerAction::move, 320, 300, gf::PointerButton::none);
+    require(editor.canvas().effective_cursor_images() == paint::forms::tool_cursor_images(paint::Tool::Path),
+            "leaving a path node does not restore the drawing cursor");
+    fixture.click(320, 300);
+    require(editor.document.path.nodes.size() == count && editor.document.undo_history.size() == undo,
+            "blank click in Edit nodes adds geometry or history");
+    fixture.drag(220, 200, 230, 240);
+    require(std::abs(editor.document.path.nodes[0].x - 230) < 1e-8 &&
+                std::abs(editor.document.path.nodes[0].y - 240) < 1e-8 &&
+                editor.document.path.nodes.size() == count && editor.document.undo_history.size() == undo + 1,
+            "left-drag edit in rotated view fails to move exactly one node transaction");
+    editor.execute("undo");
+    require(editor.document.path.nodes[0].x == 220 && editor.document.path.nodes[0].y == 200,
+            "node edit undo loses the original position");
+    editor.choose_tool(paint::Tool::Path);
+    require(!editor.edit_path_nodes && !(*mode).checked(), "Continue path leaves editing mode enabled");
+
+    Fixture curve;
+    paint::forms::Editor& curve_editor = *curve.editor;
+    curve_editor.choose_shape(paint::Shape::Bezier);
+    curve.drag(10, 20, 100, 20);
+    curve_editor.document.curve.geometry.first_control = {50, 50};
+    curve_editor.document.curve.geometry.second_control = {56, 50};
+    curve_editor.document.sync_curve();
+    curve.drag(55, 50, 55, 60);
+    require(curve_editor.document.curve.geometry.first_control.y == 50 &&
+                curve_editor.document.curve.geometry.second_control.y == 60,
+            "overlapping curve hit regions select the earlier handle instead of the nearest");
+}
+void direct_path_curve_editing() {
+    for (paint::CurveKind kind : {paint::CurveKind::Bezier, paint::CurveKind::Arc}) {
+        Fixture fixture;
+        paint::forms::Editor& editor = *fixture.editor;
+        editor.document.new_image(640, 480);
+        editor.choose_tool(paint::Tool::Path);
+        fixture.click(200, 200);
+        fixture.click(400, 200);
+        editor.execute("finish-path");
+        const int index = editor.document.swap_path_segment({0, 1}, kind);
+        require(index >= 0, "curve editing fixture cannot prepare a retained segment");
+        paint::CurveGeometry& initial = editor.document.path.segments[index].geometry;
+        initial.first_control = {250, 150};
+        initial.second_control = {350, 250};
+        initial.bulge = 40;
+        editor.document.sync_path();
+        editor.execute("fit");
+        editor.settings.rotate_view = true;
+        editor.rotate_view(.25);
+        editor.execute("edit-path-nodes");
+        open_tab(*fixture.window, "tool-tab");
+        require((*fixture.window).request_focus((*fixture.window).find("edit-path-nodes")),
+                "curve editing fixture cannot focus the ribbon control");
+        const paint::CurveGeometry original = editor.document.path.segments[index].geometry;
+        const std::vector<paint::Color> pixels = editor.document.image.pixels;
+        const std::size_t undo = editor.document.undo_history.size();
+        const paint::Point middle = original.at(.5);
+        fixture.click(middle.x, middle.y);
+        require((*fixture.window).focused_control().get() == &editor.canvas(),
+                "selecting a retained curve leaves keyboard focus in the ribbon");
+        require(editor.document.path.segments[index].geometry.kind == kind &&
+                    editor.document.undo_history.size() == undo &&
+                    std::memcmp(pixels.data(), editor.document.image.pixels.data(), pixels.size() * sizeof(paint::Color)) == 0,
+                "selecting a retained curve changes its type, pixels or undo history");
+        const paint::Point handle = original.handle(0);
+        const double offset = 3 / editor.canvas().zoom();
+        fixture.pointer(gf::PointerAction::move, handle.x + offset, handle.y, gf::PointerButton::none);
+        require(editor.canvas().effective_cursor() == gf::CursorKind::hand &&
+                    !editor.canvas().effective_cursor_images() && editor.document.undo_history.size() == undo,
+                "retained curve handle hover lacks a drag cursor or changes history");
+        fixture.click(handle.x + offset, handle.y);
+        require(editor.document.undo_history.size() == undo &&
+                    std::hypot(editor.document.path.segments[index].geometry.handle(0).x - handle.x,
+                               editor.document.path.segments[index].geometry.handle(0).y - handle.y) < 1e-8,
+                "clicking a handle without dragging changes geometry or adds undo");
+        fixture.drag(handle.x + offset, handle.y, handle.x + offset, handle.y + 20);
+        paint::CurveGeometry expected = original;
+        expected.move_handle(0, {handle.x, handle.y + 20});
+        const paint::Point actual = editor.document.path.segments[index].geometry.handle(0);
+        require(std::hypot(actual.x - expected.handle(0).x, actual.y - expected.handle(0).y) < 1e-8 &&
+                    editor.document.undo_history.size() == undo + 1,
+                "direct curve editing loses grab offset or creates more than one undo step");
+        editor.execute("undo");
+        require(editor.document.path.segments[index].geometry.kind == kind &&
+                    std::memcmp(pixels.data(), editor.document.image.pixels.data(), pixels.size() * sizeof(paint::Color)) == 0,
+                "undo does not restore the retained curve and its pixels");
+        fixture.pointer(gf::PointerAction::down, handle.x, handle.y);
+        fixture.pointer(gf::PointerAction::move, handle.x, handle.y + 20);
+        editor.execute("undo");
+        fixture.pointer(gf::PointerAction::move, handle.x, handle.y + 40, gf::PointerButton::none);
+        fixture.pointer(gf::PointerAction::up, handle.x, handle.y + 40);
+        require(editor.document.undo_history.size() == undo &&
+                    std::memcmp(pixels.data(), editor.document.image.pixels.data(), pixels.size() * sizeof(paint::Color)) == 0,
+                "pointer movement after undo resumes an interrupted curve drag");
+        fixture.drag(200, 200, 210, 210);
+        require(std::abs(editor.document.path.nodes[0].x - 210) < 1e-8 &&
+                    std::abs(editor.document.path.nodes[0].y - 210) < 1e-8,
+                "curve selection prevents subsequent node editing");
+    }
 }
 void click_move_click_shapes() {
     require(!paint::EditorSettings{}.drag_shapes, "click placement is the default");
@@ -1762,11 +1947,15 @@ void centered_circle_and_materials() {
     require(editor.document.ink.brush == paint::Brush::Crayon &&
                 editor.document.shape_fill_brush == paint::Brush::Oil,
             "line brush changes independently from fill");
-    routed_button(window, "smooth-lines");
-    require(!editor.document.ink.smooth, "Smooth lines is a visible working toggle in Materials");
+    const std::shared_ptr<gf::ComboBox> rendering =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("render-quality"));
+    require(rendering && (*rendering).visible() && !(*window.find("smooth-lines")).visible(),
+            "Materials must expose exactly one geometry rendering control");
+    (*rendering).set_selected_index(0);
+    require(!editor.document.ink.smooth, "Crisp is a working rendering choice in Materials");
     open_tab(window, "tool-tab");
     require((*window.find("tool-size")).visible() && (*window.find("outline")).visible() &&
-                (*window.find("fill")).visible() && (*window.find("smooth-lines")).visible() &&
+                (*window.find("fill")).visible() && (*window.find("render-quality")).visible() &&
                 !(*window.find("grain-scale")).visible() && !(*window.find("grain-angle")).visible() &&
                 !(*window.find("new-grain")).visible() && !window.find("edge-medium") &&
                 !window.find("fill-medium"),
@@ -1962,6 +2151,229 @@ void spirograph_accessible_pegs() {
     require(editor.spiro.pegs[0].width == 4 && editor.spiro.pegs[0].loaded &&
                 editor.spiro.pegs[0].ink.b == 190 && !editor.canvas().has_pointer_capture(),
             "accessible peg resize loses ink or captures the pointer");
+    const std::vector<paint::Color> blank = editor.document.image.pixels;
+    routed_button(window, "spiro-holes-menu");
+    require(window.find("popup-spiro-hole-3") != nullptr, "numbered hole choices are missing");
+    require(window.perform_semantic_action("popup-spiro-hole-3", gf::SemanticAction::press),
+            "numbered hole cannot be activated through accessibility");
+    require(editor.spiro.selected_peg == 3 && editor.spiro.pegs[3].seated &&
+                !editor.spiro.pegs[3].loaded && !editor.spiro.pegs[1].seated,
+            "choosing an empty numbered hole does not place an empty fine peg there");
+    editor.document.ink.primary = {180, 40, 60, 255};
+    editor.document.ink.secondary = {20, 170, 90, 255};
+    routed_button(window, "spiro-load-primary");
+    require(editor.spiro.pegs[3].loaded && editor.spiro.pegs[3].ink.r == 180 &&
+                editor.spiro.pegs[0].ink.b == 190,
+            "Load Primary changes the wrong peg or fails to load it");
+    routed_button(window, "spiro-load-alt");
+    require(editor.spiro.pegs[3].ink.g == 170, "Load Alt does not use the alternate ink");
+    routed_button(window, "spiro-holes-menu");
+    routed_button(window, "popup-spiro-hole-0");
+    require(editor.spiro.selected_peg == 0 && editor.spiro.pegs[0].width == 4 &&
+                editor.spiro.pegs[0].ink.b == 190,
+            "choosing an occupied hole replaces its peg or ink");
+    editor.document.ink.pattern = paint::Pattern::None;
+    routed_button(window, "spiro-load-primary");
+    require(editor.spiro.pegs[0].seated && !editor.spiro.pegs[0].loaded,
+            "loading No Color removes the peg instead of emptying its ink");
+    require(std::memcmp(blank.data(), editor.document.image.pixels.data(),
+                        blank.size() * sizeof(paint::Color)) == 0 && !editor.canvas().has_pointer_capture(),
+            "numbered peg setup draws on the canvas or captures the pointer");
+    routed_button(window, "spiro-remove");
+    require(!(*window.find("spiro-holes-menu")).enabled() &&
+                !(*window.find("spiro-load-primary")).enabled() &&
+                !(*window.find("spiro-load-alt")).enabled(),
+            "peg setup controls stay enabled after the insert is removed");
+    editor.spiro_choice("spiro-insert-28"); // Wheel 84, with 35 holes.
+    routed_button(window, "spiro-holes-menu");
+    window.perform_layout();
+    for (int i = 0; i < 35; ++i) {
+        const std::shared_ptr<gf::Control> choice = window.find("popup-spiro-hole-" + std::to_string(i));
+        require(choice != nullptr, "a large wheel has an inaccessible hole");
+        const gf::Rect bounds = (*choice).absolute_bounds();
+        require(bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= 1280 &&
+                    bounds.y + bounds.height <= 820,
+                "large wheel hole choices extend beyond the window");
+    }
+    routed_button(window, "popup-spiro-hole-34");
+    require(editor.spiro.selected_peg == 34 && editor.spiro.pegs[34].seated,
+            "the final Deluxe hole cannot receive a peg through visible controls");
+    routed_button(window, "spiro-deselect");
+    const paint::Point inner_hole = editor.spiro.hole(34, editor.spiro.angle);
+    fixture.click(inner_hole.x, inner_hole.y);
+    require(editor.spiro.selected_peg == 34,
+            "the wheel's center grip intercepts its innermost peg");
+}
+void rendering_quality_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.document.new_image(64, 64);
+    editor.document.tool = paint::Tool::Path;
+    editor.refresh();
+    open_tab(*fixture.window, "tool-tab");
+    const std::shared_ptr<gf::ComboBox> quality =
+        std::dynamic_pointer_cast<gf::ComboBox>((*fixture.window).find("render-quality"));
+    require(quality && (*quality).visible() && (*quality).selected_index() == 1,
+            "rendering quality choices are not reachable or Smooth is not the default");
+    (*quality).set_selected_index(2);
+    require(editor.document.ink.smooth && editor.document.ink.supersample,
+            "4x choice does not select supersampling");
+    (*quality).set_selected_index(0);
+    require(!editor.document.ink.smooth && !editor.document.ink.supersample,
+            "Crisp choice does not disable smoothing");
+    (*quality).set_selected_index(1);
+    require(editor.document.ink.smooth && !editor.document.ink.supersample,
+            "Smooth choice does not restore the original rendering");
+}
+void spirograph_lift_controls(int guide = 0, int insert = paint::spiro_default_insert) {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.new_image(640, 480);
+    editor.start_spirograph();
+    editor.spiro_choice("spiro-guide-" + std::to_string(guide));
+    editor.spiro_choice("spiro-insert-" + std::to_string(insert));
+    if (editor.spiro.quad()) {
+        require(!(*require_button(window, "spiro-outside")).enabled(),
+                "Quad exposes unverified outside contact");
+    }
+    if (guide == 17) {
+        const std::shared_ptr<gf::Button> outside = require_button(window, "spiro-outside");
+        require((*outside).selected() && !(*outside).enabled(),
+                "closed rack must expose its fixed outside contact mode");
+        const paint::Point center = editor.spiro.center;
+        fixture.drag(center.x, center.y, center.x + 12, center.y + 9);
+        require(editor.spiro.center.x == center.x + 12 && editor.spiro.center.y == center.y + 9,
+                "closed rack body cannot be picked up and translated");
+    }
+    editor.spiro.seat(0, {true, true, {170, 30, 80, 255}, 3});
+    editor.spiro.angle = .31;
+    editor.settings.rotate_view = true;
+    editor.rotate_view(.4);
+    const double rotation = editor.spiro.wheel_rotation(editor.spiro.angle);
+    const paint::Point support = editor.spiro.center;
+    const std::uint64_t revision = editor.document.revision;
+    const std::vector<paint::Color> blank = editor.document.image.pixels;
+    routed_button(window, "spiro-lift");
+    require(editor.spiro_lift && (*require_button(window, "spiro-lift")).selected(),
+            "Lift wheel does not expose its active mode");
+    paint::Point from = editor.spiro.wheel_center(editor.spiro.angle);
+    paint::Point to = editor.spiro.wheel_center(1.23, rotation);
+    fixture.drag(from.x, from.y, to.x, to.y);
+    require(std::abs(editor.spiro.angle - 1.23) < 1e-6 &&
+                std::abs(editor.spiro.wheel_rotation(editor.spiro.angle) - rotation) < 1e-10 &&
+                editor.spiro.center.x == support.x && editor.spiro.center.y == support.y &&
+                editor.spiro.pegs[0].loaded && editor.spiro.pegs[0].width == 3,
+            "lifting fails to preserve rotation, guide position or the loaded pen");
+    const double placed_angle = editor.spiro.angle, placed_offset = editor.spiro.rolling_offset;
+    from = editor.spiro.wheel_center(editor.spiro.angle);
+    to = editor.spiro.wheel_center(-.8, rotation);
+    fixture.pointer(gf::PointerAction::down, from.x, from.y);
+    fixture.pointer(gf::PointerAction::move, to.x, to.y);
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(editor.spiro.angle == placed_angle && editor.spiro.rolling_offset == placed_offset &&
+                !editor.canvas().has_pointer_capture(),
+            "Escape does not restore a lifted wheel's previous placement");
+    require(editor.document.revision == revision &&
+                std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
+            "lifting a loaded wheel draws ink or changes history");
+    from = editor.spiro.wheel_center(editor.spiro.angle);
+    fixture.drag(from.x, from.y, support.x, support.y);
+    require(editor.spiro.detached && !(*require_button(window, "spiro-operate")).enabled() &&
+                std::hypot(editor.spiro.wheel_center(editor.spiro.angle).x - support.x,
+                           editor.spiro.wheel_center(editor.spiro.angle).y - support.y) < 1e-8,
+            "lifted wheel cannot be placed freely off its track");
+    editor.spiro_choice("spiro-operate");
+    require(editor.spiro_lift && editor.spiro.advance(editor.spiro.angle + .5).empty(),
+            "a detached wheel can operate or deposit ink");
+    if (guide == 0 && !editor.spiro.quad()) {
+        for (int side = 0; side < 2; ++side) {
+            routed_button(window, "spiro-outside");
+            require(editor.spiro.detached &&
+                        std::abs(editor.spiro.wheel_rotation(editor.spiro.angle) - rotation) < 1e-10 &&
+                        std::abs(editor.spiro.detached_center.x - support.x) < 1e-8 &&
+                        std::abs(editor.spiro.detached_center.y - support.y) < 1e-8,
+                    "changing the guide contact side rotates or reseats a lifted wheel");
+        }
+    }
+    fixture.pointer(gf::PointerAction::down, support.x, support.y);
+    fixture.pointer(gf::PointerAction::move, support.x + 20, support.y + 20);
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(editor.spiro.detached && std::abs(editor.spiro.detached_center.x - support.x) < 1e-8 &&
+                std::abs(editor.spiro.detached_center.y - support.y) < 1e-8,
+            "Escape fails to restore a previously detached placement");
+    to = editor.spiro.wheel_center(1.23, rotation);
+    fixture.drag(support.x, support.y, to.x, to.y);
+    require(!editor.spiro.detached && (*require_button(window, "spiro-operate")).enabled() &&
+                std::abs(editor.spiro.wheel_rotation(editor.spiro.angle) - rotation) < 1e-10 &&
+                editor.document.revision == revision &&
+                std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
+            "reseating loses rotation, remains disabled, or draws ink");
+    routed_button(window, "spiro-operate");
+    require(!editor.spiro_lift, "Operate leaves the wheel in lift mode");
+    from = editor.spiro.wheel_center(editor.spiro.angle);
+    to = editor.spiro.wheel_center(editor.spiro.angle + .25);
+    fixture.drag(from.x, from.y, to.x, to.y);
+    require(editor.document.revision != revision &&
+                std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) != 0,
+            "rolling after placement does not resume drawing");
+    editor.execute("undo");
+    require(std::memcmp(blank.data(), editor.document.image.pixels.data(), blank.size() * sizeof(paint::Color)) == 0,
+            "the first stroke after a lift is not independently undoable");
+}
+void spirograph_resize_controls(int guide = 0, int insert = paint::spiro_default_insert) {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.new_image(640, 480);
+    editor.start_spirograph();
+    editor.spiro_choice("spiro-guide-" + std::to_string(guide));
+    editor.spiro_choice("spiro-insert-" + std::to_string(insert));
+    editor.spiro.seat(0, {true, true, {180, 40, 70, 255}, 3});
+    editor.spiro.angle = .75;
+    const std::vector<paint::Color> original = editor.document.image.pixels;
+    const std::uint64_t revision = editor.document.revision;
+    const std::shared_ptr<gf::NumericUpDown> scale =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("spiro-scale"));
+    require(scale && (*scale).visible(), "spirograph scale field is not reachable");
+    (*scale).set_value(.8);
+    require(editor.spiro.scale == .8, "spirograph numeric scale does not resize the apparatus");
+    editor.settings.rotate_view = true;
+    editor.rotate_view(.35);
+    const paint::Point handle = editor.spiro.resize_position();
+    const paint::Point center = editor.spiro.center;
+    fixture.drag(handle.x, handle.y, center.x + 1.5 * (handle.x - center.x),
+                 center.y + 1.5 * (handle.y - center.y));
+    require(std::abs(editor.spiro.scale - 1.2) < 1e-8 &&
+                std::abs((*scale).value() - 1.2) < 1e-8 && !editor.canvas().has_pointer_capture(),
+            "rotated-view resize handle loses scale, numeric feedback or pointer release");
+    require(editor.spiro.angle == .75 && editor.spiro.pegs[0].loaded && editor.spiro.pegs[0].width == 3,
+            "apparatus resizing changes the rolling phase or ink");
+    const paint::Point resized_handle = editor.spiro.resize_position();
+    fixture.pointer(gf::PointerAction::down, resized_handle.x, resized_handle.y);
+    fixture.pointer(gf::PointerAction::move, center.x + .7 * (resized_handle.x - center.x),
+                    center.y + .7 * (resized_handle.y - center.y));
+    require(std::abs(editor.spiro.scale - .84) < 1e-8, "pending resize did not start");
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(std::abs(editor.spiro.scale - 1.2) < 1e-8 &&
+                std::abs((*scale).value() - 1.2) < 1e-8 && !editor.canvas().has_pointer_capture(),
+            "Escape fails to restore apparatus size, scale feedback or capture");
+    const paint::Point body = guide == 17 ? paint::Point{center.x, center.y} :
+        paint::Point{center.x - (editor.spiro.guide_radius() + editor.spiro.guide_body_radius()) / 2,
+                     center.y};
+    fixture.pointer(gf::PointerAction::down, body.x, body.y);
+    fixture.pointer(gf::PointerAction::move, body.x + 25, body.y - 17);
+    require(std::abs(editor.spiro.center.x - center.x - 25) < 1e-8 &&
+                std::abs(editor.spiro.center.y - center.y + 17) < 1e-8,
+            "pending apparatus movement did not start");
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::escape});
+    require(std::abs(editor.spiro.center.x - center.x) < 1e-8 &&
+                std::abs(editor.spiro.center.y - center.y) < 1e-8 && !editor.canvas().has_pointer_capture(),
+            "Escape fails to restore apparatus position or capture");
+    require(editor.document.revision == revision &&
+                std::memcmp(original.data(), editor.document.image.pixels.data(),
+                            original.size() * sizeof(paint::Color)) == 0,
+            "apparatus resizing paints or modifies document history");
 }
 void spirograph_apparatus_and_ink() {
     Fixture fixture;
@@ -2050,7 +2462,8 @@ void spirograph_apparatus_and_ink() {
                 std::abs(editor.spiro.center.y - old.y - 12) < 1e-7,
             "guide movement does not carry the assembly");
     require(editor.document.revision == revision, "moving support creates an ink history entry");
-    editor.document.select({390, 0, 200, 480});
+    const int selection_left = static_cast<int>(std::floor(editor.spiro.center.x));
+    editor.document.select({selection_left, 0, 200, 480});
     const paint::Point wheel = editor.spiro.wheel_center(editor.spiro.angle);
     fixture.pointer(gf::PointerAction::down, wheel.x, wheel.y);
     for (int i = 1; i <= 50; ++i) {
@@ -2068,7 +2481,7 @@ void spirograph_apparatus_and_ink() {
     }
     require(red && blue, "loaded pegs do not draw both colors");
     for (int y = 0; y < 480; ++y) {
-        for (int x = 0; x < 390; ++x) {
+        for (int x = 0; x < selection_left; ++x) {
             require(white(editor.document.image.get(x, y)),
                     "spirograph ink escapes active selection in rotated view");
         }
@@ -3512,6 +3925,7 @@ int main() {
         stamp_material_union_and_menu_toggle();
         dialog_clipboard_and_close_contracts();
         display_preserves_document_and_hidden_rgb();
+        live_canvas_damage_opacity_and_reuse();
         startup_file_opens_after_window_attachment();
         captured_stroke_undo_and_right_color();
         solid_primary_keeps_alternate_drawing();
@@ -3536,6 +3950,8 @@ int main() {
         stamp_scrubs_one_undo_gesture();
         path_hover_snap_and_controls();
         path_node_drag_and_overlap();
+        explicit_path_node_editing();
+        direct_path_curve_editing();
         click_move_click_shapes();
         centered_closed_shapes();
         centered_circle_and_materials();
@@ -3543,6 +3959,24 @@ int main() {
         dither_dialog_and_brush();
         carpet_generator_controls();
         spirograph_accessible_pegs();
+        spirograph_lift_controls();
+        spirograph_lift_controls(17);
+        spirograph_lift_controls(0, 29);
+        spirograph_lift_controls(17, 29);
+        spirograph_lift_controls(0, 30);
+        spirograph_lift_controls(17, 30);
+        spirograph_lift_controls(0, 31);
+        spirograph_lift_controls(17, 31);
+        spirograph_lift_controls(0, 32);
+        spirograph_lift_controls(16, 32);
+        spirograph_resize_controls();
+        spirograph_resize_controls(17);
+        spirograph_resize_controls(0, 29);
+        spirograph_resize_controls(0, 30);
+        spirograph_resize_controls(0, 31);
+        spirograph_resize_controls(0, 32);
+        spirograph_resize_controls(16, 32);
+        rendering_quality_controls();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();
         independent_color_materials_and_no_color();

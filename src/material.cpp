@@ -32,9 +32,11 @@ bool textured_brush(Brush brush) {
            brush == Brush::Watercolor || brush == Brush::Bristle || brush == Brush::Pastel ||
            brush == Brush::Charcoal || brush == Brush::Marker || brush == Brush::Gel;
 }
-MaterialSurface::MaterialSurface(const Ink& ink, Brush brush) : ink_(ink), brush_(brush) {
+MaterialSurface::MaterialSurface(const Ink& ink, Brush brush, RasterSpace space)
+    : ink_(ink), brush_(brush), space_(space) {
+    ink_.size /= space.scale;
     if (ink_.alternate) {
-        alternate_ = std::make_unique<MaterialSurface>(*ink_.alternate, (*ink_.alternate).brush);
+        alternate_ = std::make_unique<MaterialSurface>(*ink_.alternate, (*ink_.alternate).brush, space);
         ink_.alternate.reset();
         ink_.transparent_pattern = true;
     }
@@ -46,7 +48,7 @@ MaterialSurface::MaterialSurface(const Ink& ink, Brush brush) : ink_(ink), brush
     sine_ = std::sin(angle);
 }
 Color MaterialSurface::sample(int x, int y, double edge_distance) const {
-    const Color front = sample_primary(x, y, edge_distance);
+    const Color front = sample_primary(space_.paper_x(x), space_.paper_y(y), edge_distance / space_.scale);
     if (!alternate_ || front.a == 255) {
         return front;
     }
@@ -180,8 +182,8 @@ static Color covered_fill_and_stroke(const FillBoundaryPixel& fill, Color stroke
 void MaterialStroke::clear() {
     pixels_.clear();
 }
-void MaterialStroke::segment(Image& image, Point start, Point end, const Ink& ink) {
-    MaterialSurface material(ink, ink.brush);
+void MaterialStroke::segment(Image& image, Point start, Point end, const Ink& ink, RasterSpace space) {
+    MaterialSurface material(ink, ink.brush, space);
     double radius = std::max(0.5, ink.size * 0.5), dx = end.x - start.x, dy = end.y - start.y,
            length2 = dx * dx + dy * dy;
     int top = std::max(0, static_cast<int>(std::floor(std::min(start.y, end.y) - radius - 1)));
@@ -256,7 +258,7 @@ void MaterialStroke::segment(Image& image, Point start, Point end, const Ink& in
     }
 }
 void material_fill(Image& image, const std::vector<Point>& points, const Ink& ink, Brush brush,
-                   FillBoundary* boundary) {
+                   FillBoundary* boundary, RasterSpace space) {
     if (points.size() < 3) {
         return;
     }
@@ -268,10 +270,10 @@ void material_fill(Image& image, const std::vector<Point>& points, const Ink& in
         max_y = std::max(max_y, points[i].y);
     }
     // A small off-canvas border keeps cropping from inventing a pigment rim.
-    int left = std::max(-16, static_cast<int>(std::floor(min_x)) - 1);
-    int top = std::max(-16, static_cast<int>(std::floor(min_y)) - 1);
-    int right = std::min(image.width + 16, static_cast<int>(std::ceil(max_x)) + 1);
-    int bottom = std::min(image.height + 16, static_cast<int>(std::ceil(max_y)) + 1);
+    int left = std::max(-16 * space.scale, static_cast<int>(std::floor(min_x)) - 1);
+    int top = std::max(-16 * space.scale, static_cast<int>(std::floor(min_y)) - 1);
+    int right = std::min(image.width + 16 * space.scale, static_cast<int>(std::ceil(max_x)) + 1);
+    int bottom = std::min(image.height + 16 * space.scale, static_cast<int>(std::ceil(max_y)) + 1);
     int width = right - left, height = bottom - top;
     if (width <= 0 || height <= 0) {
         return;
@@ -321,7 +323,7 @@ void material_fill(Image& image, const std::vector<Point>& points, const Ink& in
             }
             int count = row_coverage[x - left].count();
             coverage[index] = static_cast<std::uint16_t>(count);
-            distance[index] = count ? 32 : 0;
+            distance[index] = count ? static_cast<std::uint8_t>(32 * space.scale) : 0;
             if (boundary && count > 0 && count < 1024 && image.contains(x, top + row)) {
                 FillBoundaryPixel& pixel = (*boundary)[(top + row) * image.width + x];
                 pixel.coverage = row_coverage[x - left];
@@ -361,7 +363,7 @@ void material_fill(Image& image, const std::vector<Point>& points, const Ink& in
             distance[i] = static_cast<std::uint8_t>(d);
         }
     }
-    MaterialSurface material(ink, brush);
+    MaterialSurface material(ink, brush, space);
     for (int y = std::max(0, top); y < std::min(image.height, bottom); ++y) {
         for (int x = std::max(0, left); x < std::min(image.width, right); ++x) {
             std::size_t i = static_cast<std::size_t>(y - top) * width + x - left;

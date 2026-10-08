@@ -1,9 +1,11 @@
 #include "codecs.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <functional>
 #include <gui_forms/timer.hpp>
+#include <gui_forms/paint_framebuffer.hpp>
 #include <iostream>
 #include <stdexcept>
 #ifdef _WIN32
@@ -11,6 +13,19 @@
 #endif
 namespace {
 namespace gf = gui_forms;
+struct NativeRecoveryDirectory {
+    std::filesystem::path path = std::filesystem::temp_directory_path() /
+        ("plan-paint-native-recovery-" + std::to_string(paint::recovery_time_ms()));
+    NativeRecoveryDirectory() {
+        if (!std::filesystem::create_directory(path)) {
+            throw std::runtime_error("Could not create an isolated native recovery directory");
+        }
+    }
+    ~NativeRecoveryDirectory() {
+        std::error_code error;
+        std::filesystem::remove_all(path, error);
+    }
+};
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
@@ -237,6 +252,46 @@ struct NativeExercise {
         entered = true;
     }
     bool entered = false;
+    void inspect_frame(gf::Window& window) {
+        const gf::Size size{1280, 820};
+        std::unique_ptr<gf::PaintFramebuffer> framebuffer = window.create_framebuffer(size, window.scale());
+        if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
+            throw std::runtime_error("Native framebuffer is unavailable");
+        }
+        // A native ready callback may precede the host's first visible frame.
+        // Offscreen inspection must render even while the native window is occluded.
+        const bool occluded = window.occluded();
+        window.set_occluded(false, gf::FrameClock::now());
+        const bool painted = window.paint((*framebuffer).painter(), {0, 0, size.width, size.height}).has_value();
+        window.set_occluded(occluded, gf::FrameClock::now());
+        (*framebuffer).end();
+        const bool bgra = (*framebuffer).channel_order() == gf::FramebufferChannelOrder::bgra;
+        paint::Image image;
+        image.reset(static_cast<int>((*framebuffer).width()), static_cast<int>((*framebuffer).height()), {});
+        for (int y = 0; y < image.height; ++y) {
+            const std::byte* row = (*framebuffer).pixels().data() + y * (*framebuffer).row_bytes();
+            for (int x = 0; x < image.width; ++x) {
+                image.set(x, y, {std::to_integer<std::uint8_t>(row[x * 4 + (bgra ? 2 : 0)]),
+                    std::to_integer<std::uint8_t>(row[x * 4 + 1]),
+                    std::to_integer<std::uint8_t>(row[x * 4 + (bgra ? 0 : 2)]), 255});
+            }
+        }
+        const gf::Rect pixel = (*editor).canvas().bitmap_to_client({120, 120, 1, 1});
+        const gf::Point sample = (*editor).canvas().point_to_window(
+            {pixel.x + pixel.width / 2, pixel.y + pixel.height / 2});
+        const paint::Color actual = image.get(static_cast<int>(sample.x * window.scale()),
+                                              static_cast<int>(sample.y * window.scale()));
+        const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
+        if (capture && *capture) { paint::save_image(image, capture); }
+        const paint::Color expected = (*editor).document.image.get(120, 120);
+        if (!painted || !paint::equal(actual, expected)) {
+            throw std::runtime_error("Native live canvas pixels differ: painted=" + std::to_string(painted) +
+                " sample=" + std::to_string(sample.x) + "," + std::to_string(sample.y) +
+                " scale=" + std::to_string(window.scale()) +
+                " actual=" + std::to_string(actual.r) + "," + std::to_string(actual.g) + "," + std::to_string(actual.b) +
+                " expected=" + std::to_string(expected.r) + "," + std::to_string(expected.g) + "," + std::to_string(expected.b));
+        }
+    }
     void stroke(gf::Window& window, paint::Point first, paint::Point last) {
         gf::RasterCanvas& canvas = (*editor).canvas();
         gui_drawing::PointF origin = canvas.view_origin();
@@ -361,6 +416,7 @@ struct NativeExercise {
         if (!document.curve.line_set || document.undo_history.size() < 5) {
             throw std::runtime_error("Native editor did not retain curve and history");
         }
+        inspect_frame(window);
         entered = true;
         if (!keep_open && !handle.request_close().accepted()) {
             throw std::runtime_error("Native close request rejected");
@@ -385,6 +441,9 @@ struct WindowsFixtureReady {
 } // namespace
 int main(int argc, char** argv) {
     try {
+        // Outlive the editor and its recovery worker. Never inspect or retire
+        // recovery snapshots belonging to an ordinary application session.
+        NativeRecoveryDirectory recovery;
         NativeExercise exercise;
         exercise.keep_open = argc > 1;
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
@@ -403,6 +462,7 @@ int main(int argc, char** argv) {
         exercise.bugs = argc > 1 && std::string(argv[1]) == "--bugs";
         exercise.resize_preview = argc > 1 && std::string(argv[1]) == "--resize-preview";
         exercise.editor = gf::make_control<paint::forms::Editor>(gf::StableId("native.editor"));
+        (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
         options.initial_size = exercise.compact ? gf::Size{800, 600} : gf::Size{1280, 820};
@@ -429,7 +489,9 @@ int main(int argc, char** argv) {
             std::rethrow_exception(result.callback_exception);
         }
         if (!result.accepted() || !exercise.entered) {
-            throw std::runtime_error("Native application startup failed");
+            throw std::runtime_error("Native application startup failed: error=" +
+                std::to_string(static_cast<int>(result.error)) + " native_exit=" +
+                std::to_string(result.native_exit_code) + " ready=" + std::to_string(exercise.entered));
         }
         std::cout << "Native GUI.Forms Paint: host, input, capture, painting model, curve, history and close "
                      "passed\n";

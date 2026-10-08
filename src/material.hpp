@@ -10,10 +10,11 @@ class MaterialSurface {
     Brush brush_;
     double cosine_ = 1, sine_ = 0;
     std::unique_ptr<MaterialSurface> alternate_;
+    RasterSpace space_;
     Color sample_primary(int x, int y, double edge_distance) const;
 
   public:
-    MaterialSurface(const Ink& ink, Brush brush);
+    MaterialSurface(const Ink& ink, Brush brush, RasterSpace space = {});
     Color sample(int x, int y, double edge_distance) const;
 };
 bool textured_brush(Brush brush);
@@ -41,8 +42,8 @@ class MaterialStroke {
     void clear();
     // Each gesture deposits one coat over the union of its swept brush footprint.
     // Revisiting a pixel within that coat does not multiply its opacity by event count.
-    void segment(Image& image, Point start, Point end, const Ink& ink);
+    void segment(Image& image, Point start, Point end, const Ink& ink, RasterSpace space = {});
 };
 void material_fill(Image& image, const std::vector<Point>& polygon, const Ink& ink, Brush brush,
-                   FillBoundary* boundary = nullptr);
+                   FillBoundary* boundary = nullptr, RasterSpace space = {});
 } // namespace paint

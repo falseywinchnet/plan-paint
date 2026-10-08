@@ -3,6 +3,7 @@
 from pathlib import Path
 from release_version import project_version
 from font_pack import copy_fonts
+from toolkit_resources import copy_toolkit_notices
 import argparse
 import json
 import plistlib
@@ -26,6 +27,7 @@ def main():
     parser.add_argument("--frontend", choices=("legacy", "forms"), default="forms")
     parser.add_argument("--output")
     parser.add_argument("--gui-forms-sdk", type=Path)
+    parser.add_argument("--runtime", type=Path, help="Verified LLVM 22 runtime for macOS 14")
     parser.add_argument("--version", default=project_version())
     args = parser.parse_args()
     forms = args.frontend == "forms"
@@ -49,7 +51,7 @@ def main():
     plist_path = app / "Contents/Info.plist"
     plist = plistlib.loads(plist_path.read_bytes())
     plist["CFBundleIconFile"] = "app-icon.icns"
-    plist["LSMinimumSystemVersion"] = "26.0"
+    plist["LSMinimumSystemVersion"] = "14.0"
     plist["CFBundleDocumentTypes"] = [{"CFBundleTypeName": "Image", "CFBundleTypeRole": "Editor", "LSHandlerRank": "Alternate", "LSItemContentTypes": ["public.image"]}]
     plist_path.write_bytes(plistlib.dumps(plist))
     frameworks.mkdir(exist_ok=True)
@@ -72,8 +74,11 @@ def main():
         notices.mkdir(exist_ok=True)
         shutil.copy2(toolkit_license, notices / "GUIForms-LICENSE.txt")
         sdk_notices = sdk / "share/licenses/GUIForms"
-        if sdk_notices.is_dir():
-            shutil.copytree(sdk_notices, notices / "GUIForms", dirs_exist_ok=True)
+        copy_toolkit_notices(sdk, notices / "GUIForms")
+        if args.runtime:
+            for license_file in args.runtime.rglob("*LICENSE*"):
+                if license_file.is_file():
+                    shutil.copy2(license_file, notices / ("LLVM-" + license_file.name))
         (resources / "README-GUIForms.txt").write_text(
             "Plan Paint\n\n"
             "The application uses the native GUI.Forms interface.\n"
@@ -125,18 +130,27 @@ def main():
                 original_for_name[name] = original
                 queue.append((original, destination))
                 bundled.append({"name": destination.name, "source": str(original)})
-            replacement = ("@executable_path/../Frameworks/" if target == executable else "@loader_path/") + destination.name
+            replacement = "@rpath/" + destination.name
             run(["install_name_tool", "-change", dependency, replacement, str(target)])
         for search_path in rpaths(target):
-            if search_path.startswith(("/opt/", "/Users/", "/usr/local/")):
+            if Path(search_path).is_absolute():
                 run(["install_name_tool", "-delete_rpath", search_path, str(target)])
+    for target in sorted(seen):
+        runtime_path = "@executable_path/../Frameworks" if target == executable else "@loader_path"
+        if runtime_path not in rpaths(target):
+            run(["install_name_tool", "-add_rpath", runtime_path, str(target)])
+    if args.runtime:
+        audit = args.gui_forms_sdk / "tools/audit_macos_minimum.py"
+        subprocess.run([__import__("sys").executable, str(audit), str(app)], check=True)
     for target in sorted(seen):
         identifiers = run(["otool", "-D", str(target)]).splitlines()[1:]
         own_id = identifiers[0] if identifiers else None
         for dependency in dependencies(target):
             if dependency == own_id or dependency.startswith(("/System/", "/usr/lib/")):
                 continue
-            if dependency.startswith("@executable_path/../Frameworks/"):
+            if dependency.startswith("@rpath/"):
+                resolved = frameworks / dependency[len("@rpath/"):]
+            elif dependency.startswith("@executable_path/../Frameworks/"):
                 resolved = executable.parent / dependency.replace("@executable_path/", "")
             elif dependency.startswith("@loader_path/"):
                 resolved = target.parent / dependency.replace("@loader_path/", "")

@@ -236,6 +236,7 @@ void Editor::paint_segment(Point start, Point end) {
 namespace paint::forms {
 void Editor::begin_path_swap(CurveKind kind) {
     unset_guide();
+    edit_path_nodes = false;
     document.tool = Tool::Path;
     path_swap_kind_ = kind;
     path_swap_segment_ = -1;
@@ -243,11 +244,14 @@ void Editor::begin_path_swap(CurveKind kind) {
     refresh();
 }
 bool Editor::path_swap_pointer(const gf::PointerEvent& event, Point point) {
-    if (!path_swap_kind_ || document.tool != Tool::Path || event.button == gf::PointerButton::middle ||
+    if ((!path_swap_kind_ && !edit_path_nodes) || document.tool != Tool::Path || event.button == gf::PointerButton::middle ||
         panning_) {
         return false;
     }
     if (event.action == gf::PointerAction::down && event.button == gf::PointerButton::secondary) {
+        if (edit_path_nodes) {
+            return false;
+        }
         path_swap_kind_.reset();
         path_swap_segment_ = -1;
         path_swap_handle_ = -1;
@@ -256,31 +260,44 @@ bool Editor::path_swap_pointer(const gf::PointerEvent& event, Point point) {
         return true;
     }
     if (event.action == gf::PointerAction::down && event.button == gf::PointerButton::primary) {
+        if (window()) {
+            static_cast<void>((*window()).request_focus(canvas_));
+        }
         if (path_swap_segment_ >= 0 &&
             static_cast<std::size_t>(path_swap_segment_) < document.path.segments.size()) {
             const CurveGeometry& geometry = document.path.segments[path_swap_segment_].geometry;
-            for (int index = 0; index < geometry.handle_count(); ++index) {
-                const Point handle = geometry.handle(index);
-                if (std::hypot(point.x - handle.x, point.y - handle.y) * canvas().zoom() < 10) {
-                    path_swap_handle_ = index;
-                    path_swap_checkpoint_ = false;
-                    canvas().set_pointer_capture(true);
-                    return true;
-                }
+            const int nearest_handle = hit_curve_handle(geometry, point, 10);
+            if (nearest_handle >= 0) {
+                path_swap_handle_ = nearest_handle;
+                const Point handle = geometry.handle(nearest_handle);
+                handle_offset_ = {point.x - handle.x, point.y - handle.y};
+                path_swap_checkpoint_ = false;
+                canvas().set_pointer_capture(true);
+                return true;
             }
+        }
+        if (edit_path_nodes && hit_path_node(point) >= 0) {
+            path_swap_segment_ = -1;
+            return false;
         }
         const std::vector<PathEdge> edges = document.path_edges();
         double closest = 8 / canvas().zoom();
         int selected = -1;
+        int selected_curve = -1;
         for (std::size_t index = 0; index < edges.size(); ++index) {
+            int curve_index = -1;
             std::vector<Point> samples{document.path.nodes[edges[index].first],
                                        document.path.nodes[edges[index].last]};
             for (std::size_t curve = 0; curve < document.path.segments.size(); ++curve) {
                 const PathSegment& segment = document.path.segments[curve];
                 if (segment.first == edges[index].first && segment.last == edges[index].last) {
                     samples = segment.geometry.samples();
+                    curve_index = static_cast<int>(curve);
                     break;
                 }
+            }
+            if (edit_path_nodes && curve_index < 0) {
+                continue;
             }
             for (std::size_t sample = 1; sample < samples.size(); ++sample) {
                 const Point a = samples[sample - 1], b = samples[sample];
@@ -292,10 +309,15 @@ bool Editor::path_swap_pointer(const gf::PointerEvent& event, Point point) {
                 if (distance < closest) {
                     closest = distance;
                     selected = static_cast<int>(index);
+                    selected_curve = curve_index;
                 }
             }
         }
-        if (selected >= 0) {
+        if (edit_path_nodes) {
+            path_swap_segment_ = selected_curve;
+            refresh();
+            return selected_curve >= 0;
+        } else if (selected >= 0) {
             path_swap_segment_ = document.swap_path_segment(edges[selected], *path_swap_kind_);
             refresh();
         }
@@ -307,29 +329,43 @@ bool Editor::path_swap_pointer(const gf::PointerEvent& event, Point point) {
             canvas().set_pointer_capture(false);
             return true;
         }
-        if (!path_swap_checkpoint_) {
-            document.checkpoint();
-            path_swap_checkpoint_ = true;
+        CurveGeometry next = document.path.segments[path_swap_segment_].geometry;
+        const Point previous = next.handle(path_swap_handle_);
+        next.move_handle(path_swap_handle_, {point.x - handle_offset_.x, point.y - handle_offset_.y});
+        const Point moved = next.handle(path_swap_handle_);
+        if (std::hypot(moved.x - previous.x, moved.y - previous.y) > 1e-9) {
+            if (!path_swap_checkpoint_) {
+                document.checkpoint();
+                path_swap_checkpoint_ = true;
+            }
+            document.path.segments[path_swap_segment_].geometry = next;
+            document.sync_path();
         }
-        document.path.segments[path_swap_segment_].geometry.move_handle(path_swap_handle_, point);
-        document.sync_path();
         refresh();
         if (event.action == gf::PointerAction::up) {
             path_swap_handle_ = -1;
             canvas().set_pointer_capture(false);
         }
+    } else if (edit_path_nodes) {
+        return false;
     }
     return true;
 }
 void Editor::paint_path_swap(gf::Painter& painter) {
-    if (!path_swap_kind_ || path_swap_segment_ < 0 ||
+    if ((!path_swap_kind_ && !edit_path_nodes) || path_swap_segment_ < 0 ||
         static_cast<std::size_t>(path_swap_segment_) >= document.path.segments.size()) {
         return;
     }
     const CurveGeometry& geometry = document.path.segments[path_swap_segment_].geometry;
+    const int hovered = hovered_curve_handle(geometry, 10);
     const gf::Color blue = gf::Color::rgba(30, 110, 190), white = gf::Color::rgba(255, 255, 255);
     for (int index = 0; index < geometry.handle_count(); ++index) {
         const gf::Point point = screen(geometry.handle(index));
+        if (index == path_swap_handle_) {
+            painter.fill_rect({point.x - 9, point.y - 9, 18, 18}, gf::Color::rgba(255, 190, 40));
+        } else if (index == hovered) {
+            painter.fill_rect({point.x - 8, point.y - 8, 16, 16}, gf::Color::rgba(255, 220, 130));
+        }
         if (geometry.kind == CurveKind::Bezier) {
             painter.draw_line(screen(index == 0 ? geometry.start : geometry.end), point, blue, 1);
         }

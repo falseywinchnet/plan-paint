@@ -76,12 +76,13 @@ class Ribbon final : public gui_forms::Control {
     std::shared_ptr<gui_forms::NumericUpDown> grain_, tooth_, load_, angle_, tool_size_, text_size_;
     std::shared_ptr<gui_forms::NumericUpDown> stamp_width_, stamp_height_, stamp_scale_, stamp_angle_,
         rotation_, mesh_spacing_;
-    std::shared_ptr<gui_forms::ComboBox> font_, word_art_, picker_mode_, mix_effect_, eraser_mode_;
+    std::shared_ptr<gui_forms::ComboBox> font_, word_art_, picker_mode_, mix_effect_, eraser_mode_, render_quality_;
     std::shared_ptr<gui_forms::NumericUpDown> effect_strength_, effect_scale_, effect_phase_, heal_hardness_,
         heal_correction_, stabilizer_lag_, stamp_hardness_;
     void mix_effect_changed(std::optional<std::size_t> index);
     void word_art_changed(std::optional<std::size_t> index);
     std::shared_ptr<gui_forms::NumericUpDown> text_skew_, text_perspective_, text_warp_, text_outline_;
+    void render_quality_changed(std::optional<std::size_t> index);
     void picker_mode_changed(std::optional<std::size_t> index);
     std::vector<std::string> font_paths_;
     void font_changed(std::optional<std::size_t> index);
@@ -100,6 +101,8 @@ class Ribbon final : public gui_forms::Control {
     bool gradient_synchronizing_ = false;
 
     void options_changed(double value);
+    void spiro_scale_changed(double value);
+    std::shared_ptr<gui_forms::NumericUpDown> spiro_scale_;
     void apply_choice(const std::string& id);
     void show_page();
     void check(const std::string& id, const std::string& text, gui_forms::Rect bounds);

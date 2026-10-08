@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Bundle the native frontend and its complete musl dependency closure."""
+"""Bundle the native frontend for the standardized Ubuntu 24.04 ABI."""
 from pathlib import Path
 from release_version import project_version
 from font_pack import copy_fonts
+from toolkit_resources import copy_toolkit_notices
 import argparse
 import hashlib
 import json
@@ -29,9 +30,7 @@ def main():
     if "not found" in dependencies or "Error" in dependencies:
         raise RuntimeError(dependencies)
     loader_match = re.search(r"(/\S*/ld-musl-[^\s()]+)", dependencies)
-    if loader_match is None:
-        raise RuntimeError("Build the portable Linux package with musl; a glibc-linked binary is not interchangeable.")
-    loader = Path(loader_match[1]).resolve()
+    loader = Path(loader_match[1]).resolve() if loader_match else None
     architecture = {"aarch64": "arm64", "x86_64": "x64"}.get(platform.machine())
     if architecture is None:
         raise RuntimeError("Unverified package architecture: " + platform.machine())
@@ -46,7 +45,13 @@ def main():
     closure = {}
     for soname, filename in re.findall(r"(\S+) => (/\S+)", dependencies):
         closure[soname] = Path(filename).resolve()
-    closure[loader.name] = loader
+    if loader:
+        closure[loader.name] = loader
+    else:
+        # Keep the glibc loader, libc and tightly coupled runtime modules on the host.
+        for soname in list(closure):
+            if soname in {"libc.so.6", "libm.so.6", "libpthread.so.0", "libdl.so.2", "librt.so.1", "libresolv.so.2"} or soname.startswith("libnss_"):
+                del closure[soname]
     for soname, filename in closure.items():
         shutil.copy2(filename, bundle / "lib" / soname)
     subprocess.run(["patchelf", "--set-rpath", "$ORIGIN/../lib", str(executable)], check=True)
@@ -68,28 +73,34 @@ def main():
         'app_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\n'
         'export XLOCALEDIR="$app_dir/share/X11/locale"\n'
         'export GUI_FORMS_FONT_DIR="$app_dir/bin/fonts"\n'
-        'exec "$app_dir/lib/' + loader.name + '" --library-path "$app_dir/lib" "$app_dir/bin/plan-paint" "$@"\n')
+        + ('exec "$app_dir/lib/' + loader.name + '" --library-path "$app_dir/lib" "$app_dir/bin/plan-paint" "$@"\n'
+           if loader else 'exec "$app_dir/bin/plan-paint" "$@"\n'))
     launcher.chmod(0o755)
     for name in ("LICENSE", "THIRD_PARTY_NOTICES.md"):
         shutil.copy2(ROOT / name, bundle)
     shutil.copy2(ROOT / "packaging/README.txt", bundle / "README.txt")
     shutil.copytree(ROOT / "packaging/licenses", bundle / "licenses")
-    shutil.copytree(sdk / "share/licenses/GUIForms", bundle / "licenses/GUIForms")
+    copy_toolkit_notices(sdk, bundle / "licenses/GUIForms")
     # Every loader-resolved dependency must come from this folder, including libc.
-    resolved = subprocess.check_output([str(bundle / "lib" / loader.name), "--library-path", str(bundle / "lib"), "--list", str(executable)], text=True)
+    resolved = subprocess.check_output([str(bundle / "lib" / loader.name), "--library-path", str(bundle / "lib"), "--list", str(executable)]
+        if loader else ["ldd", str(executable)], text=True)
+    if "not found" in resolved:
+        raise RuntimeError(resolved)
     for soname, filename in re.findall(r"(\S+) => (/\S+)", resolved):
         # musl reports the executable's PT_INTERP spelling for its already-loaded
         # libc, even when this command explicitly runs our packaged loader.
-        if soname.startswith("libc.musl-") and Path(filename).name == loader.name:
+        if loader and soname.startswith("libc.musl-") and Path(filename).name == loader.name:
             if (bundle / "lib" / soname).read_bytes() != (bundle / "lib" / loader.name).read_bytes():
                 raise RuntimeError("Packaged libc differs from the selected loader")
+            continue
+        if not loader and (soname in {"libc.so.6", "libm.so.6", "libpthread.so.0", "libdl.so.2", "librt.so.1", "libresolv.so.2"} or soname.startswith("libnss_")):
             continue
         if not Path(filename).resolve().is_relative_to(bundle):
             raise RuntimeError("Package still depends on an external library: " + filename)
     manifest = {
         "version": args.version, "architecture": architecture,
         "frontend": "GUI.Forms", "window_system": "X11; XWayland on Wayland desktops",
-        "loader": loader.name,
+        "loader": loader.name if loader else "system glibc (Ubuntu 24.04 or newer)",
         "runtime_packages": subprocess.check_output(["apk", "info", "-v"], text=True).splitlines() if shutil.which("apk") else [],
         "files": {str(path.relative_to(bundle)): hashlib.sha256(path.read_bytes()).hexdigest()
                   for path in sorted(bundle.rglob("*")) if path.is_file()},
