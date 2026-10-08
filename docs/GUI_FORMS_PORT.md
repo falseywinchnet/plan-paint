@@ -161,3 +161,19 @@ every desktop service or window-manager configuration was exercised.
 
 Author: Astra
 Sponsor: Rainstar
+
+## Automatic publication
+
+The workflow follows PlaySuite's tested-release contract. A prepare job chooses
+one version for the application, bundle metadata and every package. Main builds
+use `major.minor.(baseline patch + workflow run number)`; reruns retain their
+version. Explicit `v*` tags must match the baseline series and cannot predate it.
+PRs and ordinary manual runs build the baseline without publishing. A manual
+run with `publish=true` can publish from main.
+
+After all four platform jobs pass, the release job verifies the exact package
+set, writes SHA256SUMS, tags the tested commit and uploads into a draft before
+publishing. It rejects conflicting tags, leaves existing public releases
+unchanged, and skips a main run superseded by a newer commit. Only this job
+receives repository write permission. The latest release link always leads to
+the current published downloads.

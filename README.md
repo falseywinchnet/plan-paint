@@ -16,12 +16,14 @@ Plan Paint 1.1 on Apple Silicon Mac. This picture was drawn in the native applic
 
 | Platform | Download | Requirements |
 | --- | --- | --- |
-| Apple Silicon Mac | [macOS installer](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.4/plan-paint-1.1.4-macos-arm64.pkg) | macOS 26 or newer. Install, then open Plan Paint from Applications. |
-| Windows x64 | [Portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.4/plan-paint-1.1.4-windows-x64.zip) | Extract the folder and run `plan-paint.exe`. |
-| Linux x64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.4/plan-paint-1.1.4-linux-x64.tar.gz) | X11 (including dwm), or Wayland with XWayland. Extract the complete folder and launch `Plan Paint`. |
-| Linux ARM64 | [Portable archive](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.4/plan-paint-1.1.4-linux-arm64.tar.gz) | The same X11/XWayland requirements; use this archive on ARM64. |
+| Apple Silicon Mac | [Latest release: macOS installer](https://github.com/falseywinchnet/plan-paint/releases/latest) | macOS 14 or newer. Download the `macos-arm64.pkg`, install, then open Plan Paint from Applications. |
+| Windows x64 | [Latest release: portable ZIP](https://github.com/falseywinchnet/plan-paint/releases/latest) | Download the `windows-x64.zip`, extract the folder and run `plan-paint.exe`. |
+| Linux x64 | [Latest release: portable archive](https://github.com/falseywinchnet/plan-paint/releases/latest) | Download the `linux-x64.tar.gz`. Ubuntu 24.04 or a compatible newer glibc system, with X11 or XWayland. Extract the complete folder and launch `Plan Paint`. |
+| Linux ARM64 | [Latest release: portable archive](https://github.com/falseywinchnet/plan-paint/releases/latest) | Download the `linux-arm64.tar.gz`; the same Linux requirements apply. |
 
-[Release notes](https://github.com/falseywinchnet/plan-paint/releases/latest) · [SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/download/v1.1.4/SHA256SUMS) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
+[Release notes and SHA-256 checksums](https://github.com/falseywinchnet/plan-paint/releases/latest) · [Report a problem](https://github.com/falseywinchnet/plan-paint/issues)
+
+Every successful main build automatically publishes all four tested packages and `SHA256SUMS` as a numbered release. Publication waits for every platform's tests and packaged startup checks. PR builds produce Actions artifacts without publishing.
 
 The Mac application is ad-hoc signed; its installer is unsigned and has no Developer ID notarization. macOS may require approval in **System Settings → Privacy & Security**. “Windows 7/10” describes the Paint interface; Windows 7 operating-system compatibility has not been verified.
 
