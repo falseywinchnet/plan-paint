@@ -12,7 +12,10 @@ Drawing into the native application.
 Use CMake 3.25+, Ninja, Python 3.11+ and LLVM **22.1.8**. Install libtiff,
 libwebp and dav1d development packages for the same toolchain. Paint builds
 pinned libavif, LunaSVG/PlutoVG and TinyXML-2 from source. The native scripts
-also build the reduced TIFF codec profile from source.
+also build the reduced TIFF codec profile from source. On macOS install Meson;
+the recipe builds pinned libwebp 1.6.0 and dav1d 1.5.4 for macOS 14 into
+`.build/codecs-macos14`, ahead of Homebrew's libraries. CI caches that audited
+prefix by compiler/runtime environment and recipe content.
 
 | Platform | Compiler distribution | Build/runtime contract |
 | --- | --- | --- |

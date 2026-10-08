@@ -58,7 +58,7 @@ jobs:
       - name: Install macOS compiler and codecs
         if: runner.os == 'macOS'
         run: |
-          brew install ninja llvm@22 ccache pkgconf libtiff webp dav1d
+          brew install ninja llvm@22 ccache pkgconf meson
           echo "$(brew --prefix llvm@22)/bin" >> "$GITHUB_PATH"
           echo "GUI_FORMS_LLVM_RUNTIME=$PWD/.build/toolchain/llvm-22.1.8-macos14" >> "$GITHUB_ENV"
       - name: Install Linux compiler and desktop libraries
@@ -118,6 +118,20 @@ jobs:
           with open(os.environ['GITHUB_ENV'], 'a') as output:
               output.write('PAINT_RENDERER_ENV=' + hashlib.sha256(identity).hexdigest() + '\n')
           PYTHON
+      - uses: actions/cache/restore@v4
+        id: codecs-cache
+        if: runner.os == 'macOS'
+        with:
+          path: .build/codecs-macos14
+          key: paint-codecs-macos14-v1-${{ env.PAINT_RENDERER_ENV }}-${{ hashFiles('scripts/build-macos-codecs.sh') }}
+      - name: Build macOS 14 codecs
+        if: runner.os == 'macOS'
+        run: sh scripts/build-macos-codecs.sh
+      - uses: actions/cache/save@v4
+        if: runner.os == 'macOS' && steps.codecs-cache.outputs.cache-hit != 'true'
+        with:
+          path: .build/codecs-macos14
+          key: ${{ steps.codecs-cache.outputs.cache-primary-key }}
       - uses: actions/cache/restore@v4
         id: renderer-cache
         if: runner.os != 'Windows'
