@@ -258,7 +258,12 @@ struct NativeExercise {
         if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
             throw std::runtime_error("Native framebuffer is unavailable");
         }
+        // A native ready callback may precede the host's first visible frame.
+        // Offscreen inspection must render even while the native window is occluded.
+        const bool occluded = window.occluded();
+        window.set_occluded(false, gf::FrameClock::now());
         const bool painted = window.paint((*framebuffer).painter(), {0, 0, size.width, size.height}).has_value();
+        window.set_occluded(occluded, gf::FrameClock::now());
         (*framebuffer).end();
         const bool bgra = (*framebuffer).channel_order() == gf::FramebufferChannelOrder::bgra;
         paint::Image image;
