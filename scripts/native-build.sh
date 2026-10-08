@@ -28,6 +28,7 @@ case "$action" in
     python3 scripts/fetch-gui-forms.py
     sh gui_forms/third_party/fetch_text_stack.sh
     set -- -DRAINSTAR_TOOLKIT_SOURCE_DIR="$PWD/gui_forms"
+    set -- "$@" -DPAINT_RELEASE_VERSION="${PAINT_RELEASE_VERSION:-$(python3 scripts/release_version.py)}"
     if [ "$platform" = macos-arm64 ]; then
       sh scripts/build-macos-codecs.sh
       export PKG_CONFIG_PATH="$PWD/.build/codecs-macos14/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"

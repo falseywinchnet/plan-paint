@@ -5,13 +5,34 @@ on:
     tags: ['v*']
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish tested packages from main
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
   group: native-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select one tested publication version
+        id: version
+        env:
+          PUBLISH_REQUESTED: ${{ inputs.publish }}
+        run: python3 scripts/publication_version.py
+      - name: Test publication contracts
+        run: python3 -m unittest discover -s tests -p test_publication.py
   application:
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -34,6 +55,7 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
     env:
+      PAINT_RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
       BUILD_JOBS: 2
       CC: clang
       CXX: clang++
@@ -199,3 +221,25 @@ jobs:
             .build/native/app/Testing/Temporary/LastTest.log
             .build/native/native-canvas.png
           include-hidden-files: true
+  release:
+    if: needs.prepare.outputs.publish == 'true'
+    needs: [prepare, application]
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: paint-publication
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: plan-paint-*
+          merge-multiple: true
+          path: dist
+      - name: Publish exactly the tested revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
+        run: python3 scripts/publish_tested_release.py --artifacts dist

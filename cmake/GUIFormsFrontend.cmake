@@ -83,14 +83,14 @@ endif()
 add_library(paint_forms STATIC src/forms/canvas_controls.cpp src/forms/gradient_controls.cpp src/forms/recovery.cpp src/forms/interface_theme.cpp src/cursors/tool_cursors.cpp src/forms/editor.cpp src/forms/pattern_canvas.cpp src/forms/display.cpp src/forms/ribbon.cpp src/forms/dialog.cpp src/forms/carpet_dialog.cpp src/forms/dither_dialog.cpp src/forms/text.cpp src/forms/warp.cpp src/forms/atlas.cpp src/forms/selection.cpp src/forms/help.cpp src/forms/surface.cpp src/forms/guide.cpp src/forms/spirograph.cpp)
 target_link_libraries(paint_forms PUBLIC paint_core GUIForms::Application)
 target_include_directories(paint_forms PUBLIC src)
-target_compile_definitions(paint_forms PUBLIC RAINSTAR_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(paint_forms PUBLIC RAINSTAR_VERSION="${PAINT_RELEASE_VERSION}")
 add_executable(plan-paint MACOSX_BUNDLE src/forms/main.cpp)
 target_link_libraries(plan-paint PRIVATE paint_forms)
 set_target_properties(plan-paint PROPERTIES
   MACOSX_BUNDLE_BUNDLE_NAME "Plan Paint"
   MACOSX_BUNDLE_GUI_IDENTIFIER "org.rainstar.paint"
-  MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
-  MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+  MACOSX_BUNDLE_BUNDLE_VERSION "${PAINT_RELEASE_VERSION}"
+  MACOSX_BUNDLE_SHORT_VERSION_STRING "${PAINT_RELEASE_VERSION}")
 # The consumer selects its font pack; optional CJK/emoji and extra mono faces
 # remain available in the SDK without being bundled into Paint.
 file(STRINGS "${PROJECT_SOURCE_DIR}/packaging/fonts.txt" paint_font_names)
@@ -220,7 +220,7 @@ if(Python3_Interpreter_FOUND)
   endif()
   add_custom_target(paint-package
     COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/package-${paint_package_script}.py"
-      --build "${CMAKE_BINARY_DIR}" --gui-forms-sdk "${paint_package_toolkit}" ${paint_package_arguments}
+      --build "${CMAKE_BINARY_DIR}" --version "${PAINT_RELEASE_VERSION}" --gui-forms-sdk "${paint_package_toolkit}" ${paint_package_arguments}
     DEPENDS plan-paint
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     USES_TERMINAL)

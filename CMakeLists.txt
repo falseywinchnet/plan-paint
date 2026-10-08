@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.25)
 project(PlanPaint VERSION 1.1.4 LANGUAGES C CXX)
+set(PAINT_RELEASE_VERSION "${PROJECT_VERSION}" CACHE STRING "Tested publication version")
+if(NOT PAINT_RELEASE_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
+  message(FATAL_ERROR "PAINT_RELEASE_VERSION must be numeric major.minor.patch")
+endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -101,6 +105,8 @@ if(Python3_Interpreter_FOUND)
   add_test(NAME paint-language-catalogs COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check-languages.py")
   add_test(NAME paint-toolkit-cache COMMAND "${Python3_EXECUTABLE}" -m unittest discover
     -s "${CMAKE_CURRENT_SOURCE_DIR}/tests" -p test_toolkit_cache.py)
+  add_test(NAME paint-publication COMMAND "${Python3_EXECUTABLE}" -m unittest discover
+    -s "${CMAKE_CURRENT_SOURCE_DIR}/tests" -p test_publication.py)
 endif()
 add_executable(paint-recovery-tests tests/recovery_tests.cpp)
 target_link_libraries(paint-recovery-tests PRIVATE paint_core)
