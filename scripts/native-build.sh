@@ -19,6 +19,12 @@ fi
 ccache --max-size=500M
 case "$action" in
   configure|all)
+    compiler_c=$(command -v clang)
+    compiler_cxx=$(command -v clang++)
+    if command -v cygpath >/dev/null 2>&1; then
+      compiler_c=$(cygpath -m "$compiler_c.exe")
+      compiler_cxx=$(cygpath -m "$compiler_cxx.exe")
+    fi
     python3 scripts/fetch-gui-forms.py
     sh gui_forms/third_party/fetch_text_stack.sh
     set -- -DRAINSTAR_TOOLKIT_SOURCE_DIR="$PWD/gui_forms"
@@ -32,7 +38,7 @@ case "$action" in
     esac
     cmake -S . -B "$build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_TOOLCHAIN_FILE="$PWD/gui_forms/cmake/llvm22.cmake" \
-      -DCMAKE_C_COMPILER="$(command -v clang)" -DCMAKE_CXX_COMPILER="$(command -v clang++)" \
+      -DCMAKE_C_COMPILER="$compiler_c" -DCMAKE_CXX_COMPILER="$compiler_cxx" \
       -DRAINSTAR_BUNDLED_TIFF=ON "$@"
     ;;
 esac

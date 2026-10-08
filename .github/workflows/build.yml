@@ -126,10 +126,11 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           if [ ! -f gui_forms/third_party/skia/out/paint/libskia.a ]; then
-            GUI_FORMS_SYSTEM_BUILD_TOOLS=1 sh gui_forms/third_party/fetch_skia_cpu.sh
             if [ "${{ runner.os }}" = macOS ]; then
+              sh gui_forms/third_party/fetch_skia_cpu.sh
               sh gui_forms/third_party/build_skia_cpu.sh "$PWD/gui_forms/third_party/skia/out/paint"
             else
+              GUI_FORMS_SYSTEM_BUILD_TOOLS=1 sh gui_forms/third_party/fetch_skia_cpu.sh
               sh gui_forms/third_party/build_skia_cpu_linux.sh "$PWD/gui_forms/third_party/skia/out/paint"
             fi
           fi
