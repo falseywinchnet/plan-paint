@@ -1,5 +1,7 @@
 The native Paint ribbon includes drawing, selection, path, stamp, pattern, reshape and Spirograph tools, with 22 language packs and bundled fonts.
 
+Mix brushes include **Contour relief**, which replaces Holonomy with highlights and shadows shaped by the image's own edges. Scale controls contour width; Phase rotates the light. **Brushes → Fine glitter** directly selects glitter spray and opens its controls.
+
 These packages use standalone GUI.Forms and its live-buffer canvas. All four native builds must pass CTest, style checks, packaging and isolated packaged startup before publication. SHA256SUMS contains the checksum of each package.
 
 | Platform | Package and requirements |

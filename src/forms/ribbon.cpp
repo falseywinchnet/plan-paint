@@ -2302,8 +2302,8 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             texts = {tr("Solid / material fill"), tr("Use gradient")};
         }
         if (id == "brush-menu") {
-            ids = {"family-additive", "family-mix", "family-heal", "family-carpet", "family-dither"};
-            texts = {tr("Additive brushes"), tr("Mix existing pixels"), tr("Heal / continuous clone"),
+            ids = {"family-additive", "family-glitter", "family-mix", "family-heal", "family-carpet", "family-dither"};
+            texts = {tr("Additive brushes"), tr("Fine glitter"), tr("Mix existing pixels"), tr("Heal / continuous clone"),
                      tr("Carpet generator…"), tr("Dithering brush")};
         }
         if (id == "tool-10") {
@@ -2473,10 +2473,15 @@ void Ribbon::popup_clicked(gf::ButtonBase& button) {
         (*editor).choose_tool(Tool::Lasso);
     } else if (id.starts_with("family-")) {
         if (id != "family-carpet") {
-            (*editor).brush_family = id == "family-additive" ? BrushFamily::Additive
+            (*editor).brush_family = (id == "family-additive" || id == "family-glitter") ? BrushFamily::Additive
                                      : id == "family-mix"    ? BrushFamily::Mix
                                      : id == "family-dither" ? BrushFamily::Dither
                                                              : BrushFamily::Heal;
+        }
+        if (id == "family-glitter") {
+            select_brush(document.ink, Brush::Airbrush);
+            document.ink.size = std::max(24, document.ink.size);
+            (*editor).glitter = true;
         }
         (*editor).choose_tool(Tool::Brush);
         if (id == "family-carpet") {

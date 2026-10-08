@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -139,6 +140,82 @@ void test_perceptual_tools() {
     }
     require(rejected && reloaded.occupied == occupied, "transparency slot cannot consume a custom color");
     std::filesystem::remove(path);
+}
+paint::Image relief_image(const paint::Image& source, double scale, double phase, double strength = 1,
+                          paint::Point origin = {0, 0}, bool wrap = false) {
+    paint::Image result = source;
+    paint::TransformStroke stroke;
+    stroke.begin(source, origin);
+    stroke.segment(result, {source.width * 0.5, source.height * 0.5},
+                   {source.width * 0.5, source.height * 0.5},
+                   std::hypot(source.width, source.height) * 3, paint::MixEffect::ContourRelief,
+                   strength, scale, phase, wrap);
+    return result;
+}
+void test_contour_relief() {
+    paint::Image flat;
+    flat.reset(24, 24, {110, 135, 160, 123});
+    paint::Image result = relief_image(flat, 24, 0);
+    require(std::equal(result.pixels.begin(), result.pixels.end(), flat.pixels.begin(), paint::equal), "relief must preserve flat colors exactly");
+    flat.reset(24, 24, {230, 70, 125, 0});
+    result = relief_image(flat, 24, 0, 0.7);
+    require(std::equal(result.pixels.begin(), result.pixels.end(), flat.pixels.begin(), paint::equal), "relief must preserve fully transparent hidden RGB");
+    paint::Image source;
+    source.reset(64, 48, {100, 100, 100, 177});
+    for (int y = 0; y < source.height; ++y) {
+        for (int x = 32; x < source.width; ++x) { source.set(x, y, {170, 170, 170, 177}); }
+    }
+    const paint::Image first = relief_image(source, 24, 0);
+    const paint::Image opposite = relief_image(source, 24, std::numbers::pi);
+    require(first.get(31, 24).r < source.get(31, 24).r &&
+            opposite.get(31, 24).r > source.get(31, 24).r,
+            "half-turn light rotation must exchange relief highlights and shadows");
+    require(std::equal(first.pixels.begin(), first.pixels.end(), relief_image(source, 24, 0, 1, {19, 7}).pixels.begin(), paint::equal),
+            "relief must follow content, not the gesture origin");
+    require(std::equal(source.pixels.begin(), source.pixels.end(), relief_image(source, 24, 0, 0).pixels.begin(), paint::equal), "zero strength changes pixels");
+    require(paint::equal(first.get(12, 24), source.get(12, 24)), "relief changes remote flat areas");
+    const paint::Image broad = relief_image(source, 64, 0);
+    require(paint::equal(first.get(26, 24), source.get(26, 24)) &&
+            !paint::equal(broad.get(26, 24), source.get(26, 24)), "scale must control contour width");
+    for (std::size_t i = 0; i < source.pixels.size(); ++i) {
+        require(first.pixels[i].a == source.pixels[i].a, "relief changed opacity");
+    }
+    paint::Image hidden = source;
+    for (int y = 0; y < source.height; ++y) {
+        for (int x = 32; x < source.width; ++x) { source.set(x, y, {0, 0, 0, 0}); hidden.set(x, y, {255, 0, 255, 0}); }
+    }
+    require(paint::equal(relief_image(source, 24, 0).get(31, 24),
+                         relief_image(hidden, 24, 0).get(31, 24)), "hidden RGB casts relief shadows");
+    const paint::Image wrapped = relief_image(first, 24, 0, 1, {0, 0}, true);
+    require(!paint::equal(wrapped.get(0, 24), first.get(0, 24)), "wrapped relief ignores the opposite edge");
+
+    const char* capture = std::getenv("PAINT_RELIEF_CAPTURE");
+    if (capture && *capture) {
+        paint::Image scene;
+        scene.reset(240, 180, {130, 155, 163, 255});
+        paint::Ink ink;
+        ink.size = 3;
+        ink.primary = {193, 108, 67, 255};
+        paint::draw_shape(scene, paint::Shape::RoundedRectangle, {22, 24}, {130, 140}, ink, true, false);
+        ink.primary = {58, 105, 124, 255};
+        paint::draw_shape(scene, paint::Shape::Star5, {104, 27}, {218, 144}, ink, true, false);
+        for (int x = 18; x < 225; ++x) {
+            const int y = 155 + static_cast<int>(7 * std::sin(x * 0.055));
+            scene.set(x, y, {214, 190, 122, 255});
+        }
+        const paint::Image raised = relief_image(scene, 32, 0);
+        const paint::Image reversed = relief_image(scene, 32, std::numbers::pi);
+        paint::Image sheet;
+        sheet.reset(720, 180, {});
+        for (int y = 0; y < 180; ++y) {
+            for (int x = 0; x < 240; ++x) {
+                sheet.set(x, y, scene.get(x, y));
+                sheet.set(x + 240, y, raised.get(x, y));
+                sheet.set(x + 480, y, reversed.get(x, y));
+            }
+        }
+        paint::save_image(sheet, capture);
+    }
 }
 void test_transformative_brushes() {
     paint::StrokeStabilizer whole, split;
@@ -1317,6 +1394,7 @@ int main() {
     try {
         test_color();
         test_perceptual_tools();
+        test_contour_relief();
         test_transformative_brushes();
         test_material_collections_and_dry_contact();
         test_conv();
