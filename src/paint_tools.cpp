@@ -43,6 +43,23 @@ Lab local_mean(const Image& image, int x, int y, int radius, bool wrap) {
     }
     return mass > 0 ? Lab{sum.l / mass, sum.a / mass, sum.b / mass} : Lab{};
 }
+const Lab& healing_lab(const Image& image, std::unordered_map<std::size_t, std::array<Lab, 1024>>& cache,
+                       int x, int y) {
+    const std::size_t key = static_cast<std::size_t>(y / 32) * ((image.width + 31) / 32) + x / 32;
+    std::unordered_map<std::size_t, std::array<Lab, 1024>>::iterator found = cache.find(key);
+    if (found == cache.end()) {
+        std::array<Lab, 1024> tile{};
+        const int left = x / 32 * 32, top = y / 32 * 32;
+        for (int row = top; row < std::min(top + 32, image.height); ++row) {
+            for (int column = left; column < std::min(left + 32, image.width); ++column) {
+                tile[static_cast<std::size_t>(row - top) * 32 + column - left] =
+                    to_oklab(image.get(column, row));
+            }
+        }
+        found = cache.emplace(key, std::move(tile)).first;
+    }
+    return (*found).second[static_cast<std::size_t>(y % 32) * 32 + x % 32];
+}
 double segment_distance(Point point, Point start, Point end) {
     const double dx = end.x - start.x, dy = end.y - start.y, length = dx * dx + dy * dy;
     const double t =
@@ -506,16 +523,21 @@ void HealingBrush::clear() {
     target_ = {};
     aligned_ = false;
     coverage_.clear();
+    source_lab_.clear();
+    target_lab_.clear();
 }
 void HealingBrush::capture(const Image& image, Point point) {
     source_ = image;
+    source_lab_.clear();
     source_point_ = {std::floor(point.x), std::floor(point.y)};
     aligned_ = false;
 }
-void HealingBrush::begin(const Image& image, Point point) {
+void HealingBrush::begin(const Image& image, Point point, HealingOptions options) {
     target_ = image;
+    options_ = options;
+    target_lab_.clear();
     coverage_.assign(image.pixels.size(), 0);
-    if (!aligned_) {
+    if (!aligned_ || !options.aligned) {
         offset_ = {source_point_.x - std::floor(point.x), source_point_.y - std::floor(point.y)};
         aligned_ = true;
     }
@@ -533,6 +555,7 @@ void HealingBrush::segment(Image& image, Point start, Point end, double diameter
     const int right = static_cast<int>(std::ceil(std::max(start.x, end.x) + radius + 1));
     const int top = static_cast<int>(std::floor(std::min(start.y, end.y) - radius - 1));
     const int bottom = static_cast<int>(std::ceil(std::max(start.y, end.y) + radius + 1));
+    bool changed = false;
     for (int y = top; y <= bottom; ++y) {
         for (int x = left; x <= right; ++x) {
             const Point source = source_for({static_cast<double>(x), static_cast<double>(y)});
@@ -552,21 +575,85 @@ void HealingBrush::segment(Image& image, Point start, Point end, double diameter
                 continue;
             }
             coverage_[index] = amount;
-            Color color = bounded_pixel(source_, sx, sy, wrap);
-            if (hardness < 0.999 && color.a) {
-                const int mean_radius = std::max(2, static_cast<int>(radius * 1.25));
-                const Lab source_mean = local_mean(source_, sx, sy, mean_radius, wrap);
-                const Lab target_mean = local_mean(target_, px, py, mean_radius, wrap);
-                Lab lab = to_oklab(color);
-                const double gain = std::clamp(correction, 0.0, 1.0);
-                lab.l += (target_mean.l - source_mean.l) * gain;
-                lab.a += (target_mean.a - source_mean.a) * gain;
-                lab.b += (target_mean.b - source_mean.b) * gain;
-                const std::uint8_t alpha = color.a;
-                color = from_oklab(lab);
-                color.a = alpha;
+            changed = true;
+        }
+    }
+    if (!changed) {
+        return;
+    }
+    const int halo = static_cast<int>(std::ceil(3 * std::max(1.0, radius * 0.65)));
+    const int clipped_left = wrap ? 0 : std::clamp(left - halo, 0, image.width);
+    const int clipped_top = wrap ? 0 : std::clamp(top - halo, 0, image.height);
+    const int clipped_right = wrap ? image.width : std::clamp(right + halo + 1, 0, image.width);
+    const int clipped_bottom = wrap ? image.height : std::clamp(bottom + halo + 1, 0, image.height);
+    // Re-evaluate against the complete stroke mask. Earlier dabs must not keep
+    // correction sampled from pixels subsequently marked as damaged.
+    for (int y = clipped_top; y < clipped_bottom; ++y) {
+        for (int x = clipped_left; x < clipped_right; ++x) {
+            const std::size_t index = static_cast<std::size_t>(y) * image.width + x;
+            if (coverage_[index] == 0) {
+                continue;
             }
-            image.pixels[index] = interpolate_pixel(target_.pixels[index], color, amount);
+            const Point source = source_for({static_cast<double>(x), static_cast<double>(y)});
+            const int sx =
+                wrap ? wrap_index(static_cast<int>(source.x), source_.width) : static_cast<int>(source.x);
+            const int sy =
+                wrap ? wrap_index(static_cast<int>(source.y), source_.height) : static_cast<int>(source.y);
+            if (!source_.contains(sx, sy)) {
+                continue;
+            }
+            const std::size_t source_index = static_cast<std::size_t>(sy) * source_.width + sx;
+            Color color = source_.pixels[source_index];
+            if (!options_.clone && color.a && correction > 0) {
+                Lab delta;
+                double mass = 0;
+                for (int row = -3; row <= 3; ++row) {
+                    for (int column = -3; column <= 3; ++column) {
+                        const int squared = row * row + column * column;
+                        if (squared < 4 || squared > 10) {
+                            continue;
+                        }
+                        const int dx = static_cast<int>(std::round(column * std::max(1.0, radius * 0.65)));
+                        const int dy = static_cast<int>(std::round(row * std::max(1.0, radius * 0.65)));
+                        const int tx = wrap ? wrap_index(x + dx, image.width) : x + dx;
+                        const int ty = wrap ? wrap_index(y + dy, image.height) : y + dy;
+                        const int ux = wrap ? wrap_index(sx + dx, source_.width) : sx + dx;
+                        const int uy = wrap ? wrap_index(sy + dy, source_.height) : sy + dy;
+                        if (!target_.contains(tx, ty) || !source_.contains(ux, uy)) {
+                            continue;
+                        }
+                        const std::size_t ti = static_cast<std::size_t>(ty) * image.width + tx;
+                        const std::size_t si = static_cast<std::size_t>(uy) * source_.width + ux;
+                        if (coverage_[ti] > 0) {
+                            continue;
+                        }
+                        const double weight = (target_.pixels[ti].a / 255.0) * (source_.pixels[si].a / 255.0);
+                        const Lab& target_lab = healing_lab(target_, target_lab_, tx, ty);
+                        const Lab& source_lab = healing_lab(source_, source_lab_, ux, uy);
+                        delta.l += (target_lab.l - source_lab.l) * weight;
+                        delta.a += (target_lab.a - source_lab.a) * weight;
+                        delta.b += (target_lab.b - source_lab.b) * weight;
+                        mass += weight;
+                    }
+                }
+                if (mass > 0) {
+                    Lab lab = healing_lab(source_, source_lab_, sx, sy);
+                    const double gain = std::clamp(correction, 0.0, 1.0) / mass;
+                    lab.l += delta.l * gain;
+                    lab.a += delta.a * gain;
+                    lab.b += delta.b * gain;
+                    const std::uint8_t alpha = color.a;
+                    color = from_oklab(lab);
+                    color.a = alpha;
+                }
+            }
+            if (options_.preserve_alpha) {
+                if (target_.pixels[index].a == 0 || color.a == 0) {
+                    continue;
+                }
+                color.a = target_.pixels[index].a;
+            }
+            image.pixels[index] = interpolate_pixel(target_.pixels[index], color, coverage_[index]);
         }
     }
 }

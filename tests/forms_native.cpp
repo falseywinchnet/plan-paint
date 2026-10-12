@@ -29,7 +29,8 @@ struct NativeRecoveryDirectory {
 struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
-         materials = false, interface_review = false, view_review = false, guide_review = false;
+         materials = false, interface_review = false, view_review = false, guide_review = false,
+         healing_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -252,6 +253,61 @@ struct NativeExercise {
         entered = true;
     }
     bool entered = false;
+    void healing_gallery(gf::Window& window) {
+        paint::Document& document = (*editor).document;
+        document.new_image(960, 540);
+        for (int y = 0; y < 540; ++y) {
+            for (int x = 0; x < 960; ++x) {
+                const int local_x = x % 480;
+                const int grain = ((local_x * 7 + y * 3) % 11) - 5;
+                const int shade = 115 + y / 8 + local_x / 12 + grain;
+                document.image.set(x, y,
+                                   {static_cast<std::uint8_t>(shade + 28),
+                                    static_cast<std::uint8_t>(shade + 10), static_cast<std::uint8_t>(shade),
+                                    255});
+            }
+        }
+        for (int y = 180; y <= 260; ++y) {
+            for (int x = 228; x <= 232; ++x) {
+                document.image.set(x, y, {40, 34, 28, 255});
+                document.image.set(x + 480, y, {40, 34, 28, 255});
+            }
+        }
+        (*editor).refresh();
+        (*editor).canvas().set_view(1, {0, 0});
+        document.ink.size = 24;
+        (*editor).heal_hardness = 1;
+        (*editor).brush_family = paint::BrushFamily::Heal;
+        (*editor).choose_tool(paint::Tool::Brush);
+        stroke(window, {120, 180}, {120, 180});
+        stroke(window, {710, 180}, {710, 260});
+        for (int y = 180; y <= 260; ++y) {
+            for (int x = 708; x <= 712; ++x) {
+                const int local_x = x % 480;
+                const int shade = 115 + y / 8 + local_x / 12 + ((local_x * 7 + y * 3) % 11) - 5;
+                const paint::Color repaired = document.image.get(x, y);
+                if (std::abs(repaired.r - shade - 28) > 4 || std::abs(repaired.g - shade - 10) > 4 ||
+                    std::abs(repaired.b - shade) > 4) {
+                    throw std::runtime_error("Healing did not recover the shaded texture behind the scratch");
+                }
+            }
+        }
+        paint::TextStyle label;
+        label.size = 22;
+        paint::draw_text(document.image, {30, 30}, "Original scratch", label, {35, 30, 25, 255}, {}, "");
+        paint::draw_text(document.image, {510, 30}, "Hard-edged healing", label, {35, 30, 25, 255}, {}, "");
+        (*editor).refresh();
+        const std::shared_ptr<gf::Button> tab =
+            std::dynamic_pointer_cast<gf::Button>(window.find("tool-tab"));
+        if (tab) {
+            (*tab).perform_click();
+        }
+        window.perform_layout();
+        const char* result = std::getenv("PAINT_HEAL_CAPTURE");
+        if (result && *result) {
+            paint::save_image(document.image, result);
+        }
+    }
     void inspect_frame(gf::Window& window) {
         const gf::Size size{1280, 820};
         std::unique_ptr<gf::PaintFramebuffer> framebuffer = window.create_framebuffer(size, window.scale());
@@ -332,6 +388,15 @@ struct NativeExercise {
             (*editor).refresh();
             window.perform_layout();
             entered = true;
+            return;
+        }
+        if (healing_review) {
+            healing_gallery(window);
+            inspect_frame(window);
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Healing review close failed");
+            }
             return;
         }
         if (view_review) {
@@ -446,6 +511,10 @@ int main(int argc, char** argv) {
         NativeRecoveryDirectory recovery;
         NativeExercise exercise;
         exercise.keep_open = argc > 1;
+        exercise.healing_review = argc > 1 && std::string(argv[1]) == "--healing";
+        if (exercise.healing_review) {
+            exercise.keep_open = false;
+        }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
                                          std::string(argv[1]) == "--features-compact");
         exercise.interface_review = argc > 1 && (std::string(argv[1]) == "--interface" ||

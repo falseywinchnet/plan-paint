@@ -27,6 +27,12 @@ Put the selected compiler first in PATH and use `clang`/`clang++` for C,
 C++ and Objective-C++. A new compiler requires a fresh build directory.
 Do not mix MINGW64 GCC headers with CLANG64 libc++ headers.
 
+Windows CI restores the hash-locked GUI.Forms toolchain archive with
+`scripts/restore-windows-toolchain.py` (bootstrap Python 3.14), reusing the
+provider's extraction and MSYS2 shell wrapper. Codec installation does not
+upgrade the compiler. Rolling MSYS2 compiler packages may have moved beyond
+the required LLVM version and must not replace this pinned toolchain.
+
 ```sh
 python3 scripts/fetch-gui-forms.py
 python3 scripts/restore-toolkit-cache.py windows-x64
