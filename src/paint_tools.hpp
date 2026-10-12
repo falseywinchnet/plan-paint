@@ -65,18 +65,28 @@ class TransformStroke {
     void segment(Image& image, Point start, Point end, double diameter, MixEffect effect, double strength,
                  double scale, double phase, bool wrap = false);
 };
+struct HealingOptions {
+    bool clone = false;
+    bool preserve_alpha = true;
+    bool aligned = true;
+};
 class HealingBrush {
     Image source_, target_;
     Point source_point_, offset_;
     bool aligned_ = false;
     std::vector<double> coverage_;
+    std::unordered_map<std::size_t, std::array<Lab, 1024>> source_lab_, target_lab_;
+    HealingOptions options_;
 
   public:
     bool has_source() const;
     void clear();
     void capture(const Image& image, Point point);
-    void begin(const Image& image, Point point);
+    void begin(const Image& image, Point point, HealingOptions options = {});
     Point source_for(Point destination) const;
+    Point source_origin() const {
+        return source_point_;
+    }
     void segment(Image& image, Point start, Point end, double diameter, double hardness, double correction,
                  bool wrap = false);
 };

@@ -57,6 +57,7 @@ class PaintCanvas final : public gui_forms::RasterCanvas {
     double view_angle = 0;
     gui_drawing::PointF document_point(gui_drawing::PointF point) const noexcept;
     gui_forms::Rect view_bounds() const noexcept;
+    Point visible_paste_origin(int width, int height);
     gui_forms::Point rotation_handle() const noexcept;
     void stroke_outline(gui_forms::Painter& painter, gui_drawing::RectI pixels, gui_forms::Color color,
                         double width) const;
@@ -148,6 +149,7 @@ class Editor final : public gui_forms::Control {
     EraserMode eraser_mode = EraserMode::Hard;
     double effect_strength = 0.75, effect_scale = 24, effect_phase = 0;
     double heal_hardness = 0.35, heal_correction = 1;
+    HealingOptions heal_options;
     bool set_heal_source = true, stabilize = false, glitter = false;
     double stabilizer_lag = 5;
     void regenerate_stamp();

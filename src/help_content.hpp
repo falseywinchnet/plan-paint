@@ -59,8 +59,11 @@ inline constexpr HelpTopic help_topics[] = {
      "The Brushes arrow selects Additive, Mix, Heal, Carpet or Dithering brush. Mix paints local distortions "
      "onto existing "
      "pixels; its Tool tab offers effects, strength, scale and phase. Heal first captures a source, "
-     "then paints from it with an aligned offset. Hardness 1 copies it; softer settings blend its "
-     "detail with local OKLab color correction. Set source chooses another origin. Additive spray "
+     "then paints from it. Aligned source keeps the offset between strokes; disable it to reuse the "
+     "same source origin. Hardness controls the edge, and Color match adapts the donor to the healthy "
+     "surroundings outside the stroke. Clone exactly disables color matching. Preserve transparency "
+     "keeps the destination alpha; disable it to copy source alpha. Set source chooses another origin. "
+     "Additive spray "
      "offers Fine glitter. Carpet generates a fiber texture from twelve presets. Its ten sliders control "
      "velvet-to-felt structure, fiber diameter, depth, disorder, crimp, roughness, dye, light, tilt and "
      "magnification. Hillshade relief adds surface shading; New fibers changes the seed. Accept the "
@@ -354,6 +357,17 @@ inline constexpr HelpTopic help_topics[] = {
      "near the center. Normally, sampled pixels move halfway toward their neighborhood average. "
      "Enable Brightness / saturation noise in the Tool ribbon for small color variations instead. "
      "Both modes use existing artwork, preserve alpha, and respect the active selection."},
-    {"Language and accessible drawing", "Choose Settings > Canvas controls to draw without holding a pointer button. Enter Canvas X and Canvas Y in original image pixels, then choose Move to position. Primary click and Alt click perform one click. Start stroke, movement buttons, and Finish stroke draw a continuous mark; Step (pixels) controls each movement. Constrain shape and Draw from center replace held modifiers. With the canvas focused, arrow keys move the drawing position and Space clicks. Undo removes the last completed mark.\n\nActivate a peg size with the keyboard or an accessibility action to place a peg in the selected socket, or the first empty socket. Fill pegs loads ink. On the pattern canvas, arrow keys choose a pixel, Space paints black, and Enter paints white.\n\nChoose Language in Settings and restart Plan Paint to apply it. Use system language follows the operating system preference list. English is built into the application and remains available when a translation file is missing. Translation files live in the languages folder."},
+    {"Language and accessible drawing",
+     "Choose Settings > Canvas controls to draw without holding a pointer button. Enter Canvas X and Canvas "
+     "Y in original image pixels, then choose Move to position. Primary click and Alt click perform one "
+     "click. Start stroke, movement buttons, and Finish stroke draw a continuous mark; Step (pixels) "
+     "controls each movement. Constrain shape and Draw from center replace held modifiers. With the canvas "
+     "focused, arrow keys move the drawing position and Space clicks. Undo removes the last completed "
+     "mark.\n\nActivate a peg size with the keyboard or an accessibility action to place a peg in the "
+     "selected socket, or the first empty socket. Fill pegs loads ink. On the pattern canvas, arrow keys "
+     "choose a pixel, Space paints black, and Enter paints white.\n\nChoose Language in Settings and restart "
+     "Plan Paint to apply it. Use system language follows the operating system preference list. English is "
+     "built into the application and remains available when a translation file is missing. Translation files "
+     "live in the languages folder."},
 };
 } // namespace paint

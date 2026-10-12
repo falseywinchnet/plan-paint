@@ -1257,7 +1257,7 @@ void Editor::begin(Point point, bool secondary) {
         }
         transform_brush_.begin(document.image, point);
         if (document.tool == Tool::Brush && brush_family == BrushFamily::Heal) {
-            healing_brush_.begin(document.image, point);
+            healing_brush_.begin(document.image, point, heal_options);
         }
         if (document.tool == Tool::Pencil) {
             gesture_ink_ = pencil_ink(gesture_ink_);
@@ -1374,6 +1374,9 @@ void Editor::move(Point point) {
     if ((document.tool == Tool::Pencil || document.tool == Tool::Brush || document.tool == Tool::Eraser) &&
         curve_handle_ < 0 && !moving_selection_) {
         int margin = gesture_ink_.size + 3;
+        if (document.tool == Tool::Brush && brush_family == BrushFamily::Heal) {
+            margin = gesture_ink_.size * 2 + 5;
+        }
         Rect damage = rectangle(last_, point);
         damage.x -= margin;
         damage.y -= margin;
@@ -1790,7 +1793,8 @@ void Editor::paste() {
     if (!files.paths_utf8.empty()) {
         Image image = load_image(files.paths_utf8.front());
         finish_controls();
-        document.paste(image);
+        const Point origin = canvas().visible_paste_origin(document.image.width, document.image.height);
+        document.paste(image, static_cast<int>(origin.x), static_cast<int>(origin.y));
         if (window()) {
             static_cast<void>((*window()).request_focus(canvas_));
         }
@@ -1806,7 +1810,8 @@ void Editor::paste() {
     }
     Image image = validated_clipboard_image(result.image);
     finish_controls();
-    document.paste(image);
+    const Point origin = canvas().visible_paste_origin(document.image.width, document.image.height);
+    document.paste(image, static_cast<int>(origin.x), static_cast<int>(origin.y));
     if (window()) {
         static_cast<void>((*window()).request_focus(canvas_));
     }

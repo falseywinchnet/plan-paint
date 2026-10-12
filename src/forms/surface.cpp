@@ -5,6 +5,76 @@
 #include <cmath>
 namespace paint::forms {
 namespace gf = gui_forms;
+Point PaintCanvas::visible_paste_origin(int width, int height) {
+    const gf::Rect viewport = client_rectangle();
+    if (width < 1 || height < 1 || viewport.width < 1 || viewport.height < 1) {
+        return {};
+    }
+    const double margin = std::min({12.0, viewport.width / 4, viewport.height / 4});
+    std::vector<gf::Point> polygon;
+    const gui_drawing::PointF origin = view_origin();
+    for (const Point corner : {Point{0, 0}, Point{static_cast<double>(width), 0},
+                               Point{static_cast<double>(width), static_cast<double>(height)},
+                               Point{0, static_cast<double>(height)}}) {
+        const gui_drawing::PointF point = view_point({corner.x, corner.y});
+        polygon.push_back({(point.x - origin.x) * zoom(), (point.y - origin.y) * zoom()});
+    }
+    // Clip the rotated document to the viewport, including room for its handles.
+    // Clamping an inverse-transformed corner alone can put it off screen again.
+    for (int edge = 0; edge < 4 && !polygon.empty(); ++edge) {
+        std::vector<gf::Point> clipped;
+        const double boundary = edge == 0   ? margin
+                                : edge == 1 ? viewport.width - margin
+                                : edge == 2 ? margin
+                                            : viewport.height - margin;
+        gf::Point previous = polygon.back();
+        double previous_distance = (edge < 2 ? previous.x : previous.y) - boundary;
+        if (edge == 1 || edge == 3) {
+            previous_distance = -previous_distance;
+        }
+        for (const gf::Point current : polygon) {
+            double distance = (edge < 2 ? current.x : current.y) - boundary;
+            if (edge == 1 || edge == 3) {
+                distance = -distance;
+            }
+            if ((distance >= 0) != (previous_distance >= 0)) {
+                const double fraction = previous_distance / (previous_distance - distance);
+                clipped.push_back({previous.x + fraction * (current.x - previous.x),
+                                   previous.y + fraction * (current.y - previous.y)});
+            }
+            if (distance >= 0) {
+                clipped.push_back(current);
+            }
+            previous = current;
+            previous_distance = distance;
+        }
+        polygon = std::move(clipped);
+    }
+    if (polygon.empty()) {
+        const gui_drawing::PointF center = view_point({width * 0.5, height * 0.5});
+        set_view_origin(
+            {center.x - viewport.width / (2 * zoom()), center.y - viewport.height / (2 * zoom())});
+        return visible_paste_origin(width, height);
+    }
+    gf::Point corner = polygon.front();
+    for (const gf::Point candidate : polygon) {
+        if (candidate.x + candidate.y < corner.x + corner.y) {
+            corner = candidate;
+        }
+    }
+    const gui_drawing::PointF point = client_to_bitmap(corner);
+    const Point result{std::clamp(std::round(point.x), 0.0, static_cast<double>(width - 1)),
+                       std::clamp(std::round(point.y), 0.0, static_cast<double>(height - 1))};
+    const gui_drawing::PointF projected = view_point({result.x, result.y});
+    const double screen_x = (projected.x - origin.x) * zoom();
+    const double screen_y = (projected.y - origin.y) * zoom();
+    if (screen_x < 0 || screen_x >= viewport.width || screen_y < 0 || screen_y >= viewport.height) {
+        set_view_origin(
+            {origin.x + (screen_x - std::clamp(screen_x, margin, viewport.width - margin)) / zoom(),
+             origin.y + (screen_y - std::clamp(screen_y, margin, viewport.height - margin)) / zoom()});
+    }
+    return result;
+}
 gui_drawing::PointF PaintCanvas::view_point(gui_drawing::PointF point) const noexcept {
     const double c = std::cos(view_angle), s = std::sin(view_angle);
     return {c * point.x - s * point.y, s * point.x + c * point.y};
@@ -270,7 +340,9 @@ void Editor::paint_tool_preview(gf::Painter& painter) {
                                     blue, 1);
         if (healing_brush_.has_source()) {
             const gui_drawing::PointF point = canvas().client_to_bitmap(center);
-            const gf::Point source = screen(healing_brush_.source_for({point.x, point.y}));
+            const gf::Point source =
+                screen(!dragging_ && !heal_options.aligned ? healing_brush_.source_origin()
+                                                           : healing_brush_.source_for({point.x, point.y}));
             painter.draw_line({source.x - 7, source.y}, {source.x + 7, source.y}, white, 3);
             painter.draw_line({source.x, source.y - 7}, {source.x, source.y + 7}, white, 3);
             painter.draw_line({source.x - 7, source.y}, {source.x + 7, source.y}, blue, 1);

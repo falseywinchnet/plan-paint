@@ -240,7 +240,7 @@ void test_transformative_brushes() {
     paint::HealingBrush clone;
     clone.capture(source, {8, 12});
     paint::Image target = source;
-    clone.begin(target, {40, 24});
+    clone.begin(target, {40, 24}, {true, false, true});
     clone.segment(target, {40, 24}, {60, 24}, 5, 1, 1);
     for (int x = 40; x <= 60; ++x) {
         require(paint::equal(target.get(x, 24), source.get(x - 32, 12)),
@@ -258,6 +258,30 @@ void test_transformative_brushes() {
     require(std::abs(healed_center.r - 90) <= 1 && std::abs(healed_center.g - 150) <= 1 &&
                 std::abs(healed_center.b - 170) <= 1,
             "OKLab healing did not correct a constant donor to recipient hue and lightness");
+    healed.reset(40, 40, {90, 150, 170, 128});
+    healed.set(20, 20, {0, 0, 0, 128});
+    healed.set(19, 20, {37, 41, 53, 0});
+    clone.begin(healed, {20, 20});
+    clone.segment(healed, {20, 20}, {20, 20}, 10, 1, 1);
+    require(std::abs(healed.get(20, 20).r - 90) <= 1 && std::abs(healed.get(20, 20).g - 150) <= 1 &&
+                healed.get(20, 20).a == 128,
+            "hard healing excludes the defect from color matching and preserves destination alpha");
+    require(paint::equal(healed.get(19, 20), {37, 41, 53, 0}),
+            "healing preserves hidden RGB beneath destination transparency");
+    clone.begin(healed, {10, 10}, {false, true, false});
+    require(clone.source_for({10, 10}).x == 20 && clone.source_for({10, 10}).y == 20,
+            "unaligned healing returns to the captured source each stroke");
+    paint::HealingBrush whole_heal, split_heal;
+    paint::Image whole_image = source, split_image = source;
+    whole_heal.capture(source, {10, 12});
+    split_heal.capture(source, {10, 12});
+    whole_heal.begin(whole_image, {40, 24});
+    split_heal.begin(split_image, {40, 24});
+    whole_heal.segment(whole_image, {40, 24}, {60, 24}, 8, 0.35, 1);
+    split_heal.segment(split_image, {40, 24}, {50, 24}, 8, 0.35, 1);
+    split_heal.segment(split_image, {50, 24}, {60, 24}, 8, 0.35, 1);
+    require(std::memcmp(whole_image.pixels.data(), split_image.pixels.data(), whole_image.pixels.size() * 4) == 0,
+            "healing repairs the whole_image stroke independently of pointer segmentation");
     std::set<std::string> effects;
     for (int index = 0; index < paint::mix_effect_count; ++index) {
         paint::TransformStroke stroke;

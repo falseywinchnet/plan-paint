@@ -796,7 +796,10 @@ void Ribbon::add_options() {
     button("carpet-settings", tr("Carpet settings…"), -1, {12, 36, 222, 30});
     button("heal-source", tr("Set source"), -1, {12, 36, 222, 30});
     heal_hardness_ = number("heal-hardness", tr("Hardness"), {260, 36, 230, 28}, 0, 1, 0.35, 2);
-    heal_correction_ = number("heal-correction", tr("OKLab match"), {510, 36, 230, 28}, 0, 1, 1, 2);
+    heal_correction_ = number("heal-correction", tr("Color match"), {510, 36, 230, 28}, 0, 1, 1, 2);
+    check("heal-clone", tr("Clone exactly"), {760, 36, 220, 28});
+    check("heal-aligned", tr("Aligned source"), {430, 79, 210, 28});
+    check("heal-alpha", tr("Preserve transparency"), {670, 79, 260, 28});
     check("stroke-stabilize", tr("Stabilizer"), {12, 79, 150, 28});
     stabilizer_lag_ = number("stroke-lag", tr("Lag (px)"), {180, 79, 220, 28}, 0.1, 50, 5, 1);
     check("spray-glitter", tr("Fine glitter"), {920, 79, 200, 28});
@@ -1171,6 +1174,12 @@ void Ribbon::apply_choice(const std::string& id) {
         (*editor).open_editor_dialog(EditorDialogKind::carpet);
     } else if (id == "heal-source") {
         (*editor).set_heal_source = true;
+    } else if (id == "heal-clone") {
+        (*editor).heal_options.clone = !(*editor).heal_options.clone;
+    } else if (id == "heal-aligned") {
+        (*editor).heal_options.aligned = !(*editor).heal_options.aligned;
+    } else if (id == "heal-alpha") {
+        (*editor).heal_options.preserve_alpha = !(*editor).heal_options.preserve_alpha;
     } else if (id == "stroke-stabilize") {
         (*editor).stabilize = !(*editor).stabilize;
     } else if (id == "dither-brush-noise") {
@@ -1832,9 +1841,13 @@ void Ribbon::synchronize() {
                                                           : style.word_wrap);
             continue;
         }
-        (*check).set_checked(id == "guide-fill"              ? (*editor).guide.fill
-                             : id == "stroke-stabilize"      ? (*editor).stabilize
-                             : id == "dither-brush-noise" ? (*editor).dither_brush_mode == DitherBrushMode::Noise
+        (*check).set_checked(id == "guide-fill"         ? (*editor).guide.fill
+                             : id == "heal-clone"       ? (*editor).heal_options.clone
+                             : id == "heal-aligned"     ? (*editor).heal_options.aligned
+                             : id == "heal-alpha"       ? (*editor).heal_options.preserve_alpha
+                             : id == "stroke-stabilize" ? (*editor).stabilize
+                             : id == "dither-brush-noise"
+                                 ? (*editor).dither_brush_mode == DitherBrushMode::Noise
                              : id == "spray-glitter"         ? (*editor).glitter
                              : id == "picker-magnifier"      ? (*editor).picker_magnifier
                              : id == "soft-eraser"           ? (*editor).eraser_soft

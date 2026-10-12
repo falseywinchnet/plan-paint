@@ -232,6 +232,55 @@ void dialog_clipboard_and_close_contracts() {
     }
     std::filesystem::remove(services.path);
 }
+void paste_visible_canvas_corner() {
+    Fixture fixture;
+    TestServices services;
+    gf::HostSession session(*fixture.window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{1180, 820}, 1}}).accepted(), "paste host attaches");
+    paint::forms::Editor& editor = *fixture.editor;
+    editor.execute("copy");
+    editor.document.new_image(2400, 1800);
+    editor.refresh();
+    editor.canvas().set_view(2, {300, 200});
+    editor.execute("paste");
+    require(editor.document.selection.x == 306 && editor.document.selection.y == 206,
+            "paste starts at the visible viewport corner after zoom and pan");
+    require(editor.document.selection.active && editor.document.selection.image.width == 128,
+            "viewport placement retains the floating clipboard image");
+    editor.execute("release");
+    editor.canvas().view_angle = 0.7;
+    editor.canvas().set_view(1.5, {100, 450});
+    editor.execute("paste");
+    const gui_drawing::PointF projected = editor.canvas().view_point(
+        {static_cast<double>(editor.document.selection.x), static_cast<double>(editor.document.selection.y)});
+    const gui_drawing::PointF origin = editor.canvas().view_origin();
+    const gf::Rect viewport = editor.canvas().client_rectangle();
+    const double x = (projected.x - origin.x) * editor.canvas().zoom();
+    const double y = (projected.y - origin.y) * editor.canvas().zoom();
+    require(x >= 0 && y >= 0 && x < viewport.width && y < viewport.height,
+            "rotated paste anchor stays inside both the viewport and document");
+    editor.document.new_image(64, 48);
+    editor.refresh();
+    for (const double angle : {0.0, 0.7, 1.5707963267948966, 3.141592653589793}) {
+        editor.canvas().view_angle = angle;
+        for (const double scale : {0.25, 2.0, 32.0}) {
+            for (const gui_drawing::PointF pan : {gui_drawing::PointF{0, 0},
+                                                  gui_drawing::PointF{300, 200},
+                                                  gui_drawing::PointF{-1000, -1000},
+                                                  gui_drawing::PointF{5000, 5000}}) {
+                editor.canvas().set_view(scale, pan);
+                const paint::Point anchor = editor.canvas().visible_paste_origin(64, 48);
+                const gui_drawing::PointF viewed = editor.canvas().view_point({anchor.x, anchor.y});
+                const gui_drawing::PointF adjusted = editor.canvas().view_origin();
+                const double px = (viewed.x - adjusted.x) * scale;
+                const double py = (viewed.y - adjusted.y) * scale;
+                require(anchor.x >= 0 && anchor.x < 64 && anchor.y >= 0 && anchor.y < 48 &&
+                            px >= 0 && px < viewport.width && py >= 0 && py < viewport.height,
+                        "paste stays visible for centered, rotated, highly zoomed and offscreen documents");
+            }
+        }
+    }
+}
 void startup_file_opens_after_window_attachment() {
     const std::string path = (std::filesystem::temp_directory_path() / "rainstar-startup-forms.png").string();
     paint::Image image;
@@ -1762,6 +1811,42 @@ void explicit_path_node_editing() {
     require(curve_editor.document.curve.geometry.first_control.y == 50 &&
                 curve_editor.document.curve.geometry.second_control.y == 60,
             "overlapping curve hit regions select the earlier handle instead of the nearest");
+}
+void healing_context_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.brush_family = paint::BrushFamily::Heal;
+    editor.choose_tool(paint::Tool::Brush);
+    open_tab(window, "tool-tab");
+    for (const char* id : {"heal-clone", "heal-aligned", "heal-alpha"}) {
+        const std::shared_ptr<gf::CheckBox> control =
+            std::dynamic_pointer_cast<gf::CheckBox>(window.find(id));
+        require(control && (*control).visible(), "healing option is discoverable in the tool ribbon");
+        (*control).perform_click();
+    }
+    require(editor.heal_options.clone && !editor.heal_options.aligned && !editor.heal_options.preserve_alpha,
+            "healing controls update independent clone, alignment and transparency settings");
+    editor.heal_options = {};
+    editor.heal_hardness = 1;
+    editor.document.ink.size = 16;
+    editor.document.image.reset(128, 96, {90, 150, 170, 255});
+    for (int y = 0; y < 96; ++y) {
+        for (int x = 0; x < 40; ++x) {
+            editor.document.image.set(x, y, {190, 110, 90, 255});
+        }
+    }
+    editor.document.image.set(80, 40, {0, 0, 0, 255});
+    editor.refresh();
+    fixture.click(20, 40);
+    const std::size_t history = editor.document.undo_history.size();
+    fixture.click(80, 40);
+    require(editor.document.undo_history.size() == history + 1 &&
+                std::abs(editor.document.image.get(80, 40).g - 150) <= 1,
+            "native healing gesture repairs a defect in one history transaction");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(80, 40), {0, 0, 0, 255}),
+            "undo restores the original defect after a healing gesture");
 }
 void direct_path_curve_editing() {
     for (paint::CurveKind kind : {paint::CurveKind::Bezier, paint::CurveKind::Arc}) {
@@ -3954,6 +4039,8 @@ int main() {
         lasso_add_subtract_and_void_expansion();
         stamp_material_union_and_menu_toggle();
         dialog_clipboard_and_close_contracts();
+        healing_context_controls();
+        paste_visible_canvas_corner();
         display_preserves_document_and_hidden_rgb();
         live_canvas_damage_opacity_and_reuse();
         startup_file_opens_after_window_attachment();
