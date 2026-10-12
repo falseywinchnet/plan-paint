@@ -65,18 +65,21 @@ jobs:
       CMAKE_OBJCXX_COMPILER_LAUNCHER: ccache
     steps:
       - uses: actions/checkout@v4
-      - uses: msys2/setup-msys2@v2
+      - uses: actions/setup-python@v5
         if: runner.os == 'Windows'
         with:
-          msystem: CLANG64
-          path-type: inherit
-          update: true
-          install: >-
-            mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-cmake
-            mingw-w64-clang-x86_64-ninja mingw-w64-clang-x86_64-python
-            mingw-w64-clang-x86_64-ccache mingw-w64-clang-x86_64-winpthreads
-            mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libtiff
-            mingw-w64-clang-x86_64-libwebp mingw-w64-clang-x86_64-dav1d git
+          python-version: '3.14'
+      - name: Restore pinned Windows toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python scripts/fetch-gui-forms.py
+          python scripts/restore-windows-toolchain.py
+      - name: Install Windows codecs without upgrading the compiler
+        if: runner.os == 'Windows'
+        run: pacman -Sy --needed --noconfirm mingw-w64-clang-x86_64-pkgconf mingw-w64-clang-x86_64-libwebp mingw-w64-clang-x86_64-dav1d
       - name: Install macOS compiler and codecs
         if: runner.os == 'macOS'
         run: |

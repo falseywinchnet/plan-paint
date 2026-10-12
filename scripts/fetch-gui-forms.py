@@ -20,6 +20,8 @@ def main():
             raise SystemExit("Existing toolkit differs from the pin; supply a fresh --destination.")
     else:
         subprocess.run(["git", "init", str(destination)], check=True)
+        # The checkout may be created by Windows Git and then read by MSYS2 Git.
+        subprocess.run(["git", "-C", str(destination), "config", "core.autocrlf", "false"], check=True)
         subprocess.run(["git", "-C", str(destination), "remote", "add", "origin",
                         "https://github.com/" + lock["repository"] + ".git"], check=True)
         subprocess.run(["git", "-C", str(destination), "fetch", "--depth=1", "origin", lock["commit"]], check=True)
