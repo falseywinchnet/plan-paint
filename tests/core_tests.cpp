@@ -112,6 +112,17 @@ void test_icon_size_production() {
     document.make_icon_sizes({16}, true, paint::IconSizePolicy::ExactProfile);
     require(document.atlas.count() == 2 && paint::legacy_xor_pixel(document.atlas.icons[1], 0),
             "exact pruning without resampling works for a legacy source");
+    const paint::IconFrame repeated = original.frames[0];
+    original.frames.assign(256, repeated);
+    document.replace_container(original, "full.cur");
+    rejected = false;
+    try {
+        document.make_icon_sizes({24}, true);
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected && document.atlas.count() == 256 && document.undo_history.empty(),
+            "generation beyond the container entry limit must fail before changing the document");
 }
 void test_color() {
     for (int r = 0; r <= 255; r += 17) {

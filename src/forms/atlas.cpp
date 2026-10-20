@@ -5,6 +5,18 @@
 #include <cmath>
 namespace paint::forms {
 namespace gf = gui_forms;
+namespace {
+std::string icon_format_name(IconFormat format) {
+    if (format.storage == IconStorage::Unknown) {
+        return "RGBA";
+    }
+    return std::to_string(format.bits_per_pixel) + " bpp " +
+           (format.storage == IconStorage::Png ? "PNG" : "DIB");
+}
+std::string icon_source_name(const IconFrame& frame) {
+    return icon_format_name(frame.source ? (*frame.source).format : IconFormat{});
+}
+} // namespace
 AtlasThumbnail::AtlasThumbnail(gf::StableId id, std::weak_ptr<Editor> editor, int index)
     : Button(std::move(id), ""), editor_(std::move(editor)), index_(index) {
     set_theme_override(ribbon_theme());
@@ -53,11 +65,16 @@ void AtlasThumbnail::synchronize() {
         return;
     }
     const AtlasState& atlas = (*editor).document.atlas;
+    const bool icon = atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor;
+    set_requested_bounds({0, 0, icon ? 110.0 : 82.0, 72});
     bool selected = atlas.active == index_ ||
                     std::find(atlas.sequence.begin(), atlas.sequence.end(), index_) != atlas.sequence.end();
     set_selected(selected);
-    set_accessible_name(tr("Frame ") + std::to_string(index_ + 1) + (atlas.active == index_ ? tr(", current") : "") +
-                        (selected ? tr(", selected") : ""));
+    set_accessible_name(tr("Frame ") + std::to_string(index_ + 1) +
+                        (atlas.active == index_ ? tr(", current") : "") + (selected ? tr(", selected") : "") +
+                        (icon && index_ < atlas.count()
+                             ? "; " + tr("Source: ") + icon_source_name(atlas.icons[index_])
+                             : ""));
     update_image();
     invalidate(gf::Dirty::paint);
 }
@@ -155,13 +172,18 @@ void AtlasThumbnail::on_paint(gf::Painter& painter, gf::Rect damage) {
     Rect source = atlas.kind == AtlasKind::Sheet
                       ? atlas.grid.frame(atlas.sheet, index_)
                       : Rect{0, 0, atlas.icons[index_].image.width, atlas.icons[index_].image.height};
+    const bool icon = atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor;
     if (image_.value) {
-        painter.draw_image(image_, {19, 5, 44, 44});
+        painter.draw_image(image_, {icon ? 37.0 : 19.0, 5, icon ? 36.0 : 44.0, icon ? 36.0 : 44.0});
     }
-    painter.draw_text_utf8({5, 67},
+    painter.draw_text_utf8({5, icon ? 54.0 : 67.0},
                            std::to_string(index_ + 1) + ": " + std::to_string(source.w) + "×" +
                                std::to_string(source.h),
                            {gf::FontRole::control, 10, 400, false}, gf::Color::rgba(42, 65, 91));
+    if (icon) {
+        painter.draw_text_utf8({5, 68}, icon_source_name(atlas.icons[index_]),
+                               {gf::FontRole::control, 10, 400, false}, gf::Color::rgba(42, 65, 91));
+    }
 }
 AtlasPanel::AtlasPanel(gf::StableId id, std::weak_ptr<Editor> editor, bool gallery)
     : Control(std::move(id)), editor_(std::move(editor)), gallery_(gallery) {}
@@ -289,6 +311,15 @@ void AtlasPanel::synchronize() {
                    ? tr("Whole sheet")
                    : tr("Frame ") + std::to_string(atlas.active + 1) + tr(" of ") + std::to_string(count_)) +
                   tr(" · Ctrl-click frames to select a sequence; use Previous / Next to step through it."));
+    if ((atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor) && atlas.active >= 0 &&
+        atlas.active < count_) {
+        const IconFrame& frame = atlas.icons[atlas.active];
+        const ContainerKind kind =
+            atlas.kind == AtlasKind::Icon ? ContainerKind::Icon : ContainerKind::Cursor;
+        (*status_).set_text(tr("Frame ") + std::to_string(atlas.active + 1) + tr(" of ") +
+                            std::to_string(count_) + " · " + tr("Source: ") + icon_source_name(frame) +
+                            " · " + tr("Save: ") + icon_format_name(icon_output_format(frame, kind)));
+    }
 }
 void AtlasPanel::reveal_current() {
     if (!window() || active_ < 0 || active_ >= count_) {

@@ -726,5 +726,7 @@
   "Keep: ": "Behalten: ",
   " · Add: ": " · Hinzufügen: ",
   " · Replace: ": " · Ersetzen: ",
-  " · Remove: ": " · Entfernen: "
+  " · Remove: ": " · Entfernen: ",
+  "Source: ": "Quelle: ",
+  "Save: ": "Speichern: "
 }

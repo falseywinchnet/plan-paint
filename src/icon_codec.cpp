@@ -23,7 +23,40 @@ class Bytes {
         return data[offset] | (std::uint32_t(data[offset + 1]) << 8) |
                (std::uint32_t(data[offset + 2]) << 16) | (std::uint32_t(data[offset + 3]) << 24);
     }
+    std::uint32_t big32(std::size_t offset) const {
+        check(offset, 4);
+        return (std::uint32_t(data[offset]) << 24) | (std::uint32_t(data[offset + 1]) << 16) |
+               (std::uint32_t(data[offset + 2]) << 8) | data[offset + 3];
+    }
 };
+IconFormat png_format(Bytes bytes) {
+    bytes.check(0, 33);
+    if (bytes.big32(8) != 13 || std::memcmp(bytes.data + 12, "IHDR", 4) != 0) {
+        throw std::runtime_error("ICO/CUR PNG header is invalid.");
+    }
+    const unsigned depth = bytes.data[24], type = bytes.data[25];
+    const unsigned channels = type == 0 || type == 3 ? 1 : type == 2 ? 3 : type == 4 ? 2 : type == 6 ? 4 : 0;
+    if (!channels) {
+        throw std::runtime_error("ICO/CUR PNG color type is invalid.");
+    }
+    IconFormat format{IconStorage::Png, depth * channels, 0};
+    for (std::size_t offset = 8; offset < bytes.size;) {
+        bytes.check(offset, 12);
+        const std::size_t length = bytes.big32(offset);
+        bytes.check(offset + 8, length + 4);
+        if (type == 3 && std::memcmp(bytes.data + offset + 4, "PLTE", 4) == 0) {
+            if (length == 0 || length > 768 || length % 3 != 0) {
+                throw std::runtime_error("ICO/CUR PNG palette is invalid.");
+            }
+            format.palette_colors = static_cast<unsigned>(length / 3);
+        }
+        if (std::memcmp(bytes.data + offset + 4, "IEND", 4) == 0) {
+            break;
+        }
+        offset += length + 12;
+    }
+    return format;
+}
 void put16(std::vector<std::uint8_t>& bytes, unsigned value) {
     bytes.push_back(static_cast<std::uint8_t>(value));
     bytes.push_back(static_cast<std::uint8_t>(value >> 8));
@@ -43,7 +76,7 @@ std::uint8_t component(std::uint32_t value, std::uint32_t mask, std::uint8_t fal
     }
     return static_cast<std::uint8_t>((std::uint64_t((value & mask) >> shift) * 255 + maximum / 2) / maximum);
 }
-IconFrame decode_dib(Bytes bytes, int width, int height) {
+IconFrame decode_dib(Bytes bytes, int width, int height, IconFormat& format) {
     unsigned header = bytes.u32(0);
     if (header != 12 && header != 40 && header != 52 && header != 56 && header != 108 && header != 124) {
         throw std::runtime_error("Unsupported ICO/CUR bitmap header.");
@@ -153,6 +186,7 @@ IconFrame decode_dib(Bytes bytes, int width, int height) {
             }
         }
     }
+    format = {IconStorage::Dib, bpp, bpp <= 8 ? palette_count : 0};
     return result;
 }
 std::vector<std::uint8_t> encode_dib(const IconFrame& frame) {
@@ -224,6 +258,7 @@ ImageContainer decode_icon_container(const void* data, std::size_t size) {
     bytes.check(6, count * 16);
     ImageContainer result;
     result.kind = bytes.u16(2) == 2 ? ContainerKind::Cursor : ContainerKind::Icon;
+    std::size_t retained_payload_bytes = 0;
     for (int i = 0; i < count; ++i) {
         std::size_t entry = 6 + i * 16, offset = bytes.u32(entry + 12), length = bytes.u32(entry + 8);
         int width = bytes.data[entry] ? bytes.data[entry] : 256,
@@ -232,15 +267,21 @@ ImageContainer decode_icon_container(const void* data, std::size_t size) {
             throw std::runtime_error("ICO/CUR image directory is invalid.");
         }
         bytes.check(offset, length);
+        if (length > 256000000 - retained_payload_bytes) {
+            throw std::runtime_error("ICO/CUR retained image data exceeds the memory limit.");
+        }
+        retained_payload_bytes += length;
         IconFrame frame;
+        IconFormat format;
         const unsigned char png[8] = {137, 80, 78, 71, 13, 10, 26, 10};
         if (std::memcmp(bytes.data + offset, png, 8) == 0) {
             frame.image = decode_image(bytes.data + offset, length);
             if (frame.image.width != width || frame.image.height != height) {
                 throw std::runtime_error("ICO/CUR PNG dimensions disagree with its directory.");
             }
+            format = png_format({bytes.data + offset, length});
         } else {
-            frame = decode_dib({bytes.data + offset, length}, width, height);
+            frame = decode_dib({bytes.data + offset, length}, width, height, format);
         }
         if (result.kind == ContainerKind::Cursor) {
             frame.hotspot_x = bytes.u16(entry + 4);
@@ -249,6 +290,12 @@ ImageContainer decode_icon_container(const void* data, std::size_t size) {
                 throw std::runtime_error("CUR hotspot is outside its image.");
             }
         }
+        std::shared_ptr<IconSource> source = std::make_shared<IconSource>();
+        (*source).format = format;
+        (*source).image = frame.image;
+        (*source).xor_pixels = frame.xor_pixels;
+        (*source).payload.assign(bytes.data + offset, bytes.data + offset + length);
+        frame.source = std::move(source);
         result.frames.push_back(std::move(frame));
     }
     return result;
@@ -262,21 +309,18 @@ std::vector<std::uint8_t> encode_icon_container(const ImageContainer& container)
         const IconFrame& frame = container.frames[i];
         if (frame.image.width < 1 || frame.image.height < 1 || frame.image.width > 256 ||
             frame.image.height > 256 || frame.hotspot_x < 0 || frame.hotspot_y < 0 ||
-            frame.hotspot_x >= frame.image.width || frame.hotspot_y >= frame.image.height) {
+            frame.hotspot_x >= frame.image.width || frame.hotspot_y >= frame.image.height ||
+            frame.image.pixels.size() != static_cast<std::size_t>(frame.image.width) * frame.image.height) {
             throw std::runtime_error(
                 "ICO/CUR dimensions or hotspot are invalid (maximum 256 by 256 pixels).");
         }
-        bool has_xor = false;
-        for (std::size_t p = 0; p < frame.image.pixels.size(); ++p) {
-            if (legacy_xor_pixel(frame, p)) {
-                has_xor = true;
-                break;
-            }
+        if (icon_source_matches(frame)) {
+            payloads.push_back((*frame.source).payload);
+        } else {
+            const IconFormat format = icon_output_format(frame, container.kind);
+            payloads.push_back(format.storage == IconStorage::Png ? encode_png(frame.image)
+                                                                  : encode_dib(frame));
         }
-        payloads.push_back(container.kind == ContainerKind::Icon && frame.image.width == 256 &&
-                                   frame.image.height == 256 && !has_xor
-                               ? encode_png(frame.image)
-                               : encode_dib(frame));
     }
     std::vector<std::uint8_t> bytes;
     put16(bytes, 0);
@@ -287,10 +331,11 @@ std::vector<std::uint8_t> encode_icon_container(const ImageContainer& container)
         const IconFrame& frame = container.frames[i];
         bytes.push_back(static_cast<std::uint8_t>(frame.image.width));
         bytes.push_back(static_cast<std::uint8_t>(frame.image.height));
-        bytes.push_back(0);
+        const IconFormat format = icon_output_format(frame, container.kind);
+        bytes.push_back(static_cast<std::uint8_t>(format.palette_colors < 256 ? format.palette_colors : 0));
         bytes.push_back(0);
         put16(bytes, container.kind == ContainerKind::Cursor ? frame.hotspot_x : 1);
-        put16(bytes, container.kind == ContainerKind::Cursor ? frame.hotspot_y : 32);
+        put16(bytes, container.kind == ContainerKind::Cursor ? frame.hotspot_y : format.bits_per_pixel);
         put32(bytes, static_cast<std::uint32_t>(payloads[i].size()));
         put32(bytes, offset);
         offset += static_cast<std::uint32_t>(payloads[i].size());

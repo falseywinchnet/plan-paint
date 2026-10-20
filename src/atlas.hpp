@@ -1,14 +1,30 @@
 #pragma once
 #include "image.hpp"
+#include <memory>
 namespace paint {
 enum class ContainerKind { Image, Icon, Cursor };
+enum class IconStorage { Unknown, Dib, Png };
+struct IconFormat {
+    IconStorage storage = IconStorage::Unknown;
+    unsigned bits_per_pixel = 0, palette_colors = 0;
+};
+struct IconSource {
+    IconFormat format;
+    Image image;
+    std::vector<Color> xor_pixels;
+    std::vector<std::uint8_t> payload;
+};
 struct IconFrame {
     Image image;
     int hotspot_x = 0, hotspot_y = 0;
     // Legacy AND/XOR pixels have no background-independent RGBA equivalent.
     // Nonzero entries preserve the XOR color; their canvas pixels use a transparent white sentinel.
     std::vector<Color> xor_pixels;
+    // Shared immutable import evidence. Undo retains it without duplicating encoded data.
+    std::shared_ptr<const IconSource> source = {};
 };
+bool icon_source_matches(const IconFrame& frame);
+IconFormat icon_output_format(const IconFrame& frame, ContainerKind kind);
 struct ImageContainer {
     ContainerKind kind = ContainerKind::Image;
     std::vector<IconFrame> frames;

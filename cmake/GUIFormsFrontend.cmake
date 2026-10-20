@@ -182,6 +182,7 @@ if(APPLE OR WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_test(NAME paint-forms-native COMMAND paint-forms-native-tests)
   add_test(NAME paint-healing-native COMMAND paint-forms-native-tests --healing)
   add_test(NAME paint-icon-production-native COMMAND paint-forms-native-tests --icon-production)
+  add_test(NAME paint-icon-formats-native COMMAND paint-forms-native-tests --icon-formats)
 endif()
 # Explicit offline authoring target; not part of application builds or installation.
 if(EXISTS "${PROJECT_SOURCE_DIR}/astra/ribbon-export.cpp")

@@ -1,6 +1,7 @@
 #include "codecs.hpp"
-#include "cursors/tool_cursors.hpp"
 #include "conv.hpp"
+#include "cursors/tool_cursors.hpp"
+#include "fixtures/icon_reference.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
 #include "localization.hpp"
@@ -1078,6 +1079,33 @@ void atlas_grid_frames_and_cursor_save() {
                 saved.frames.back().hotspot_y == 17,
             "CUR reload preserves all frames and hotspot");
     std::filesystem::remove(services.path);
+}
+void icon_representation_identity() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    paint::ImageContainer container =
+        paint::decode_icon_container(paint::test::indexed_icon, sizeof(paint::test::indexed_icon));
+    container.frames.push_back(container.frames[0]);
+    editor.document.replace_container(container, "indexed.ico");
+    editor.refresh();
+    editor.execute("atlas-icons");
+    editor.close_editor_dialog();
+    window.perform_layout();
+    const std::shared_ptr<gf::Label> status =
+        std::dynamic_pointer_cast<gf::Label>(window.find("atlas-status"));
+    require(status && (*status).text().find("Source: 2 bpp PNG") != std::string::npos &&
+                (*status).text().find("Save: 2 bpp PNG") != std::string::npos,
+            "indexed source and save formats must be distinguishable in the strip status");
+    editor.document.checkpoint();
+    editor.document.image.set(0, 0, {80, 90, 100, 255});
+    editor.refresh();
+    require((*status).text().find("Source: 2 bpp PNG") != std::string::npos &&
+                (*status).text().find("Save: 32 bpp DIB") != std::string::npos,
+            "edited source must keep provenance but show the changed save format");
+    editor.execute("undo");
+    require((*status).text().find("Save: 2 bpp PNG") != std::string::npos,
+            "Undo must restore the untouched save format in the UI");
 }
 void icon_generation_review_and_cancel() {
     Fixture fixture;
@@ -4150,6 +4178,7 @@ int main() {
         stamp_reset_and_recapture();
         atlas_grid_frames_and_cursor_save();
         icon_generation_review_and_cancel();
+        icon_representation_identity();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();
