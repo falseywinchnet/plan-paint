@@ -72,6 +72,37 @@
 @media(max-width:1000px) and (min-width:701px){.preview-card .preview-actions{grid-column:1/-1}}
 @media(max-width:520px){.inspector-header{padding:12px}.inspector-header h2{font-size:16px}.inspector-body{padding:12px}.inspector-body .mini{font-size:13px;min-height:280px}.inspector-body .mini-body{padding:12px}.inspector-body .ribbon-groups{font-size:11px}}
 @media print{.preview-actions,.skip-comparison,.preview-inspector{display:none}}
+
+/* Each visual alternative owns its radio, specimen and consequence. */
+.visual-choice{display:grid;grid-template-columns:20px 27px 1fr;align-items:center;gap:9px;width:100%;cursor:pointer;padding:12px;min-height:84px}
+.visual-choice input{width:19px;height:19px;margin:0;accent-color:#946b1b}
+.visual-choice>span{font-size:15px;line-height:1.35}.visual-choice small{grid-column:3;font-size:11px;font-weight:400;color:#536b82}
+.preview-card figcaption{display:block;padding:0;min-height:0}.preview-card:focus-within{outline:2px dotted #315d91;outline-offset:4px}
+.preview-card:has(input:checked){border-color:#946b1b;box-shadow:0 0 0 2px #d7b05d}.preview-card:has(input:checked) figcaption{background:#fff0c9}
+.visual-consequence{padding:12px 14px;background:#fff;flex:1;border-top:1px solid #ced9e4}.visual-consequence .option-copy{padding:0;font-size:14px;line-height:1.55}
+.visual-question .preview-card .visual{flex:0;padding:10px}.preview-card .placement{margin-top:0;min-height:65px}.preview-actions{margin-top:auto;padding:8px 12px;background:#eef3f8}.preview-actions button{width:100%;min-height:36px}
+.question .answer-heading{margin:16px 0 14px}.question .answer-heading span{font-size:12px}.preview-gallery{margin-bottom:16px}
+.question .undecided{margin:12px 0 8px}.clear-answer{margin-bottom:0}.chosen-direction{font-size:13px;margin-top:12px}.question textarea{min-height:100px}
+.question .comment-label{margin-top:16px}.question-end{margin-top:14px}.question-hint{line-height:1.6}.skip-comparison{margin:0;font-size:12px}
+.guide p{line-height:1.6}.question{box-shadow:none}.preview-card.excluded .visual-choice{cursor:not-allowed}
+@media(min-width:701px) and (max-width:1000px){
+ .preview-card{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+ .preview-card figcaption{grid-column:1/-1}.visual-choice{min-height:64px}
+ .visual-question .preview-card .visual{grid-column:1;grid-row:2/5}
+ .preview-card .placement{grid-column:2;margin:10px 10px 0 0;min-height:0;align-self:stretch}
+ .visual-consequence{grid-column:2;margin-right:10px}.preview-card .preview-actions{grid-column:2;margin-right:10px;margin-bottom:10px}
+}
+@media(max-width:700px){
+ .visual-choice{min-height:0;padding:12px}.visual-choice>span{font-size:15px}
+ .visual-question .preview-card .mini{min-height:0}.visual-question .preview-card .mini-body{padding:9px}
+ .visual-question .preview-card .mini-canvas{height:64px}.preview-card .mini-foot{min-height:0;padding:7px 9px}
+ .preview-card .placement{min-height:0;padding:8px 12px;font-size:12px}.placement b{display:inline;margin-right:7px;font-size:9px}
+ .visual-consequence{padding:10px 12px}.visual-consequence .option-copy{font-size:13px}
+ .question .answer-heading span{display:block;margin:5px 0 0}.preview-gallery{gap:16px}
+ .masthead h1{font-size:28px}.masthead{padding-bottom:18px}.guide{padding:14px}.question{padding:16px}
+}
+.inspector-body .preview-card{display:flex}.inspector-body .preview-card .placement{margin:0}
+@media print{.visual-choice{min-height:72px}.visual-consequence{print-color-adjust:exact}.preview-card{display:flex}.preview-card figcaption{display:block}.preview-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -99,7 +130,7 @@
 <main class="layout">
 <aside class="guide">
 <p>
-<strong>The choices are the interview.</strong> Visual questions start with an A / B / C comparison of the proposed interfaces or output. Choose directly beneath a preview, or use the separate <strong>Your choice</strong> section with all answers visible together and a comments field. <strong>Enlarge preview</strong> opens a closer view without changing your answer. Behavior questions go straight to the choices. On narrow screens the previews stack in the same A / B / C order. Nothing is preselected; a recommendation is not your decision. Choose “Discuss / combine” wherever none of the options fits.</p>
+<strong>The choices are the interview.</strong> Visual questions put each radio choice directly above its preview, with its location and consequences below. Select the direction you want, compare the other visible alternatives, then add your comments. <strong>Enlarge preview</strong> opens a closer view without changing your answer. Nonvisual questions have a multiple-choice section followed immediately by comments. On narrow screens the previews stack in the same A / B / C order. Nothing is preselected; a recommendation is not your decision. Choose “Discuss / combine” wherever none of the options fits.</p>
 <p>Previews are independent HTML design studies, not screenshots or implemented features. Existing scope exclusions stay visible but cannot be selected. Use comments to request a separate scope discussion. Progress is local to this browser; export your answers to retain or share the complete record.</p>
 <nav class="jump-links" aria-label="Interview sections">
 <a href="#chapter-1">01 · Document and representation model</a>
@@ -130,41 +161,13 @@
 <fieldset>
 <legend>Where should icon commands live?</legend>
 <p class="question-hint">Compare which commands stay visible while you paint an ICO, and which require a menu or a tab change.</p>
-<a class="skip-comparison" href="#answer-heading-Q01">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q01-A"><figcaption><b>A</b><span>Contextual Icon ribbon</span></figcaption><div class="visual"><div class="mini"><div class="mini-title">Plan Paint · sample.ico</div><div class="mini-body"><div class="mini-tabs">File　Home　View　<b>Icon</b></div><div class="ribbon-groups"><div><span class="command-emphasis">Generate sizes…</span><br>Image properties…<b>Images</b></div><div>Palette…<br>Alpha view<b>Color & alpha</b></div><div>Compare…<br>Batch…<b>Production</b></div></div><div class="representation-strip"><span>16 × 16</span><span class="current">32 × 32 · RGBA</span><span>256 × 256</span></div><div class="mini-canvas"><img src="../../assets/app-icon.png" alt="" width="64" height="64"></div></div><div class="mini-foot">Home retains drawing, path, stamp, pattern and reshape.</div></div></div>
-<span class="placement"><b>Proposed location</b>Icon → production groups</span><div class="preview-actions"><button type="button" data-preview-choice="Q01-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q01-A" aria-label="Enlarge Q01 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q01-B"><figcaption><b>B</b><span>Extend the Atlas ribbon</span></figcaption><div class="visual"><div class="mini"><div class="mini-title">Plan Paint · sample.ico</div><div class="mini-body"><div class="mini-tabs">File　Home　View　<b>Atlas</b></div><div class="ribbon-groups"><div>Cell size…<br>Arrange strip…<b>Atlas cells</b></div><div><span class="command-emphasis">Icon sizes…</span><br>Palette…<b>Icon images</b></div><div>Export…<br>Compare…<b>Output</b></div></div><div class="representation-strip"><span>16 × 16</span><span class="current">32 × 32 · RGBA</span><span>256 × 256</span></div><div class="mini-canvas"><img src="../../assets/app-icon.png" alt="" width="64" height="64"></div></div><div class="mini-foot">Home retains drawing, path, stamp, pattern and reshape.</div></div></div>
-<span class="placement"><b>Proposed location</b>Atlas → icon groups</span><div class="preview-actions"><button type="button" data-preview-choice="Q01-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q01-B" aria-label="Enlarge Q01 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q01-C"><figcaption><b>C</b><span>Menus with a small Icon ribbon</span></figcaption><div class="visual"><div class="mini"><div class="mini-title">Plan Paint · sample.ico</div><div class="mini-body"><div class="mini-tabs">File　Home　View　<b>Icon</b></div><div class="ribbon-groups"><div>Current image ▾<br>Previous / Next<b>Images</b></div><div>Compare…<br>100% preview<b>Proofing</b></div></div><div class="menu-sample">File → Icon tools ▸<br>Generate sizes… · Palette…<br>States… · Batch production…</div><div class="representation-strip"><span>16 × 16</span><span class="current">32 × 32 · RGBA</span><span>256 × 256</span></div><div class="mini-canvas"><img src="../../assets/app-icon.png" alt="" width="64" height="64"></div></div><div class="mini-foot">Home retains drawing, path, stamp, pattern and reshape.</div></div></div>
-<span class="placement"><b>Proposed location</b>File → Icon tools</span><div class="preview-actions"><button type="button" data-preview-choice="Q01-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q01-C" aria-label="Enlarge Q01 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q01">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q01">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q01" value="A" aria-label="Q01 option A: Contextual Icon ribbon" aria-describedby="choice-copy-Q01-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Contextual Icon ribbon</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q01-A">contextual Icon tab for ICO; reuse Atlas data and Gallery machinery. Generic drawing stays on Home/Pencil.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q01" value="B" aria-label="Q01 option B: Extend the Atlas ribbon" aria-describedby="choice-copy-Q01-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Extend the Atlas ribbon</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q01-B">Extend Atlas with icon groups; no additional tab.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q01" value="C" aria-label="Q01 option C: Menus with a small Icon ribbon" aria-describedby="choice-copy-Q01-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Menus with a small Icon ribbon</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q01-C">Mostly menus, with a small Icon tab containing only image selection and preview.</span>
-</label>
-</div>
+<a class="skip-comparison" href="#comment-Q01">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q01">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q01-A"><figcaption><label class="visual-choice"><input type="radio" name="Q01" value="A" aria-label="Q01 option A: Contextual Icon ribbon" aria-describedby="choice-copy-Q01-A" ><b>A</b><span>Contextual Icon ribbon</span><small>Recommended</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Plan Paint · sample.ico</div><div class="mini-body"><div class="mini-tabs">File　Home　View　<b>Icon</b></div><div class="ribbon-groups"><div><span class="command-emphasis">Generate sizes…</span><br>Image properties…<b>Images</b></div><div>Palette…<br>Alpha view<b>Color & alpha</b></div><div>Compare…<br>Batch…<b>Production</b></div></div><div class="representation-strip"><span>16 × 16</span><span class="current">32 × 32 · RGBA</span><span>256 × 256</span></div><div class="mini-canvas"><img src="../../assets/app-icon.png" alt="" width="64" height="64"></div></div><div class="mini-foot">Home retains drawing, path, stamp, pattern and reshape.</div></div></div>
+<span class="placement"><b>Proposed location</b>Icon → production groups</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q01-A">contextual Icon tab for ICO; reuse Atlas data and Gallery machinery. Generic drawing stays on Home/Pencil.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q01-A" aria-label="Enlarge Q01 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q01-B"><figcaption><label class="visual-choice"><input type="radio" name="Q01" value="B" aria-label="Q01 option B: Extend the Atlas ribbon" aria-describedby="choice-copy-Q01-B" ><b>B</b><span>Extend the Atlas ribbon</span><small>Alternative</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Plan Paint · sample.ico</div><div class="mini-body"><div class="mini-tabs">File　Home　View　<b>Atlas</b></div><div class="ribbon-groups"><div>Cell size…<br>Arrange strip…<b>Atlas cells</b></div><div><span class="command-emphasis">Icon sizes…</span><br>Palette…<b>Icon images</b></div><div>Export…<br>Compare…<b>Output</b></div></div><div class="representation-strip"><span>16 × 16</span><span class="current">32 × 32 · RGBA</span><span>256 × 256</span></div><div class="mini-canvas"><img src="../../assets/app-icon.png" alt="" width="64" height="64"></div></div><div class="mini-foot">Home retains drawing, path, stamp, pattern and reshape.</div></div></div>
+<span class="placement"><b>Proposed location</b>Atlas → icon groups</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q01-B">Extend Atlas with icon groups; no additional tab.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q01-B" aria-label="Enlarge Q01 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q01-C"><figcaption><label class="visual-choice"><input type="radio" name="Q01" value="C" aria-label="Q01 option C: Menus with a small Icon ribbon" aria-describedby="choice-copy-Q01-C" ><b>C</b><span>Menus with a small Icon ribbon</span><small>Alternative</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Plan Paint · sample.ico</div><div class="mini-body"><div class="mini-tabs">File　Home　View　<b>Icon</b></div><div class="ribbon-groups"><div>Current image ▾<br>Previous / Next<b>Images</b></div><div>Compare…<br>100% preview<b>Proofing</b></div></div><div class="menu-sample">File → Icon tools ▸<br>Generate sizes… · Palette…<br>States… · Batch production…</div><div class="representation-strip"><span>16 × 16</span><span class="current">32 × 32 · RGBA</span><span>256 × 256</span></div><div class="mini-canvas"><img src="../../assets/app-icon.png" alt="" width="64" height="64"></div></div><div class="mini-foot">Home retains drawing, path, stamp, pattern and reshape.</div></div></div>
+<span class="placement"><b>Proposed location</b>File → Icon tools</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q01-C">Mostly menus, with a small Icon tab containing only image selection and preview.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q01-C" aria-label="Enlarge Q01 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q01" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q01">Leave unanswered</button>
@@ -239,8 +242,8 @@
 <fieldset>
 <legend>What does indexed-color editing mean?</legend>
 <p class="question-hint">Compare changing ordinary pixel colors with changing a palette entry that recolors every matching pixel.</p>
-<a class="skip-comparison" href="#answer-heading-Q03">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q03-A"><figcaption><b>A</b><span>RGBA with palette export</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q03">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q03">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q03-A"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="A" aria-label="Q03 option A: RGBA with palette export" aria-describedby="choice-copy-Q03-A" ><b>A</b><span>RGBA with palette export</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">RGBA editing → export preview</div>
 <div class="mini-body">
@@ -259,8 +262,8 @@
 <div class="mini-foot">Edits operate on colors; quantize on export</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Palette → Export preview</span><div class="preview-actions"><button type="button" data-preview-choice="Q03-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q03-A" aria-label="Enlarge Q03 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q03-B"><figcaption><b>B</b><span>Edit palette indices directly</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Palette → Export preview</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q03-A">edit RGBA pixels; show target palette/depth as export settings with a preview. Preserve imported originals until explicitly converted or edited.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q03-A" aria-label="Enlarge Q03 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q03-B"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="B" aria-label="Q03 option B: Edit palette indices directly" aria-describedby="choice-copy-Q03-B" ><b>B</b><span>Edit palette indices directly</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Indexed image · 16 entries</div>
 <div class="mini-body">
@@ -303,8 +306,8 @@
 <div class="mini-foot">All pixels using entry 03 change together</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Palette → Edit entries</span><div class="preview-actions"><button type="button" data-preview-choice="Q03-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q03-B" aria-label="Enlarge Q03 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q03-C"><figcaption><b>C</b><span>RGBA output only</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Palette → Edit entries</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q03-B">True palette/index editing, including changing a palette entry to recolor every pixel using it.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q03-B" aria-label="Enlarge Q03 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q03-C"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="C" aria-label="Q03 option C: RGBA output only" aria-describedby="choice-copy-Q03-C" ><b>C</b><span>RGBA output only</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">RGBA authoring only</div>
 <div class="mini-body">
@@ -323,35 +326,7 @@
 <div class="mini-foot">Legacy depth is readable, not an output target</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>File → Save / Export</span><div class="preview-actions"><button type="button" data-preview-choice="Q03-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q03-C" aria-label="Enlarge Q03 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q03">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q03">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q03" value="A" aria-label="Q03 option A: RGBA with palette export" aria-describedby="choice-copy-Q03-A" >
-<b class="choice-letter">A</b><strong class="choice-title">RGBA with palette export</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q03-A">edit RGBA pixels; show target palette/depth as export settings with a preview. Preserve imported originals until explicitly converted or edited.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q03" value="B" aria-label="Q03 option B: Edit palette indices directly" aria-describedby="choice-copy-Q03-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Edit palette indices directly</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q03-B">True palette/index editing, including changing a palette entry to recolor every pixel using it.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q03" value="C" aria-label="Q03 option C: RGBA output only" aria-describedby="choice-copy-Q03-C" >
-<b class="choice-letter">C</b><strong class="choice-title">RGBA output only</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q03-C">RGBA-only authoring; legacy palette images are importable but cannot be emitted.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>File → Save / Export</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q03-C">RGBA-only authoring; legacy palette images are importable but cannot be emitted.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q03-C" aria-label="Enlarge Q03 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q03" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q03">Leave unanswered</button>
@@ -376,8 +351,8 @@
 <fieldset>
 <legend>How much palette control?</legend>
 <p class="question-hint">Compare per-image conversion, one palette shared by an asset family, and automatic conversion with no controls.</p>
-<a class="skip-comparison" href="#answer-heading-Q04">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q04-A"><figcaption><b>A</b><span>Per-image palette controls</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q04">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q04">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q04-A"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="A" aria-label="Q04 option A: Per-image palette controls" aria-describedby="choice-copy-Q04-A" ><b>A</b><span>Per-image palette controls</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Palette conversion</div>
 <div class="mini-body">
@@ -393,8 +368,8 @@
 <div class="mini-foot">Each image gets its own palette</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Palette…</span><div class="preview-actions"><button type="button" data-preview-choice="Q04-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q04-A" aria-label="Enlarge Q04 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q04-B"><figcaption><b>B</b><span>Shared batch palettes</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Palette…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q04-A">adaptive per-image palette, named dithering choice, transparent-index policy and side-by-side preview.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q04-A" aria-label="Enlarge Q04 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q04-B"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="B" aria-label="Q04 option B: Shared batch palettes" aria-describedby="choice-copy-Q04-B" ><b>B</b><span>Shared batch palettes</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Shared family palette</div>
 <div class="mini-body">
@@ -427,8 +402,8 @@
 <div class="mini-foot">One chosen palette across the entire batch</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Batch → Shared palette…</span><div class="preview-actions"><button type="button" data-preview-choice="Q04-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q04-B" aria-label="Enlarge Q04 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q04-C"><figcaption><b>C</b><span>Automatic conversion</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Batch → Shared palette…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q04-B">A plus a shared palette across a batch and palette file import/export.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q04-B" aria-label="Enlarge Q04 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q04-C"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="C" aria-label="Q04 option C: Automatic conversion" aria-describedby="choice-copy-Q04-C" ><b>C</b><span>Automatic conversion</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Automatic palette</div>
 <div class="mini-body">
@@ -447,35 +422,7 @@
 <div class="mini-foot">Single conversion command</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Convert color depth</span><div class="preview-actions"><button type="button" data-preview-choice="Q04-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q04-C" aria-label="Enlarge Q04 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q04">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q04">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q04" value="A" aria-label="Q04 option A: Per-image palette controls" aria-describedby="choice-copy-Q04-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Per-image palette controls</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q04-A">adaptive per-image palette, named dithering choice, transparent-index policy and side-by-side preview.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q04" value="B" aria-label="Q04 option B: Shared batch palettes" aria-describedby="choice-copy-Q04-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Shared batch palettes</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q04-B">A plus a shared palette across a batch and palette file import/export.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q04" value="C" aria-label="Q04 option C: Automatic conversion" aria-describedby="choice-copy-Q04-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Automatic conversion</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q04-C">Automatic conversion only.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Icon → Convert color depth</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q04-C">Automatic conversion only.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q04-C" aria-label="Enlarge Q04 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q04" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q04">Leave unanswered</button>
@@ -500,8 +447,8 @@
 <fieldset>
 <legend>Which ICO delivery profiles?</legend>
 <p class="question-hint">Compare the sizes exposed by default, the optional legacy depths and the separation of experimental sizes.</p>
-<a class="skip-comparison" href="#answer-heading-Q05">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q05-A"><figcaption><b>A</b><span>Full production profiles</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q05">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q05">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q05-A"><figcaption><label class="visual-choice"><input type="radio" name="Q05" value="A" aria-label="Q05 option A: Full production profiles" aria-describedby="choice-copy-Q05-A" ><b>A</b><span>Full production profiles</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Modern profile</div>
 <div class="mini-body">
@@ -526,8 +473,8 @@
 <div class="mini-foot">Custom sizes within verified compatibility</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Generate sizes…</span><div class="preview-actions"><button type="button" data-preview-choice="Q05-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q05-A" aria-label="Enlarge Q05 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q05-B"><figcaption><b>B</b><span>Four-size starter profile</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Generate sizes…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q05-A">modern RGBA sizes 16/24/32/48/64/128/256; optional legacy 4/8-bit variants; custom dimensions within the verified profile.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q05-A" aria-label="Enlarge Q05 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q05-B"><figcaption><label class="visual-choice"><input type="radio" name="Q05" value="B" aria-label="Q05 option B: Four-size starter profile" aria-describedby="choice-copy-Q05-B" ><b>B</b><span>Four-size starter profile</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Compact profile</div>
 <div class="mini-body">
@@ -546,8 +493,8 @@
 <div class="mini-foot">Small default list; advanced choices disclosed</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Generate sizes → More…</span><div class="preview-actions"><button type="button" data-preview-choice="Q05-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q05-B" aria-label="Enlarge Q05 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q05-C"><figcaption><b>C</b><span>Experimental large sizes</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Generate sizes → More…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q05-B">Minimal 16/32/48/256 RGBA preset, advanced sizes hidden behind More.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q05-B" aria-label="Enlarge Q05 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q05-C"><figcaption><label class="visual-choice"><input type="radio" name="Q05" value="C" aria-label="Q05 option C: Experimental large sizes" aria-describedby="choice-copy-Q05-C" ><b>C</b><span>Experimental large sizes</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Modern + experimental</div>
 <div class="mini-body">
@@ -563,35 +510,7 @@
 <div class="mini-foot">Large images are visibly separated</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Experimental profiles</span><div class="preview-actions"><button type="button" data-preview-choice="Q05-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q05-C" aria-label="Enlarge Q05 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q05">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q05">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q05" value="A" aria-label="Q05 option A: Full production profiles" aria-describedby="choice-copy-Q05-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Full production profiles</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q05-A">modern RGBA sizes 16/24/32/48/64/128/256; optional legacy 4/8-bit variants; custom dimensions within the verified profile.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q05" value="B" aria-label="Q05 option B: Four-size starter profile" aria-describedby="choice-copy-Q05-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Four-size starter profile</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q05-B">Minimal 16/32/48/256 RGBA preset, advanced sizes hidden behind More.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q05" value="C" aria-label="Q05 option C: Experimental large sizes" aria-describedby="choice-copy-Q05-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Experimental large sizes</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q05-C">Also experimental 512/768 images, visibly separated from tested compatibility.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Icon → Experimental profiles</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q05-C">Also experimental 512/768 images, visibly separated from tested compatibility.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q05-C" aria-label="Enlarge Q05 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q05" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q05">Leave unanswered</button>
@@ -666,8 +585,8 @@
 <fieldset>
 <legend>What protects manually edited sizes?</legend>
 <p class="question-hint">You generate new sizes in an icon that already contains hand-tuned artwork. Compare what prevents replacement.</p>
-<a class="skip-comparison" href="#answer-heading-Q07">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q07-A"><figcaption><b>A</b><span>Review each replacement</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q07">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q07">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q07-A"><figcaption><label class="visual-choice"><input type="radio" name="Q07" value="A" aria-label="Q07 option A: Review each replacement" aria-describedby="choice-copy-Q07-A" ><b>A</b><span>Review each replacement</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Replace representations</div>
 <div class="mini-body">
@@ -687,8 +606,8 @@
 <div class="mini-foot">Review each replacement</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Generate sizes → Review</span><div class="preview-actions"><button type="button" data-preview-choice="Q07-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q07-A" aria-label="Enlarge Q07 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q07-B"><figcaption><b>B</b><span>Protect hand-tuned images</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Generate sizes → Review</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q07-A">“Keep existing” default; replacements individually checked in a before/after list.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q07-A" aria-label="Enlarge Q07 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q07-B"><figcaption><label class="visual-choice"><input type="radio" name="Q07" value="B" aria-label="Q07 option B: Protect hand-tuned images" aria-describedby="choice-copy-Q07-B" ><b>B</b><span>Protect hand-tuned images</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Protected artwork</div>
 <div class="mini-body">
@@ -708,8 +627,8 @@
 <div class="mini-foot">Clear protection before replacing</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Image properties → Hand-tuned</span><div class="preview-actions"><button type="button" data-preview-choice="Q07-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q07-B" aria-label="Enlarge Q07 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q07-C"><figcaption><b>C</b><span>Replace and rely on Undo</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Image properties → Hand-tuned</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q07-B">A visible “hand-tuned” flag that blocks replacement unless cleared.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q07-B" aria-label="Enlarge Q07 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q07-C"><figcaption><label class="visual-choice"><input type="radio" name="Q07" value="C" aria-label="Q07 option C: Replace and rely on Undo" aria-describedby="choice-copy-Q07-C" ><b>C</b><span>Replace and rely on Undo</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Replace chosen sizes</div>
 <div class="mini-body">
@@ -723,35 +642,7 @@
 <div class="mini-foot">One document Undo restores the operation</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Generate sizes → Replace</span><div class="preview-actions"><button type="button" data-preview-choice="Q07-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q07-C" aria-label="Enlarge Q07 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q07">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q07">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q07" value="A" aria-label="Q07 option A: Review each replacement" aria-describedby="choice-copy-Q07-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Review each replacement</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q07-A">“Keep existing” default; replacements individually checked in a before/after list.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q07" value="B" aria-label="Q07 option B: Protect hand-tuned images" aria-describedby="choice-copy-Q07-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Protect hand-tuned images</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q07-B">A visible “hand-tuned” flag that blocks replacement unless cleared.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q07" value="C" aria-label="Q07 option C: Replace and rely on Undo" aria-describedby="choice-copy-Q07-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Replace and rely on Undo</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q07-C">Replace all chosen dimensions, relying on Undo.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Icon → Generate sizes → Replace</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q07-C">Replace all chosen dimensions, relying on Undo.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q07-C" aria-label="Enlarge Q07 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q07" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q07">Leave unanswered</button>
@@ -785,9 +676,9 @@
 <fieldset>
 <legend>Which alpha tools belong in the first release?</legend>
 <p class="question-hint">Compare seeing opacity, preserving it while painting, and editing it directly. The specimen shows why those differ.</p>
-<a class="skip-comparison" href="#answer-heading-Q08">Jump to choices and comments ↓</a>
+<a class="skip-comparison" href="#comment-Q08">Jump to comments ↓</a>
 <figure class="decision-example"><figcaption><strong>See what an alpha view reveals</strong>The same independent specimen is shown as color and opacity. White in the alpha view means opaque; gray means partially transparent.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Color image</b><small>The small circle has partial opacity.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="96" height="96" fill="#111"/><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#ffffff"/><path d="M29 59 L47 30 L66 59 Z" fill="#ffffff"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Alpha inspection</b><small>RGB is hidden; opacity is visible.</small></div><div class="sample"><div class="sample-stage dark"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Dark proof</b><small>Partial opacity blends with the backdrop.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q08-A"><figcaption><b>A</b><span>Essential alpha tools</span></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q08">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q08-A"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="A" aria-label="Q08 option A: Essential alpha tools" aria-describedby="choice-copy-Q08-A" ><b>A</b><span>Essential alpha tools</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Transparency tools</div>
 <div class="mini-body">
@@ -806,8 +697,8 @@
 <div class="mini-foot">Preview threshold and matte before export</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Alpha</span><div class="preview-actions"><button type="button" data-preview-choice="Q08-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q08-A" aria-label="Enlarge Q08 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q08-B"><figcaption><b>B</b><span>Alpha inspection and painting</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Alpha</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q08-A">alpha view, alpha-preserving paint, opacity, copy/paste alpha, threshold/matte export preview.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q08-A" aria-label="Enlarge Q08 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q08-B"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="B" aria-label="Q08 option B: Alpha inspection and painting" aria-describedby="choice-copy-Q08-B" ><b>B</b><span>Alpha inspection and painting</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Alpha editing</div>
 <div class="mini-body">
@@ -840,8 +731,8 @@
 <div class="mini-foot">Explicit mask mode + numeric histogram</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Alpha → Inspect / Paint</span><div class="preview-actions"><button type="button" data-preview-choice="Q08-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q08-B" aria-label="Enlarge Q08 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q08-C"><figcaption><b>C</b><span>Existing transparency tools</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Alpha → Inspect / Paint</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q08-B">A plus numeric alpha histogram and editable mask painting mode.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q08-B" aria-label="Enlarge Q08 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q08-C"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="C" aria-label="Q08 option C: Existing transparency tools" aria-describedby="choice-copy-Q08-C" ><b>C</b><span>Existing transparency tools</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Existing transparency</div>
 <div class="mini-body">
@@ -856,35 +747,7 @@
 <div class="mini-foot">Retain the current tool set</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Home → existing transparency tools</span><div class="preview-actions"><button type="button" data-preview-choice="Q08-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q08-C" aria-label="Enlarge Q08 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q08">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q08">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q08" value="A" aria-label="Q08 option A: Essential alpha tools" aria-describedby="choice-copy-Q08-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Essential alpha tools</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q08-A">alpha view, alpha-preserving paint, opacity, copy/paste alpha, threshold/matte export preview.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q08" value="B" aria-label="Q08 option B: Alpha inspection and painting" aria-describedby="choice-copy-Q08-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Alpha inspection and painting</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q08-B">A plus numeric alpha histogram and editable mask painting mode.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q08" value="C" aria-label="Q08 option C: Existing transparency tools" aria-describedby="choice-copy-Q08-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Existing transparency tools</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q08-C">Preserve existing transparency tools only.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Home → existing transparency tools</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q08-C">Preserve existing transparency tools only.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q08-C" aria-label="Enlarge Q08 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q08" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q08">Leave unanswered</button>
@@ -909,8 +772,8 @@
 <fieldset>
 <legend>How should reusable objects work without layers?</legend>
 <p class="question-hint">Compare a temporary placement with an immediately committed stamp. The retained-object alternative conflicts with the no-layers requirement.</p>
-<a class="skip-comparison" href="#answer-heading-Q09">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q09-A"><figcaption><b>A</b><span>Preview, position, flatten</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q09">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q09">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q09-A"><figcaption><label class="visual-choice"><input type="radio" name="Q09" value="A" aria-label="Q09 option A: Preview, position, flatten" aria-describedby="choice-copy-Q09-A" ><b>A</b><span>Preview, position, flatten</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Temporary stamp placement</div>
 <div class="mini-body">
@@ -926,8 +789,8 @@
 <div class="mini-foot">One placement; Apply writes pixels</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Home → Stamp → Apply</span><div class="preview-actions"><button type="button" data-preview-choice="Q09-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q09-A" aria-label="Enlarge Q09 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q09-B"><figcaption><b>B</b><span>Stamp immediately</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Home → Stamp → Apply</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q09-A">existing stamp tool plus one temporary placement preview; Apply flattens into the current image, Escape cancels.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q09-A" aria-label="Enlarge Q09 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q09-B"><figcaption><label class="visual-choice"><input type="radio" name="Q09" value="B" aria-label="Q09 option B: Stamp immediately" aria-describedby="choice-copy-Q09-B" ><b>B</b><span>Stamp immediately</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Immediate paste</div>
 <div class="mini-body">
@@ -942,8 +805,8 @@
 <div class="mini-foot">Placement is already part of the bitmap</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Home → Stamp</span><div class="preview-actions"><button type="button" data-preview-choice="Q09-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q09-B" aria-label="Enlarge Q09 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card excluded" id="preview-Q09-C"><figcaption><b>C</b><span>Retain editable objects</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Home → Stamp</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q09-B">Paste immediately at the chosen point, then use normal Undo.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q09-B" aria-label="Enlarge Q09 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card excluded" id="preview-Q09-C"><figcaption><label class="visual-choice"><input type="radio" name="Q09" value="C" aria-label="Q09 option C: Retain editable objects" aria-describedby="choice-copy-Q09-C" disabled ><b>C</b><span>Retain editable objects</span><small>Outside given scope</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Retained objects · outside scope</div>
 <div class="mini-body">
@@ -960,35 +823,7 @@
 <div class="mini-foot">Conflicts with the given flattened model</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Outside the given no-layers scope</span><div class="preview-actions"><button type="button" data-preview-choice="Q09-C" aria-pressed="false" disabled>Outside given scope</button><button type="button" data-inspect-preview="preview-Q09-C" aria-label="Enlarge Q09 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q09">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q09">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q09" value="A" aria-label="Q09 option A: Preview, position, flatten" aria-describedby="choice-copy-Q09-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Preview, position, flatten</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q09-A">existing stamp tool plus one temporary placement preview; Apply flattens into the current image, Escape cancels.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q09" value="B" aria-label="Q09 option B: Stamp immediately" aria-describedby="choice-copy-Q09-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Stamp immediately</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q09-B">Paste immediately at the chosen point, then use normal Undo.</span>
-</label>
-<label class="option answer-option excluded">
-<span class="option-heading">
-<input type="radio" name="Q09" value="C" aria-label="Q09 option C: Retain editable objects" aria-describedby="choice-copy-Q09-C" disabled >
-<b class="choice-letter">C</b><strong class="choice-title">Retain editable objects</strong>
-<span class="badge">Outside given scope</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q09-C">Keep several editable placed objects until Save.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Outside the given no-layers scope</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q09-C">Keep several editable placed objects until Save.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q09-C" aria-label="Enlarge Q09 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q09" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q09">Leave unanswered</button>
@@ -1013,8 +848,8 @@
 <fieldset>
 <legend>Which effects should be promoted?</legend>
 <p class="question-hint">Compare a short effects menu, equal prominence for every filter, and keeping effects out of icon production.</p>
-<a class="skip-comparison" href="#answer-heading-Q10">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q10-A"><figcaption><b>A</b><span>Common effects first</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q10">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q10">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q10-A"><figcaption><label class="visual-choice"><input type="radio" name="Q10" value="A" aria-label="Q10 option A: Common effects first" aria-describedby="choice-copy-Q10-A" ><b>A</b><span>Common effects first</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Effects menu</div>
 <div class="mini-body">
@@ -1024,8 +859,8 @@
 <div class="mini-foot">Common effects first; others grouped</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Home → Effects; Icon → selected images</span><div class="preview-actions"><button type="button" data-preview-choice="Q10-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q10-A" aria-label="Enlarge Q10 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q10-B"><figcaption><b>B</b><span>All filters at equal prominence</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Home → Effects; Icon → selected images</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q10-A">brightness/contrast, hue/saturation, grayscale, opacity, blur, sharpen and shadow; remaining filters under Advanced.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q10-A" aria-label="Enlarge Q10 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q10-B"><figcaption><label class="visual-choice"><input type="radio" name="Q10" value="B" aria-label="Q10 option B: All filters at equal prominence" aria-describedby="choice-copy-Q10-B" ><b>B</b><span>All filters at equal prominence</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">All effects</div>
 <div class="mini-body">
@@ -1046,8 +881,8 @@
 <div class="mini-foot">Every filter family has equal prominence</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Home → Effects → all filters</span><div class="preview-actions"><button type="button" data-preview-choice="Q10-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q10-B" aria-label="Enlarge Q10 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q10-C"><figcaption><b>C</b><span>Keep effects separate</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Home → Effects → all filters</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q10-B">All observed color/filter families receive equal menu prominence.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q10-B" aria-label="Enlarge Q10 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q10-C"><figcaption><label class="visual-choice"><input type="radio" name="Q10" value="C" aria-label="Q10 option C: Keep effects separate" aria-describedby="choice-copy-Q10-C" ><b>C</b><span>Keep effects separate</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Icon production</div>
 <div class="mini-body">
@@ -1064,35 +899,7 @@
 <div class="mini-foot">No new icon effect commands</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Home → existing effects</span><div class="preview-actions"><button type="button" data-preview-choice="Q10-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q10-C" aria-label="Enlarge Q10 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q10">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q10">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q10" value="A" aria-label="Q10 option A: Common effects first" aria-describedby="choice-copy-Q10-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Common effects first</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q10-A">brightness/contrast, hue/saturation, grayscale, opacity, blur, sharpen and shadow; remaining filters under Advanced.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q10" value="B" aria-label="Q10 option B: All filters at equal prominence" aria-describedby="choice-copy-Q10-B" >
-<b class="choice-letter">B</b><strong class="choice-title">All filters at equal prominence</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q10-B">All observed color/filter families receive equal menu prominence.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q10" value="C" aria-label="Q10 option C: Keep effects separate" aria-describedby="choice-copy-Q10-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Keep effects separate</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q10-C">Only size conversion, alpha and palette work; effects stay outside the icon feature.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Home → existing effects</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q10-C">Only size conversion, alpha and palette work; effects stay outside the icon feature.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q10-C" aria-label="Enlarge Q10 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q10" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q10">Leave unanswered</button>
@@ -1117,9 +924,9 @@
 <fieldset>
 <legend>How should shadows handle clipping?</legend>
 <p class="question-hint">The shadow reaches beyond the bitmap. Compare clipping it, shrinking the artwork and changing the image dimensions.</p>
-<a class="skip-comparison" href="#answer-heading-Q11">Jump to choices and comments ↓</a>
+<a class="skip-comparison" href="#comment-Q11">Jump to comments ↓</a>
 <figure class="decision-example"><figcaption><strong>The choice changes the output geometry</strong>Example: artwork nearly fills a 32 × 32 image. These enlarged illustrations show three different shadow policies.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>A · Keep 32 × 32</b><small>Shadow reaches the image edge.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(13 13) scale(.72)" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>B · Keep 32 × 32</b><small>Artwork becomes smaller to fit.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 112 112" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>C · Grow dimensions</b><small>Image identity changes to fit the shadow.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q11-A"><figcaption><b>A</b><span>Preserve dimensions; show clipping</span></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q11">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q11-A"><figcaption><label class="visual-choice"><input type="radio" name="Q11" value="A" aria-label="Q11 option A: Preserve dimensions; show clipping" aria-describedby="choice-copy-Q11-A" ><b>A</b><span>Preserve dimensions; show clipping</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Keep 32 × 32</div>
 <div class="mini-body">
@@ -1132,8 +939,8 @@
 <div class="mini-foot">Offer Fit artwork as an explicit operation</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Effects → Shadow → Clipping preview</span><div class="preview-actions"><button type="button" data-preview-choice="Q11-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q11-A" aria-label="Enlarge Q11 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q11-B"><figcaption><b>B</b><span>Shrink artwork automatically</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Effects → Shadow → Clipping preview</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q11-A">keep icon dimensions; preview clipped pixels and offer “Fit artwork within image” as a separate explicit operation.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q11-A" aria-label="Enlarge Q11 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q11-B"><figcaption><label class="visual-choice"><input type="radio" name="Q11" value="B" aria-label="Q11 option B: Shrink artwork automatically" aria-describedby="choice-copy-Q11-B" ><b>B</b><span>Shrink artwork automatically</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Shrink inside 32 × 32</div>
 <div class="mini-body">
@@ -1149,8 +956,8 @@
 <div class="mini-foot">Image dimensions stay fixed; artwork shrinks</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Effects → Shadow → Auto-fit</span><div class="preview-actions"><button type="button" data-preview-choice="Q11-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q11-B" aria-label="Enlarge Q11 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q11-C"><figcaption><b>C</b><span>Enlarge dimensions automatically</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Effects → Shadow → Auto-fit</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q11-B">Automatically shrink artwork to make room for the shadow.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q11-B" aria-label="Enlarge Q11 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q11-C"><figcaption><label class="visual-choice"><input type="radio" name="Q11" value="C" aria-label="Q11 option C: Enlarge dimensions automatically" aria-describedby="choice-copy-Q11-C" ><b>C</b><span>Enlarge dimensions automatically</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Grow to 40 × 40</div>
 <div class="mini-body">
@@ -1166,35 +973,7 @@
 <div class="mini-foot">The image identity and delivery size change</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Effects → Shadow → Enlarge</span><div class="preview-actions"><button type="button" data-preview-choice="Q11-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q11-C" aria-label="Enlarge Q11 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q11">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q11">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q11" value="A" aria-label="Q11 option A: Preserve dimensions; show clipping" aria-describedby="choice-copy-Q11-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Preserve dimensions; show clipping</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q11-A">keep icon dimensions; preview clipped pixels and offer “Fit artwork within image” as a separate explicit operation.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q11" value="B" aria-label="Q11 option B: Shrink artwork automatically" aria-describedby="choice-copy-Q11-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Shrink artwork automatically</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q11-B">Automatically shrink artwork to make room for the shadow.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q11" value="C" aria-label="Q11 option C: Enlarge dimensions automatically" aria-describedby="choice-copy-Q11-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Enlarge dimensions automatically</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q11-C">Automatically enlarge the image.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Effects → Shadow → Enlarge</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q11-C">Automatically enlarge the image.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q11-C" aria-label="Enlarge Q11 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q11" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q11">Leave unanswered</button>
@@ -1219,9 +998,9 @@
 <fieldset>
 <legend>What should “disabled” and “hot” mean?</legend>
 <p class="question-hint">Compare adjustable state recipes, one-click defaults and separate hand-painted files. Judge the whole size/depth family.</p>
-<a class="skip-comparison" href="#answer-heading-Q12">Jump to choices and comments ↓</a>
+<a class="skip-comparison" href="#comment-Q12">Jump to comments ↓</a>
 <figure class="decision-example"><figcaption><strong>Judge the state family together</strong>Illustrative appearance only. The decision below is whether these transformations are adjustable, fixed, or authored by hand.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Normal</b><small>Original colors.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity=".55"><rect x="13" y="13" width="66" height="66" rx="13" fill="#929da6"/><path d="M29 59 L47 30 L66 59 Z" fill="#c2c8cd"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Disabled</b><small>Reduced color and opacity.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#1676b9"/><path d="M29 59 L47 30 L66 59 Z" fill="#ffb929"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Hot</b><small>Stronger blue and gold.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q12-A"><figcaption><b>A</b><span>Adjustable state presets</span></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q12">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q12-A"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="A" aria-label="Q12 option A: Adjustable state presets" aria-describedby="choice-copy-Q12-A" ><b>A</b><span>Adjustable state presets</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">State recipe · adjustable</div>
 <div class="mini-body">
@@ -1242,8 +1021,8 @@
 <div class="mini-foot">Illustrative states, not reference formulas</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → States…</span><div class="preview-actions"><button type="button" data-preview-choice="Q12-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q12-A" aria-label="Enlarge Q12 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q12-B"><figcaption><b>B</b><span>Fixed one-click variants</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → States…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q12-A">named adjustable presets, previewed across all selected sizes/depths, exported to separate files.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q12-A" aria-label="Enlarge Q12 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q12-B"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="B" aria-label="Q12 option B: Fixed one-click variants" aria-describedby="choice-copy-Q12-B" ><b>B</b><span>Fixed one-click variants</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">One-click states</div>
 <div class="mini-body">
@@ -1260,8 +1039,8 @@
 <div class="mini-foot">Fixed defaults; no recipe controls</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Hot / Disabled</span><div class="preview-actions"><button type="button" data-preview-choice="Q12-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q12-B" aria-label="Enlarge Q12 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q12-C"><figcaption><b>C</b><span>Hand-authored states</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Hot / Disabled</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q12-B">Fixed one-click defaults modeled on the visual intent of the reference.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q12-B" aria-label="Enlarge Q12 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q12-C"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="C" aria-label="Q12 option C: Hand-authored states" aria-describedby="choice-copy-Q12-C" ><b>C</b><span>Hand-authored states</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Hand-authored states</div>
 <div class="mini-body">
@@ -1277,35 +1056,7 @@
 <div class="mini-foot">Each state is painted as a separate document</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>File → Save as…</span><div class="preview-actions"><button type="button" data-preview-choice="Q12-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q12-C" aria-label="Enlarge Q12 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q12">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q12">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q12" value="A" aria-label="Q12 option A: Adjustable state presets" aria-describedby="choice-copy-Q12-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Adjustable state presets</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q12-A">named adjustable presets, previewed across all selected sizes/depths, exported to separate files.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q12" value="B" aria-label="Q12 option B: Fixed one-click variants" aria-describedby="choice-copy-Q12-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Fixed one-click variants</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q12-B">Fixed one-click defaults modeled on the visual intent of the reference.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q12" value="C" aria-label="Q12 option C: Hand-authored states" aria-describedby="choice-copy-Q12-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Hand-authored states</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q12-C">Only hand-authored state artwork; no generated states.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>File → Save as…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q12-C">Only hand-authored state artwork; no generated states.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q12-C" aria-label="Enlarge Q12 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q12" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q12">Leave unanswered</button>
@@ -1330,8 +1081,8 @@
 <fieldset>
 <legend>Should generic transforms gain precise controls?</legend>
 <p class="question-hint">Compare exact numeric transforms with simpler alignment controls and the existing Paint commands.</p>
-<a class="skip-comparison" href="#answer-heading-Q13">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q13-A"><figcaption><b>A</b><span>Precise transform controls</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q13">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q13">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q13-A"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="A" aria-label="Q13 option A: Precise transform controls" aria-describedby="choice-copy-Q13-A" ><b>A</b><span>Precise transform controls</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Transform current image</div>
 <div class="mini-body">
@@ -1351,8 +1102,8 @@
 <div class="mini-foot">Numeric controls reuse Paint transforms</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Home → Transform…</span><div class="preview-actions"><button type="button" data-preview-choice="Q13-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q13-A" aria-label="Enlarge Q13 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q13-B"><figcaption><b>B</b><span>Alignment and padding only</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Home → Transform…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q13-A">numeric offset, scale, angle and sampling, using existing Paint transform commands.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q13-A" aria-label="Enlarge Q13 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q13-B"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="B" aria-label="Q13 option B: Alignment and padding only" aria-describedby="choice-copy-Q13-B" ><b>B</b><span>Alignment and padding only</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Align artwork</div>
 <div class="mini-body">
@@ -1376,8 +1127,8 @@
 <div class="mini-foot">Alignment and padding only</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Align / Padding…</span><div class="preview-actions"><button type="button" data-preview-choice="Q13-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q13-B" aria-label="Enlarge Q13 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q13-C"><figcaption><b>C</b><span>Keep current transforms</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Align / Padding…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q13-B">Add only icon-specific alignment/centering and padding.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q13-B" aria-label="Enlarge Q13 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q13-C"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="C" aria-label="Q13 option C: Keep current transforms" aria-describedby="choice-copy-Q13-C" ><b>C</b><span>Keep current transforms</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Existing transform controls</div>
 <div class="mini-body">
@@ -1393,35 +1144,7 @@
 <div class="mini-foot">No additional precision controls</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Home → current transforms</span><div class="preview-actions"><button type="button" data-preview-choice="Q13-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q13-C" aria-label="Enlarge Q13 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q13">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q13">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q13" value="A" aria-label="Q13 option A: Precise transform controls" aria-describedby="choice-copy-Q13-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Precise transform controls</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q13-A">numeric offset, scale, angle and sampling, using existing Paint transform commands.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q13" value="B" aria-label="Q13 option B: Alignment and padding only" aria-describedby="choice-copy-Q13-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Alignment and padding only</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q13-B">Add only icon-specific alignment/centering and padding.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q13" value="C" aria-label="Q13 option C: Keep current transforms" aria-describedby="choice-copy-Q13-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Keep current transforms</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q13-C">Keep current transform UI unchanged.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Home → current transforms</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q13-C">Keep current transform UI unchanged.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q13-C" aria-label="Enlarge Q13 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q13" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q13">Leave unanswered</button>
@@ -1455,9 +1178,9 @@
 <fieldset>
 <legend>Which comparison view?</legend>
 <p class="question-hint">Compare a separate proofing window, a permanent canvas-side preview and an exported sheet. Notice the canvas space each uses.</p>
-<a class="skip-comparison" href="#answer-heading-Q14">Jump to choices and comments ↓</a>
+<a class="skip-comparison" href="#comment-Q14">Jump to comments ↓</a>
 <figure class="decision-example"><figcaption><strong>One image, three proofing backgrounds</strong>A backdrop can expose edges that disappear on another. These are enlarged design specimens, not a physical-pixel calibration.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage light"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Light</b><small>Inspect dark edges.</small></div><div class="sample"><div class="sample-stage dark"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Dark</b><small>Inspect translucent highlights.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Checkerboard</b><small>Inspect transparent bounds.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q14-A"><figcaption><b>A</b><span>Separate comparison window</span></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q14">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q14-A"><figcaption><label class="visual-choice"><input type="radio" name="Q14" value="A" aria-label="Q14 option A: Separate comparison window" aria-describedby="choice-copy-Q14-A" ><b>A</b><span>Separate comparison window</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Owned Compare popup</div>
 <div class="mini-body">
@@ -1477,8 +1200,8 @@
 <div class="mini-foot">Separate window; full canvas remains available</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Compare…</span><div class="preview-actions"><button type="button" data-preview-choice="Q14-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q14-A" aria-label="Enlarge Q14 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q14-B"><figcaption><b>B</b><span>Persistent canvas-side preview</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Compare…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q14-A">owned popup with actual-size rows on light, dark, checker and chosen color; optional enlarged pixel inspection.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q14-A" aria-label="Enlarge Q14 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q14-B"><figcaption><label class="visual-choice"><input type="radio" name="Q14" value="B" aria-label="Q14 option B: Persistent canvas-side preview" aria-describedby="choice-copy-Q14-B" ><b>B</b><span>Persistent canvas-side preview</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Persistent canvas preview</div>
 <div class="mini-body">
@@ -1496,8 +1219,8 @@
 <div class="mini-foot">Always visible; takes space from the canvas</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>View → Icon preview</span><div class="preview-actions"><button type="button" data-preview-choice="Q14-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q14-B" aria-label="Enlarge Q14 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q14-C"><figcaption><b>C</b><span>Export a contact sheet</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>View → Icon preview</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q14-B">Persistent preview region beside the canvas.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q14-B" aria-label="Enlarge Q14 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q14-C"><figcaption><label class="visual-choice"><input type="radio" name="Q14" value="C" aria-label="Q14 option C: Export a contact sheet" aria-describedby="choice-copy-Q14-C" ><b>C</b><span>Export a contact sheet</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Export a contact sheet</div>
 <div class="mini-body">
@@ -1522,35 +1245,7 @@
 <div class="mini-foot">Inspect a generated sheet outside the canvas</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Contact sheet…</span><div class="preview-actions"><button type="button" data-preview-choice="Q14-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q14-C" aria-label="Enlarge Q14 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q14">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q14">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q14" value="A" aria-label="Q14 option A: Separate comparison window" aria-describedby="choice-copy-Q14-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Separate comparison window</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q14-A">owned popup with actual-size rows on light, dark, checker and chosen color; optional enlarged pixel inspection.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q14" value="B" aria-label="Q14 option B: Persistent canvas-side preview" aria-describedby="choice-copy-Q14-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Persistent canvas-side preview</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q14-B">Persistent preview region beside the canvas.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q14" value="C" aria-label="Q14 option C: Export a contact sheet" aria-describedby="choice-copy-Q14-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Export a contact sheet</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q14-C">Contact-sheet export only.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Icon → Contact sheet…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q14-C">Contact-sheet export only.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q14-C" aria-label="Enlarge Q14 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q14" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q14">Leave unanswered</button>
@@ -1575,8 +1270,8 @@
 <fieldset>
 <legend>How should contact sheets be delivered?</legend>
 <p class="question-hint">Compare an editable bitmap, a browsable HTML/PNG bundle and a printable page. The delivered artifact is different in each case.</p>
-<a class="skip-comparison" href="#answer-heading-Q15">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q15-A"><figcaption><b>A</b><span>Editable image or PNG</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q15">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q15">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q15-A"><figcaption><label class="visual-choice"><input type="radio" name="Q15" value="A" aria-label="Q15 option A: Editable image or PNG" aria-describedby="choice-copy-Q15-A" ><b>A</b><span>Editable image or PNG</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">New image · contact sheet</div>
 <div class="mini-body">
@@ -1602,8 +1297,8 @@
 <div class="mini-foot">Labels become pixels in a new image</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Contact sheet → New image</span><div class="preview-actions"><button type="button" data-preview-choice="Q15-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q15-A" aria-label="Enlarge Q15 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q15-B"><figcaption><b>B</b><span>PNG with an HTML index</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Contact sheet → New image</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q15-A">create a new ordinary image with labels; optional direct PNG export.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q15-A" aria-label="Enlarge Q15 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q15-B"><figcaption><label class="visual-choice"><input type="radio" name="Q15" value="B" aria-label="Q15 option B: PNG with an HTML index" aria-describedby="choice-copy-Q15-B" ><b>B</b><span>PNG with an HTML index</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">PNG + HTML index</div>
 <div class="mini-body">
@@ -1615,8 +1310,8 @@
 <div class="mini-foot">Browse linked source assets and sheet images</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Contact sheet → Export bundle</span><div class="preview-actions"><button type="button" data-preview-choice="Q15-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q15-B" aria-label="Enlarge Q15 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q15-C"><figcaption><b>C</b><span>Print-oriented pages</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Contact sheet → Export bundle</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q15-B">Export PNG plus HTML index of the source assets.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q15-B" aria-label="Enlarge Q15 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q15-C"><figcaption><label class="visual-choice"><input type="radio" name="Q15" value="C" aria-label="Q15 option C: Print-oriented pages" aria-describedby="choice-copy-Q15-C" ><b>C</b><span>Print-oriented pages</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Print layout</div>
 <div class="mini-body">
@@ -1627,35 +1322,7 @@
 <div class="mini-foot">Paper size, margins, pagination</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>File → Print contact sheet…</span><div class="preview-actions"><button type="button" data-preview-choice="Q15-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q15-C" aria-label="Enlarge Q15 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q15">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q15">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q15" value="A" aria-label="Q15 option A: Editable image or PNG" aria-describedby="choice-copy-Q15-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Editable image or PNG</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q15-A">create a new ordinary image with labels; optional direct PNG export.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q15" value="B" aria-label="Q15 option B: PNG with an HTML index" aria-describedby="choice-copy-Q15-B" >
-<b class="choice-letter">B</b><strong class="choice-title">PNG with an HTML index</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q15-B">Export PNG plus HTML index of the source assets.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q15" value="C" aria-label="Q15 option C: Print-oriented pages" aria-describedby="choice-copy-Q15-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Print-oriented pages</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q15-C">Print-oriented page layout only.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>File → Print contact sheet…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q15-C">Print-oriented page layout only.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q15-C" aria-label="Enlarge Q15 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q15" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q15">Leave unanswered</button>
@@ -1680,8 +1347,8 @@
 <fieldset>
 <legend>Which validation feedback is useful?</legend>
 <p class="question-hint">Compare actionable production findings, optional visual advice and a file-validity check alone.</p>
-<a class="skip-comparison" href="#answer-heading-Q16">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q16-A"><figcaption><b>A</b><span>Production checks</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q16">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q16">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q16-A"><figcaption><label class="visual-choice"><input type="radio" name="Q16" value="A" aria-label="Q16 option A: Production checks" aria-describedby="choice-copy-Q16-A" ><b>A</b><span>Production checks</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Validation report</div>
 <div class="mini-body">
@@ -1694,8 +1361,8 @@
 <div class="mini-foot">Specific production and compatibility findings</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Validate…</span><div class="preview-actions"><button type="button" data-preview-choice="Q16-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q16-A" aria-label="Enlarge Q16 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q16-B"><figcaption><b>B</b><span>Checks plus visual heuristics</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Validate…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q16-A">missing profile sizes, duplicate size/depth entries, upscaling, clipped effects, transparent/opaque output change and consumer compatibility notes.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q16-A" aria-label="Enlarge Q16 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q16-B"><figcaption><label class="visual-choice"><input type="radio" name="Q16" value="B" aria-label="Q16 option B: Checks plus visual heuristics" aria-describedby="choice-copy-Q16-B" ><b>B</b><span>Checks plus visual heuristics</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Validation + visual advice</div>
 <div class="mini-body">
@@ -1709,8 +1376,8 @@
 <div class="mini-foot">Heuristics never invalidate deliberate pixel art</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Validate → Visual advice</span><div class="preview-actions"><button type="button" data-preview-choice="Q16-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q16-B" aria-label="Enlarge Q16 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q16-C"><figcaption><b>C</b><span>File validity only</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Validate → Visual advice</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q16-B">A plus small-size visual-quality heuristics.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q16-B" aria-label="Enlarge Q16 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q16-C"><figcaption><label class="visual-choice"><input type="radio" name="Q16" value="C" aria-label="Q16 option C: File validity only" aria-describedby="choice-copy-Q16-C" ><b>C</b><span>File validity only</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Structure only</div>
 <div class="mini-body">
@@ -1730,35 +1397,7 @@
 <div class="mini-foot">No completeness or appearance guidance</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>File → structural checks</span><div class="preview-actions"><button type="button" data-preview-choice="Q16-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q16-C" aria-label="Enlarge Q16 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q16">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q16">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q16" value="A" aria-label="Q16 option A: Production checks" aria-describedby="choice-copy-Q16-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Production checks</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q16-A">missing profile sizes, duplicate size/depth entries, upscaling, clipped effects, transparent/opaque output change and consumer compatibility notes.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q16" value="B" aria-label="Q16 option B: Checks plus visual heuristics" aria-describedby="choice-copy-Q16-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Checks plus visual heuristics</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q16-B">A plus small-size visual-quality heuristics.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q16" value="C" aria-label="Q16 option C: File validity only" aria-describedby="choice-copy-Q16-C" >
-<b class="choice-letter">C</b><strong class="choice-title">File validity only</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q16-C">Structural validity only.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>File → structural checks</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q16-C">Structural validity only.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q16-C" aria-label="Enlarge Q16 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q16" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q16">Leave unanswered</button>
@@ -1792,8 +1431,8 @@
 <fieldset>
 <legend>What is the asset library?</legend>
 <p class="question-hint">Compare browsing files where they already live with copying them into a managed collection. Packaged proprietary libraries stay outside scope.</p>
-<a class="skip-comparison" href="#answer-heading-Q17">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q17-A"><figcaption><b>A</b><span>Browse ordinary folders</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q17">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q17">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q17-A"><figcaption><label class="visual-choice"><input type="radio" name="Q17" value="A" aria-label="Q17 option A: Browse ordinary folders" aria-describedby="choice-copy-Q17-A" ><b>A</b><span>Browse ordinary folders</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Asset browser · ordinary folders</div>
 <div class="mini-body">
@@ -1818,8 +1457,8 @@
 <div class="mini-foot">Source files stay in their ordinary locations</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>File → Browse assets…</span><div class="preview-actions"><button type="button" data-preview-choice="Q17-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q17-A" aria-label="Enlarge Q17 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q17-B"><figcaption><b>B</b><span>Copy into a managed collection</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>File → Browse assets…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q17-A">ordinary folders, bookmarks and an optional open metadata index; owned browser popup.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q17-A" aria-label="Enlarge Q17 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q17-B"><figcaption><label class="visual-choice"><input type="radio" name="Q17" value="B" aria-label="Q17 option B: Copy into a managed collection" aria-describedby="choice-copy-Q17-B" ><b>B</b><span>Copy into a managed collection</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Managed collection</div>
 <div class="mini-body">
@@ -1840,8 +1479,8 @@
 <div class="mini-foot">Collection owns additional copies of assets</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>File → Collections…</span><div class="preview-actions"><button type="button" data-preview-choice="Q17-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q17-B" aria-label="Enlarge Q17 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card excluded" id="preview-Q17-C"><figcaption><b>C</b><span>Packaged proprietary library</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>File → Collections…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q17-B">A managed collection that copies imported assets into a chosen root.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q17-B" aria-label="Enlarge Q17 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card excluded" id="preview-Q17-C"><figcaption><label class="visual-choice"><input type="radio" name="Q17" value="C" aria-label="Q17 option C: Packaged proprietary library" aria-describedby="choice-copy-Q17-C" disabled ><b>C</b><span>Packaged proprietary library</span><small>Outside given scope</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Packaged library · excluded</div>
 <div class="mini-body">
@@ -1857,35 +1496,7 @@
 <div class="mini-foot">Outside the requested output scope</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Outside the given output scope</span><div class="preview-actions"><button type="button" data-preview-choice="Q17-C" aria-pressed="false" disabled>Outside given scope</button><button type="button" data-inspect-preview="preview-Q17-C" aria-label="Enlarge Q17 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q17">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q17">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q17" value="A" aria-label="Q17 option A: Browse ordinary folders" aria-describedby="choice-copy-Q17-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Browse ordinary folders</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q17-A">ordinary folders, bookmarks and an optional open metadata index; owned browser popup.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q17" value="B" aria-label="Q17 option B: Copy into a managed collection" aria-describedby="choice-copy-Q17-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Copy into a managed collection</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q17-B">A managed collection that copies imported assets into a chosen root.</span>
-</label>
-<label class="option answer-option excluded">
-<span class="option-heading">
-<input type="radio" name="Q17" value="C" aria-label="Q17 option C: Packaged proprietary library" aria-describedby="choice-copy-Q17-C" disabled >
-<b class="choice-letter">C</b><strong class="choice-title">Packaged proprietary library</strong>
-<span class="badge">Outside given scope</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q17-C">A proprietary-style packaged library container.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Outside the given output scope</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q17-C">A proprietary-style packaged library container.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q17-C" aria-label="Enlarge Q17 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q17" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q17">Leave unanswered</button>
@@ -1960,8 +1571,8 @@
 <fieldset>
 <legend>What should a batch window expose?</legend>
 <p class="question-hint">Compare seeing the entire output manifest, stepping through a wizard and starting immediately from settings.</p>
-<a class="skip-comparison" href="#answer-heading-Q19">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q19-A"><figcaption><b>A</b><span>One reviewable production window</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q19">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q19">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q19-A"><figcaption><label class="visual-choice"><input type="radio" name="Q19" value="A" aria-label="Q19 option A: One reviewable production window" aria-describedby="choice-copy-Q19-A" ><b>A</b><span>One reviewable production window</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Batch production</div>
 <div class="mini-body">
@@ -1979,8 +1590,8 @@
 <div class="mini-foot">Manifest, destination, progress and report</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Batch production…</span><div class="preview-actions"><button type="button" data-preview-choice="Q19-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q19-A" aria-label="Enlarge Q19 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q19-B"><figcaption><b>B</b><span>A guided production wizard</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Batch production…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q19-A">source list, operation, profile, per-target manifest, warnings, destination, collision policy, progress and report.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q19-A" aria-label="Enlarge Q19 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q19-B"><figcaption><label class="visual-choice"><input type="radio" name="Q19" value="B" aria-label="Q19 option B: A guided production wizard" aria-describedby="choice-copy-Q19-B" ><b>B</b><span>A guided production wizard</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Batch wizard</div>
 <div class="mini-body">
@@ -1998,8 +1609,8 @@
 <div class="mini-foot">Progressive steps; details are expandable</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Batch wizard…</span><div class="preview-actions"><button type="button" data-preview-choice="Q19-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q19-B" aria-label="Enlarge Q19 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q19-C"><figcaption><b>C</b><span>Settings, then run immediately</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Icon → Batch wizard…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q19-B">A short wizard with those details in expandable sections.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q19-B" aria-label="Enlarge Q19 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q19-C"><figcaption><label class="visual-choice"><input type="radio" name="Q19" value="C" aria-label="Q19 option C: Settings, then run immediately" aria-describedby="choice-copy-Q19-C" ><b>C</b><span>Settings, then run immediately</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Batch settings</div>
 <div class="mini-body">
@@ -2023,35 +1634,7 @@
 <div class="mini-foot">One dialog; less review before writing</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Icon → Batch settings…</span><div class="preview-actions"><button type="button" data-preview-choice="Q19-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q19-C" aria-label="Enlarge Q19 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q19">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q19">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q19" value="A" aria-label="Q19 option A: One reviewable production window" aria-describedby="choice-copy-Q19-A" >
-<b class="choice-letter">A</b><strong class="choice-title">One reviewable production window</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q19-A">source list, operation, profile, per-target manifest, warnings, destination, collision policy, progress and report.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q19" value="B" aria-label="Q19 option B: A guided production wizard" aria-describedby="choice-copy-Q19-B" >
-<b class="choice-letter">B</b><strong class="choice-title">A guided production wizard</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q19-B">A short wizard with those details in expandable sections.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q19" value="C" aria-label="Q19 option C: Settings, then run immediately" aria-describedby="choice-copy-Q19-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Settings, then run immediately</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q19-C">One settings dialog that starts immediately on OK.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Icon → Batch settings…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q19-C">One settings dialog that starts immediately on OK.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q19-C" aria-label="Enlarge Q19 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q19" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q19">Leave unanswered</button>
@@ -2076,8 +1659,8 @@
 <fieldset>
 <legend>Default destination and collisions?</legend>
 <p class="question-hint">Compare the actual destination paths and the fate of an existing file with the same name.</p>
-<a class="skip-comparison" href="#answer-heading-Q20">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q20-A"><figcaption><b>A</b><span>Separate output folder</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q20">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q20">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q20-A"><figcaption><label class="visual-choice"><input type="radio" name="Q20" value="A" aria-label="Q20 option A: Separate output folder" aria-describedby="choice-copy-Q20-A" ><b>A</b><span>Separate output folder</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">New output folder</div>
 <div class="mini-body">
@@ -2090,8 +1673,8 @@
 <div class="mini-foot">Replacement must be explicitly chosen</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Batch → Destination → Output folder</span><div class="preview-actions"><button type="button" data-preview-choice="Q20-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q20-A" aria-label="Enlarge Q20 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q20-B"><figcaption><b>B</b><span>Beside sources with suffixes</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Batch → Destination → Output folder</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q20-A">a new output folder; skip or rename collisions unless replace is explicitly selected.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q20-A" aria-label="Enlarge Q20 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q20-B"><figcaption><label class="visual-choice"><input type="radio" name="Q20" value="B" aria-label="Q20 option B: Beside sources with suffixes" aria-describedby="choice-copy-Q20-B" ><b>B</b><span>Beside sources with suffixes</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Beside source</div>
 <div class="mini-body">
@@ -2104,8 +1687,8 @@
 <div class="mini-foot">Generated assets share the source folder</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Batch → Destination → Beside source</span><div class="preview-actions"><button type="button" data-preview-choice="Q20-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q20-B" aria-label="Enlarge Q20 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q20-C"><figcaption><b>C</b><span>Replace the source files</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Batch → Destination → Beside source</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q20-B">Beside the source, deterministic suffixes.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q20-B" aria-label="Enlarge Q20 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q20-C"><figcaption><label class="visual-choice"><input type="radio" name="Q20" value="C" aria-label="Q20 option C: Replace the source files" aria-describedby="choice-copy-Q20-C" ><b>C</b><span>Replace the source files</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Replace source by default</div>
 <div class="mini-body">
@@ -2115,35 +1698,7 @@
 <div class="mini-foot">Document Undo does not reverse file jobs</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Batch → Destination → Replace source</span><div class="preview-actions"><button type="button" data-preview-choice="Q20-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q20-C" aria-label="Enlarge Q20 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q20">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q20">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q20" value="A" aria-label="Q20 option A: Separate output folder" aria-describedby="choice-copy-Q20-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Separate output folder</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q20-A">a new output folder; skip or rename collisions unless replace is explicitly selected.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q20" value="B" aria-label="Q20 option B: Beside sources with suffixes" aria-describedby="choice-copy-Q20-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Beside sources with suffixes</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q20-B">Beside the source, deterministic suffixes.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q20" value="C" aria-label="Q20 option C: Replace the source files" aria-describedby="choice-copy-Q20-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Replace the source files</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q20-C">Replace source files by default.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Batch → Destination → Replace source</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q20-C">Replace source files by default.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q20-C" aria-label="Enlarge Q20 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q20" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q20">Leave unanswered</button>
@@ -2168,8 +1723,8 @@
 <fieldset>
 <legend>How should normalization behave?</legend>
 <p class="question-hint">Input contains 16/24/32 px images; the target is 16/32/48. Compare whether the 24 px image survives.</p>
-<a class="skip-comparison" href="#answer-heading-Q21">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q21-A"><figcaption><b>A</b><span>Separate add and exact modes</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q21">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q21">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q21-A"><figcaption><label class="visual-choice"><input type="radio" name="Q21" value="A" aria-label="Q21 option A: Separate add and exact modes" aria-describedby="choice-copy-Q21-A" ><b>A</b><span>Separate add and exact modes</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Choose normalization mode</div>
 <div class="mini-body">
@@ -2189,8 +1744,8 @@
 <div class="mini-foot">Input 16/24/32 → target 16/32/48</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Batch → Normalize → Mode</span><div class="preview-actions"><button type="button" data-preview-choice="Q21-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q21-A" aria-label="Enlarge Q21 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q21-B"><figcaption><b>B</b><span>Always enforce the exact profile</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Batch → Normalize → Mode</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q21-A">“Add missing” and “Exact profile” are separate modes; Exact profile lists removals before running.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q21-A" aria-label="Enlarge Q21 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q21-B"><figcaption><label class="visual-choice"><input type="radio" name="Q21" value="B" aria-label="Q21 option B: Always enforce the exact profile" aria-describedby="choice-copy-Q21-B" ><b>B</b><span>Always enforce the exact profile</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Always exact profile</div>
 <div class="mini-body">
@@ -2205,8 +1760,8 @@
 <div class="mini-foot">Output always matches the requested set</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Batch → Normalize → Exact profile</span><div class="preview-actions"><button type="button" data-preview-choice="Q21-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q21-B" aria-label="Enlarge Q21 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q21-C"><figcaption><b>C</b><span>Only add missing sizes</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Batch → Normalize → Exact profile</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q21-B">Always match the exact profile, removing everything unselected.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q21-B" aria-label="Enlarge Q21 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q21-C"><figcaption><label class="visual-choice"><input type="radio" name="Q21" value="C" aria-label="Q21 option C: Only add missing sizes" aria-describedby="choice-copy-Q21-C" ><b>C</b><span>Only add missing sizes</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Add only</div>
 <div class="mini-body">
@@ -2224,35 +1779,7 @@
 <div class="mini-foot">Output can contain sizes outside the profile</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Batch → Add missing sizes</span><div class="preview-actions"><button type="button" data-preview-choice="Q21-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q21-C" aria-label="Enlarge Q21 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q21">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q21">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q21" value="A" aria-label="Q21 option A: Separate add and exact modes" aria-describedby="choice-copy-Q21-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Separate add and exact modes</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q21-A">“Add missing” and “Exact profile” are separate modes; Exact profile lists removals before running.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q21" value="B" aria-label="Q21 option B: Always enforce the exact profile" aria-describedby="choice-copy-Q21-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Always enforce the exact profile</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q21-B">Always match the exact profile, removing everything unselected.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q21" value="C" aria-label="Q21 option C: Only add missing sizes" aria-describedby="choice-copy-Q21-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Only add missing sizes</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q21-C">Generate missing sizes only; never remove.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Batch → Add missing sizes</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q21-C">Generate missing sizes only; never remove.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q21-C" aria-label="Enlarge Q21 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q21" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q21">Leave unanswered</button>
@@ -2327,8 +1854,8 @@
 <fieldset>
 <legend>How should toolbar strips integrate?</legend>
 <p class="question-hint">Compare reusing Atlas cell editing with introducing another document mode. Different resolutions are not automatically successive strip cells.</p>
-<a class="skip-comparison" href="#answer-heading-Q23">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q23-A"><figcaption><b>A</b><span>Reuse Atlas for strips</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q23">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q23">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q23-A"><figcaption><label class="visual-choice"><input type="radio" name="Q23" value="A" aria-label="Q23 option A: Reuse Atlas for strips" aria-describedby="choice-copy-Q23-A" ><b>A</b><span>Reuse Atlas for strips</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Atlas · toolbar strip</div>
 <div class="mini-body">
@@ -2350,8 +1877,8 @@
 <div class="mini-foot">Existing Atlas editing; PNG / BMP export</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Atlas → Assemble strip…</span><div class="preview-actions"><button type="button" data-preview-choice="Q23-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q23-A" aria-label="Enlarge Q23 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q23-B"><figcaption><b>B</b><span>Separate strip document mode</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Atlas → Assemble strip…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q23-A">reuse Atlas cell editing; explicit ordering, cell size, spacing, alpha/matte and PNG/BMP export.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q23-A" aria-label="Enlarge Q23 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q23-B"><figcaption><label class="visual-choice"><input type="radio" name="Q23" value="B" aria-label="Q23 option B: Separate strip document mode" aria-describedby="choice-copy-Q23-B" ><b>B</b><span>Separate strip document mode</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Toolbar strip document</div>
 <div class="mini-body">
@@ -2371,8 +1898,8 @@
 <div class="mini-foot">Separate document type and tool surface</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>File → New → Toolbar strip</span><div class="preview-actions"><button type="button" data-preview-choice="Q23-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q23-B" aria-label="Enlarge Q23 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q23-C"><figcaption><b>C</b><span>Defer toolbar strips</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>File → New → Toolbar strip</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q23-B">Separate toolbar-strip document mode.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q23-B" aria-label="Enlarge Q23 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q23-C"><figcaption><label class="visual-choice"><input type="radio" name="Q23" value="C" aria-label="Q23 option C: Defer toolbar strips" aria-describedby="choice-copy-Q23-C" ><b>C</b><span>Defer toolbar strips</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Defer strip production</div>
 <div class="mini-body">
@@ -2387,35 +1914,7 @@
 <div class="mini-foot">Focus this release on ICO and image bundles</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>No new command</span><div class="preview-actions"><button type="button" data-preview-choice="Q23-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q23-C" aria-label="Enlarge Q23 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q23">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q23">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q23" value="A" aria-label="Q23 option A: Reuse Atlas for strips" aria-describedby="choice-copy-Q23-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Reuse Atlas for strips</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q23-A">reuse Atlas cell editing; explicit ordering, cell size, spacing, alpha/matte and PNG/BMP export.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q23" value="B" aria-label="Q23 option B: Separate strip document mode" aria-describedby="choice-copy-Q23-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Separate strip document mode</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q23-B">Separate toolbar-strip document mode.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q23" value="C" aria-label="Q23 option C: Defer toolbar strips" aria-describedby="choice-copy-Q23-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Defer toolbar strips</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q23-C">Defer strips.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>No new command</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q23-C">Defer strips.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q23-C" aria-label="Enlarge Q23 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q23" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q23">Leave unanswered</button>
@@ -2649,8 +2148,8 @@
 <fieldset>
 <legend>Which ribbon rendering variant should the study show?</legend>
 <p class="question-hint">Compare command-face construction while keeping selection, keyboard focus and the Paint ribbon structure distinct.</p>
-<a class="skip-comparison" href="#answer-heading-Q28">Jump to choices and comments ↓</a>
-<div class="preview-intro"><strong>Compare the alternatives</strong><span>A, B and C below match the answer choices.</span></div><div class="preview-gallery"><figure class="preview-card" id="preview-Q28-A"><figcaption><b>A</b><span>Follow the selected theme</span></figcaption><div class="visual">
+<a class="skip-comparison" href="#comment-Q28">Jump to comments ↓</a>
+<h3 class="answer-heading" id="answer-heading-Q28">Your choice <span>Select an option above its preview. All alternatives stay visible.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q28-A"><figcaption><label class="visual-choice"><input type="radio" name="Q28" value="A" aria-label="Q28 option A: Follow the selected theme" aria-describedby="choice-copy-Q28-A" ><b>A</b><span>Follow the selected theme</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Theme-selected rendering</div>
 <div class="mini-body">
@@ -2670,8 +2169,8 @@
 <div class="mini-foot">Quiet flat illustration; actual theme chooses treatment</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Settings → Appearance → Theme</span><div class="preview-actions"><button type="button" data-preview-choice="Q28-A" aria-pressed="false">Choose A</button><button type="button" data-inspect-preview="preview-Q28-A" aria-label="Enlarge Q28 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q28-B"><figcaption><b>B</b><span>Smooth raised commands</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Settings → Appearance → Theme</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q28-A">preserve current Paint proportions and blue/gold identity; leave flat/smooth/dithered command rendering to the selected GUI.Forms theme.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q28-A" aria-label="Enlarge Q28 preview A">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q28-B"><figcaption><label class="visual-choice"><input type="radio" name="Q28" value="B" aria-label="Q28 option B: Smooth raised commands" aria-describedby="choice-copy-Q28-B" ><b>B</b><span>Smooth raised commands</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Smooth cloth-bulge preference</div>
 <div class="mini-body">
@@ -2691,8 +2190,8 @@
 <div class="mini-foot">Soft upper-left light; gently raised command face</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Settings → Appearance → Construction</span><div class="preview-actions"><button type="button" data-preview-choice="Q28-B" aria-pressed="false">Choose B</button><button type="button" data-inspect-preview="preview-Q28-B" aria-label="Enlarge Q28 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q28-C"><figcaption><b>C</b><span>Dithered raised commands</span></figcaption><div class="visual">
+<span class="placement"><b>Proposed location</b>Settings → Appearance → Construction</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q28-B">Choose smooth cloth-bulge commands as this application&#x27;s explicit theme preference.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q28-B" aria-label="Enlarge Q28 preview B">Enlarge preview</button></div></figure>
+<figure class="preview-card" id="preview-Q28-C"><figcaption><label class="visual-choice"><input type="radio" name="Q28" value="C" aria-label="Q28 option C: Dithered raised commands" aria-describedby="choice-copy-Q28-C" ><b>C</b><span>Dithered raised commands</span><small>Alternative</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Dithered bulge preference</div>
 <div class="mini-body">
@@ -2712,35 +2211,7 @@
 <div class="mini-foot">Textured command face with stepped light and shadow</div>
 </div>
 </div>
-<span class="placement"><b>Proposed location</b>Settings → Appearance → Construction</span><div class="preview-actions"><button type="button" data-preview-choice="Q28-C" aria-pressed="false">Choose C</button><button type="button" data-inspect-preview="preview-Q28-C" aria-label="Enlarge Q28 preview C">Enlarge preview</button></div></figure></div><h3 class="answer-heading" id="answer-heading-Q28">Your choice <span>Choose one, or discuss a combination below.</span></h3><div class="options" id="options-Q28">
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q28" value="A" aria-label="Q28 option A: Follow the selected theme" aria-describedby="choice-copy-Q28-A" >
-<b class="choice-letter">A</b><strong class="choice-title">Follow the selected theme</strong>
-<span class="badge">Recommended</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q28-A">preserve current Paint proportions and blue/gold identity; leave flat/smooth/dithered command rendering to the selected GUI.Forms theme.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q28" value="B" aria-label="Q28 option B: Smooth raised commands" aria-describedby="choice-copy-Q28-B" >
-<b class="choice-letter">B</b><strong class="choice-title">Smooth raised commands</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q28-B">Choose smooth cloth-bulge commands as this application&#x27;s explicit theme preference.</span>
-</label>
-<label class="option answer-option">
-<span class="option-heading">
-<input type="radio" name="Q28" value="C" aria-label="Q28 option C: Dithered raised commands" aria-describedby="choice-copy-Q28-C" >
-<b class="choice-letter">C</b><strong class="choice-title">Dithered raised commands</strong>
-<span class="badge">Alternative</span>
-</span>
-
-<span class="option-copy" id="choice-copy-Q28-C">Choose dithered bulge commands.</span>
-</label>
-</div>
+<span class="placement"><b>Proposed location</b>Settings → Appearance → Construction</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q28-C">Choose dithered bulge commands.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q28-C" aria-label="Enlarge Q28 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q28" value="discuss"> Discuss / combine / propose another direction</label>
 <button type="button" class="clear-answer" data-clear="Q28">Leave unanswered</button>
@@ -2800,12 +2271,6 @@ function collectAnswers() {
   return {schemaVersion:1, interview:'Plan Paint icon production', exportedAt:new Date().toISOString(), given:['Broad icon production including batch tools and asset browsing','No layers','Preserve the classic Paint ribbon and existing creative tools','No proprietary appearance, binary or output replication'], answers:interviewQuestions.map(getAnswer)};
 }
 function refreshReview() {
-  document.querySelectorAll('[data-preview-choice]').forEach(function refreshPreviewButton(button) {
-    const parts = button.dataset.previewChoice.split('-');
-    const radio = document.querySelector('input[name="' + parts[0] + '"][value="' + parts[1] + '"]');
-    button.setAttribute('aria-pressed', String(radio.checked));
-    button.textContent = radio.disabled ? 'Outside given scope' : radio.checked ? 'Selected ' + parts[1] : 'Choose ' + parts[1];
-  });
   const answers = interviewQuestions.map(getAnswer);
   updateQuestionMap(answers);
   const answered = answers.filter(function hasChoice(answer) { return answer.choice !== null; }).length;
@@ -2914,10 +2379,6 @@ document.querySelectorAll('[data-export-html]').forEach(function connectAnswerSh
 
 const previewInspector = document.getElementById('preview-inspector');
 let inspectedChoice = null;
-function choosePreview(event) {
-  const identity = event.currentTarget.dataset.previewChoice;
-  applyPreviewChoice(identity);
-}
 function applyPreviewChoice(identity) {
   const parts = identity.split('-');
   const radio = document.querySelector('input[name="' + parts[0] + '"][value="' + parts[1] + '"]');
@@ -2932,7 +2393,9 @@ function inspectPreview(event) {
   const clone = source.cloneNode(true);
   clone.removeAttribute('id');
   clone.querySelector('.preview-actions').remove();
-  document.getElementById('inspector-title').textContent = parts[0] + ' · ' + parts[1] + ' · ' + source.querySelector('figcaption span').textContent;
+  clone.querySelector('figcaption').remove();
+  clone.querySelector('.visual-consequence').remove();
+  document.getElementById('inspector-title').textContent = parts[0] + ' · ' + parts[1] + ' · ' + source.querySelector('.visual-choice > span').textContent;
   document.getElementById('inspector-specimen').replaceChildren(clone);
   document.getElementById('inspector-consequence').textContent = document.getElementById('choice-copy-' + inspectedChoice).textContent;
   const radio = document.querySelector('input[name="' + parts[0] + '"][value="' + parts[1] + '"]');
@@ -2947,7 +2410,6 @@ function chooseInspectedPreview() {
   if (inspectedChoice) applyPreviewChoice(inspectedChoice);
   previewInspector.close();
 }
-document.querySelectorAll('[data-preview-choice]').forEach(function connectPreviewChoice(button) { button.addEventListener('click', choosePreview); });
 document.querySelectorAll('[data-inspect-preview]').forEach(function connectPreviewInspector(button) { button.addEventListener('click', inspectPreview); });
 document.getElementById('close-inspector').addEventListener('click', closePreviewInspector);
 document.getElementById('inspector-comment').addEventListener('click', closePreviewInspector);
