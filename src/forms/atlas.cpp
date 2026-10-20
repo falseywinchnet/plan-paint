@@ -202,7 +202,7 @@ void AtlasPanel::initialize_control_tree() {
         (*control).set_theme_override(ribbon_theme());
         (*control).set_font({gf::FontRole::control, 11, 400, false});
         const int slot = i >= 11 ? i - 3 : i;
-        (*control).set_requested_bounds({6 + (slot % 2) * 106.0, 5 + (slot / 2) * 26.0, 102, 24});
+        (*control).set_requested_bounds({6 + (slot % 3) * 106.0, 5 + (slot / 3) * 26.0, 102, 24});
         subscriptions_.push_back((*control).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<AtlasPanel, &AtlasPanel::clicked>(*this)));
         buttons_.push_back(control);
@@ -246,7 +246,7 @@ void AtlasPanel::arrange(gf::Rect bounds) {
     set_child_layout(buttons_[8], {bounds.width - 96, bounds.height - 22, 88, 20});
     set_child_layout(buttons_[9], {bounds.width - 192, bounds.height - 22, 88, 20});
     set_child_layout(buttons_[10], {bounds.width - 288, bounds.height - 22, 88, 20});
-    const double controls = std::min(218.0, bounds.width * 0.28);
+    const double controls = std::min(324.0, bounds.width * 0.42);
     const double options = std::min(190.0, bounds.width * 0.22);
     set_child_layout(
         strip_, {controls + 6, 4, std::max(1.0, bounds.width - controls - options - 18), bounds.height - 26});
@@ -260,8 +260,8 @@ void AtlasPanel::arrange(gf::Rect bounds) {
             continue;
         }
         gf::Rect rectangle = (*buttons_[i]).requested_bounds();
-        rectangle.x *= controls / 218;
-        rectangle.width *= controls / 218;
+        rectangle.x *= controls / 324;
+        rectangle.width *= controls / 324;
         set_child_layout(buttons_[i], rectangle);
     }
 }

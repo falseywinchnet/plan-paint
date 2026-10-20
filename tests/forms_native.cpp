@@ -563,6 +563,23 @@ struct NativeExercise {
             (*editor).execute("atlas-icons");
             (*editor).close_editor_dialog();
             window.perform_layout();
+            const gf::Rect panel = (*window.find("atlas-panel")).absolute_bounds();
+            const char* commands[] = {"atlas-alpha-tools", "atlas-palette"};
+            for (const char* command : commands) {
+                const gf::Rect bounds = (*window.find(command)).absolute_bounds();
+                if (bounds.y < panel.y || bounds.bottom() > panel.bottom()) {
+                    throw std::runtime_error("Native icon command is clipped by the ribbon");
+                }
+                const gf::Point point{bounds.x + bounds.width / 2, bounds.y + bounds.height / 2};
+                window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, point});
+                window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, point});
+                if (!window.find(std::string(command) == "atlas-palette" ? "palette-after"
+                                                                         : "alpha-before")) {
+                    throw std::runtime_error("Native pointer could not open icon command");
+                }
+                (*editor).close_editor_dialog();
+                window.perform_layout();
+            }
             inspect_frame(window);
             entered = true;
             if (!handle.request_close().accepted()) {
@@ -758,7 +775,9 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size = exercise.compact ? gf::Size{800, 600} : gf::Size{1280, 820};
+        options.initial_size = exercise.icon_formats_review ? gf::Size{800, 520}
+                               : exercise.compact           ? gf::Size{800, 600}
+                                                            : gf::Size{1280, 820};
         options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;
         options.ready = std::bind(&NativeExercise::ready, std::ref(exercise), std::placeholders::_1,

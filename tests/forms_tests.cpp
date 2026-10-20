@@ -1291,7 +1291,22 @@ void icon_palette_contracts() {
     editor.document.replace_container(container, "palette.cur");
     editor.refresh();
     const std::uint64_t revision = editor.document.revision;
-    editor.execute("atlas-palette");
+    open_tab(window, "atlas-tab");
+    window.perform_layout();
+    const gf::Rect panel = (*window.find("atlas-panel")).absolute_bounds();
+    const char* commands[] = {"atlas-grid",    "atlas-icons",    "atlas-cursors", "atlas-whole",
+                              "atlas-leave",   "atlas-previous", "atlas-next",    "atlas-hotspot",
+                              "atlas-gallery", "atlas-compare",  "atlas-export",  "atlas-alpha-tools",
+                              "atlas-palette"};
+    for (const char* command : commands) {
+        const gf::Rect bounds = (*window.find(command)).absolute_bounds();
+        require(bounds.x >= panel.x && bounds.y >= panel.y && bounds.right() <= panel.right() &&
+                    bounds.bottom() <= panel.bottom() && bounds.width >= 80 && bounds.height >= 20,
+                "every Atlas command fits its visible panel at minimum window size");
+    }
+    require((*window.find("atlas-frames")).absolute_bounds().width >= 220,
+            "minimum-width Atlas retains room for two representation thumbnails");
+    routed_button(window, "atlas-palette");
     window.perform_layout();
     const gf::Rect close = (*window.find("dialog-cancel")).absolute_bounds();
     require(close.x >= 0 && close.y >= 0 && close.x + close.width <= 800 && close.y + close.height <= 520,
@@ -1364,7 +1379,8 @@ void alpha_tools_contracts() {
     editor.document.atlas_select(0);
     editor.refresh();
     const std::uint64_t revision = editor.document.revision;
-    editor.execute("atlas-alpha-tools");
+    open_tab(window, "atlas-tab");
+    routed_button(window, "atlas-alpha-tools");
     window.perform_layout();
     const gf::Rect close = (*window.find("dialog-cancel")).absolute_bounds();
     require(close.x >= 0 && close.y >= 0 && close.x + close.width <= 800 && close.y + close.height <= 520,
