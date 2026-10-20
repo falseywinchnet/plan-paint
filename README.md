@@ -165,6 +165,8 @@ ICO and CUR open every stored size in Atlas. CUR retains per-image hotspots, edi
 
 Icon and cursor size generation defaults to adding missing sizes while preserving existing artwork. Choose replacement or an exact profile explicitly, review each image change and upscaling warning, then apply the complete operation with one Undo step. Untouched imported PNG/DIB representations retain their original payloads on save, including indexed images. Atlas identifies each source format and shows the current image's planned save format. See [icon and cursor production](docs/ICON_EDITING.md).
 
+**Atlas → Compare…** previews icon and cursor representations on light, dark, checkerboard, transparent or primary-color backgrounds. Choose actual display pixels or an enlarged view, configure a labeled contact sheet, and export it as PNG without changing the source document or its Undo history.
+
 Atlas uses flat canvases with a maximum of 4096 grid cells. Filename tokens such as `sprite`, `spritesheet`, `atlas`, `tileset`, `walk` and `idle` automatically offer grid setup; any picture can use Atlas manually. Rows and columns come first, with optional margins and spacing. Unused edge pixels are preserved. Grid setup and navigation do not change the picture, and edits participate in undo/redo across frames. Leave grid to resize or crop the whole sheet.
 
 ### Transform limits

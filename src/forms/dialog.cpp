@@ -234,6 +234,10 @@ void EditorDialog::initialize_control_tree() {
     if (!editor) {
         return;
     }
+    if (kind_ == EditorDialogKind::icon_sheet) {
+        initialize_icon_sheet();
+        return;
+    }
     if (kind_ == EditorDialogKind::about) {
         panel_ = {0, 0, 590, 565};
         label("about-version", "Plan Paint " RAINSTAR_VERSION, {24, 54, 542, 28}, true);
@@ -759,6 +763,8 @@ std::string EditorDialog::title() const {
         return tr("Cursor hotspot");
     case EditorDialogKind::atlas_gallery:
         return tr("Atlas frames");
+    case EditorDialogKind::icon_sheet:
+        return tr("Compare / contact sheet");
     case EditorDialogKind::settings:
         return tr("Settings");
     case EditorDialogKind::properties:

@@ -1107,6 +1107,70 @@ void icon_representation_identity() {
     require((*status).text().find("Save: 2 bpp PNG") != std::string::npos,
             "Undo must restore the untouched save format in the UI");
 }
+void await_icon_sheet(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!(*window.find("sheet-export")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        const std::shared_ptr<gf::Label> error =
+            std::dynamic_pointer_cast<gf::Label>(window.find("dialog-error"));
+        if (error && !(*error).text().empty()) {
+            return;
+        }
+        require(std::chrono::steady_clock::now() < deadline,
+                "contact sheet worker completes through dispatcher");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    window.perform_layout();
+}
+void icon_sheet_preview_and_export() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{1280, 820}, 2}}).accepted(),
+            "proofing test host attaches at high DPI");
+    editor.document.make_icon_sizes({16, 32, 48}, false);
+    const std::vector<std::uint8_t> original =
+        paint::encode_icon_container(editor.document.output_container(false));
+    const std::uint64_t revision = editor.document.revision;
+    const std::size_t history = editor.document.undo_history.size();
+    editor.execute("atlas-compare");
+    await_icon_sheet(window);
+    require((*window.find("sheet-export")).enabled(), "completed sheet enables explicit export");
+    const std::shared_ptr<gf::RasterCanvas> preview =
+        std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("sheet-preview"));
+    const std::shared_ptr<gf::ComboBox> zoom =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-zoom"));
+    (*zoom).set_selected_index(1);
+    window.perform_layout();
+    require(std::abs((*preview).bitmap_to_client({0, 0, 1, 1}).width * window.scale() - 1) < 1e-8,
+            "actual-pixel proof must map one image pixel to one physical display pixel");
+    const std::shared_ptr<gf::ComboBox> background =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-background"));
+    (*background).set_selected_index(1);
+    (*background).set_selected_index(3);
+    await_icon_sheet(window);
+    services.path = (std::filesystem::temp_directory_path() / "rainstar-icon-contact-sheet.png").string();
+    routed_button(window, "sheet-export");
+    const paint::Image exported = paint::load_image(services.path);
+    require(exported.get(0, 0).a == 0, "latest transparent preview must match exported PNG");
+    std::filesystem::remove(services.path);
+    const std::shared_ptr<gf::ComboBox> scope =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-scope"));
+    (*scope).set_selected_index(2);
+    await_icon_sheet(window);
+    require(!(*window.find("sheet-export")).enabled(),
+            "empty selected sequence must not export stale preview");
+    (*scope).set_selected_index(0);
+    routed_button(window, "dialog-cancel");
+    static_cast<void>(window.drain_posted_work());
+    require(!window.find("sheet-preview") && editor.document.revision == revision &&
+                editor.document.undo_history.size() == history &&
+                paint::encode_icon_container(editor.document.output_container(false)) == original,
+            "proof settings, export and close must preserve source document, history and pixels");
+}
 void icon_generation_review_and_cancel() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -4179,6 +4243,7 @@ int main() {
         atlas_grid_frames_and_cursor_save();
         icon_generation_review_and_cancel();
         icon_representation_identity();
+        icon_sheet_preview_and_export();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

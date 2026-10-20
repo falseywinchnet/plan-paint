@@ -9,6 +9,7 @@
 #include <gui_forms/timer.hpp>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
 #ifdef _WIN32
 #include <gui_forms/platform/windows_host.hpp>
 #endif
@@ -31,7 +32,8 @@ struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
          materials = false, interface_review = false, view_review = false, guide_review = false,
-         healing_review = false, icon_production_review = false, icon_formats_review = false;
+         healing_review = false, icon_production_review = false, icon_formats_review = false,
+         icon_sheet_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -354,6 +356,12 @@ struct NativeExercise {
             }
             return;
         }
+        if (icon_sheet_review) {
+            if (!painted || !window.find("sheet-export") || !(*window.find("sheet-export")).enabled()) {
+                throw std::runtime_error("Native contact sheet preview did not render");
+            }
+            return;
+        }
         const paint::Color expected = (*editor).document.image.get(120, 120);
         if (!painted || !paint::equal(actual, expected)) {
             throw std::runtime_error("Native live canvas pixels differ: painted=" + std::to_string(painted) +
@@ -390,6 +398,45 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (icon_sheet_review) {
+            const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+            document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
+            document.make_icon_sizes({16, 32, 48, 128}, false);
+            const std::vector<std::uint8_t> encoded =
+                paint::encode_icon_container(document.output_container(false));
+            document.replace_container(paint::decode_icon_container(encoded.data(), encoded.size()),
+                                       "proof-study.ico");
+            (*editor).refresh();
+            (*editor).execute("atlas-compare");
+            window.perform_layout();
+            const std::chrono::steady_clock::time_point deadline =
+                std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            while (!(*window.find("sheet-export")).enabled()) {
+                static_cast<void>(window.drain_posted_work());
+                if (std::chrono::steady_clock::now() > deadline) {
+                    throw std::runtime_error("Native contact sheet worker timed out");
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            const std::shared_ptr<gf::ComboBox> zoom =
+                std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-zoom"));
+            const std::shared_ptr<gf::RasterCanvas> preview =
+                std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("sheet-preview"));
+            (*zoom).set_selected_index(1);
+            window.perform_layout();
+            if (std::abs((*preview).bitmap_to_client({0, 0, 1, 1}).width * window.scale() - 1) > 1e-8) {
+                throw std::runtime_error("Native actual-size proof did not map physical pixels one to one");
+            }
+            (*zoom).set_selected_index(0);
+            window.perform_layout();
+            inspect_frame(window);
+            (*editor).close_editor_dialog();
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native proofing review close failed");
+            }
+            return;
+        }
         if (icon_formats_review) {
             paint::ImageContainer container =
                 paint::decode_icon_container(paint::test::indexed_icon, sizeof(paint::test::indexed_icon));
@@ -571,7 +618,9 @@ int main(int argc, char** argv) {
         exercise.healing_review = argc > 1 && std::string(argv[1]) == "--healing";
         exercise.icon_production_review = argc > 1 && std::string(argv[1]) == "--icon-production";
         exercise.icon_formats_review = argc > 1 && std::string(argv[1]) == "--icon-formats";
-        if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review) {
+        exercise.icon_sheet_review = argc > 1 && std::string(argv[1]) == "--icon-sheet";
+        if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
+            exercise.icon_sheet_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||

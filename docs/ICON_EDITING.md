@@ -65,7 +65,41 @@ replaces and removes nothing does not add an Undo step. The current image stays
 selected if it survives the operation. If it is removed, the last output image
 becomes current.
 
+## Comparison and contact sheets
+
+Open an ICO or CUR and choose **Atlas → Compare…**. The owned comparison window
+uses a snapshot of the document at opening. Choose all representations, the
+current image, or the sequence selected in Atlas. Sequence order and repeated
+entries are retained; an empty sequence reports an error. Labels retain the
+original one-based image numbers, dimensions and imported format. Newly generated
+images are labeled RGBA. Imported format describes source provenance, as in Atlas.
+
+Choose a light, dark, checkerboard, transparent or primary-color background.
+The primary color is captured when the window opens and used as an opaque
+background. Columns, padding, spacing, label visibility and text size determine
+the generated sheet. Images keep their original pixel dimensions, centered in
+uniform cells; the sheet renderer does not resize the artwork. Layout is checked
+before allocation and rejects outputs larger than 16 megapixels.
+
+**Fit sheet** fits the result into the preview area. **Actual pixels** maps one
+image pixel to one physical display pixel, accounting for the host's display
+scale. **4× pixels** maps each image pixel to four display pixels. Enlarged
+previews use nearest-pixel sampling; scroll when the sheet exceeds the viewport.
+The status reports both output dimensions and the display-to-image pixel ratio.
+
+**Export PNG…** saves the prepared sheet through the normal save dialog. Background
+and labels become part of that PNG; Transparent preserves alpha outside the
+artwork and labels. Legacy background-dependent XOR pixels are evaluated against
+the chosen opaque background. Transparent output is unavailable for those images
+because ordinary PNG alpha cannot represent a background-dependent XOR operation.
+
+Changing settings prepares a new preview and disables export until it is ready.
+Closing cancels pending work. Preview settings and exported sheets do not change
+the source document, its filename or Undo history. This command exports one
+assembled sheet; separate-file representation export and multi-file batch jobs
+remain future work.
+
 The broader [icon production interview](icon-editor-study/mockups.html) covers
-future palette, alpha, preview, batch and asset-browsing capabilities. Its
-recommendations remain candidate designs; this size-production feature does not
-establish answers to the remaining interview questions.
+future palette, alpha, batch and asset-browsing capabilities. Its recommendations
+remain candidate designs; implemented features do not establish owner answers
+to the remaining interview questions.

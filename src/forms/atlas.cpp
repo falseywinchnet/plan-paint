@@ -188,11 +188,12 @@ void AtlasThumbnail::on_paint(gf::Painter& painter, gf::Rect damage) {
 AtlasPanel::AtlasPanel(gf::StableId id, std::weak_ptr<Editor> editor, bool gallery)
     : Control(std::move(id)), editor_(std::move(editor)), gallery_(gallery) {}
 void AtlasPanel::initialize_control_tree() {
-    const char* ids[] = {"atlas-grid",     "atlas-icons", "atlas-cursors", "atlas-whole",  "atlas-leave",
-                         "atlas-previous", "atlas-next",  "atlas-hotspot", "atlas-gallery"};
-    const std::string labels[] = {tr("Sprite grid…"), tr("Icon sizes…"), tr("Cursor sizes…"), tr("Whole sheet"), tr("Leave atlas"),
-                            tr("Previous"),     tr("Next"),        tr("Hotspot…"),      tr("Gallery…")};
-    for (int i = 0; i < 9; ++i) {
+    const char* ids[] = {"atlas-grid",     "atlas-icons", "atlas-cursors", "atlas-whole",   "atlas-leave",
+                         "atlas-previous", "atlas-next",  "atlas-hotspot", "atlas-gallery", "atlas-compare"};
+    const std::string labels[] = {
+        tr("Sprite grid…"), tr("Icon sizes…"), tr("Cursor sizes…"), tr("Whole sheet"), tr("Leave atlas"),
+        tr("Previous"),     tr("Next"),        tr("Hotspot…"),      tr("Gallery…"),    tr("Compare…")};
+    for (int i = 0; i < 10; ++i) {
         std::shared_ptr<gf::Button> control = gf::make_control<gf::Button>(
             gf::StableId(std::string(gallery_ ? "gallery-" : "") + ids[i]), labels[i]);
         (*control).set_theme_override(ribbon_theme());
@@ -239,12 +240,13 @@ void AtlasPanel::arrange(gf::Rect bounds) {
         set_child_layout(buttons_[i], (*buttons_[i]).requested_bounds());
     }
     set_child_layout(buttons_[8], {bounds.width - 96, bounds.height - 22, 88, 20});
+    set_child_layout(buttons_[9], {bounds.width - 192, bounds.height - 22, 88, 20});
     const double controls = std::min(218.0, bounds.width * 0.28);
     const double options = std::min(190.0, bounds.width * 0.22);
     set_child_layout(
         strip_, {controls + 6, 4, std::max(1.0, bounds.width - controls - options - 18), bounds.height - 26});
     set_child_layout(status_,
-                     {controls + 6, bounds.height - 22, std::max(1.0, bounds.width - controls - 112), 20});
+                     {controls + 6, bounds.height - 22, std::max(1.0, bounds.width - controls - 208), 20});
     set_child_layout(wrap_, {bounds.width - options - 6, 5, options, 25});
     set_child_layout(alpha_, {bounds.width - options - 6, 34, options, 25});
     set_child_layout(clear_reference_, {bounds.width - options - 6, 65, options, 25});
@@ -299,6 +301,7 @@ void AtlasPanel::synchronize() {
     (*alpha_).set_enabled(atlas.active >= 0);
     (*clear_reference_).set_enabled(!(*editor).atlas_reference.pixels.empty());
     (*buttons_[8]).set_visible(!gallery_);
+    (*buttons_[9]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
     (*buttons_[3]).set_enabled(atlas.kind == AtlasKind::Sheet);
     (*buttons_[4]).set_enabled(atlas.kind != AtlasKind::None);
     (*buttons_[5]).set_enabled(count_ > 0);

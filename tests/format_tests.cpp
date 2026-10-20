@@ -1,6 +1,7 @@
 #include "codecs.hpp"
 #include "document.hpp"
 #include "fixtures/icon_reference.hpp"
+#include "icon_sheet.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -195,6 +196,77 @@ void icons() {
     require(document.atlas.active == 0 && document.image.get(2, 3).r == 21,
             "undo did not restore the edited icon");
 }
+void icon_sheets() {
+    paint::ImageContainer source;
+    source.kind = paint::ContainerKind::Icon;
+    paint::IconFrame first, second;
+    first.image.reset(5, 3, {90, 120, 150, 128});
+    second.image.reset(3, 5, {200, 40, 60, 255});
+    source.frames = {first, second};
+    paint::IconSheetOptions options;
+    options.columns = 2;
+    options.padding = 2;
+    options.gap = 3;
+    options.labels = false;
+    options.background = paint::IconSheetBackground::Transparent;
+    const paint::IconSheetLayout layout = paint::plan_icon_sheet(source, {0, 1}, options);
+    require(layout.width == 17 && layout.height == 9 && layout.cells[0].image.x == 2 &&
+                layout.cells[0].image.y == 3 && layout.cells[1].image.x == 11 && layout.cells[1].image.y == 2,
+            "odd-size contact sheet centering changed dimensions or resampled artwork");
+    const paint::Image transparent = paint::render_icon_sheet(source, {0, 1}, options);
+    require(paint::equal(transparent.get(2, 3), first.image.get(0, 0)) && transparent.get(0, 0).a == 0 &&
+                paint::equal(transparent.get(11, 2), second.image.get(0, 0)),
+            "transparent sheet failed to preserve source alpha and exact pixels");
+    options.background = paint::IconSheetBackground::Light;
+    const paint::Image light = paint::render_icon_sheet(source, {0, 1}, options);
+    paint::Image expected;
+    expected.reset(1, 1);
+    expected.blend(0, 0, first.image.get(0, 0));
+    require(paint::equal(light.get(2, 3), expected.get(0, 0)) && light.get(0, 0).a == 255,
+            "opaque proof did not composite straight-alpha pixels over its background");
+    options.labels = true;
+    const paint::IconSheetLayout reordered = paint::plan_icon_sheet(source, {1, 0, 1}, options);
+    require(reordered.cells[0].text.starts_with("#2") && reordered.cells[1].text.starts_with("#1") &&
+                reordered.cells[2].source_index == 1,
+            "sheet labels or ordering lost original representation identity");
+    bool rejected = false;
+    try {
+        paint::plan_icon_sheet(source, {}, options);
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected, "empty contact sheet accepted");
+    paint::ImageContainer cursor =
+        paint::decode_icon_container(paint::test::legacy_cursor, sizeof(paint::test::legacy_cursor));
+    options.labels = false;
+    options.padding = 0;
+    const paint::Image xor_proof = paint::render_icon_sheet(cursor, {0}, options);
+    require(xor_proof.get(1, 1).r == 0 && xor_proof.get(1, 1).a == 255,
+            "XOR proof was not evaluated against the selected opaque background");
+    options.background = paint::IconSheetBackground::Transparent;
+    rejected = false;
+    try {
+        paint::render_icon_sheet(cursor, {0}, options);
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected, "transparent export silently flattened background-dependent XOR");
+    std::atomic<bool> cancel{true};
+    require(paint::render_icon_sheet(source, {0}, options, &cancel).pixels.empty(),
+            "cancelled sheet published partial output");
+    source.frames[0].image.reset(256, 256);
+    options.columns = 16;
+    options.padding = 64;
+    options.gap = 64;
+    rejected = false;
+    try {
+        paint::plan_icon_sheet(source, std::vector<int>(256, 0), options);
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected, "oversized contact sheet was not rejected at layout preflight");
+    require(paint::equal(first.image.get(0, 0), {90, 120, 150, 128}), "proofing mutated source pixels");
+}
 void atlas() {
     paint::Document document;
     document.new_image(20, 16);
@@ -243,6 +315,7 @@ int main() {
     try {
         imports();
         icons();
+        icon_sheets();
         atlas();
         std::cout << "Import formats, icon/cursor containers, Atlas edits and history passed.\n";
         return 0;
