@@ -211,6 +211,8 @@ class Editor final : public gui_forms::Control {
     bool export_png_image(const Image& image, const std::string& suggested_name);
     std::string choose_export_directory(const std::string& initial_directory);
     std::string choose_asset_directory(const std::string& initial_directory);
+    void copy_alpha_image(const Image& source);
+    Image read_alpha_mask();
     void copy_asset_path(const std::string& path);
     void open_browser_asset(const AssetPreview& preview);
     void use_asset_stamp(Image image);

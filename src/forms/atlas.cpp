@@ -190,17 +190,19 @@ AtlasPanel::AtlasPanel(gf::StableId id, std::weak_ptr<Editor> editor, bool galle
 void AtlasPanel::initialize_control_tree() {
     const char* ids[] = {"atlas-grid",    "atlas-icons",    "atlas-cursors", "atlas-whole",
                          "atlas-leave",   "atlas-previous", "atlas-next",    "atlas-hotspot",
-                         "atlas-gallery", "atlas-compare",  "atlas-export"};
-    const std::string labels[] = {tr("Sprite grid…"), tr("Icon sizes…"), tr("Cursor sizes…"),
-                                  tr("Whole sheet"),  tr("Leave atlas"), tr("Previous"),
-                                  tr("Next"),         tr("Hotspot…"),    tr("Gallery…"),
-                                  tr("Compare…"),     tr("Export…")};
-    for (int i = 0; i < 11; ++i) {
+                         "atlas-gallery", "atlas-compare",  "atlas-export",  "atlas-alpha-tools",
+                         "atlas-palette"};
+    const std::string labels[] = {
+        tr("Sprite grid…"), tr("Icon sizes…"),  tr("Cursor sizes…"), tr("Whole sheet"), tr("Leave atlas"),
+        tr("Previous"),     tr("Next"),         tr("Hotspot…"),      tr("Gallery…"),    tr("Compare…"),
+        tr("Export…"),      tr("Alpha tools…"), tr("Palette…")};
+    for (int i = 0; i < 13; ++i) {
         std::shared_ptr<gf::Button> control = gf::make_control<gf::Button>(
             gf::StableId(std::string(gallery_ ? "gallery-" : "") + ids[i]), labels[i]);
         (*control).set_theme_override(ribbon_theme());
         (*control).set_font({gf::FontRole::control, 11, 400, false});
-        (*control).set_requested_bounds({6 + (i % 2) * 106.0, 5 + (i / 2) * 26.0, 102, 24});
+        const int slot = i >= 11 ? i - 3 : i;
+        (*control).set_requested_bounds({6 + (slot % 3) * 106.0, 5 + (slot / 3) * 26.0, 102, 24});
         subscriptions_.push_back((*control).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<AtlasPanel, &AtlasPanel::clicked>(*this)));
         buttons_.push_back(control);
@@ -244,7 +246,7 @@ void AtlasPanel::arrange(gf::Rect bounds) {
     set_child_layout(buttons_[8], {bounds.width - 96, bounds.height - 22, 88, 20});
     set_child_layout(buttons_[9], {bounds.width - 192, bounds.height - 22, 88, 20});
     set_child_layout(buttons_[10], {bounds.width - 288, bounds.height - 22, 88, 20});
-    const double controls = std::min(218.0, bounds.width * 0.28);
+    const double controls = std::min(324.0, bounds.width * 0.42);
     const double options = std::min(190.0, bounds.width * 0.22);
     set_child_layout(
         strip_, {controls + 6, 4, std::max(1.0, bounds.width - controls - options - 18), bounds.height - 26});
@@ -253,10 +255,13 @@ void AtlasPanel::arrange(gf::Rect bounds) {
     set_child_layout(wrap_, {bounds.width - options - 6, 5, options, 25});
     set_child_layout(alpha_, {bounds.width - options - 6, 34, options, 25});
     set_child_layout(clear_reference_, {bounds.width - options - 6, 65, options, 25});
-    for (std::size_t i = 0; i < 8; ++i) {
+    for (std::size_t i = 0; i < buttons_.size(); ++i) {
+        if (i >= 8 && i <= 10) {
+            continue;
+        }
         gf::Rect rectangle = (*buttons_[i]).requested_bounds();
-        rectangle.x *= controls / 218;
-        rectangle.width *= controls / 218;
+        rectangle.x *= controls / 324;
+        rectangle.width *= controls / 324;
         set_child_layout(buttons_[i], rectangle);
     }
 }
@@ -306,6 +311,8 @@ void AtlasPanel::synchronize() {
     (*buttons_[8]).set_visible(!gallery_);
     (*buttons_[9]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
     (*buttons_[10]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
+    (*buttons_[11]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
+    (*buttons_[12]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
     (*buttons_[3]).set_enabled(atlas.kind == AtlasKind::Sheet);
     (*buttons_[4]).set_enabled(atlas.kind != AtlasKind::None);
     (*buttons_[5]).set_enabled(count_ > 0);

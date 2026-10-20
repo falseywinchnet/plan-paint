@@ -234,6 +234,14 @@ void EditorDialog::initialize_control_tree() {
     if (!editor) {
         return;
     }
+    if (kind_ == EditorDialogKind::icon_palette) {
+        initialize_icon_palette();
+        return;
+    }
+    if (kind_ == EditorDialogKind::alpha_tools) {
+        initialize_alpha_tools();
+        return;
+    }
     if (kind_ == EditorDialogKind::icon_sheet) {
         initialize_icon_sheet();
         return;
@@ -734,7 +742,8 @@ void EditorDialog::on_key_preview(gf::KeyEvent& event) {
         event.handled = true;
     } else if (event.physical_key == gf::PhysicalKey::enter) {
         if (kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_sheet ||
-            kind_ == EditorDialogKind::asset_browser) {
+            kind_ == EditorDialogKind::asset_browser || kind_ == EditorDialogKind::alpha_tools ||
+            kind_ == EditorDialogKind::icon_palette) {
             return; // The focused command owns Enter; never run a disk job implicitly.
         }
         accept();
@@ -779,6 +788,10 @@ std::string EditorDialog::title() const {
         return tr("Compare / contact sheet");
     case EditorDialogKind::icon_export:
         return tr("Export representations");
+    case EditorDialogKind::icon_palette:
+        return tr("Palette conversion");
+    case EditorDialogKind::alpha_tools:
+        return tr("Alpha tools");
     case EditorDialogKind::asset_browser:
         return tr("Browse assets");
     case EditorDialogKind::settings:

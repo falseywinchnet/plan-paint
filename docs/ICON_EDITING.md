@@ -200,7 +200,117 @@ This browser currently provides a filename list and a selected-image preview.
 Thumbnail grids, multiple-asset job selection, metadata indexing and file-manager
 integration remain part of the broader production work.
 
+## Inspecting and transferring opacity
+
+For an ICO or CUR document, choose **Atlas → Alpha tools…**. Like other Atlas
+commands, opening the tool settles the current painting gesture and editable
+geometry. The tool operates on the **entire current representation**, even if a
+selection outline is present. Other sizes and depths are not targets.
+
+The owned window shows the original and proposed result. **Alpha** displays
+opacity as opaque grayscale: black is transparent, white is opaque and gray is
+partial opacity. **Color** composites the actual RGBA image over a checkerboard.
+Both previews fit without enlarging small artwork, using nearest sampling.
+Statistics show the minimum and maximum alpha and counts for alpha 0, 1–254,
+and 255. Changing the view does not change pixels or create history.
+
+**Copy alpha** copies the original representation's opacity as an ordinary,
+opaque grayscale clipboard image. **Paste alpha** reads an image from the
+clipboard and prepares a replacement opacity mask. The conversion is defined
+as `(R + G + B + 1) / 3` using integer division on encoded 8-bit channels. The
+mask's own alpha is ignored. Grayscale values therefore transfer exactly;
+colored masks use a rounded arithmetic mean, not perceptual luminance.
+
+Mismatched dimensions leave Apply unavailable until **Resize mask to image**
+is explicitly enabled. Resizing samples nearest pixel centers independently
+on each axis; it can change aspect ratio and does not interpolate. The original
+and mask dimensions remain visible. Disabling resizing restores the mismatch
+error without changing the document. **Reset** discards the staged mask.
+
+**Apply** changes alpha only, retaining every RGB byte, including hidden colors
+under fully transparent pixels. It creates one Undo entry and closes the window.
+An identical mask leaves Apply disabled. **Close** or Escape discards the preview.
+An intervening document or representation change rejects Apply and requires
+reopening the tool. Cursor hotspots and other representations remain unchanged.
+
+Legacy background-dependent XOR artwork cannot be treated as an ordinary alpha
+mask; the command reports that limitation before opening the tool. Clipboard
+geometry and host errors are validated before preparing a result. This workflow
+adds no layer or persistent channel document. Painting directly into an alpha
+mask and viewing alpha on the main canvas remain separate work.
+
+## Indexed palette conversion
+
+Open an ICO or CUR and choose **Atlas → Palette…**. The owned window compares
+the current image with a 1-, 4-, or 8-bit indexed result. Set the alpha threshold
+(1–255, initially 128), an RGB matte color (initially white), and either no
+dithering or Floyd–Steinberg error diffusion. The preview reports palette entries,
+transparent pixels, and the number of partially transparent source pixels that
+will be converted. The displayed threshold rule identifies the resulting binary
+alpha. Previews cover the entire current representation, including when a
+selection outline is present.
+
+**Apply** replaces that representation with the displayed indexed image in one
+Undo step. Other representations, their encoded payloads, and cursor hotspots
+remain intact. Saving the unchanged converted representation emits an indexed
+DIB at the chosen depth, including for a 256 × 256 image. Subsequent painting
+invalidates that encoded snapshot and saves the edited image as RGBA; conversion
+can be run again when the artwork is ready. This is explicit pixel conversion,
+not an index-aware painting mode or a permanently linked export recipe.
+
+Changing preview settings does not alter the document or its Undo history.
+**Close** and Escape discard the preview. Invalid matte text disables Apply.
+A document change after opening the tool prevents applying stale pixels. A
+conversion with the same encoded payload leaves Apply disabled. The tool rejects
+background-dependent legacy XOR pixels rather than silently flattening them.
+
+The independently specified conversion is:
+
+1. Source pixels with alpha below the threshold become transparent black. With
+   the default threshold, 127 is transparent and 128 is opaque. Pixels at or
+   above the threshold are composited against the matte in encoded RGB byte
+   space, using `round(channel * alpha/255 + matte * (1-alpha/255))`; their output
+   alpha is 255. Matte alpha is ignored. Hidden RGB is intentionally discarded
+   for transparent output pixels. The original source is untouched until Apply.
+2. A histogram counts every distinct opaque RGB color after matting. No sampling
+   is used. When transparency requires a black palette entry, opaque black pixels
+   use that entry and are excluded from the color histogram. Weighted median-cut
+   splits the box with the greatest
+   `population × largest channel range`; ties keep the earlier box. Channel-range
+   ties prefer red, then green, then blue. Samples sort by that channel, then
+   ascending packed `0xRRGGBB`. The split is the first cumulative count reaching
+   half the population, clamped to keep both boxes nonempty. The left box keeps
+   its position and the right box is appended. Each representative is the
+   population-weighted encoded-RGB mean, rounded to the nearest byte.
+3. Palette matching minimizes squared encoded-RGB distance, with lower palette
+   index winning ties. With dithering, pixels scan left to right, top to bottom.
+   Clamp the error-adjusted sample to 0–255 before matching; distribute the
+   difference to right, lower-left, lower, and lower-right with weights
+   7/16, 3/16, 5/16, and 1/16. Error that reaches a transparent pixel or crosses
+   the image boundary is discarded. Calculations use double precision.
+4. If any pixel is transparent, palette index zero is reserved as black, leaving
+   1, 15, or 255 entries for additional colors at the three depths. Opaque black
+   shares index zero, distinguished from transparency by its clear AND bit.
+   The reserved black entry participates in opaque color matching; a 1-bit image
+   can therefore contain black, white, and transparent pixels together. A completely
+   transparent image has only that reserved entry in the active palette. Without transparency, all 2, 16, or 256 entries
+   are available for opaque colors. Unused encoded palette slots are padded with
+   black; the file carries the full table for its depth.
+5. Output uses an uncompressed 40-byte DIB header, bottom-up color rows and AND
+   mask rows, DWORD-aligned row strides, BGR0 palette entries, and most-significant
+   bits first for packed indices. Transparent color pixels use the reserved
+   black index and a set AND bit, producing ordinary transparency without XOR
+   effects. The standard ICO/CUR directory retains representation order and
+   cursor hotspots.
+
+The public Windows bitmap layout is described by Microsoft's
+[BITMAPINFOHEADER documentation](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader)
+and [bitmap header types](https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types).
+Palette construction and dithering above are Plan Paint behavior, not a claim
+to reproduce another editor's numerical output. Shared batch palettes, palette
+file interchange, and direct palette-entry editing remain separate capabilities.
+
 The broader [icon production interview](icon-editor-study/mockups.html) covers
-future palette, alpha, batch and additional asset-browsing capabilities. Its recommendations
+additional palette, alpha, batch and asset-browsing capabilities. Its recommendations
 remain candidate designs; implemented features do not establish owner answers
 to the remaining interview questions.

@@ -40,6 +40,8 @@ enum class EditorDialogKind {
     icon_sheet,
     icon_export,
     asset_browser,
+    alpha_tools,
+    icon_palette,
     properties,
     settings,
     english_help,
@@ -136,6 +138,32 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::Label> export_status_;
     std::shared_ptr<gui_forms::Button> export_folder_, export_review_, export_run_, export_cancel_,
         export_report_;
+    void initialize_icon_palette();
+    void render_icon_palette();
+    void palette_clicked(gui_forms::ButtonBase&);
+    void palette_choice_changed(std::optional<std::size_t>);
+    void palette_number_changed(double);
+    void palette_text_changed(const std::string&);
+    IconFrame palette_source_, palette_result_;
+    std::uint64_t palette_revision_ = 0, palette_epoch_ = 0;
+    int palette_current_ = -1;
+    std::shared_ptr<gui_forms::ComboBox> palette_depth_, palette_dither_;
+    std::shared_ptr<gui_forms::NumericUpDown> palette_threshold_;
+    std::shared_ptr<gui_forms::TextBox> palette_matte_, palette_status_;
+    std::shared_ptr<gui_forms::RasterCanvas> palette_before_, palette_after_;
+    std::shared_ptr<gui_forms::Button> palette_apply_;
+    void initialize_alpha_tools();
+    void render_alpha_tools();
+    void alpha_clicked(gui_forms::ButtonBase&);
+    void alpha_view_changed(std::optional<std::size_t>);
+    Image alpha_source_, alpha_mask_, alpha_result_;
+    std::uint64_t alpha_revision_ = 0, alpha_epoch_ = 0;
+    int alpha_current_ = -1;
+    std::shared_ptr<gui_forms::RasterCanvas> alpha_before_, alpha_after_;
+    std::shared_ptr<gui_forms::ComboBox> alpha_view_;
+    std::shared_ptr<gui_forms::CheckBox> alpha_resize_;
+    std::shared_ptr<gui_forms::TextBox> alpha_status_;
+    std::shared_ptr<gui_forms::Button> alpha_apply_;
     void initialize_icon_sheet();
     void render_icon_sheet_preview();
     void stop_icon_sheet();

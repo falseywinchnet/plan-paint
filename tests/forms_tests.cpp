@@ -1272,6 +1272,174 @@ void await_assets(gf::Window& window) {
     }
     window.perform_layout();
 }
+void icon_palette_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(), "palette host attaches");
+    paint::ImageContainer container;
+    container.kind = paint::ContainerKind::Cursor;
+    paint::IconFrame original, other;
+    original.image.reset(32, 32, {60, 90, 180, 128});
+    original.image.set(0, 0, {27, 45, 65, 127});
+    original.hotspot_x = 7;
+    original.hotspot_y = 9;
+    other.image.reset(16, 16, {9, 8, 7, 6});
+    container.frames = {original, other};
+    editor.document.replace_container(container, "palette.cur");
+    editor.refresh();
+    const std::uint64_t revision = editor.document.revision;
+    open_tab(window, "atlas-tab");
+    window.perform_layout();
+    const gf::Rect panel = (*window.find("atlas-panel")).absolute_bounds();
+    const char* commands[] = {"atlas-grid",    "atlas-icons",    "atlas-cursors", "atlas-whole",
+                              "atlas-leave",   "atlas-previous", "atlas-next",    "atlas-hotspot",
+                              "atlas-gallery", "atlas-compare",  "atlas-export",  "atlas-alpha-tools",
+                              "atlas-palette"};
+    for (const char* command : commands) {
+        const gf::Rect bounds = (*window.find(command)).absolute_bounds();
+        require(bounds.x >= panel.x && bounds.y >= panel.y && bounds.right() <= panel.right() &&
+                    bounds.bottom() <= panel.bottom() && bounds.width >= 80 && bounds.height >= 20,
+                "every Atlas command fits its visible panel at minimum window size");
+    }
+    require((*window.find("atlas-frames")).absolute_bounds().width >= 220,
+            "minimum-width Atlas retains room for two representation thumbnails");
+    routed_button(window, "atlas-palette");
+    window.perform_layout();
+    const gf::Rect close = (*window.find("dialog-cancel")).absolute_bounds();
+    require(close.x >= 0 && close.y >= 0 && close.x + close.width <= 800 && close.y + close.height <= 520,
+            "palette dialog fits minimum window");
+    const std::shared_ptr<gf::RasterCanvas> preview =
+        std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("palette-after"));
+    require((*preview).bitmap() && (*window.find("palette-apply")).enabled(), "indexed preview rendered");
+    const std::shared_ptr<gf::TextBox> matte =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("palette-matte"));
+    (*matte).set_text("#invalid");
+    require(!(*window.find("palette-apply")).enabled(), "invalid matte blocks Apply");
+    (*matte).set_text("#000000");
+    require((*window.find("palette-apply")).enabled() && editor.document.revision == revision &&
+                editor.document.undo_history.empty(),
+            "preview leaves document and history intact");
+    routed_button(window, "palette-apply");
+    require(!window.find("palette-after") && editor.document.undo_history.size() == 1,
+            "palette Apply closes and creates one undo entry");
+    const paint::ImageContainer output = editor.document.output_container(true);
+    require(paint::icon_output_format(output.frames[0], output.kind).bits_per_pixel == 4 &&
+                output.frames[0].hotspot_x == 7 && output.frames[0].hotspot_y == 9 &&
+                output.frames[0].image.get(0, 0).a == 0 &&
+                paint::equal(output.frames[0].image.get(1, 0), {30, 45, 90, 255}),
+            "Apply retains indexed payload, binary alpha, matte and cursor hotspot");
+    require(paint::equal(output.frames[1].image.get(0, 0), other.image.get(0, 0)),
+            "other representations unchanged");
+    const std::vector<std::uint8_t> bytes = paint::encode_icon_container(output);
+    const paint::ImageContainer saved = paint::decode_icon_container(bytes.data(), bytes.size());
+    require(paint::icon_output_format(saved.frames[0], saved.kind).bits_per_pixel == 4,
+            "document output emits indexed cursor");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(1, 0), original.image.get(1, 0)) &&
+                !editor.document.atlas.icons[0].source,
+            "Undo restores pixels and representation format");
+    editor.execute("redo");
+    require(paint::icon_output_format(editor.document.atlas.icons[0], output.kind).bits_per_pixel == 4,
+            "Redo restores indexed payload");
+    editor.execute("atlas-palette");
+    const std::shared_ptr<gf::ComboBox> depth =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-depth"));
+    (*depth).set_selected_index(2);
+    require((*window.find("palette-apply")).enabled(), "changing depth prepares a new representation");
+    editor.document.checkpoint();
+    editor.document.image.set(1, 0, {1, 2, 3, 4});
+    routed_button(window, "palette-apply");
+    require(window.find("palette-after") && paint::equal(editor.document.image.get(1, 0), {1, 2, 3, 4}),
+            "stale palette preview cannot replace an intervening edit");
+    const std::uint64_t before_close = editor.document.revision;
+    routed_button(window, "dialog-cancel");
+    require(editor.document.revision == before_close, "closing palette preview does not edit");
+}
+
+void alpha_tools_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(), "alpha host attaches");
+    paint::ImageContainer container;
+    container.kind = paint::ContainerKind::Icon;
+    paint::IconFrame original, other;
+    original.image.reset(256, 1);
+    for (int x = 0; x < 256; ++x) {
+        original.image.set(x, 0, {97, 31, 213, static_cast<std::uint8_t>(x)});
+    }
+    other.image.reset(16, 16, {23, 45, 67, 89});
+    container.frames = {original, other};
+    editor.document.replace_container(container, "alpha.ico");
+    editor.document.atlas_select(0);
+    editor.refresh();
+    const std::uint64_t revision = editor.document.revision;
+    open_tab(window, "atlas-tab");
+    routed_button(window, "atlas-alpha-tools");
+    window.perform_layout();
+    const gf::Rect close = (*window.find("dialog-cancel")).absolute_bounds();
+    require(close.x >= 0 && close.y >= 0 && close.x + close.width <= 800 && close.y + close.height <= 520,
+            "alpha dialog fits minimum window");
+    const std::shared_ptr<gf::RasterCanvas> before =
+        std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("alpha-before"));
+    require((*before).bitmap() && !(*window.find("alpha-apply")).enabled(),
+            "view-only initial alpha preview");
+    routed_button(window, "alpha-copy");
+    require(services.clipboard.width == 256 && services.clipboard.height == 1 &&
+                std::to_integer<int>(services.clipboard.pixels[0]) == 0 &&
+                std::to_integer<int>(services.clipboard.pixels[3]) == 255 &&
+                std::to_integer<int>(services.clipboard.pixels[127 * 4]) == 127,
+            "copy alpha emits opaque grayscale bytes");
+    routed_button(window, "alpha-paste");
+    require(!(*window.find("alpha-apply")).enabled() && editor.document.revision == revision,
+            "identity mask does not dirty or enable Apply");
+    services.clipboard = {2, 1, 8, std::vector<std::byte>(8, std::byte{0})};
+    services.clipboard.pixels[0] = std::byte{12};
+    services.clipboard.pixels[1] = std::byte{60};
+    services.clipboard.pixels[2] = std::byte{120};
+    services.clipboard.pixels[4] = std::byte{255};
+    services.clipboard.pixels[5] = std::byte{255};
+    services.clipboard.pixels[6] = std::byte{255};
+    routed_button(window, "alpha-paste");
+    require(!(*window.find("alpha-apply")).enabled(), "mismatch requires explicit resize");
+    routed_button(window, "alpha-resize");
+    require((*window.find("alpha-apply")).enabled(), "explicit resize prepares result");
+    routed_button(window, "alpha-reset");
+    require(!(*window.find("alpha-apply")).enabled() && editor.document.revision == revision,
+            "Reset discards preview without mutation");
+    routed_button(window, "alpha-paste");
+    routed_button(window, "alpha-apply");
+    require(!window.find("alpha-before") && editor.document.undo_history.size() == 1,
+            "Apply is one undo entry and closes");
+    require(paint::equal(editor.document.image.get(0, 0), {97, 31, 213, 64}) &&
+                paint::equal(editor.document.image.get(255, 0), {97, 31, 213, 255}),
+            "Apply modifies alpha only, including formerly transparent RGB");
+    const paint::ImageContainer result = editor.document.output_container(false);
+    require(paint::equal(result.frames[1].image.get(0, 0), other.image.get(0, 0)),
+            "other representations remain unchanged");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(0, 0), original.image.get(0, 0)),
+            "Undo restores original opacity");
+    editor.execute("redo");
+    require(editor.document.image.get(0, 0).a == 64, "Redo restores mask");
+    editor.execute("atlas-alpha-tools");
+    services.clipboard.pixels[0] = std::byte{0};
+    routed_button(window, "alpha-paste");
+    routed_button(window, "alpha-resize");
+    editor.document.checkpoint();
+    editor.document.image.set(0, 0, {1, 2, 3, 4});
+    routed_button(window, "alpha-apply");
+    require(window.find("alpha-before") && paint::equal(editor.document.image.get(0, 0), {1, 2, 3, 4}),
+            "stale preview cannot overwrite intervening edit");
+    const std::uint64_t before_close = editor.document.revision;
+    routed_button(window, "dialog-cancel");
+    require(editor.document.revision == before_close, "Close has no alpha edit");
+}
 void asset_browser_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -4456,6 +4624,8 @@ int main() {
         icon_sheet_preview_and_export();
         icon_representation_export();
         asset_browser_contracts();
+        alpha_tools_contracts();
+        icon_palette_contracts();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

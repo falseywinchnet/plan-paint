@@ -33,7 +33,8 @@ struct NativeExercise {
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_formats_review = false,
-         icon_sheet_review = false, icon_export_review = false, asset_browser_review = false;
+         icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
+         alpha_tools_review = false, icon_palette_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -362,6 +363,14 @@ struct NativeExercise {
             }
             return;
         }
+        if (alpha_tools_review || icon_palette_review) {
+            const std::shared_ptr<gf::RasterCanvas> preview = std::dynamic_pointer_cast<gf::RasterCanvas>(
+                window.find(icon_palette_review ? "palette-after" : "alpha-before"));
+            if (!painted || !preview || !(*preview).bitmap()) {
+                throw std::runtime_error("Native alpha inspection did not render");
+            }
+            return;
+        }
         if (asset_browser_review) {
             if (!painted || !window.find("asset-stamp") || !(*window.find("asset-stamp")).enabled()) {
                 throw std::runtime_error("Native asset browser preview did not render");
@@ -410,6 +419,29 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (alpha_tools_review || icon_palette_review) {
+            paint::ImageContainer icon;
+            icon.kind = paint::ContainerKind::Icon;
+            paint::IconFrame frame;
+            frame.image.reset(128, 128);
+            for (int y = 0; y < 128; ++y) {
+                for (int x = 0; x < 128; ++x) {
+                    frame.image.set(x, y,
+                                    {static_cast<std::uint8_t>(x * 2), static_cast<std::uint8_t>(y * 2), 190,
+                                     static_cast<std::uint8_t>(x * 255 / 127)});
+                }
+            }
+            icon.frames.push_back(std::move(frame));
+            document.replace_container(std::move(icon), "alpha-study.ico");
+            (*editor).execute(icon_palette_review ? "atlas-palette" : "atlas-alpha-tools");
+            window.perform_layout();
+            inspect_frame(window);
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native alpha close rejected");
+            }
+            return;
+        }
         if (asset_browser_review) {
             const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
             (*editor).asset_directory = (root / "assets").string();
@@ -531,6 +563,23 @@ struct NativeExercise {
             (*editor).execute("atlas-icons");
             (*editor).close_editor_dialog();
             window.perform_layout();
+            const gf::Rect panel = (*window.find("atlas-panel")).absolute_bounds();
+            const char* commands[] = {"atlas-alpha-tools", "atlas-palette"};
+            for (const char* command : commands) {
+                const gf::Rect bounds = (*window.find(command)).absolute_bounds();
+                if (bounds.y < panel.y || bounds.bottom() > panel.bottom()) {
+                    throw std::runtime_error("Native icon command is clipped by the ribbon");
+                }
+                const gf::Point point{bounds.x + bounds.width / 2, bounds.y + bounds.height / 2};
+                window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, point});
+                window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, point});
+                if (!window.find(std::string(command) == "atlas-palette" ? "palette-after"
+                                                                         : "alpha-before")) {
+                    throw std::runtime_error("Native pointer could not open icon command");
+                }
+                (*editor).close_editor_dialog();
+                window.perform_layout();
+            }
             inspect_frame(window);
             entered = true;
             if (!handle.request_close().accepted()) {
@@ -699,9 +748,12 @@ int main(int argc, char** argv) {
         exercise.icon_formats_review = argc > 1 && std::string(argv[1]) == "--icon-formats";
         exercise.icon_sheet_review = argc > 1 && std::string(argv[1]) == "--icon-sheet";
         exercise.icon_export_review = argc > 1 && std::string(argv[1]) == "--icon-export";
+        exercise.icon_palette_review = argc > 1 && std::string(argv[1]) == "--icon-palette";
+        exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
-            exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review) {
+            exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
+            exercise.alpha_tools_review || exercise.icon_palette_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
@@ -723,7 +775,9 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size = exercise.compact ? gf::Size{800, 600} : gf::Size{1280, 820};
+        options.initial_size = exercise.icon_formats_review ? gf::Size{800, 520}
+                               : exercise.compact           ? gf::Size{800, 600}
+                                                            : gf::Size{1280, 820};
         options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;
         options.ready = std::bind(&NativeExercise::ready, std::ref(exercise), std::placeholders::_1,
