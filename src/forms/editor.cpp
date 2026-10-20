@@ -1753,6 +1753,30 @@ bool Editor::save(bool save_as) {
     save_path(path);
     return true;
 }
+std::string Editor::choose_export_directory(const std::string& initial_directory) {
+    const gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(
+        dialog(gf::HostFolderDialogRequest{tr("Destination folder"), initial_directory}).payload);
+    return result.outcome == gf::HostDialogOutcome::accepted && !result.paths.empty() ? result.paths.front()
+                                                                                      : "";
+}
+bool Editor::save_export_report(const std::string& report) {
+    gf::HostSaveFileDialogRequest request;
+    request.title = tr("Save report…");
+    request.suggested_name = "icon-export-report.json";
+    request.default_extension = "json";
+    request.filters = {{"JSON", {"json"}}};
+    const gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
+    if (result.outcome != gf::HostDialogOutcome::accepted || result.paths.empty()) {
+        return false;
+    }
+    std::string path = result.paths.front();
+    if (image_extension(path).empty()) {
+        path += ".json";
+    }
+    const std::vector<std::uint8_t> bytes(report.begin(), report.end());
+    save_encoded_bytes(bytes, path);
+    return true;
+}
 bool Editor::export_png_image(const Image& image, const std::string& suggested_name) {
     gf::HostSaveFileDialogRequest request;
     request.title = tr("Export PNG");
@@ -1984,6 +2008,9 @@ void Editor::execute(const std::string& command) {
             } else if (command == "atlas-compare" &&
                        (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
                 open_editor_dialog(EditorDialogKind::icon_sheet);
+            } else if (command == "atlas-export" &&
+                       (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
+                open_editor_dialog(EditorDialogKind::icon_export);
             } else if (command == "atlas-grid") {
                 (*ribbon_).show_atlas();
                 open_editor_dialog(EditorDialogKind::atlas_grid);

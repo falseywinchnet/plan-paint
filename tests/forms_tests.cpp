@@ -1171,6 +1171,95 @@ void icon_sheet_preview_and_export() {
                 paint::encode_icon_container(editor.document.output_container(false)) == original,
             "proof settings, export and close must preserve source document, history and pixels");
 }
+void await_icon_export(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while ((*window.find("export-cancel")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now() < deadline, "export worker completes through dispatcher");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    window.perform_layout();
+}
+void icon_representation_export() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{1280, 820}, 1}}).accepted(), "export host attaches");
+    editor.document.make_icon_sizes({16, 32}, false);
+    const std::vector<std::uint8_t> original =
+        paint::encode_icon_container(editor.document.output_container(false));
+    const std::uint64_t revision = editor.document.revision;
+    const std::size_t history = editor.document.undo_history.size();
+    const std::filesystem::path root =
+        std::filesystem::temp_directory_path() /
+        ("paint-export-ui-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    require(std::filesystem::create_directory(root), "export UI directory creation failed");
+    services.path = root.string();
+    editor.execute("atlas-export");
+    require(!(*window.find("export-run")).enabled(), "export must await a reviewed folder");
+    routed_button(window, "export-folder");
+    await_icon_export(window);
+    require((*window.find("export-run")).enabled() && std::filesystem::is_empty(root),
+            "review wrote outputs or did not enable run");
+    const std::shared_ptr<gf::TextBox> manifest =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("export-manifest"));
+    require((*manifest).text().find("16x16-rgba-001.png") != std::string::npos &&
+                (*manifest).text().find("32x32-rgba-002.png") != std::string::npos,
+            "review omits actual representation identities");
+    window.request_focus(window.find("export-prefix"));
+    gf::KeyEvent enter;
+    enter.action = gf::KeyAction::down;
+    enter.physical_key = gf::PhysicalKey::enter;
+    window.dispatch_key(enter);
+    require(window.find("export-manifest") && std::filesystem::is_empty(root),
+            "Enter in settings ran or dismissed export");
+    routed_button(window, "export-run");
+    require(!(*window.find("export-prefix")).enabled(), "running export settings are mutable");
+    await_icon_export(window);
+    require((*manifest).text().find("Completed") != std::string::npos &&
+                std::filesystem::exists(root / "icon-16x16-rgba-001.png") &&
+                std::filesystem::exists(root / "icon-32x32-rgba-002.png"),
+            "UI export failed to publish both outputs");
+    services.path = (root / "report.json").string();
+    routed_button(window, "export-report");
+    const std::vector<std::uint8_t> report = paint::read_image_bytes(services.path);
+    require(std::string(report.begin(), report.end()).find("\"sourceOrdinal\": 2") != std::string::npos,
+            "saved report lost representation identity");
+    routed_button(window, "export-review");
+    await_icon_export(window);
+    require(!(*window.find("export-run")).enabled() &&
+                (*manifest).text().find("Skipped") != std::string::npos,
+            "default collision policy would overwrite existing PNGs");
+    const std::shared_ptr<gf::ComboBox> policy =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("export-collision"));
+    (*policy).set_selected_index(1);
+    await_icon_export(window);
+    require((*window.find("export-run")).enabled() &&
+                (*manifest).text().find("001-2.png") != std::string::npos,
+            "rename targets are not reviewable");
+    const std::shared_ptr<gf::TextBox> prefix =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("export-prefix"));
+    (*prefix).set_text("../escape");
+    await_icon_export(window);
+    require(!(*window.find("export-run")).enabled() && !(*window.find("export-report")).enabled(),
+            "invalid revised input left a stale runnable plan");
+    (*prefix).set_text("fresh");
+    const std::shared_ptr<gf::TextBox> destination =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("export-destination"));
+    (*destination).set_text("");
+    static_cast<void>(window.drain_posted_work());
+    require(!(*window.find("export-cancel")).enabled() && !(*window.find("export-run")).enabled(),
+            "clearing destination left a worker or stale runnable manifest");
+    routed_button(window, "dialog-cancel");
+    static_cast<void>(window.drain_posted_work());
+    require(editor.document.revision == revision && editor.document.undo_history.size() == history &&
+                paint::encode_icon_container(editor.document.output_container(false)) == original,
+            "separate PNG export modified the source document");
+    std::filesystem::remove_all(root);
+}
 void icon_generation_review_and_cancel() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -4244,6 +4333,7 @@ int main() {
         icon_generation_review_and_cancel();
         icon_representation_identity();
         icon_sheet_preview_and_export();
+        icon_representation_export();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

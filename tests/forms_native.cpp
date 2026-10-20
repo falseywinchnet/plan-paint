@@ -33,7 +33,7 @@ struct NativeExercise {
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_formats_review = false,
-         icon_sheet_review = false;
+         icon_sheet_review = false, icon_export_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -356,6 +356,12 @@ struct NativeExercise {
             }
             return;
         }
+        if (icon_export_review) {
+            if (!painted || !window.find("export-run") || !(*window.find("export-run")).enabled()) {
+                throw std::runtime_error("Native representation export manifest did not render");
+            }
+            return;
+        }
         if (icon_sheet_review) {
             if (!painted || !window.find("sheet-export") || !(*window.find("sheet-export")).enabled()) {
                 throw std::runtime_error("Native contact sheet preview did not render");
@@ -398,6 +404,36 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (icon_export_review) {
+            NativeRecoveryDirectory outputs;
+            const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+            document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
+            document.make_icon_sizes({16, 32, 48, 128}, false);
+            (*editor).execute("atlas-export");
+            const std::shared_ptr<gf::TextBox> destination =
+                std::dynamic_pointer_cast<gf::TextBox>(window.find("export-destination"));
+            (*destination).set_text(outputs.path.string());
+            const std::chrono::steady_clock::time_point deadline =
+                std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            while ((*window.find("export-cancel")).enabled()) {
+                static_cast<void>(window.drain_posted_work());
+                if (std::chrono::steady_clock::now() > deadline) {
+                    throw std::runtime_error("Native export review timed out");
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            window.perform_layout();
+            inspect_frame(window);
+            if (!std::filesystem::is_empty(outputs.path)) {
+                throw std::runtime_error("Native export review wrote files");
+            }
+            (*editor).close_editor_dialog();
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native export review close failed");
+            }
+            return;
+        }
         if (icon_sheet_review) {
             const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
             document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
@@ -619,8 +655,9 @@ int main(int argc, char** argv) {
         exercise.icon_production_review = argc > 1 && std::string(argv[1]) == "--icon-production";
         exercise.icon_formats_review = argc > 1 && std::string(argv[1]) == "--icon-formats";
         exercise.icon_sheet_review = argc > 1 && std::string(argv[1]) == "--icon-sheet";
+        exercise.icon_export_review = argc > 1 && std::string(argv[1]) == "--icon-export";
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
-            exercise.icon_sheet_review) {
+            exercise.icon_sheet_review || exercise.icon_export_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
