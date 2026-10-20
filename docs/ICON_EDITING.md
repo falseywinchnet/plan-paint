@@ -99,6 +99,51 @@ the source document, its filename or Undo history. This command exports one
 assembled sheet; separate-file representation export and multi-file batch jobs
 remain future work.
 
+## Exporting separate PNG files
+
+Open an ICO or CUR and choose **Atlas → Export…**. Choose all representations,
+the current image, or the selected Atlas sequence. Enter a filename prefix and
+choose an existing destination folder. The window takes a document snapshot when
+opened and prepares the complete output manifest before enabling **Export PNG…**.
+Review every name and status before running. Merely reviewing creates no files.
+
+Each representation becomes a separate RGBA PNG at its original dimensions.
+No resampling or palette conversion is requested. Names include dimensions,
+imported source depth when available, and the original one-based image number:
+`sample-32x32-src8bpp-003.png`. Here `src8bpp` describes imported provenance;
+the exported PNG contains current RGBA pixels. New representations use `rgba`.
+Same-size variants remain distinct. Repeated sequence entries get an additional
+copy suffix. PNG does not carry cursor hotspots or background-dependent XOR
+operations; XOR images produce a preflight error. An opaque contact sheet can
+show their appearance against a chosen background.
+
+Choose how to handle existing output names:
+
+| Policy | Reviewed behavior |
+|---|---|
+| Skip existing | Default. Existing destinations are listed as skipped and remain unchanged. |
+| Rename outputs | Resolve numeric suffixes during review. If a reviewed name becomes occupied before publication, report failure and leave that file unchanged; review again for a new name. |
+| Replace existing | Explicitly permit replacement of regular files. Replacements are marked in the manifest. Directories and symbolic links are not valid replacement targets. |
+
+Skip and Rename use an atomic publication step that cannot overwrite an existing
+destination, including a file created after review. Each completed PNG is first
+written and closed as a temporary sibling, then published. An output failure
+preserves the earlier destination and is reported individually; other outputs
+can still complete. Filesystems that cannot support the required publication
+operation report failure rather than falling back to a non-atomic overwrite.
+
+**Cancel** stops further outputs and keeps the results window open. A file already
+being published may finish; completed files remain on disk and in the report.
+Closing the window also cancels pending work and waits for the worker to stop.
+There is no whole-job rollback. **Save report…** exports JSON with each source
+ordinal, dimensions, source depth, destination name, state and diagnostic.
+**Review outputs** prepares a fresh plan after a job or filesystem change.
+Document pixels, filename and Undo history remain unchanged.
+
+This command exports the representations that actually exist in one open
+document. Requested-size fallback, choosing one depth per distinct size, and
+multi-document batch conversion remain separate work.
+
 The broader [icon production interview](icon-editor-study/mockups.html) covers
 future palette, alpha, batch and asset-browsing capabilities. Its recommendations
 remain candidate designs; implemented features do not establish owner answers

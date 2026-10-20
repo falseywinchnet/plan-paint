@@ -1,6 +1,7 @@
 #pragma once
 #include "carpet.hpp"
 #include "color_tools.hpp"
+#include "icon_export.hpp"
 #include "icon_sheet.hpp"
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
@@ -18,6 +19,7 @@ class EditorDialog;
 struct CarpetRenderJob;
 struct DitherRenderJob;
 struct IconSheetJob;
+struct IconExportJob;
 enum class EditorDialogKind {
     dither,
     tool_size,
@@ -32,6 +34,7 @@ enum class EditorDialogKind {
     hotspot,
     atlas_gallery,
     icon_sheet,
+    icon_export,
     properties,
     settings,
     english_help,
@@ -66,6 +69,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_carpet();
     void deliver_dither();
     void deliver_icon_sheet();
+    void deliver_icon_export();
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
     void arrange(gui_forms::Rect bounds) override;
@@ -82,6 +86,25 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_icon_export();
+    void review_icon_export();
+    void stop_icon_export();
+    void icon_export_clicked(gui_forms::ButtonBase&);
+    void icon_export_choice_changed(std::optional<std::size_t>);
+    void icon_export_text_changed(const std::string&);
+    void icon_export_destination_changed(const std::string&);
+    void start_icon_export(bool execute);
+    std::shared_ptr<const ImageContainer> export_source_;
+    std::vector<int> export_selected_;
+    int export_current_ = -1;
+    std::string export_directory_;
+    std::shared_ptr<IconExportJob> export_job_;
+    std::thread export_worker_;
+    std::shared_ptr<gui_forms::ComboBox> export_scope_, export_collision_;
+    std::shared_ptr<gui_forms::TextBox> export_prefix_, export_manifest_, export_destination_;
+    std::shared_ptr<gui_forms::Label> export_status_;
+    std::shared_ptr<gui_forms::Button> export_folder_, export_review_, export_run_, export_cancel_,
+        export_report_;
     void initialize_icon_sheet();
     void render_icon_sheet_preview();
     void stop_icon_sheet();

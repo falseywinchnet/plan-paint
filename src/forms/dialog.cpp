@@ -238,6 +238,10 @@ void EditorDialog::initialize_control_tree() {
         initialize_icon_sheet();
         return;
     }
+    if (kind_ == EditorDialogKind::icon_export) {
+        initialize_icon_export();
+        return;
+    }
     if (kind_ == EditorDialogKind::about) {
         panel_ = {0, 0, 590, 565};
         label("about-version", "Plan Paint " RAINSTAR_VERSION, {24, 54, 542, 28}, true);
@@ -725,6 +729,9 @@ void EditorDialog::on_key_preview(gf::KeyEvent& event) {
         }
         event.handled = true;
     } else if (event.physical_key == gf::PhysicalKey::enter) {
+        if (kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_sheet) {
+            return; // The focused command owns Enter; never run a disk job implicitly.
+        }
         accept();
         event.handled = true;
     }
@@ -765,6 +772,8 @@ std::string EditorDialog::title() const {
         return tr("Atlas frames");
     case EditorDialogKind::icon_sheet:
         return tr("Compare / contact sheet");
+    case EditorDialogKind::icon_export:
+        return tr("Export representations");
     case EditorDialogKind::settings:
         return tr("Settings");
     case EditorDialogKind::properties:

@@ -156,7 +156,7 @@ std::vector<std::uint8_t> read_regular_file_bounded(const std::string& path, std
 }
 
 void write_file_atomic(const std::vector<std::uint8_t>& bytes, const std::string& path,
-                       const char* failure_message) {
+                       const char* failure_message, bool replace_existing) {
     const std::filesystem::path target = path_from_utf8(path);
     std::filesystem::path temporary;
 #ifdef _WIN32
@@ -175,7 +175,8 @@ void write_file_atomic(const std::vector<std::uint8_t>& bytes, const std::string
     const bool written = write_all(file, bytes) && FlushFileBuffers(file);
     const bool closed = CloseHandle(file) != 0;
     if (!written || !closed ||
-        !MoveFileExW(temporary.c_str(), target.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        !MoveFileExW(temporary.c_str(), target.c_str(),
+                     (replace_existing ? MOVEFILE_REPLACE_EXISTING : 0) | MOVEFILE_WRITE_THROUGH)) {
         DeleteFileW(temporary.c_str());
         throw std::runtime_error(failure_message);
     }
@@ -193,8 +194,18 @@ void write_file_atomic(const std::vector<std::uint8_t>& bytes, const std::string
     }
     const bool written = write_all(file, bytes) && fsync(file) == 0;
     const bool closed = close(file) == 0;
-    if (!written || !closed || rename(temporary.c_str(), target.c_str()) != 0) {
+    if (!written || !closed) {
         unlink(temporary.c_str());
+        throw std::runtime_error(failure_message);
+    }
+    // A hard-link publication atomically refuses an existing destination. The
+    // temporary is a sibling, so both names are on the same filesystem.
+    const int published = replace_existing ? rename(temporary.c_str(), target.c_str())
+                                           : link(temporary.c_str(), target.c_str());
+    if (!replace_existing || published != 0) {
+        unlink(temporary.c_str());
+    }
+    if (published != 0) {
         throw std::runtime_error(failure_message);
     }
 #endif

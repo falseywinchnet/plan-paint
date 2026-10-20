@@ -209,6 +209,8 @@ class Editor final : public gui_forms::Control {
     void open_editor_dialog(EditorDialogKind kind, bool secondary = false);
     void close_editor_dialog();
     bool export_png_image(const Image& image, const std::string& suggested_name);
+    std::string choose_export_directory(const std::string& initial_directory);
+    bool save_export_report(const std::string& report);
     void arrange(gui_forms::Rect bounds) override;
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
     void paint_canvas_overlay(gui_forms::Painter& painter, gui_forms::Rect damage);
