@@ -1753,6 +1753,26 @@ bool Editor::save(bool save_as) {
     save_path(path);
     return true;
 }
+bool Editor::export_png_image(const Image& image, const std::string& suggested_name) {
+    gf::HostSaveFileDialogRequest request;
+    request.title = tr("Export PNG");
+    request.suggested_name = suggested_name;
+    request.default_extension = "png";
+    request.filters = {{"PNG", {"png"}}};
+    const gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
+    if (result.outcome != gf::HostDialogOutcome::accepted || result.paths.empty()) {
+        return false;
+    }
+    std::string path = result.paths.front();
+    if (image_extension(path).empty()) {
+        path += ".png";
+    }
+    if (image_extension(path) != ".png") {
+        throw std::runtime_error(tr("Choose a PNG filename for this export."));
+    }
+    save_image(image, path);
+    return true;
+}
 void Editor::save_path(const std::string& path) {
     document.sync_curve();
     document.sync_path();
@@ -1961,6 +1981,9 @@ void Editor::execute(const std::string& command) {
             finish_controls();
             if (command == "atlas-gallery") {
                 open_editor_dialog(EditorDialogKind::atlas_gallery);
+            } else if (command == "atlas-compare" &&
+                       (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
+                open_editor_dialog(EditorDialogKind::icon_sheet);
             } else if (command == "atlas-grid") {
                 (*ribbon_).show_atlas();
                 open_editor_dialog(EditorDialogKind::atlas_grid);

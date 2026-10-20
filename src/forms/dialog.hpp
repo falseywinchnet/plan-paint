@@ -1,6 +1,7 @@
 #pragma once
 #include "carpet.hpp"
 #include "color_tools.hpp"
+#include "icon_sheet.hpp"
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
@@ -16,6 +17,7 @@ class SwatchButton;
 class EditorDialog;
 struct CarpetRenderJob;
 struct DitherRenderJob;
+struct IconSheetJob;
 enum class EditorDialogKind {
     dither,
     tool_size,
@@ -29,6 +31,7 @@ enum class EditorDialogKind {
     cursor_sizes,
     hotspot,
     atlas_gallery,
+    icon_sheet,
     properties,
     settings,
     english_help,
@@ -62,6 +65,7 @@ class EditorDialog final : public gui_forms::Control {
     void on_detaching_from_window(gui_forms::Window& window) noexcept override;
     void deliver_carpet();
     void deliver_dither();
+    void deliver_icon_sheet();
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
     void arrange(gui_forms::Rect bounds) override;
@@ -78,6 +82,26 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_icon_sheet();
+    void render_icon_sheet_preview();
+    void stop_icon_sheet();
+    void icon_sheet_number_changed(double);
+    void icon_sheet_choice_changed(std::optional<std::size_t>);
+    void icon_sheet_zoom_changed(std::optional<std::size_t>);
+    void icon_sheet_clicked(gui_forms::ButtonBase&);
+    std::shared_ptr<const ImageContainer> sheet_source_;
+    std::vector<int> sheet_selected_;
+    int sheet_current_ = -1;
+    Color sheet_custom_;
+    std::shared_ptr<IconSheetJob> sheet_job_;
+    std::thread sheet_worker_;
+    std::shared_ptr<gui_forms::ComboBox> sheet_scope_, sheet_background_, sheet_zoom_;
+    std::shared_ptr<gui_forms::NumericUpDown> sheet_columns_, sheet_padding_, sheet_gap_, sheet_font_;
+    std::shared_ptr<gui_forms::CheckBox> sheet_labels_;
+    std::shared_ptr<gui_forms::RasterCanvas> sheet_preview_;
+    std::shared_ptr<gui_forms::Control> sheet_viewport_;
+    std::shared_ptr<gui_forms::Label> sheet_status_;
+    std::shared_ptr<gui_forms::Button> sheet_export_;
     void theme_changed(double hue);
     std::shared_ptr<gui_forms::TrackBar> theme_hue_;
     std::shared_ptr<gui_forms::CheckBox> recovery_enabled_;
@@ -152,6 +176,13 @@ class EditorDialog final : public gui_forms::Control {
     void set_color(Color color, bool update_hsv = true);
     std::vector<std::shared_ptr<gui_forms::NumericUpDown>> atlas_numbers_;
     std::vector<std::shared_ptr<gui_forms::CheckBox>> icon_sizes_;
+    std::shared_ptr<gui_forms::ComboBox> icon_policy_;
+    std::shared_ptr<gui_forms::Label> icon_plan_;
+    std::shared_ptr<gui_forms::TextBox> icon_manifest_;
+    std::vector<int> chosen_icon_sizes() const;
+    void icon_size_clicked(gui_forms::ButtonBase& control);
+    void icon_policy_changed(std::optional<std::size_t> index);
+    void refresh_icon_plan();
     std::string title() const;
     void atlas_changed(double value);
     void accept();

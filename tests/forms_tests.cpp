@@ -1,6 +1,7 @@
 #include "codecs.hpp"
-#include "cursors/tool_cursors.hpp"
 #include "conv.hpp"
+#include "cursors/tool_cursors.hpp"
+#include "fixtures/icon_reference.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
 #include "localization.hpp"
@@ -1078,6 +1079,141 @@ void atlas_grid_frames_and_cursor_save() {
                 saved.frames.back().hotspot_y == 17,
             "CUR reload preserves all frames and hotspot");
     std::filesystem::remove(services.path);
+}
+void icon_representation_identity() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    paint::ImageContainer container =
+        paint::decode_icon_container(paint::test::indexed_icon, sizeof(paint::test::indexed_icon));
+    container.frames.push_back(container.frames[0]);
+    editor.document.replace_container(container, "indexed.ico");
+    editor.refresh();
+    editor.execute("atlas-icons");
+    editor.close_editor_dialog();
+    window.perform_layout();
+    const std::shared_ptr<gf::Label> status =
+        std::dynamic_pointer_cast<gf::Label>(window.find("atlas-status"));
+    require(status && (*status).text().find("Source: 2 bpp PNG") != std::string::npos &&
+                (*status).text().find("Save: 2 bpp PNG") != std::string::npos,
+            "indexed source and save formats must be distinguishable in the strip status");
+    editor.document.checkpoint();
+    editor.document.image.set(0, 0, {80, 90, 100, 255});
+    editor.refresh();
+    require((*status).text().find("Source: 2 bpp PNG") != std::string::npos &&
+                (*status).text().find("Save: 32 bpp DIB") != std::string::npos,
+            "edited source must keep provenance but show the changed save format");
+    editor.execute("undo");
+    require((*status).text().find("Save: 2 bpp PNG") != std::string::npos,
+            "Undo must restore the untouched save format in the UI");
+}
+void await_icon_sheet(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!(*window.find("sheet-export")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        const std::shared_ptr<gf::Label> error =
+            std::dynamic_pointer_cast<gf::Label>(window.find("dialog-error"));
+        if (error && !(*error).text().empty()) {
+            return;
+        }
+        require(std::chrono::steady_clock::now() < deadline,
+                "contact sheet worker completes through dispatcher");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    window.perform_layout();
+}
+void icon_sheet_preview_and_export() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{1280, 820}, 2}}).accepted(),
+            "proofing test host attaches at high DPI");
+    editor.document.make_icon_sizes({16, 32, 48}, false);
+    const std::vector<std::uint8_t> original =
+        paint::encode_icon_container(editor.document.output_container(false));
+    const std::uint64_t revision = editor.document.revision;
+    const std::size_t history = editor.document.undo_history.size();
+    editor.execute("atlas-compare");
+    await_icon_sheet(window);
+    require((*window.find("sheet-export")).enabled(), "completed sheet enables explicit export");
+    const std::shared_ptr<gf::RasterCanvas> preview =
+        std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("sheet-preview"));
+    const std::shared_ptr<gf::ComboBox> zoom =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-zoom"));
+    (*zoom).set_selected_index(1);
+    window.perform_layout();
+    require(std::abs((*preview).bitmap_to_client({0, 0, 1, 1}).width * window.scale() - 1) < 1e-8,
+            "actual-pixel proof must map one image pixel to one physical display pixel");
+    const std::shared_ptr<gf::ComboBox> background =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-background"));
+    (*background).set_selected_index(1);
+    (*background).set_selected_index(3);
+    await_icon_sheet(window);
+    services.path = (std::filesystem::temp_directory_path() / "rainstar-icon-contact-sheet.png").string();
+    routed_button(window, "sheet-export");
+    const paint::Image exported = paint::load_image(services.path);
+    require(exported.get(0, 0).a == 0, "latest transparent preview must match exported PNG");
+    std::filesystem::remove(services.path);
+    const std::shared_ptr<gf::ComboBox> scope =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-scope"));
+    (*scope).set_selected_index(2);
+    await_icon_sheet(window);
+    require(!(*window.find("sheet-export")).enabled(),
+            "empty selected sequence must not export stale preview");
+    (*scope).set_selected_index(0);
+    routed_button(window, "dialog-cancel");
+    static_cast<void>(window.drain_posted_work());
+    require(!window.find("sheet-preview") && editor.document.revision == revision &&
+                editor.document.undo_history.size() == history &&
+                paint::encode_icon_container(editor.document.output_container(false)) == original,
+            "proof settings, export and close must preserve source document, history and pixels");
+}
+void icon_generation_review_and_cancel() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.make_icon_sizes({16, 24, 32}, false);
+    const std::size_t history = editor.document.undo_history.size();
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    std::shared_ptr<gf::ComboBox> policy =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-size-policy"));
+    std::shared_ptr<gf::Label> summary = std::dynamic_pointer_cast<gf::Label>(window.find("icon-size-plan"));
+    require(policy && summary && (*policy).selected_index().value_or(99) == 0 &&
+                (*summary).text().find("Keep: 3") != std::string::npos &&
+                (*summary).text().find("Add: 2") != std::string::npos,
+            "icon generation defaults to preserving existing artwork with a live plan");
+    (*policy).set_selected_index(2);
+    const std::shared_ptr<gf::TextBox> manifest =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("icon-size-manifest"));
+    require(manifest && (*manifest).read_only() &&
+                (*manifest).text().find("Remove #2 · 24 × 24") != std::string::npos,
+            "review identifies the particular representation that will be removed");
+    window.perform_layout();
+    require((*manifest).scroll_offset().y == 0,
+            "updated generation manifest starts at its first image");
+    require((*summary).text().find("Remove: 1") != std::string::npos && editor.document.atlas.count() == 3 &&
+                editor.document.undo_history.size() == history,
+            "exact-profile preview identifies removal without mutating the document");
+    routed_button(window, "icon-size-48");
+    require((*summary).text().find("Add: 1") != std::string::npos,
+            "target checkbox updates the generation plan before acceptance");
+    routed_button(window, "dialog-cancel");
+    require(editor.document.atlas.count() == 3 && editor.document.undo_history.size() == history,
+            "cancel preserves all representations and history");
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    policy = std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-size-policy"));
+    (*policy).set_selected_index(2);
+    routed_button(window, "dialog-ok");
+    require(editor.document.atlas.count() == 4 && editor.document.undo_history.size() == history + 1,
+            "accept applies the reviewed exact profile as one transaction");
+    editor.execute("undo");
+    require(editor.document.atlas.count() == 3 && editor.document.atlas.icons[1].image.width == 24,
+            "Undo restores an image removed by exact-profile generation");
 }
 void atlas_large_sheet_uses_visible_thumbnail_resources() {
     Fixture fixture;
@@ -4105,6 +4241,9 @@ int main() {
         crop_and_help_actions();
         stamp_reset_and_recapture();
         atlas_grid_frames_and_cursor_save();
+        icon_generation_review_and_cancel();
+        icon_representation_identity();
+        icon_sheet_preview_and_export();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();
