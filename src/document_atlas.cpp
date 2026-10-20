@@ -1,6 +1,7 @@
 #include "conv.hpp"
 #include "document.hpp"
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 namespace paint {
 bool Document::has_legacy_xor() const {
@@ -187,30 +188,68 @@ void Document::atlas_step(int direction) {
     atlas_select(next, false);
     atlas.sequence = std::move(sequence);
 }
-void Document::make_icon_sizes(const std::vector<int>& sizes, bool cursor) {
-    if (sizes.empty()) {
-        throw std::runtime_error("Choose at least one icon size.");
-    }
-    commit_selection();
-    commit_path();
-    commit_curve();
-    sync_atlas();
-    ImageContainer result;
-    result.kind = cursor ? ContainerKind::Cursor : ContainerKind::Icon;
-    for (std::size_t i = 0; i < sizes.size(); ++i) {
-        if (sizes[i] < 1 || sizes[i] > 256) {
-            throw std::runtime_error("Icon sizes must be between 1 and 256 pixels.");
+void Document::make_icon_sizes(const std::vector<int>& sizes, bool cursor, IconSizePolicy policy) {
+    const bool existing_icon = atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor;
+    ImageContainer current;
+    if (existing_icon) {
+        current = output_container(cursor);
+        if (atlas.active >= 0 && (image.width != atlas.icons[atlas.active].image.width ||
+                                  image.height != atlas.icons[atlas.active].image.height)) {
+            current.frames[atlas.active].xor_pixels.clear();
         }
-        IconFrame frame;
-        conv_resize(image, sizes[i], sizes[i], frame.image);
-        result.frames.push_back(std::move(frame));
     }
+    const IconSizePlan plan = plan_icon_sizes(current.frames, sizes, policy);
+    const AtlasKind target_kind = cursor ? AtlasKind::Cursor : AtlasKind::Icon;
+    if (atlas.kind == target_kind && plan.added == 0 && plan.replaced == 0 && plan.removed == 0) {
+        return;
+    }
+    if (plan.added + plan.replaced > 0) {
+        require_rgba_transform();
+    }
+    const Image source = visible_image();
+    int hotspot_x = 0, hotspot_y = 0;
+    if (atlas.kind == AtlasKind::Cursor && atlas.active >= 0) {
+        hotspot_x = atlas.icons[atlas.active].hotspot_x;
+        hotspot_y = atlas.icons[atlas.active].hotspot_y;
+    }
+    AtlasState result;
+    result.kind = target_kind;
+    for (const IconSizeStep& step : plan.steps) {
+        IconFrame frame;
+        if (step.generate) {
+            if (source.width == step.size && source.height == step.size) {
+                frame.image = source;
+            } else {
+                conv_resize(source, step.size, step.size, frame.image);
+            }
+            if (cursor && atlas.kind == AtlasKind::Cursor) {
+                frame.hotspot_x = std::clamp(
+                    static_cast<int>(std::lround((hotspot_x + 0.5) * step.size / source.width - 0.5)), 0,
+                    step.size - 1);
+                frame.hotspot_y = std::clamp(
+                    static_cast<int>(std::lround((hotspot_y + 0.5) * step.size / source.height - 0.5)), 0,
+                    step.size - 1);
+            }
+        } else {
+            frame = current.frames[step.existing_index];
+        }
+        if (existing_icon && step.existing_index == atlas.active) {
+            result.active = static_cast<int>(result.icons.size());
+        }
+        result.icons.push_back(std::move(frame));
+    }
+    if (result.active < 0) {
+        result.active = static_cast<int>(result.icons.size()) - 1;
+    }
+    Image active_image = result.icons[result.active].image;
+    // Publish only after validation and all resampling/allocation have succeeded.
+    // The snapshot includes a floating selection, so one Undo restores the source session.
     checkpoint();
-    atlas = {};
-    atlas.kind = cursor ? AtlasKind::Cursor : AtlasKind::Icon;
-    atlas.icons = std::move(result.frames);
-    atlas.active = static_cast<int>(atlas.icons.size()) - 1;
-    image = atlas.icons.back().image;
+    selection = {};
+    path = {};
+    curve = {};
+    atlas = std::move(result);
+    image = std::move(active_image);
     ++atlas_epoch;
 }
 void Document::set_hotspot(int x, int y) {

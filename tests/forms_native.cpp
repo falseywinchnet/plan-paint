@@ -30,7 +30,7 @@ struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
          materials = false, interface_review = false, view_review = false, guide_review = false,
-         healing_review = false;
+         healing_review = false, icon_production_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -339,6 +339,12 @@ struct NativeExercise {
                                               static_cast<int>(sample.y * window.scale()));
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
+        if (icon_production_review) {
+            if (!painted || !window.find("icon-size-manifest")) {
+                throw std::runtime_error("Native icon generation review did not render");
+            }
+            return;
+        }
         const paint::Color expected = (*editor).document.image.get(120, 120);
         if (!painted || !paint::equal(actual, expected)) {
             throw std::runtime_error("Native live canvas pixels differ: painted=" + std::to_string(painted) +
@@ -375,6 +381,26 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (icon_production_review) {
+            const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+            document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
+            document.make_icon_sizes({16, 24, 32}, false);
+            (*editor).refresh();
+            (*editor).execute("atlas-icons");
+            window.perform_layout();
+            const std::shared_ptr<gf::ComboBox> policy =
+                std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-size-policy"));
+            if (!policy) { throw std::runtime_error("Native icon generation policy is unavailable"); }
+            (*policy).set_selected_index(2);
+            window.perform_layout();
+            inspect_frame(window);
+            (*editor).close_editor_dialog();
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native icon review close failed");
+            }
+            return;
+        }
         if (guide_review) {
             document.ink.size = 3;
             paint::draw_shape(document.image, paint::Shape::Oval, {300, 110}, {620, 430},
@@ -512,7 +538,8 @@ int main(int argc, char** argv) {
         NativeExercise exercise;
         exercise.keep_open = argc > 1;
         exercise.healing_review = argc > 1 && std::string(argv[1]) == "--healing";
-        if (exercise.healing_review) {
+        exercise.icon_production_review = argc > 1 && std::string(argv[1]) == "--icon-production";
+        if (exercise.healing_review || exercise.icon_production_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||

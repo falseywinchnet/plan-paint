@@ -29,6 +29,90 @@ void require(bool value, const char* message) {
         throw std::runtime_error(message);
     }
 }
+void test_icon_size_production() {
+    paint::ImageContainer original;
+    original.kind = paint::ContainerKind::Cursor;
+    for (int size : {16, 16, 32, 48}) {
+        paint::IconFrame frame;
+        frame.image.reset(size, size, {static_cast<std::uint8_t>(size), 80, 120, 173});
+        frame.hotspot_x = size / 2;
+        frame.hotspot_y = size / 4;
+        original.frames.push_back(frame);
+    }
+    original.frames[1].image.set(0, 0, {255, 255, 255, 0});
+    original.frames[1].xor_pixels.resize(16 * 16);
+    original.frames[1].xor_pixels[0] = {255, 255, 255, 255};
+    paint::Document document;
+    document.replace_container(original, "production.cur");
+    document.atlas_select(2);
+    document.image.set(4, 4, {210, 30, 70, 99});
+    const paint::Image edited_source = document.image;
+    const paint::IconSizePlan additions =
+        paint::plan_icon_sizes(original.frames, {16, 24, 24, 32}, paint::IconSizePolicy::AddMissing);
+    require(additions.kept == 4 && additions.added == 1 && additions.replaced == 0 && additions.removed == 0,
+            "add-missing plan preserves duplicate representations and deduplicates requested sizes");
+    document.make_icon_sizes({16, 24, 24, 32}, true);
+    require(document.atlas.count() == 5 && document.atlas.active == 2 && document.undo_history.size() == 1,
+            "generation preserves the current image and creates one transaction");
+    require(paint::equal(document.atlas.icons[2].image.get(4, 4), edited_source.get(4, 4)) &&
+                paint::legacy_xor_pixel(document.atlas.icons[1], 0),
+            "add-missing preserves pending pixels and untouched legacy representations");
+    require(document.atlas.icons[4].image.width == 24 && document.atlas.icons[4].hotspot_x == 12 &&
+                document.atlas.icons[4].hotspot_y == 6,
+            "generated cursor hotspot follows source pixel centers");
+    const std::uint64_t revision = document.revision;
+    document.make_icon_sizes({16, 24, 32}, true);
+    require(document.revision == revision && document.undo_history.size() == 1,
+            "already-complete add-missing request is a true no-op");
+    document.undo();
+    require(document.atlas.count() == 4 && document.atlas.active == 2 &&
+                paint::equal(document.image.get(4, 4), edited_source.get(4, 4)),
+            "one Undo restores all original images and the unsynchronized current source");
+    document.redo();
+    require(document.atlas.count() == 5 && document.atlas.icons[4].image.width == 24,
+            "Redo restores generated images");
+    const paint::IconSizePlan exact =
+        paint::plan_icon_sizes(document.atlas.icons, {16, 32}, paint::IconSizePolicy::ExactProfile);
+    require(exact.kept == 3 && exact.removed == 2 && exact.added == 0,
+            "exact profile removes only off-profile dimensions, preserving same-size variants");
+    document.make_icon_sizes({16, 32}, true, paint::IconSizePolicy::ExactProfile);
+    require(document.atlas.count() == 3 && paint::legacy_xor_pixel(document.atlas.icons[1], 0),
+            "exact profile retains legacy data for matching representations");
+    document.make_icon_sizes({16}, true, paint::IconSizePolicy::ReplaceSelected);
+    require(document.atlas.count() == 3 && document.atlas.icons[0].xor_pixels.empty() &&
+                document.atlas.icons[1].xor_pixels.empty() && document.atlas.active == 2 &&
+                paint::equal(document.atlas.icons[2].image.get(4, 4), edited_source.get(4, 4)),
+            "replacement affects all chosen-size entries while preserving other artwork");
+    const std::size_t history = document.undo_history.size();
+    bool rejected = false;
+    try {
+        document.make_icon_sizes({24, 257}, true);
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected && document.atlas.count() == 3 && document.undo_history.size() == history,
+            "invalid later target cannot partially mutate a document");
+    rejected = false;
+    try {
+        document.make_icon_sizes({}, true, paint::IconSizePolicy::ExactProfile);
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected && document.atlas.count() == 3, "empty exact profile cannot delete every image");
+    document.replace_container(original, "legacy.cur");
+    document.atlas_select(1);
+    rejected = false;
+    try {
+        document.make_icon_sizes({24}, true);
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected && document.atlas.count() == 4 && document.undo_history.empty(),
+            "background-dependent XOR source is rejected before history or data mutation");
+    document.make_icon_sizes({16}, true, paint::IconSizePolicy::ExactProfile);
+    require(document.atlas.count() == 2 && paint::legacy_xor_pixel(document.atlas.icons[1], 0),
+            "exact pruning without resampling works for a legacy source");
+}
 void test_color() {
     for (int r = 0; r <= 255; r += 17) {
         for (int g = 0; g <= 255; g += 17) {
@@ -1416,6 +1500,7 @@ void test_file_security() {
 } // namespace
 int main() {
     try {
+        test_icon_size_production();
         test_color();
         test_perceptual_tools();
         test_contour_relief();

@@ -4,6 +4,49 @@
 #include <filesystem>
 #include <stdexcept>
 namespace paint {
+IconSizePlan plan_icon_sizes(const std::vector<IconFrame>& existing, const std::vector<int>& sizes,
+                             IconSizePolicy policy) {
+    if (sizes.empty()) {
+        throw std::runtime_error("Choose at least one icon size.");
+    }
+    std::vector<int> targets;
+    for (int size : sizes) {
+        if (size < 1 || size > 256) {
+            throw std::runtime_error("Icon sizes must be between 1 and 256 pixels.");
+        }
+        if (std::find(targets.begin(), targets.end(), size) == targets.end()) {
+            targets.push_back(size);
+        }
+    }
+    IconSizePlan plan;
+    std::vector<int> present;
+    for (std::size_t index = 0; index < existing.size(); ++index) {
+        const Image& image = existing[index].image;
+        const bool selected = image.width == image.height &&
+                              std::find(targets.begin(), targets.end(), image.width) != targets.end();
+        if (selected) {
+            present.push_back(image.width);
+        }
+        if (!selected && policy == IconSizePolicy::ExactProfile) {
+            ++plan.removed;
+            continue;
+        }
+        const bool generate = selected && policy == IconSizePolicy::ReplaceSelected;
+        plan.steps.push_back({static_cast<int>(index), image.width, generate});
+        if (generate) {
+            ++plan.replaced;
+        } else {
+            ++plan.kept;
+        }
+    }
+    for (int size : targets) {
+        if (std::find(present.begin(), present.end(), size) == present.end()) {
+            plan.steps.push_back({-1, size, true});
+            ++plan.added;
+        }
+    }
+    return plan;
+}
 void AtlasGrid::validate(const Image& sheet) const {
     if (columns < 1 || rows < 1 || columns > 4096 || rows > 4096 || columns * rows > 4096 || margin_x < 0 ||
         margin_y < 0 || spacing_x < 0 || spacing_y < 0 || margin_x > sheet.width / 2 ||

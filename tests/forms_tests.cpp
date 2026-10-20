@@ -1079,6 +1079,50 @@ void atlas_grid_frames_and_cursor_save() {
             "CUR reload preserves all frames and hotspot");
     std::filesystem::remove(services.path);
 }
+void icon_generation_review_and_cancel() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.document.make_icon_sizes({16, 24, 32}, false);
+    const std::size_t history = editor.document.undo_history.size();
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    std::shared_ptr<gf::ComboBox> policy =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-size-policy"));
+    std::shared_ptr<gf::Label> summary = std::dynamic_pointer_cast<gf::Label>(window.find("icon-size-plan"));
+    require(policy && summary && (*policy).selected_index().value_or(99) == 0 &&
+                (*summary).text().find("Keep: 3") != std::string::npos &&
+                (*summary).text().find("Add: 2") != std::string::npos,
+            "icon generation defaults to preserving existing artwork with a live plan");
+    (*policy).set_selected_index(2);
+    const std::shared_ptr<gf::TextBox> manifest =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("icon-size-manifest"));
+    require(manifest && (*manifest).read_only() &&
+                (*manifest).text().find("Remove #2 · 24 × 24") != std::string::npos,
+            "review identifies the particular representation that will be removed");
+    window.perform_layout();
+    require((*manifest).scroll_offset().y == 0,
+            "updated generation manifest starts at its first image");
+    require((*summary).text().find("Remove: 1") != std::string::npos && editor.document.atlas.count() == 3 &&
+                editor.document.undo_history.size() == history,
+            "exact-profile preview identifies removal without mutating the document");
+    routed_button(window, "icon-size-48");
+    require((*summary).text().find("Add: 1") != std::string::npos,
+            "target checkbox updates the generation plan before acceptance");
+    routed_button(window, "dialog-cancel");
+    require(editor.document.atlas.count() == 3 && editor.document.undo_history.size() == history,
+            "cancel preserves all representations and history");
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    policy = std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-size-policy"));
+    (*policy).set_selected_index(2);
+    routed_button(window, "dialog-ok");
+    require(editor.document.atlas.count() == 4 && editor.document.undo_history.size() == history + 1,
+            "accept applies the reviewed exact profile as one transaction");
+    editor.execute("undo");
+    require(editor.document.atlas.count() == 3 && editor.document.atlas.icons[1].image.width == 24,
+            "Undo restores an image removed by exact-profile generation");
+}
 void atlas_large_sheet_uses_visible_thumbnail_resources() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -4105,6 +4149,7 @@ int main() {
         crop_and_help_actions();
         stamp_reset_and_recapture();
         atlas_grid_frames_and_cursor_save();
+        icon_generation_review_and_cancel();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

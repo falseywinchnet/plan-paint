@@ -152,6 +152,13 @@ class EditorDialog final : public gui_forms::Control {
     void set_color(Color color, bool update_hsv = true);
     std::vector<std::shared_ptr<gui_forms::NumericUpDown>> atlas_numbers_;
     std::vector<std::shared_ptr<gui_forms::CheckBox>> icon_sizes_;
+    std::shared_ptr<gui_forms::ComboBox> icon_policy_;
+    std::shared_ptr<gui_forms::Label> icon_plan_;
+    std::shared_ptr<gui_forms::TextBox> icon_manifest_;
+    std::vector<int> chosen_icon_sizes() const;
+    void icon_size_clicked(gui_forms::ButtonBase& control);
+    void icon_policy_changed(std::optional<std::size_t> index);
+    void refresh_icon_plan();
     std::string title() const;
     void atlas_changed(double value);
     void accept();

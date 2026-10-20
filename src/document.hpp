@@ -129,7 +129,8 @@ struct Document {
     void sync_atlas();
     void atlas_select(int index, bool control = false);
     void atlas_step(int direction);
-    void make_icon_sizes(const std::vector<int>& sizes, bool cursor);
+    void make_icon_sizes(const std::vector<int>& sizes, bool cursor,
+                         IconSizePolicy policy = IconSizePolicy::AddMissing);
     void set_hotspot(int x, int y);
     Image output_image() const;
     ImageContainer output_container(bool cursor) const;

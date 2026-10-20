@@ -163,6 +163,8 @@ PNG, TIFF and TGA preserve transparency. JPEG and BMP flatten onto white. GIF is
 
 ICO and CUR open every stored size in Atlas. CUR retains per-image hotspots, editable numerically or by clicking the canvas. Save As from a picture offers standard icon sizes. Legacy AND/XOR cursor pixels are retained; these background-dependent pixels cannot be combined with partial-alpha pixels in one legacy bitmap. Erase or paint over XOR pixels before lifting selections or resampling; exact flips and quarter-turns retain them. Exporting an ICO/CUR entry to a regular raster format exports the current image; saving the container retains every entry.
 
+Icon and cursor size generation defaults to adding missing sizes while preserving existing artwork. Choose replacement or an exact profile explicitly, review each image change and upscaling warning, then apply the complete operation with one Undo step. See [icon and cursor size production](docs/ICON_EDITING.md).
+
 Atlas uses flat canvases with a maximum of 4096 grid cells. Filename tokens such as `sprite`, `spritesheet`, `atlas`, `tileset`, `walk` and `idle` automatically offer grid setup; any picture can use Atlas manually. Rows and columns come first, with optional margins and spacing. Unused edge pixels are preserved. Grid setup and navigation do not change the picture, and edits participate in undo/redo across frames. Leave grid to resize or crop the whole sheet.
 
 ### Transform limits
