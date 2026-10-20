@@ -273,7 +273,9 @@ The independently specified conversion is:
    alpha is 255. Matte alpha is ignored. Hidden RGB is intentionally discarded
    for transparent output pixels. The original source is untouched until Apply.
 2. A histogram counts every distinct opaque RGB color after matting. No sampling
-   is used. Weighted median-cut splits the box with the greatest
+   is used. When transparency requires a black palette entry, opaque black pixels
+   use that entry and are excluded from the color histogram. Weighted median-cut
+   splits the box with the greatest
    `population × largest channel range`; ties keep the earlier box. Channel-range
    ties prefer red, then green, then blue. Samples sort by that channel, then
    ascending packed `0xRRGGBB`. The split is the first cumulative count reaching
@@ -287,9 +289,11 @@ The independently specified conversion is:
    7/16, 3/16, 5/16, and 1/16. Error that reaches a transparent pixel or crosses
    the image boundary is discarded. Calculations use double precision.
 4. If any pixel is transparent, palette index zero is reserved as black, leaving
-   1, 15, or 255 entries for opaque colors at the three depths. Opaque black can
-   have its own entry. A completely transparent image has only that reserved
-   entry in the active palette. Without transparency, all 2, 16, or 256 entries
+   1, 15, or 255 entries for additional colors at the three depths. Opaque black
+   shares index zero, distinguished from transparency by its clear AND bit.
+   The reserved black entry participates in opaque color matching; a 1-bit image
+   can therefore contain black, white, and transparent pixels together. A completely
+   transparent image has only that reserved entry in the active palette. Without transparency, all 2, 16, or 256 entries
    are available for opaque colors. Unused encoded palette slots are padded with
    black; the file carries the full table for its depth.
 5. Output uses an uncompressed 40-byte DIB header, bottom-up color rows and AND

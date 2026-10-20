@@ -41,6 +41,13 @@ void conversion_contracts() {
     require(dib[48] == 0x80 && dib[52] == 0x40 && dib[56] == 0 && dib[60] == 0,
             "bottom-up MSB-first packed pixels and DWORD-aligned masks");
     check_roundtrip(monochrome.frame, 1, paint::ContainerKind::Cursor);
+    source.image.set(0, 0, {0, 0, 0, 0});
+    const paint::IconPaletteResult masked_mono = paint::convert_icon_palette(source, options);
+    require(paint::equal(masked_mono.frame.image.get(0, 0), {0, 0, 0, 0}) &&
+                paint::equal(masked_mono.frame.image.get(1, 0), {255, 255, 255, 255}) &&
+                paint::equal(masked_mono.frame.image.get(1, 1), {0, 0, 0, 255}),
+            "one-bit black, white and transparency share the black entry with separate AND bits");
+    check_roundtrip(masked_mono.frame, 1, paint::ContainerKind::Cursor);
     source.image.reset(5, 3, {20, 80, 120, 255});
     source.image.set(0, 0, {255, 17, 90, 0});
     source.image.set(1, 0, {0, 0, 0, 127});

@@ -45,12 +45,14 @@ void measure(PaletteBox& box) {
         }
     }
 }
-std::vector<Color> palette_for(const Image& image, unsigned capacity) {
+std::vector<Color> palette_for(const Image& image, unsigned capacity, bool reserve_black) {
     std::map<std::uint32_t, std::size_t> histogram;
     for (Color color : image.pixels) {
         if (color.a) {
             const std::uint32_t key = (unsigned(color.r) << 16) | (unsigned(color.g) << 8) | color.b;
-            ++histogram[key];
+            if (key != 0 || !reserve_black) {
+                ++histogram[key];
+            }
         }
     }
     PaletteBox initial;
@@ -187,7 +189,7 @@ IconPaletteResult convert_icon_palette(const IconFrame& source, const IconPalett
     }
     const bool transparent = result.transparent_pixels != 0;
     const unsigned first_color = transparent ? 1 : 0;
-    result.palette = palette_for(prepared, (1u << options.bits_per_pixel) - first_color);
+    result.palette = palette_for(prepared, (1u << options.bits_per_pixel) - first_color, transparent);
     if (transparent) {
         result.palette.insert(result.palette.begin(), {0, 0, 0, 255});
     }
@@ -206,8 +208,8 @@ IconPaletteResult convert_icon_palette(const IconFrame& source, const IconPalett
                 target[axis] = std::clamp(component(color, axis) + current[x + 1][axis], 0.0, 255.0);
             }
             double distance = std::numeric_limits<double>::max();
-            unsigned chosen = first_color;
-            for (unsigned i = first_color; i < result.palette.size(); ++i) {
+            unsigned chosen = 0;
+            for (unsigned i = 0; i < result.palette.size(); ++i) {
                 double candidate = 0;
                 for (unsigned axis = 0; axis < 3; ++axis) {
                     const double delta = target[axis] - component(result.palette[i], axis);
