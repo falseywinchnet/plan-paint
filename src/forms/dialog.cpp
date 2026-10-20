@@ -242,6 +242,10 @@ void EditorDialog::initialize_control_tree() {
         initialize_icon_export();
         return;
     }
+    if (kind_ == EditorDialogKind::asset_browser) {
+        initialize_asset_browser();
+        return;
+    }
     if (kind_ == EditorDialogKind::about) {
         panel_ = {0, 0, 590, 565};
         label("about-version", "Plan Paint " RAINSTAR_VERSION, {24, 54, 542, 28}, true);
@@ -729,7 +733,8 @@ void EditorDialog::on_key_preview(gf::KeyEvent& event) {
         }
         event.handled = true;
     } else if (event.physical_key == gf::PhysicalKey::enter) {
-        if (kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_sheet) {
+        if (kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_sheet ||
+            kind_ == EditorDialogKind::asset_browser) {
             return; // The focused command owns Enter; never run a disk job implicitly.
         }
         accept();
@@ -774,6 +779,8 @@ std::string EditorDialog::title() const {
         return tr("Compare / contact sheet");
     case EditorDialogKind::icon_export:
         return tr("Export representations");
+    case EditorDialogKind::asset_browser:
+        return tr("Browse assets");
     case EditorDialogKind::settings:
         return tr("Settings");
     case EditorDialogKind::properties:

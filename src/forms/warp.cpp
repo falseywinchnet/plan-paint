@@ -468,6 +468,20 @@ void Editor::reset_stamp() {
     ++stamp_generation_;
     ++stamp_source_generation_;
 }
+void Editor::use_asset_stamp(Image image) {
+    if (image.pixels.empty()) {
+        return;
+    }
+    Image original = image;
+    finish_controls();
+    choose_tool(Tool::Stamp);
+    reset_stamp();
+    document.stamp = std::move(image);
+    hard_stamp_ = std::move(original);
+    stamp_hardness = 1;
+    regenerate_stamp();
+    refresh();
+}
 void Editor::add_stamp_material() {
     if (document.stamp.pixels.empty()) {
         return;

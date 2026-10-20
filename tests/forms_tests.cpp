@@ -1260,6 +1260,127 @@ void icon_representation_export() {
             "separate PNG export modified the source document");
     std::filesystem::remove_all(root);
 }
+void await_assets(gf::Window& window) {
+    const std::shared_ptr<gf::Label> status =
+        std::dynamic_pointer_cast<gf::Label>(window.find("asset-status"));
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while ((*status).text() == "Reading folder…" || (*status).text() == "Loading preview…") {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now() < deadline, "asset browser worker timeout");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    window.perform_layout();
+}
+void asset_browser_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(),
+            "asset browser host attaches");
+    const std::filesystem::path root =
+        std::filesystem::temp_directory_path() /
+        ("paint-assets-ui-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    require(std::filesystem::create_directory(root), "asset UI folder creation");
+    std::filesystem::create_directory(root / "nested");
+    paint::Image asset;
+    asset.reset(8, 8, {210, 70, 30, 128});
+    asset.set(0, 0, {70, 60, 50, 0});
+    paint::save_image(asset, (root / "sample.png").string());
+    editor.asset_directory = root.string();
+    editor.asset_bookmark_path = (root / "bookmarks.txt").string();
+    editor.execute("browse-assets");
+    await_assets(window);
+    const std::shared_ptr<gf::ListBox> list =
+        std::dynamic_pointer_cast<gf::ListBox>(window.find("asset-list"));
+    require((*list).items().size() == 2 && (*list).items()[0] == "[+] nested", "folder sorting and listing");
+    const gf::Rect close_bounds = (*window.find("dialog-cancel")).absolute_bounds();
+    require(close_bounds.x >= 0 && close_bounds.y >= 0 && close_bounds.x + close_bounds.width <= 800 &&
+                close_bounds.y + close_bounds.height <= 520,
+            "asset browser clips at application minimum size");
+    routed_button(window, "asset-bookmark-add");
+    require(paint::load_asset_bookmarks(editor.asset_bookmark_path).size() == 1,
+            "explicit bookmark not saved");
+    (*list).select_index(1);
+    await_assets(window);
+    const std::shared_ptr<gf::RasterCanvas> preview =
+        std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("asset-preview"));
+    require((*preview).bitmap() && (*window.find("asset-stamp")).enabled(),
+            "asset selection did not render preview");
+    const std::shared_ptr<gf::TextBox> search =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("asset-search"));
+    (*search).set_text("missing");
+    require(!(*list).enabled() && !(*window.find("asset-stamp")).enabled(),
+            "query edit retained stale actions");
+    routed_button(window, "asset-refresh");
+    await_assets(window);
+    require((*list).items().empty(), "query did not filter files and folders");
+    (*search).set_text("");
+    routed_button(window, "asset-refresh");
+    await_assets(window);
+    (*list).select_index(0);
+    routed_button(window, "asset-open");
+    await_assets(window);
+    require((*list).items().empty(), "folder navigation failed");
+    routed_button(window, "asset-up");
+    await_assets(window);
+    (*list).select_index(1);
+    await_assets(window);
+    const std::size_t history = editor.document.undo_history.size();
+    const std::uint64_t revision = editor.document.revision;
+    routed_button(window, "asset-stamp");
+    require(!window.find("asset-list") && editor.document.tool == paint::Tool::Stamp &&
+                editor.document.undo_history.size() == history && editor.document.revision == revision &&
+                paint::equal(editor.document.stamp.get(0, 0), asset.get(0, 0)),
+            "loading a stamp changed source pixels/history or lost alpha");
+    fixture.click(40, 40);
+    require(editor.document.undo_history.size() == history + 1 && !white(editor.document.image.get(40, 40)),
+            "stamp placement did not create a single reversible edit");
+    editor.document.undo();
+    require(white(editor.document.image.get(40, 40)), "asset stamp Undo failed");
+    // A cancelled save prompt preserves the edited document.
+    editor.document.checkpoint();
+    editor.document.image.set(1, 1, {3, 4, 5, 255});
+    const paint::AssetPreview candidate = paint::load_asset_preview((root / "sample.png").string());
+    editor.open_browser_asset(candidate);
+    require(editor.document.image.width == 128 &&
+                paint::equal(editor.document.image.get(1, 1), {3, 4, 5, 255}),
+            "asset open bypassed unsaved-document cancellation");
+    services.choice = gf::HostDialogChoice::no;
+    editor.execute("browse-assets");
+    await_assets(window);
+    const std::shared_ptr<gf::ListBox> activate_list =
+        std::dynamic_pointer_cast<gf::ListBox>(window.find("asset-list"));
+    (*activate_list).select_index(1);
+    window.request_focus(activate_list);
+    gf::KeyEvent enter;
+    enter.action = gf::KeyAction::down;
+    enter.physical_key = gf::PhysicalKey::enter;
+    window.dispatch_key(enter);
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (window.find("asset-list")) {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now() < deadline,
+                "file activation during preview did not finish opening");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    require(editor.document.image.width == 8 && editor.document.filename == std::filesystem::canonical(root / "sample.png").string(),
+            "approved asset open did not load the preview snapshot");
+    // Rapid folder/selection replacement and close must reject queued deliveries.
+    editor.execute("browse-assets");
+    await_assets(window);
+    const std::shared_ptr<gf::ListBox> final_list =
+        std::dynamic_pointer_cast<gf::ListBox>(window.find("asset-list"));
+    (*final_list).select_index(1);
+    routed_button(window, "asset-refresh");
+    editor.close_editor_dialog();
+    static_cast<void>(window.drain_posted_work());
+    require(!window.find("asset-preview"), "late asset completion resurrected closed browser");
+    std::filesystem::remove_all(root);
+}
 void icon_generation_review_and_cancel() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -4334,6 +4455,7 @@ int main() {
         icon_representation_identity();
         icon_sheet_preview_and_export();
         icon_representation_export();
+        asset_browser_contracts();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

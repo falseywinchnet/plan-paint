@@ -1,4 +1,5 @@
 #pragma once
+#include "asset_browser.hpp"
 #include "carpet.hpp"
 #include "color_tools.hpp"
 #include "icon_export.hpp"
@@ -7,6 +8,7 @@
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
 #include <gui_forms/controls/panel/combo_box/combo_box.hpp>
+#include <gui_forms/controls/panel/list_box/list_box.hpp>
 #include <gui_forms/controls/panel/numeric_up_down/numeric_up_down.hpp>
 #include <gui_forms/controls/panel/text_box/text_box.hpp>
 #include <gui_forms/controls/range_control/track_bar/track_bar.hpp>
@@ -20,6 +22,8 @@ struct CarpetRenderJob;
 struct DitherRenderJob;
 struct IconSheetJob;
 struct IconExportJob;
+struct AssetBrowserWorker;
+struct AssetBrowserResult;
 enum class EditorDialogKind {
     dither,
     tool_size,
@@ -35,6 +39,7 @@ enum class EditorDialogKind {
     atlas_gallery,
     icon_sheet,
     icon_export,
+    asset_browser,
     properties,
     settings,
     english_help,
@@ -70,6 +75,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_dither();
     void deliver_icon_sheet();
     void deliver_icon_export();
+    void deliver_asset_browser(std::shared_ptr<const AssetBrowserResult> result);
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
     void arrange(gui_forms::Rect bounds) override;
@@ -86,6 +92,31 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_asset_browser();
+    void stop_asset_browser();
+    void request_assets(bool scan);
+    void asset_clicked(gui_forms::ButtonBase&);
+    void asset_filter_changed(std::optional<std::size_t>);
+    void asset_input_changed(const std::string&);
+    void asset_selected(const gui_forms::ListSelectionChange&);
+    void asset_activated(std::size_t index);
+    void asset_representation_changed(std::optional<std::size_t>);
+    void asset_bookmark_changed(std::optional<std::size_t>);
+    void clear_asset_preview();
+    void show_asset_representation();
+    std::shared_ptr<AssetBrowserWorker> asset_worker_;
+    std::shared_ptr<const AssetPreview> asset_preview_;
+    AssetListing asset_listing_;
+    std::uint64_t asset_generation_ = 0;
+    std::vector<std::string> asset_bookmarks_;
+    bool asset_bookmarks_valid_ = true;
+    bool asset_open_after_preview_ = false;
+    std::shared_ptr<gui_forms::TextBox> asset_location_, asset_search_, asset_details_;
+    std::shared_ptr<gui_forms::ListBox> asset_list_;
+    std::shared_ptr<gui_forms::ComboBox> asset_filter_, asset_representations_, asset_bookmark_;
+    std::shared_ptr<gui_forms::RasterCanvas> asset_canvas_;
+    std::shared_ptr<gui_forms::Label> asset_status_;
+    std::shared_ptr<gui_forms::Button> asset_open_, asset_stamp_, asset_copy_;
     void initialize_icon_export();
     void review_icon_export();
     void stop_icon_export();
