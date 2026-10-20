@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "图像已更改。请重新打开透明度工具。",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "使用蒙版 RGB 均值，忽略其透明度。保留原图 RGB。",
   "Mask dimensions differ. Enable mask resizing to continue.": "尺寸不匹配。请启用蒙版缩放。",
-  "Alpha tools…": "透明度工具…"
+  "Alpha tools…": "透明度工具…",
+  "Color depth": "颜色深度",
+  "Dithering": "抖动",
+  "None": "无",
+  "Alpha threshold": "透明度阈值",
+  "Matte RGB": "RGB 底色",
+  "Indexed preview": "索引色预览",
+  "Palette conversion": "调色板转换",
+  "Current image only. Further painting returns it to RGBA output.": "仅当前图像。再次绘画后恢复 RGBA 输出。",
+  "Enter a matte color as #RRGGBB.": "请输入 #RRGGBB 格式的底色。",
+  "Palette entries": "调色板条目",
+  "Transparent pixels": "透明像素",
+  "Partial alpha converted": "已转换的半透明像素",
+  "Image changed. Reopen Palette conversion.": "图像已更改。请重新打开调色板转换。",
+  "Palette…": "调色板…"
 }

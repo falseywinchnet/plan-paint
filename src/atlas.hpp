@@ -20,7 +20,7 @@ struct IconFrame {
     // Legacy AND/XOR pixels have no background-independent RGBA equivalent.
     // Nonzero entries preserve the XOR color; their canvas pixels use a transparent white sentinel.
     std::vector<Color> xor_pixels;
-    // Shared immutable import evidence. Undo retains it without duplicating encoded data.
+    // Shared immutable encoded snapshot (import or explicit conversion). Undo shares its bytes.
     std::shared_ptr<const IconSource> source = {};
 };
 bool icon_source_matches(const IconFrame& frame);

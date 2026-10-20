@@ -239,7 +239,74 @@ geometry and host errors are validated before preparing a result. This workflow
 adds no layer or persistent channel document. Painting directly into an alpha
 mask and viewing alpha on the main canvas remain separate work.
 
+## Indexed palette conversion
+
+Open an ICO or CUR and choose **Atlas → Palette…**. The owned window compares
+the current image with a 1-, 4-, or 8-bit indexed result. Set the alpha threshold
+(1–255, initially 128), an RGB matte color (initially white), and either no
+dithering or Floyd–Steinberg error diffusion. The preview reports palette entries,
+transparent pixels, and the number of partially transparent source pixels that
+will be converted. The displayed threshold rule identifies the resulting binary
+alpha. Previews cover the entire current representation, including when a
+selection outline is present.
+
+**Apply** replaces that representation with the displayed indexed image in one
+Undo step. Other representations, their encoded payloads, and cursor hotspots
+remain intact. Saving the unchanged converted representation emits an indexed
+DIB at the chosen depth, including for a 256 × 256 image. Subsequent painting
+invalidates that encoded snapshot and saves the edited image as RGBA; conversion
+can be run again when the artwork is ready. This is explicit pixel conversion,
+not an index-aware painting mode or a permanently linked export recipe.
+
+Changing preview settings does not alter the document or its Undo history.
+**Close** and Escape discard the preview. Invalid matte text disables Apply.
+A document change after opening the tool prevents applying stale pixels. A
+conversion with the same encoded payload leaves Apply disabled. The tool rejects
+background-dependent legacy XOR pixels rather than silently flattening them.
+
+The independently specified conversion is:
+
+1. Source pixels with alpha below the threshold become transparent black. With
+   the default threshold, 127 is transparent and 128 is opaque. Pixels at or
+   above the threshold are composited against the matte in encoded RGB byte
+   space, using `round(channel * alpha/255 + matte * (1-alpha/255))`; their output
+   alpha is 255. Matte alpha is ignored. Hidden RGB is intentionally discarded
+   for transparent output pixels. The original source is untouched until Apply.
+2. A histogram counts every distinct opaque RGB color after matting. No sampling
+   is used. Weighted median-cut splits the box with the greatest
+   `population × largest channel range`; ties keep the earlier box. Channel-range
+   ties prefer red, then green, then blue. Samples sort by that channel, then
+   ascending packed `0xRRGGBB`. The split is the first cumulative count reaching
+   half the population, clamped to keep both boxes nonempty. The left box keeps
+   its position and the right box is appended. Each representative is the
+   population-weighted encoded-RGB mean, rounded to the nearest byte.
+3. Palette matching minimizes squared encoded-RGB distance, with lower palette
+   index winning ties. With dithering, pixels scan left to right, top to bottom.
+   Clamp the error-adjusted sample to 0–255 before matching; distribute the
+   difference to right, lower-left, lower, and lower-right with weights
+   7/16, 3/16, 5/16, and 1/16. Error that reaches a transparent pixel or crosses
+   the image boundary is discarded. Calculations use double precision.
+4. If any pixel is transparent, palette index zero is reserved as black, leaving
+   1, 15, or 255 entries for opaque colors at the three depths. Opaque black can
+   have its own entry. A completely transparent image has only that reserved
+   entry in the active palette. Without transparency, all 2, 16, or 256 entries
+   are available for opaque colors. Unused encoded palette slots are padded with
+   black; the file carries the full table for its depth.
+5. Output uses an uncompressed 40-byte DIB header, bottom-up color rows and AND
+   mask rows, DWORD-aligned row strides, BGR0 palette entries, and most-significant
+   bits first for packed indices. Transparent color pixels use the reserved
+   black index and a set AND bit, producing ordinary transparency without XOR
+   effects. The standard ICO/CUR directory retains representation order and
+   cursor hotspots.
+
+The public Windows bitmap layout is described by Microsoft's
+[BITMAPINFOHEADER documentation](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader)
+and [bitmap header types](https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types).
+Palette construction and dithering above are Plan Paint behavior, not a claim
+to reproduce another editor's numerical output. Shared batch palettes, palette
+file interchange, and direct palette-entry editing remain separate capabilities.
+
 The broader [icon production interview](icon-editor-study/mockups.html) covers
-future palette, alpha, batch and additional asset-browsing capabilities. Its recommendations
+additional palette, alpha, batch and asset-browsing capabilities. Its recommendations
 remain candidate designs; implemented features do not establish owner answers
 to the remaining interview questions.

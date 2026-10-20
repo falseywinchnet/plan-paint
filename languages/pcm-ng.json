@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "Picture don change. Open Alpha tools again.",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "Use mask RGB average; ignore mask alpha. Keep picture RGB.",
   "Mask dimensions differ. Enable mask resizing to continue.": "Sizes no match. Allow mask resizing to continue.",
-  "Alpha tools…": "Alpha tools…"
+  "Alpha tools…": "Alpha tools…",
+  "Color depth": "Colour depth",
+  "Dithering": "Dithering",
+  "None": "None",
+  "Alpha threshold": "Alpha threshold",
+  "Matte RGB": "Matte RGB",
+  "Indexed preview": "Indexed preview",
+  "Palette conversion": "Palette conversion",
+  "Current image only. Further painting returns it to RGBA output.": "Na only this image. If you paint again, output go return to RGBA.",
+  "Enter a matte color as #RRGGBB.": "Enter matte colour as #RRGGBB.",
+  "Palette entries": "Palette entries",
+  "Transparent pixels": "Transparent pixels",
+  "Partial alpha converted": "Partial alpha wey convert",
+  "Image changed. Reopen Palette conversion.": "Image don change. Open Palette conversion again.",
+  "Palette…": "Palette…"
 }

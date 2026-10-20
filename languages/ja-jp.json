@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "画像が変更されました。アルファツールを開き直してください。",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "マスクのRGB平均を使用。マスクのアルファは無視し、元のRGBを保持。",
   "Mask dimensions differ. Enable mask resizing to continue.": "寸法が異なります。マスクのサイズ変更を有効にしてください。",
-  "Alpha tools…": "アルファツール…"
+  "Alpha tools…": "アルファツール…",
+  "Color depth": "色深度",
+  "Dithering": "ディザリング",
+  "None": "なし",
+  "Alpha threshold": "アルファしきい値",
+  "Matte RGB": "マット RGB",
+  "Indexed preview": "インデックス色プレビュー",
+  "Palette conversion": "パレット変換",
+  "Current image only. Further painting returns it to RGBA output.": "現在の画像のみ。再び描画すると RGBA 出力に戻ります。",
+  "Enter a matte color as #RRGGBB.": "マット色を #RRGGBB で入力してください。",
+  "Palette entries": "パレット項目",
+  "Transparent pixels": "透明ピクセル",
+  "Partial alpha converted": "変換した半透明",
+  "Image changed. Reopen Palette conversion.": "画像が変わりました。パレット変換を開き直してください。",
+  "Palette…": "パレット…"
 }

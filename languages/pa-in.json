@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "ਤਸਵੀਰ ਬਦਲ ਗਈ। ਅਲਫ਼ਾ ਸੰਦ ਮੁੜ ਖੋਲ੍ਹੋ।",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "ਮਾਸਕ ਦਾ RGB ਔਸਤ; ਉਸ ਦਾ ਅਲਫ਼ਾ ਅਣਡਿੱਠਾ। ਅਸਲ RGB ਸੁਰੱਖਿਅਤ।",
   "Mask dimensions differ. Enable mask resizing to continue.": "ਆਕਾਰ ਵੱਖਰੇ ਹਨ। ਮਾਸਕ ਦਾ ਆਕਾਰ ਬਦਲਣਾ ਚਾਲੂ ਕਰੋ।",
-  "Alpha tools…": "ਅਲਫ਼ਾ ਸੰਦ…"
+  "Alpha tools…": "ਅਲਫ਼ਾ ਸੰਦ…",
+  "Color depth": "ਰੰਗ ਦੀ ਡੂੰਘਾਈ",
+  "Dithering": "ਡਿਥਰਿੰਗ",
+  "None": "ਕੋਈ ਨਹੀਂ",
+  "Alpha threshold": "ਅਲਫ਼ਾ ਹੱਦ",
+  "Matte RGB": "RGB ਪਿਛੋਕੜ",
+  "Indexed preview": "ਇੰਡੈਕਸ ਝਲਕ",
+  "Palette conversion": "ਪੈਲੇਟ ਤਬਦੀਲੀ",
+  "Current image only. Further painting returns it to RGBA output.": "ਸਿਰਫ਼ ਮੌਜੂਦਾ ਤਸਵੀਰ। ਮੁੜ ਪੇਂਟ ਕਰਨ ਨਾਲ RGBA ਆਉਟਪੁੱਟ ਵਾਪਸ ਆਉਂਦੀ ਹੈ।",
+  "Enter a matte color as #RRGGBB.": "ਪਿਛੋਕੜ ਰੰਗ #RRGGBB ਵਜੋਂ ਦਿਓ।",
+  "Palette entries": "ਪੈਲੇਟ ਐਂਟਰੀਆਂ",
+  "Transparent pixels": "ਪਾਰਦਰਸ਼ੀ ਪਿਕਸਲ",
+  "Partial alpha converted": "ਬਦਲਿਆ ਅੰਸ਼ਕ ਅਲਫ਼ਾ",
+  "Image changed. Reopen Palette conversion.": "ਤਸਵੀਰ ਬਦਲ ਗਈ। ਪੈਲੇਟ ਤਬਦੀਲੀ ਮੁੜ ਖੋਲ੍ਹੋ।",
+  "Palette…": "ਪੈਲੇਟ…"
 }

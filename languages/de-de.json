@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "Bild geändert. Alpha-Werkzeuge erneut öffnen.",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "RGB-Mittel der Maske; Maskenalpha ignoriert. RGB bleibt erhalten.",
   "Mask dimensions differ. Enable mask resizing to continue.": "Maskengröße abweichend. Größenanpassung aktivieren.",
-  "Alpha tools…": "Alpha-Werkzeuge…"
+  "Alpha tools…": "Alpha-Werkzeuge…",
+  "Color depth": "Farbtiefe",
+  "Dithering": "Dithering",
+  "None": "Keines",
+  "Alpha threshold": "Alpha-Schwelle",
+  "Matte RGB": "RGB-Hintergrund",
+  "Indexed preview": "Indizierte Vorschau",
+  "Palette conversion": "Palettenumwandlung",
+  "Current image only. Further painting returns it to RGBA output.": "Nur aktuelles Bild. Weiteres Malen stellt RGBA-Ausgabe wieder her.",
+  "Enter a matte color as #RRGGBB.": "Hintergrundfarbe als #RRGGBB eingeben.",
+  "Palette entries": "Paletteneinträge",
+  "Transparent pixels": "Transparente Pixel",
+  "Partial alpha converted": "Teilalpha umgewandelt",
+  "Image changed. Reopen Palette conversion.": "Bild geändert. Palettenumwandlung erneut öffnen.",
+  "Palette…": "Palette…"
 }

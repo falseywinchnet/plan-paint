@@ -62,6 +62,9 @@ void EditorDialog::stop_carpet() {
 }
 void EditorDialog::on_attached_to_window() {
     Control::on_attached_to_window();
+    if (kind_ == EditorDialogKind::icon_palette) {
+        render_icon_palette();
+    }
     if (kind_ == EditorDialogKind::alpha_tools) {
         render_alpha_tools();
     }

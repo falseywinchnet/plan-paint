@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "Ảnh đã đổi. Mở lại công cụ alpha.",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "Dùng trung bình RGB mặt nạ; bỏ qua alpha của nó. Giữ RGB gốc.",
   "Mask dimensions differ. Enable mask resizing to continue.": "Kích thước khác nhau. Bật đổi cỡ mặt nạ.",
-  "Alpha tools…": "Công cụ alpha…"
+  "Alpha tools…": "Công cụ alpha…",
+  "Color depth": "Độ sâu màu",
+  "Dithering": "Dithering",
+  "None": "Không",
+  "Alpha threshold": "Ngưỡng alpha",
+  "Matte RGB": "Nền RGB",
+  "Indexed preview": "Xem màu chỉ mục",
+  "Palette conversion": "Chuyển bảng màu",
+  "Current image only. Further painting returns it to RGBA output.": "Chỉ ảnh hiện tại. Vẽ tiếp sẽ trở về đầu ra RGBA.",
+  "Enter a matte color as #RRGGBB.": "Nhập màu nền dạng #RRGGBB.",
+  "Palette entries": "Mục bảng màu",
+  "Transparent pixels": "Điểm ảnh trong suốt",
+  "Partial alpha converted": "Alpha một phần đã đổi",
+  "Image changed. Reopen Palette conversion.": "Ảnh đã đổi. Mở lại chuyển bảng màu.",
+  "Palette…": "Bảng màu…"
 }

@@ -1272,6 +1272,78 @@ void await_assets(gf::Window& window) {
     }
     window.perform_layout();
 }
+void icon_palette_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(), "palette host attaches");
+    paint::ImageContainer container;
+    container.kind = paint::ContainerKind::Cursor;
+    paint::IconFrame original, other;
+    original.image.reset(32, 32, {60, 90, 180, 128});
+    original.image.set(0, 0, {27, 45, 65, 127});
+    original.hotspot_x = 7;
+    original.hotspot_y = 9;
+    other.image.reset(16, 16, {9, 8, 7, 6});
+    container.frames = {original, other};
+    editor.document.replace_container(container, "palette.cur");
+    editor.refresh();
+    const std::uint64_t revision = editor.document.revision;
+    editor.execute("atlas-palette");
+    window.perform_layout();
+    const gf::Rect close = (*window.find("dialog-cancel")).absolute_bounds();
+    require(close.x >= 0 && close.y >= 0 && close.x + close.width <= 800 && close.y + close.height <= 520,
+            "palette dialog fits minimum window");
+    const std::shared_ptr<gf::RasterCanvas> preview =
+        std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("palette-after"));
+    require((*preview).bitmap() && (*window.find("palette-apply")).enabled(), "indexed preview rendered");
+    const std::shared_ptr<gf::TextBox> matte =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("palette-matte"));
+    (*matte).set_text("#invalid");
+    require(!(*window.find("palette-apply")).enabled(), "invalid matte blocks Apply");
+    (*matte).set_text("#000000");
+    require((*window.find("palette-apply")).enabled() && editor.document.revision == revision &&
+                editor.document.undo_history.empty(),
+            "preview leaves document and history intact");
+    routed_button(window, "palette-apply");
+    require(!window.find("palette-after") && editor.document.undo_history.size() == 1,
+            "palette Apply closes and creates one undo entry");
+    const paint::ImageContainer output = editor.document.output_container(true);
+    require(paint::icon_output_format(output.frames[0], output.kind).bits_per_pixel == 4 &&
+                output.frames[0].hotspot_x == 7 && output.frames[0].hotspot_y == 9 &&
+                output.frames[0].image.get(0, 0).a == 0 &&
+                paint::equal(output.frames[0].image.get(1, 0), {30, 45, 90, 255}),
+            "Apply retains indexed payload, binary alpha, matte and cursor hotspot");
+    require(paint::equal(output.frames[1].image.get(0, 0), other.image.get(0, 0)),
+            "other representations unchanged");
+    const std::vector<std::uint8_t> bytes = paint::encode_icon_container(output);
+    const paint::ImageContainer saved = paint::decode_icon_container(bytes.data(), bytes.size());
+    require(paint::icon_output_format(saved.frames[0], saved.kind).bits_per_pixel == 4,
+            "document output emits indexed cursor");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(1, 0), original.image.get(1, 0)) &&
+                !editor.document.atlas.icons[0].source,
+            "Undo restores pixels and representation format");
+    editor.execute("redo");
+    require(paint::icon_output_format(editor.document.atlas.icons[0], output.kind).bits_per_pixel == 4,
+            "Redo restores indexed payload");
+    editor.execute("atlas-palette");
+    const std::shared_ptr<gf::ComboBox> depth =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-depth"));
+    (*depth).set_selected_index(2);
+    require((*window.find("palette-apply")).enabled(), "changing depth prepares a new representation");
+    editor.document.checkpoint();
+    editor.document.image.set(1, 0, {1, 2, 3, 4});
+    routed_button(window, "palette-apply");
+    require(window.find("palette-after") && paint::equal(editor.document.image.get(1, 0), {1, 2, 3, 4}),
+            "stale palette preview cannot replace an intervening edit");
+    const std::uint64_t before_close = editor.document.revision;
+    routed_button(window, "dialog-cancel");
+    require(editor.document.revision == before_close, "closing palette preview does not edit");
+}
+
 void alpha_tools_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -4537,6 +4609,7 @@ int main() {
         icon_representation_export();
         asset_browser_contracts();
         alpha_tools_contracts();
+        icon_palette_contracts();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

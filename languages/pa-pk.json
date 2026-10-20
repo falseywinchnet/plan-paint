@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "تصویر بدل گئی۔ الفا دے اوزار دوبارہ کھولو۔",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "ماسک دا RGB اوسط؛ اوہدا الفا نظر انداز۔ اصل RGB محفوظ۔",
   "Mask dimensions differ. Enable mask resizing to continue.": "سائز وکھرے نیں۔ ماسک دا سائز بدلنا چالو کرو۔",
-  "Alpha tools…": "الفا دے اوزار…"
+  "Alpha tools…": "الفا دے اوزار…",
+  "Color depth": "رنگ دی گہرائی",
+  "Dithering": "ڈتھرنگ",
+  "None": "کوئی نہیں",
+  "Alpha threshold": "الفا حد",
+  "Matte RGB": "RGB پچھوکڑ",
+  "Indexed preview": "انڈیکس پیش نظارہ",
+  "Palette conversion": "پیلیٹ تبدیلی",
+  "Current image only. Further painting returns it to RGBA output.": "صرف موجودہ تصویر۔ فیر پینٹ کرن نال RGBA آؤٹ پٹ واپس آؤندا اے۔",
+  "Enter a matte color as #RRGGBB.": "پچھوکڑ دا رنگ #RRGGBB وچ دیو۔",
+  "Palette entries": "پیلیٹ اندراج",
+  "Transparent pixels": "شفاف پکسل",
+  "Partial alpha converted": "بدلیا جزوی الفا",
+  "Image changed. Reopen Palette conversion.": "تصویر بدل گئی۔ پیلیٹ تبدیلی فیر کھولو۔",
+  "Palette…": "پیلیٹ…"
 }

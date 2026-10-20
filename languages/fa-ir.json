@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "تصویر تغییر کرده است. ابزارهای آلفا را دوباره باز کنید.",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "میانگین RGB ماسک؛ آلفای ماسک نادیده گرفته می‌شود. RGB حفظ می‌شود.",
   "Mask dimensions differ. Enable mask resizing to continue.": "ابعاد متفاوت است. تغییر اندازهٔ ماسک را فعال کنید.",
-  "Alpha tools…": "ابزارهای آلفا…"
+  "Alpha tools…": "ابزارهای آلفا…",
+  "Color depth": "عمق رنگ",
+  "Dithering": "دیتر",
+  "None": "هیچ‌کدام",
+  "Alpha threshold": "آستانهٔ آلفا",
+  "Matte RGB": "پس‌زمینهٔ RGB",
+  "Indexed preview": "پیش‌نمایش نمایه‌ای",
+  "Palette conversion": "تبدیل پالت",
+  "Current image only. Further painting returns it to RGBA output.": "فقط تصویر فعلی. نقاشی دوباره خروجی را به RGBA برمی‌گرداند.",
+  "Enter a matte color as #RRGGBB.": "رنگ پس‌زمینه را به صورت #RRGGBB وارد کنید.",
+  "Palette entries": "رنگ‌های پالت",
+  "Transparent pixels": "پیکسل‌های شفاف",
+  "Partial alpha converted": "آلفای جزئی تبدیل‌شده",
+  "Image changed. Reopen Palette conversion.": "تصویر تغییر کرده است. تبدیل پالت را دوباره باز کنید.",
+  "Palette…": "پالت…"
 }

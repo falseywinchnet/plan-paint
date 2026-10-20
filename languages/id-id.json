@@ -818,5 +818,19 @@
   "Image changed. Reopen Alpha tools.": "Gambar berubah. Buka kembali alat alfa.",
   "Mask RGB mean; mask alpha ignored. RGB is preserved.": "Rata-rata RGB masker; alfa masker diabaikan. RGB tetap.",
   "Mask dimensions differ. Enable mask resizing to continue.": "Ukuran berbeda. Aktifkan penyesuaian ukuran masker.",
-  "Alpha tools…": "Alat alfa…"
+  "Alpha tools…": "Alat alfa…",
+  "Color depth": "Kedalaman warna",
+  "Dithering": "Dithering",
+  "None": "Tidak ada",
+  "Alpha threshold": "Ambang alfa",
+  "Matte RGB": "Latar RGB",
+  "Indexed preview": "Pratinjau terindeks",
+  "Palette conversion": "Konversi palet",
+  "Current image only. Further painting returns it to RGBA output.": "Hanya gambar aktif. Melukis lagi mengembalikan keluaran RGBA.",
+  "Enter a matte color as #RRGGBB.": "Masukkan warna latar sebagai #RRGGBB.",
+  "Palette entries": "Entri palet",
+  "Transparent pixels": "Piksel transparan",
+  "Partial alpha converted": "Alfa parsial dikonversi",
+  "Image changed. Reopen Palette conversion.": "Gambar berubah. Buka ulang konversi palet.",
+  "Palette…": "Palet…"
 }
