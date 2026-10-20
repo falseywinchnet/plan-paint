@@ -25,6 +25,22 @@
 @media(max-width:850px){.option{display:flex}.option-heading{min-height:0}.map-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.options{gap:18px}.expanded .option{display:flex}.expanded .visual{width:100%}.expanded .mini{min-height:280px}.behavior-question .option{grid-template-columns:1fr}.behavior-question .option-copy{border-left:0;padding-top:0}.comparison-tools{align-items:start}.visual-question .option-heading{background:#f1f5fa;border-bottom:1px solid #ccd8e3;margin-bottom:10px}.expanded .badge{flex-basis:100%;margin-left:50px}}
 @media(max-width:520px){.comparison-tools{flex-wrap:wrap}.comparison-tools button{width:100%}.choice-title{font-size:16px}.map-grid{grid-template-columns:1fr}.toolbar .progress-block{min-width:150px}.mini{min-height:235px}.option-heading{padding:12px}.question-hint{font-size:14px}}
 @media print{.comparison-tools,.question-map,#continue-unanswered{display:none}.option-heading{min-height:90px}.choice-title{font-size:13px}.behavior-question .option{grid-template-columns:1fr 2fr}}
+
+/* Reading layout: the specimen and its answer remain one visible choice. */
+.masthead{padding-top:25px;padding-bottom:24px}.masthead h1{font-size:32px;margin-bottom:12px}.intro{font-size:16px;margin-bottom:16px}
+.guide{padding:18px 22px}.guide p{font-size:14px}.question{padding:28px}.question-hint{font-size:15px}
+.comparison-tools{margin-top:16px}.visual-question .options{grid-template-columns:1fr}
+.visual-question .option{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(220px,1fr);align-content:start;grid-template-rows:auto auto 1fr;padding:12px;gap:0}
+.visual-question .option-heading{grid-column:1/-1;min-height:0;padding:8px 8px 16px}.visual-question .badge{flex-basis:auto;margin-left:auto}
+.visual-question .visual{grid-column:1;grid-row:2/4;padding:0 14px 0 0}.visual-question .placement{grid-column:2;grid-row:2}.visual-question .option-copy{grid-column:2;grid-row:3;font-size:15px}
+.visual-question .mini{min-height:260px;font-size:13px}.visual-question .mini-canvas{height:115px}
+.visual-question.expanded .options{grid-template-columns:repeat(3,minmax(0,1fr))}.visual-question.expanded .option{display:flex;padding:0}.visual-question.expanded .visual{padding:0 10px 10px}.visual-question.expanded .option-heading{min-height:105px;padding:14px}.visual-question.expanded .badge{flex-basis:100%;margin-left:50px}.visual-question.expanded .mini{font-size:12px;min-height:260px}
+.decision-example{margin:20px 0;padding:18px;background:#f2f5f8;border:1px solid #c3cfdb;border-radius:4px}.decision-example figcaption{font-size:13px;margin:0 0 15px}.decision-example figcaption strong{display:block;color:#314f71;font-size:14px;margin-bottom:4px}
+.sample-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.sample{margin:0;text-align:center;min-width:0}.sample-stage{height:120px;display:flex;align-items:center;justify-content:center;border:1px solid #b5c2d0;background:repeating-conic-gradient(#e0e5eb 0% 25%,#fff 0% 50%) 0/16px 16px;overflow:hidden}.sample-stage.dark{background:#263748}.sample-stage.light{background:#fff}.sample-stage svg{width:96px;height:96px;border:1px dashed #6d8299}.sample-stage svg[viewBox="0 0 112 112"]{width:112px;height:112px}.sample b{display:block;font-size:13px;margin-top:9px}.sample small{display:block;font-size:12px;color:#53677c;margin-top:4px}.example-note{font-size:12px;color:#627186;margin:12px 0 0}
+.chosen-direction{margin-top:18px;padding:12px 14px;background:#fff2ce;border-left:3px solid #ad7a22;font-size:14px}.chosen-direction:empty{display:none}.question-end{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:18px;font-size:13px}.question-end span{color:#647487}.question-end a{white-space:nowrap}.comment-label{font-size:14px}textarea{min-height:96px}.sample-log{width:100%;text-align:left;padding:12px;background:white;font:12px/1.8 Consolas,monospace;overflow-wrap:anywhere}.sample-log strong{display:block;color:#31597b}.sample-log .issue{color:#95531a}
+@media(max-width:850px){.visual-question .option,.visual-question.expanded .option{display:flex;padding:0}.visual-question .options,.visual-question.expanded .options{grid-template-columns:1fr}.visual-question .visual{padding:0 12px 12px}.visual-question .option-heading,.visual-question.expanded .option-heading{min-height:0;padding:14px}.visual-question .badge{flex-basis:100%;margin-left:50px}.visual-question .mini{min-height:230px}.question{padding:20px}.sample-row{gap:8px}.sample-stage{height:100px}.sample-stage svg{width:78px;height:78px}}
+@media(max-width:520px){.masthead{padding:22px 18px}.question{padding:16px}.comparison-tools{display:none}.decision-example{padding:12px}.sample-row{grid-template-columns:1fr}.sample{display:grid;grid-template-columns:110px 1fr;column-gap:12px;text-align:left;align-content:center}.sample-stage{grid-row:1/3}.sample b{align-self:end}.sample small{margin-bottom:8px}.question-end{align-items:start}.toolbar{gap:9px}.toolbar .progress-block{min-width:120px}.toolbar progress{width:130px}.guide{padding:16px}.sample-log{font-size:11px}.sample-stage:has(.sample-log){height:140px}}
+@media print{.visual-question .options{grid-template-columns:1fr}.question-end,.comparison-tools{display:none}.decision-example,.sample-stage{print-color-adjust:exact}.sample-row{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
@@ -47,12 +63,12 @@
 <span id="save-state" role="status">Answers save in this browser</span>
 <a href="#Q01" id="continue-unanswered">Continue unanswered</a>
 <a href="#review">Review answers</a>
-<button type="button" class="primary" data-export>Export answers</button>
+<button type="button" class="primary" data-export-html>Save answer sheet</button>
 </div>
 <main class="layout">
 <aside class="guide">
 <p>
-<strong>The choices are the interview.</strong> Visual questions show named alternatives, proposed command locations and previews beside their answers. Use “Enlarge comparisons” for a closer look without leaving the page. Behavior questions use multiple choice with a comments field. Nothing is preselected; a recommendation is not your decision. Choose “Discuss / combine” wherever none of the options fits.</p>
+<strong>The choices are the interview.</strong> Visual questions show named alternatives, proposed command locations and previews beside their answers. Each preview stays beside its answer. On a wide screen, “Compare side by side” switches to a three-column overview. Behavior questions use multiple choice with a comments field. Nothing is preselected; a recommendation is not your decision. Choose “Discuss / combine” wherever none of the options fits.</p>
 <p>Previews are independent HTML design studies, not screenshots or implemented features. Existing scope exclusions stay visible but cannot be selected. Use comments to request a separate scope discussion. Progress is local to this browser; export your answers to retain or share the complete record.</p>
 <nav class="jump-links" aria-label="Interview sections">
 <a href="#chapter-1">01 · Document and representation model</a>
@@ -83,7 +99,7 @@
 <fieldset>
 <legend>Where should icon commands live?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q01" data-expand="Q01">Enlarge comparisons</button></div><div class="options" id="options-Q01">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q01" data-expand="Q01">Compare side by side</button></div><div class="options" id="options-Q01">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q01" value="A" aria-label="Q01 option A: Contextual Icon ribbon" aria-describedby="choice-copy-Q01-A" >
@@ -123,10 +139,12 @@
 <strong>Specifics & consequences</strong>
 <p>Evidence: Plan Paint already opens ICO into Atlas (P01), and Gallery already uses a popup (P03). Specific: the tab becomes available after successful ICO decode; opening a PNG does not silently convert it to ICO. File &gt; New &gt; Icon and File &gt; Icon tools remain discoverable without an icon open. Choosing a painting tool must not lose the current icon image.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q01" role="status"></div>
 <label class="comment-label" for="comment-Q01">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q01" name="comment-Q01" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q02">Next question →</a></div>
 </article>
 <article class="question behavior-question" id="Q02">
 <div class="question-top">
@@ -170,10 +188,12 @@
 <strong>Specifics & consequences</strong>
 <p>A protects hand-tuned 16-pixel artwork and fits the no-layers model. B requires persistent provenance and stale-state rules; C risks discarding deliberate edits.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q02" role="status"></div>
 <label class="comment-label" for="comment-Q02">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q02" name="comment-Q02" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q03">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q03">
 <div class="question-top">
@@ -183,7 +203,7 @@
 <fieldset>
 <legend>What does indexed-color editing mean?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q03" data-expand="Q03">Enlarge comparisons</button></div><div class="options" id="options-Q03">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q03" data-expand="Q03">Compare side by side</button></div><div class="options" id="options-Q03">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q03" value="A" aria-label="Q03 option A: RGBA with palette export" aria-describedby="choice-copy-Q03-A" >
@@ -301,10 +321,12 @@
 <strong>Specifics & consequences</strong>
 <p>A must not imply byte-preserving save after edits. B needs index-aware tools and exact palette/mask round trips. Choose B if palette craft is a core goal rather than a compatibility feature.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q03" role="status"></div>
 <label class="comment-label" for="comment-Q03">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q03" name="comment-Q03" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q04">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q04">
 <div class="question-top">
@@ -314,7 +336,7 @@
 <fieldset>
 <legend>How much palette control?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q04" data-expand="Q04">Enlarge comparisons</button></div><div class="options" id="options-Q04">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q04" data-expand="Q04">Compare side by side</button></div><div class="options" id="options-Q04">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q04" value="A" aria-label="Q04 option A: Per-image palette controls" aria-describedby="choice-copy-Q04-A" >
@@ -419,10 +441,12 @@
 <strong>Specifics & consequences</strong>
 <p>B improves consistency across toolbar families; it increases the need to show color loss before committing.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q04" role="status"></div>
 <label class="comment-label" for="comment-Q04">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q04" name="comment-Q04" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q05">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q05">
 <div class="question-top">
@@ -432,7 +456,7 @@
 <fieldset>
 <legend>Which ICO delivery profiles?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q05" data-expand="Q05">Enlarge comparisons</button></div><div class="options" id="options-Q05">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q05" data-expand="Q05">Compare side by side</button></div><div class="options" id="options-Q05">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q05" value="A" aria-label="Q05 option A: Full production profiles" aria-describedby="choice-copy-Q05-A" >
@@ -529,10 +553,12 @@
 <strong>Specifics & consequences</strong>
 <p>The offered Axialis sizes are not themselves evidence that every Windows consumer accepts them. Profile names must say what was tested.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q05" role="status"></div>
 <label class="comment-label" for="comment-Q05">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q05" name="comment-Q05" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q06">Next question →</a></div>
 </article>
 <article class="question behavior-question" id="Q06">
 <div class="question-top">
@@ -576,10 +602,12 @@
 <strong>Specifics & consequences</strong>
 <p>Allowing A and C together is possible: inferred mappings are reviewed before Generate. Duplicate dimensions/depths must never be silently collapsed.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q06" role="status"></div>
 <label class="comment-label" for="comment-Q06">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q06" name="comment-Q06" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q07">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q07">
 <div class="question-top">
@@ -589,7 +617,7 @@
 <fieldset>
 <legend>What protects manually edited sizes?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q07" data-expand="Q07">Enlarge comparisons</button></div><div class="options" id="options-Q07">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q07" data-expand="Q07">Compare side by side</button></div><div class="options" id="options-Q07">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q07" value="A" aria-label="Q07 option A: Review each replacement" aria-describedby="choice-copy-Q07-A" >
@@ -680,10 +708,12 @@
 <strong>Specifics & consequences</strong>
 <p>Even A needs one Undo for the whole generation transaction, not one per image.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q07" role="status"></div>
 <label class="comment-label" for="comment-Q07">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q07" name="comment-Q07" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q08">Next question →</a></div>
 </article>
 </section>
 <section class="chapter" id="chapter-2" aria-labelledby="chapter-title-2">
@@ -702,7 +732,8 @@
 <fieldset>
 <legend>Which alpha tools belong in the first release?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q08" data-expand="Q08">Enlarge comparisons</button></div><div class="options" id="options-Q08">
+<figure class="decision-example"><figcaption><strong>See what an alpha view reveals</strong>The same independent specimen is shown as color and opacity. White in the alpha view means opaque; gray means partially transparent.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Color image</b><small>The small circle has partial opacity.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="96" height="96" fill="#111"/><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#ffffff"/><path d="M29 59 L47 30 L66 59 Z" fill="#ffffff"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Alpha inspection</b><small>RGB is hidden; opacity is visible.</small></div><div class="sample"><div class="sample-stage dark"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Dark proof</b><small>Partial opacity blends with the backdrop.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q08" data-expand="Q08">Compare side by side</button></div><div class="options" id="options-Q08">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q08" value="A" aria-label="Q08 option A: Essential alpha tools" aria-describedby="choice-copy-Q08-A" >
@@ -806,10 +837,12 @@
 <strong>Specifics & consequences</strong>
 <p>Alpha view is a rendering mode of the current bitmap, not a persistent layer/channel document. Its keyboard mode and saved-pixel consequences must be unmistakable.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q08" role="status"></div>
 <label class="comment-label" for="comment-Q08">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q08" name="comment-Q08" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q09">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q09">
 <div class="question-top">
@@ -819,7 +852,7 @@
 <fieldset>
 <legend>How should reusable objects work without layers?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q09" data-expand="Q09">Enlarge comparisons</button></div><div class="options" id="options-Q09">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q09" data-expand="Q09">Compare side by side</button></div><div class="options" id="options-Q09">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q09" value="A" aria-label="Q09 option A: Preview, position, flatten" aria-describedby="choice-copy-Q09-A" >
@@ -904,10 +937,12 @@
 <strong>Specifics & consequences</strong>
 <p>C conflicts with the intended simple flattened model and is not recommended. If chosen, it needs a separate owner decision about retained objects rather than being introduced under another name.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q09" role="status"></div>
 <label class="comment-label" for="comment-Q09">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q09" name="comment-Q09" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q10">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q10">
 <div class="question-top">
@@ -917,7 +952,7 @@
 <fieldset>
 <legend>Which effects should be promoted?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q10" data-expand="Q10">Enlarge comparisons</button></div><div class="options" id="options-Q10">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q10" data-expand="Q10">Compare side by side</button></div><div class="options" id="options-Q10">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q10" value="A" aria-label="Q10 option A: Common effects first" aria-describedby="choice-copy-Q10-A" >
@@ -1002,10 +1037,12 @@
 <strong>Specifics & consequences</strong>
 <p>Effect controls show scope: selection, current image, or explicitly selected images. A checked live Preview must not create Undo entries.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q10" role="status"></div>
 <label class="comment-label" for="comment-Q10">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q10" name="comment-Q10" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q11">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q11">
 <div class="question-top">
@@ -1015,7 +1052,8 @@
 <fieldset>
 <legend>How should shadows handle clipping?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q11" data-expand="Q11">Enlarge comparisons</button></div><div class="options" id="options-Q11">
+<figure class="decision-example"><figcaption><strong>The choice changes the output geometry</strong>Example: artwork nearly fills a 32 × 32 image. These enlarged illustrations show three different shadow policies.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>A · Keep 32 × 32</b><small>Shadow reaches the image edge.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(13 13) scale(.72)" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>B · Keep 32 × 32</b><small>Artwork becomes smaller to fit.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 112 112" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>C · Grow dimensions</b><small>Image identity changes to fit the shadow.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q11" data-expand="Q11">Compare side by side</button></div><div class="options" id="options-Q11">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q11" value="A" aria-label="Q11 option A: Preserve dimensions; show clipping" aria-describedby="choice-copy-Q11-A" >
@@ -1097,10 +1135,12 @@
 <strong>Specifics & consequences</strong>
 <p>For an ICO representation, C changes its identity and export compatibility. No option should silently move artwork differently at each size.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q11" role="status"></div>
 <label class="comment-label" for="comment-Q11">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q11" name="comment-Q11" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q12">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q12">
 <div class="question-top">
@@ -1110,7 +1150,8 @@
 <fieldset>
 <legend>What should “disabled” and “hot” mean?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q12" data-expand="Q12">Enlarge comparisons</button></div><div class="options" id="options-Q12">
+<figure class="decision-example"><figcaption><strong>Judge the state family together</strong>Illustrative appearance only. The decision below is whether these transformations are adjustable, fixed, or authored by hand.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Normal</b><small>Original colors.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity=".55"><rect x="13" y="13" width="66" height="66" rx="13" fill="#929da6"/><path d="M29 59 L47 30 L66 59 Z" fill="#c2c8cd"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Disabled</b><small>Reduced color and opacity.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#1676b9"/><path d="M29 59 L47 30 L66 59 Z" fill="#ffb929"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Hot</b><small>Stronger blue and gold.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q12" data-expand="Q12">Compare side by side</button></div><div class="options" id="options-Q12">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q12" value="A" aria-label="Q12 option A: Adjustable state presets" aria-describedby="choice-copy-Q12-A" >
@@ -1201,10 +1242,12 @@
 <strong>Specifics & consequences</strong>
 <p>Observed reference behavior leaves indexed images visually colored in the disabled icon (O11). Proposed A should either process those consistently or report every skipped representation. Exact Axialis color formulas are unknown.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q12" role="status"></div>
 <label class="comment-label" for="comment-Q12">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q12" name="comment-Q12" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q13">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q13">
 <div class="question-top">
@@ -1214,7 +1257,7 @@
 <fieldset>
 <legend>Should generic transforms gain precise controls?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q13" data-expand="Q13">Enlarge comparisons</button></div><div class="options" id="options-Q13">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q13" data-expand="Q13">Compare side by side</button></div><div class="options" id="options-Q13">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q13" value="A" aria-label="Q13 option A: Precise transform controls" aria-describedby="choice-copy-Q13-A" >
@@ -1311,10 +1354,12 @@
 <strong>Specifics & consequences</strong>
 <p>Centering should distinguish canvas center from visible-alpha bounds; empty images need a defined result.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q13" role="status"></div>
 <label class="comment-label" for="comment-Q13">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q13" name="comment-Q13" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q14">Next question →</a></div>
 </article>
 </section>
 <section class="chapter" id="chapter-3" aria-labelledby="chapter-title-3">
@@ -1333,7 +1378,8 @@
 <fieldset>
 <legend>Which comparison view?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q14" data-expand="Q14">Enlarge comparisons</button></div><div class="options" id="options-Q14">
+<figure class="decision-example"><figcaption><strong>One image, three proofing backgrounds</strong>A backdrop can expose edges that disappear on another. These are enlarged design specimens, not a physical-pixel calibration.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage light"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Light</b><small>Inspect dark edges.</small></div><div class="sample"><div class="sample-stage dark"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Dark</b><small>Inspect translucent highlights.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Checkerboard</b><small>Inspect transparent bounds.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q14" data-expand="Q14">Compare side by side</button></div><div class="options" id="options-Q14">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q14" value="A" aria-label="Q14 option A: Separate comparison window" aria-describedby="choice-copy-Q14-A" >
@@ -1433,10 +1479,12 @@
 <strong>Specifics & consequences</strong>
 <p>A follows the proposed auxiliary-window composition and preserves canvas space. A preview at 100% must identify whether one source pixel maps to one physical display pixel.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q14" role="status"></div>
 <label class="comment-label" for="comment-Q14">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q14" name="comment-Q14" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q15">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q15">
 <div class="question-top">
@@ -1446,7 +1494,7 @@
 <fieldset>
 <legend>How should contact sheets be delivered?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q15" data-expand="Q15">Enlarge comparisons</button></div><div class="options" id="options-Q15">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q15" data-expand="Q15">Compare side by side</button></div><div class="options" id="options-Q15">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q15" value="A" aria-label="Q15 option A: Editable image or PNG" aria-describedby="choice-copy-Q15-A" >
@@ -1532,10 +1580,12 @@
 <strong>Specifics & consequences</strong>
 <p>Show whether the background is opaque or alpha. Labels and checker squares become pixels only in the generated sheet, never in the source icon.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q15" role="status"></div>
 <label class="comment-label" for="comment-Q15">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q15" name="comment-Q15" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q16">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q16">
 <div class="question-top">
@@ -1545,7 +1595,7 @@
 <fieldset>
 <legend>Which validation feedback is useful?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q16" data-expand="Q16">Enlarge comparisons</button></div><div class="options" id="options-Q16">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q16" data-expand="Q16">Compare side by side</button></div><div class="options" id="options-Q16">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q16" value="A" aria-label="Q16 option A: Production checks" aria-describedby="choice-copy-Q16-A" >
@@ -1629,10 +1679,12 @@
 <strong>Specifics & consequences</strong>
 <p>Heuristics must be advisory; do not mark an artist&#x27;s deliberate pixel design “invalid.”</p>
 </div>
+<div class="chosen-direction" id="chosen-Q16" role="status"></div>
 <label class="comment-label" for="comment-Q16">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q16" name="comment-Q16" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q17">Next question →</a></div>
 </article>
 </section>
 <section class="chapter" id="chapter-4" aria-labelledby="chapter-title-4">
@@ -1651,7 +1703,7 @@
 <fieldset>
 <legend>What is the asset library?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q17" data-expand="Q17">Enlarge comparisons</button></div><div class="options" id="options-Q17">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q17" data-expand="Q17">Compare side by side</button></div><div class="options" id="options-Q17">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q17" value="A" aria-label="Q17 option A: Browse ordinary folders" aria-describedby="choice-copy-Q17-A" >
@@ -1750,10 +1802,12 @@
 <strong>Specifics & consequences</strong>
 <p>C is outside the requested output scope. A permits source files to stay useful in other tools. Metadata must be rebuildable and missing files must remain distinguishable from empty folders.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q17" role="status"></div>
 <label class="comment-label" for="comment-Q17">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q17" name="comment-Q17" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q18">Next question →</a></div>
 </article>
 <article class="question behavior-question" id="Q18">
 <div class="question-top">
@@ -1797,10 +1851,12 @@
 <strong>Specifics & consequences</strong>
 <p>A keeps browsing focused on artwork. B requires collision, Undo/recycle and external-change contracts unrelated to image editing.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q18" role="status"></div>
 <label class="comment-label" for="comment-Q18">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q18" name="comment-Q18" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q19">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q19">
 <div class="question-top">
@@ -1810,7 +1866,7 @@
 <fieldset>
 <legend>What should a batch window expose?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q19" data-expand="Q19">Enlarge comparisons</button></div><div class="options" id="options-Q19">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q19" data-expand="Q19">Compare side by side</button></div><div class="options" id="options-Q19">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q19" value="A" aria-label="Q19 option A: One reviewable production window" aria-describedby="choice-copy-Q19-A" >
@@ -1907,10 +1963,12 @@
 <strong>Specifics & consequences</strong>
 <p>Preview A shows an unresolved collision preventing Run. Preview must identify every generated file before writes begin.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q19" role="status"></div>
 <label class="comment-label" for="comment-Q19">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q19" name="comment-Q19" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q20">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q20">
 <div class="question-top">
@@ -1920,7 +1978,7 @@
 <fieldset>
 <legend>Default destination and collisions?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q20" data-expand="Q20">Enlarge comparisons</button></div><div class="options" id="options-Q20">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q20" data-expand="Q20">Compare side by side</button></div><div class="options" id="options-Q20">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q20" value="A" aria-label="Q20 option A: Separate output folder" aria-describedby="choice-copy-Q20-A" >
@@ -1993,10 +2051,12 @@
 <strong>Specifics & consequences</strong>
 <p>Atomicity is per output file, not a promise to roll back a whole batch. Cancellation leaves completed outputs and a report. Document Undo does not pretend to reverse filesystem jobs.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q20" role="status"></div>
 <label class="comment-label" for="comment-Q20">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q20" name="comment-Q20" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q21">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q21">
 <div class="question-top">
@@ -2006,7 +2066,7 @@
 <fieldset>
 <legend>How should normalization behave?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q21" data-expand="Q21">Enlarge comparisons</button></div><div class="options" id="options-Q21">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q21" data-expand="Q21">Compare side by side</button></div><div class="options" id="options-Q21">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q21" value="A" aria-label="Q21 option A: Separate add and exact modes" aria-describedby="choice-copy-Q21-A" >
@@ -2096,10 +2156,12 @@
 <strong>Specifics & consequences</strong>
 <p>An empty target profile is an error. If creation of missing images is off, show which files cannot satisfy the profile.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q21" role="status"></div>
 <label class="comment-label" for="comment-Q21">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q21" name="comment-Q21" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q22">Next question →</a></div>
 </article>
 <article class="question behavior-question" id="Q22">
 <div class="question-top">
@@ -2143,10 +2205,12 @@
 <strong>Specifics & consequences</strong>
 <p>This interview assumes broad production as GIVEN; A or B best matches that choice. Large batches need bounded memory and cancellation between outputs.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q22" role="status"></div>
 <label class="comment-label" for="comment-Q22">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q22" name="comment-Q22" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q23">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q23">
 <div class="question-top">
@@ -2156,7 +2220,7 @@
 <fieldset>
 <legend>How should toolbar strips integrate?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q23" data-expand="Q23">Enlarge comparisons</button></div><div class="options" id="options-Q23">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q23" data-expand="Q23">Compare side by side</button></div><div class="options" id="options-Q23">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q23" value="A" aria-label="Q23 option A: Reuse Atlas for strips" aria-describedby="choice-copy-Q23-A" >
@@ -2250,10 +2314,12 @@
 <strong>Specifics & consequences</strong>
 <p>An icon&#x27;s different resolutions are not successive strip cells by default. Users explicitly select the images that form the strip.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q23" role="status"></div>
 <label class="comment-label" for="comment-Q23">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q23" name="comment-Q23" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q24">Next question →</a></div>
 </article>
 </section>
 <section class="chapter" id="chapter-5" aria-labelledby="chapter-title-5">
@@ -2306,10 +2372,12 @@
 <strong>Specifics & consequences</strong>
 <p>Mobile presets require current target rules and clear mask/background expectations, not a generic “works everywhere” badge.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q24" role="status"></div>
 <label class="comment-label" for="comment-Q24">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q24" name="comment-Q24" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q25">Next question →</a></div>
 </article>
 <article class="question behavior-question" id="Q25">
 <div class="question-top">
@@ -2353,10 +2421,12 @@
 <strong>Specifics & consequences</strong>
 <p>A can improve small-size geometry but still needs optical retouching. No option introduces vector layers or a vector document editor.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q25" role="status"></div>
 <label class="comment-label" for="comment-Q25">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q25" name="comment-Q25" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q26">Next question →</a></div>
 </article>
 <article class="question behavior-question" id="Q26">
 <div class="question-top">
@@ -2400,10 +2470,12 @@
 <strong>Specifics & consequences</strong>
 <p>The study excludes proprietary bridge/template replication. Independently designed integration would be a separate project.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q26" role="status"></div>
 <label class="comment-label" for="comment-Q26">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q26" name="comment-Q26" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q27">Next question →</a></div>
 </article>
 <article class="question behavior-question" id="Q27">
 <div class="question-top">
@@ -2447,10 +2519,12 @@
 <strong>Specifics & consequences</strong>
 <p>No reference-application binary was inspected. C introduces a separate artifact-modification workflow and is not part of the proposed portfolio.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q27" role="status"></div>
 <label class="comment-label" for="comment-Q27">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q27" name="comment-Q27" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#Q28">Next question →</a></div>
 </article>
 <article class="question visual-question" id="Q28">
 <div class="question-top">
@@ -2460,7 +2534,7 @@
 <fieldset>
 <legend>Which ribbon rendering variant should the study show?</legend>
 <p class="question-hint">Compare the previews, then choose a direction.</p>
-<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q28" data-expand="Q28">Enlarge comparisons</button></div><div class="options" id="options-Q28">
+<div class="comparison-tools"><span>Compare all three alternatives below.</span><button type="button" class="expand-comparison" aria-expanded="false" aria-controls="options-Q28" data-expand="Q28">Compare side by side</button></div><div class="options" id="options-Q28">
 <label class="option">
 <span class="option-heading">
 <input type="radio" name="Q28" value="A" aria-label="Q28 option A: Follow the selected theme" aria-describedby="choice-copy-Q28-A" >
@@ -2557,10 +2631,12 @@
 <strong>Specifics & consequences</strong>
 <p>The toolkit&#x27;s latest source leaves the default choice open. The HTML interview compares theme-selected, smooth and dithered treatments as composition studies; native GUI.Forms rendering remains to be validated.</p>
 </div>
+<div class="chosen-direction" id="chosen-Q28" role="status"></div>
 <label class="comment-label" for="comment-Q28">Comments, exceptions or exact requirements <span>optional</span>
 </label>
 <textarea id="comment-Q28" name="comment-Q28" rows="2" placeholder="Keep this, change that; describe your preferred behavior…">
 </textarea>
+<div class="question-end"><span>Choose one direction, or combine in comments.</span><a href="#review">Review my answers →</a></div>
 </article>
 </section>
 </form>
@@ -2571,7 +2647,8 @@
 <div id="answer-review">
 </div>
 <div class="review-actions">
-<button type="button" class="primary" data-export>Export answers</button>
+<button type="button" data-export>Export JSON</button>
+<button type="button" class="primary" data-export-html>Save answer sheet</button>
 <a href="#Q01">Back to the first question</a>
 </div>
 <p id="export-status" role="status">
@@ -2610,6 +2687,7 @@ function refreshReview() {
   answers.forEach(function renderAnswer(answer) {
     document.getElementById(answer.id).classList.toggle('answered', Boolean(answer.choice));
     document.getElementById('state-' + answer.id).textContent = answer.choice ? answer.choice === 'discuss' ? 'Discuss / combine' : 'Selected ' + answer.choice : answer.comment.trim() ? 'Comment only' : 'Unanswered';
+    document.getElementById('chosen-' + answer.id).textContent = answer.choice ? 'Your direction: ' + answer.choiceText : '';
     const item = document.createElement('div'); item.className = 'review-row';
     const link = document.createElement('a'); link.href = '#' + answer.id; link.textContent = answer.id + ' · ' + answer.question; item.append(link);
     const result = document.createElement('div'); result.textContent = answer.choice ? answer.choice + ' — ' + answer.choiceText : 'Unanswered'; item.append(result);
@@ -2687,12 +2765,32 @@ function toggleComparison(event) {
   const question = document.getElementById(button.dataset.expand);
   const expanded = question.classList.toggle('expanded');
   button.setAttribute('aria-expanded', String(expanded));
-  button.textContent = expanded ? 'Compact comparisons' : 'Enlarge comparisons';
+  button.textContent = expanded ? 'Larger reading layout' : 'Compare side by side';
 }
 document.querySelectorAll('[data-expand]').forEach(function connectComparison(button) {
   button.addEventListener('click', toggleComparison);
 });
 buildQuestionMap();
+
+
+function escapeAnswerText(value) {
+  return String(value).replace(/[&<>"']/g, function escapeCharacter(character) {
+    return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[character];
+  });
+}
+function downloadAnswerSheet() {
+  const record = collectAnswers();
+  let body = '<h1>Plan Paint · icon editor decisions</h1><p>Saved ' + escapeAnswerText(record.exportedAt) + '</p><p>Owner selections and comments. Unanswered questions remain open.</p>';
+  record.answers.forEach(function writeAnswer(answer) {
+    body += '<section><h2>' + escapeAnswerText(answer.id + ' · ' + answer.question) + '</h2><p><strong>' + escapeAnswerText(answer.choice ? answer.choice + ' — ' + answer.choiceText : 'Unanswered') + '</strong></p><p class="comment">' + escapeAnswerText(answer.comment || 'No comment') + '</p></section>';
+  });
+  const html = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Plan Paint interview answers</title><style>body{font:16px/1.6 Segoe UI,sans-serif;max-width:880px;margin:40px auto;padding:0 24px;color:#243548}section{border-top:1px solid #c5d0dc;padding:18px 0}h2{font-size:20px}.comment{white-space:pre-wrap}</style><body>' + body + '</body></html>';
+  const url = URL.createObjectURL(new Blob([html], {type:'text/html;charset=utf-8'}));
+  const link = document.createElement('a'); link.href = url; link.download = 'plan-paint-icon-interview-answers.html'; document.body.append(link); link.click(); link.remove();
+  setTimeout(function releaseAnswerSheet() { URL.revokeObjectURL(url); }, 1000);
+  document.getElementById('export-status').textContent = 'HTML answer sheet prepared. Your editable answers remain saved in this browser.';
+}
+document.querySelectorAll('[data-export-html]').forEach(function connectAnswerSheet(button) { button.addEventListener('click', downloadAnswerSheet); });
 
 restoreAnswers();
 </script></body></html>
