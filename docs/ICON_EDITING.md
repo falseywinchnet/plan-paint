@@ -96,8 +96,8 @@ because ordinary PNG alpha cannot represent a background-dependent XOR operation
 Changing settings prepares a new preview and disables export until it is ready.
 Closing cancels pending work. Preview settings and exported sheets do not change
 the source document, its filename or Undo history. This command exports one
-assembled sheet; separate-file representation export and multi-file batch jobs
-remain future work.
+assembled sheet. Separate-file representation export is described below;
+multi-file batch jobs remain future work.
 
 ## Exporting separate PNG files
 
@@ -144,7 +144,63 @@ This command exports the representations that actually exist in one open
 document. Requested-size fallback, choosing one depth per distinct size, and
 multi-document batch conversion remain separate work.
 
+## Browsing source artwork and stamps
+
+Choose **File → Browse assets…** from any document. The browser uses ordinary
+folders; it neither imports copies into a private library nor modifies files
+while browsing. Enter a folder and filename search, then press **Search /
+refresh**, or use **Choose folder…**, **Up**, and folder activation. Search
+matches a substring of the current folder's filenames with ASCII case folding;
+other UTF-8 characters match literally. Type filters distinguish ICO, CUR,
+bitmap images and SVG. Folders remain available through type filters.
+
+The list includes PNG, JPEG, BMP, TGA, TIFF, WebP, AVIF, HEIF, SVG/SVGZ, ICO and
+CUR extensions. Import support and limits are the same as opening these files
+normally, including platform-dependent HEIF support and the restricted TIFF
+profile. Corrupt or unsupported image contents produce a visible error.
+GIF, PSD, HDR and portable-map formats are not advertised as supported inputs.
+Each scan is confined to one folder and stops after 8,192 matching entries or
+50,000 inspected entries. A limited listing is explicitly labeled; narrow the
+search or choose a subfolder. Results are sorted folders first, then by name.
+An inaccessible or missing folder is an error, not an empty result.
+
+Select a file to decode a preview in the background. ICO/CUR files retain all
+representations, including duplicate dimensions, and the representation chooser
+identifies each ordinal, dimensions and imported depth. The largest image is
+selected initially. The preview fits inside its well using nearest sampling and
+does not enlarge small images. It composites alpha over a checkerboard and
+evaluates legacy XOR against that background without modifying source pixels.
+Cursor hotspots appear in the details. Preview loading initially refuses files
+larger than 32 MB; larger images can still be opened through the ordinary Open
+command, subject to the normal decoder limits.
+
+**Open** opens the complete image or icon container and honors the existing
+unsaved-document prompt. **Use as stamp** loads the chosen representation into
+the existing Stamp tool at its original dimensions and alpha. Loading the stamp
+does not itself change canvas pixels or create an Undo entry; placement uses the
+normal painting transaction and Undo. Background-dependent XOR images cannot
+be used as ordinary alpha stamps, and that action is visibly unavailable.
+**Copy path** copies the selected file or folder path.
+
+Size and modification-time checks before/after decoding and before using a
+preview detect ordinary external changes. A changed or missing file requires a
+fresh preview. These checks are not a cryptographic guarantee against replacing
+content while preserving both metadata values. Navigation keeps only the latest
+pending request; completed work carries a generation that must still match the
+window. Closing revokes queued results and waits for the active decode to finish.
+
+**Bookmark folder** and **Remove bookmark** maintain explicit bookmarks in
+`asset-folders.txt` beside the application preferences. The open UTF-8 format
+starts with `Plan Paint asset folders v1` followed by a newline, then one absolute
+path per line. Percent signs and control bytes are escaped as uppercase `%HH`.
+Missing folders remain in the bookmark list. There are at most 64 bookmarks;
+failed or malformed storage is reported and is not silently replaced.
+
+This browser currently provides a filename list and a selected-image preview.
+Thumbnail grids, multiple-asset job selection, metadata indexing and file-manager
+integration remain part of the broader production work.
+
 The broader [icon production interview](icon-editor-study/mockups.html) covers
-future palette, alpha, batch and asset-browsing capabilities. Its recommendations
+future palette, alpha, batch and additional asset-browsing capabilities. Its recommendations
 remain candidate designs; implemented features do not establish owner answers
 to the remaining interview questions.

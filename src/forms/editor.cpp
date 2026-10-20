@@ -209,6 +209,7 @@ void Editor::rebuild_file_menu() {
     menu_subscriptions_.clear();
     commands_.clear();
     std::vector<gf::MenuItemSpec> items = {menu_item("new", tr("New")), menu_item("open", tr("Open…"))};
+    items.push_back(menu_item("browse-assets", tr("Browse assets…")));
     if (!recent.paths.empty()) {
         gf::MenuItemSpec recent_menu;
         recent_menu.stable_id = "recent-files";
@@ -1703,7 +1704,9 @@ bool Editor::can_replace() {
     }
 }
 void Editor::open_file(const std::string& path) {
-    ImageContainer image = load_container(path);
+    open_container(load_container(path), path);
+}
+void Editor::open_container(ImageContainer image, const std::string& path) {
     finish_controls();
     unset_guide();
     atlas_reference = {};
@@ -1758,6 +1761,39 @@ std::string Editor::choose_export_directory(const std::string& initial_directory
         dialog(gf::HostFolderDialogRequest{tr("Destination folder"), initial_directory}).payload);
     return result.outcome == gf::HostDialogOutcome::accepted && !result.paths.empty() ? result.paths.front()
                                                                                       : "";
+}
+std::string Editor::choose_asset_directory(const std::string& initial_directory) {
+    const gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(
+        dialog(gf::HostFolderDialogRequest{tr("Browse assets"), initial_directory}).payload);
+    return result.outcome == gf::HostDialogOutcome::accepted && !result.paths.empty() ? result.paths.front()
+                                                                                      : "";
+}
+void Editor::copy_asset_path(const std::string& path) {
+    if (!services().write_clipboard_text(path).accepted()) {
+        throw std::runtime_error(tr("Could not copy the asset path."));
+    }
+}
+void Editor::open_browser_asset(const AssetPreview& preview) {
+    if (!asset_unchanged(preview)) {
+        throw std::runtime_error(tr("Asset changed while loading. Refresh its preview."));
+    }
+    ImageContainer prepared = preview.images;
+    close_editor_dialog();
+    if (!can_replace()) {
+        if (!pending_save_path.empty()) {
+            deferred_open_path = preview.path;
+        }
+        return;
+    }
+    if (!asset_unchanged(preview)) {
+        error(tr("Asset changed while loading. Refresh its preview."));
+        return;
+    }
+    try {
+        open_container(std::move(prepared), preview.path);
+    } catch (const std::exception& exception) {
+        error(exception.what());
+    }
 }
 bool Editor::save_export_report(const std::string& report) {
     gf::HostSaveFileDialogRequest request;
@@ -2081,6 +2117,8 @@ void Editor::execute(const std::string& command) {
             } else if (!pending_save_path.empty()) {
                 deferred_command = "new";
             }
+        } else if (command == "browse-assets") {
+            open_editor_dialog(EditorDialogKind::asset_browser);
         } else if (command == "open") {
             if (!can_replace()) {
                 if (!pending_save_path.empty()) {

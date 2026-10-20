@@ -45,6 +45,7 @@ struct CarpetWork {
 };
 } // namespace
 EditorDialog::~EditorDialog() {
+    stop_asset_browser();
     stop_icon_export();
     stop_icon_sheet();
     stop_carpet();
@@ -61,6 +62,9 @@ void EditorDialog::stop_carpet() {
 }
 void EditorDialog::on_attached_to_window() {
     Control::on_attached_to_window();
+    if (kind_ == EditorDialogKind::asset_browser) {
+        request_assets(true);
+    }
     if (kind_ == EditorDialogKind::icon_sheet) {
         render_icon_sheet_preview();
     }
@@ -70,6 +74,7 @@ void EditorDialog::on_attached_to_window() {
     }
 }
 void EditorDialog::on_detaching_from_window(gf::Window& window) noexcept {
+    stop_asset_browser();
     stop_icon_export();
     stop_icon_sheet();
     stop_carpet();

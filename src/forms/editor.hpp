@@ -210,6 +210,11 @@ class Editor final : public gui_forms::Control {
     void close_editor_dialog();
     bool export_png_image(const Image& image, const std::string& suggested_name);
     std::string choose_export_directory(const std::string& initial_directory);
+    std::string choose_asset_directory(const std::string& initial_directory);
+    void copy_asset_path(const std::string& path);
+    void open_browser_asset(const AssetPreview& preview);
+    void use_asset_stamp(Image image);
+    std::string asset_directory, asset_bookmark_path;
     bool save_export_report(const std::string& report);
     void arrange(gui_forms::Rect bounds) override;
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
@@ -230,6 +235,7 @@ class Editor final : public gui_forms::Control {
     void unset_guide();
     void refresh();
     void open_file(const std::string& path);
+    void open_container(ImageContainer image, const std::string& path);
     bool save(bool save_as);
     void save_path(const std::string& path);
     std::string pending_save_path, deferred_command, deferred_open_path;

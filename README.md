@@ -167,6 +167,8 @@ Icon and cursor size generation defaults to adding missing sizes while preservin
 
 **Atlas → Compare…** previews icon and cursor representations on light, dark, checkerboard, transparent or primary-color backgrounds. Choose actual display pixels or an enlarged view, configure a labeled contact sheet, and export it as PNG without changing the source document or its Undo history.
 
+**File → Browse assets…** browses ordinary artwork folders with search, type filters, bookmarks and an image preview. Inspect individual ICO/CUR representations, open the complete file, copy its path, or use one representation with the existing Stamp tool. Browsing preserves the current document; stamping changes pixels only when placed. See [icon production and asset browsing](docs/ICON_EDITING.md).
+
 **Atlas → Export…** writes separate PNGs for all representations, the current image or a selected sequence. Review filenames and choose Skip, Rename or Replace for existing destinations before running. Same-size variants keep distinct names; cancellation and per-file results remain visible, with a JSON report available to save.
 
 Atlas uses flat canvases with a maximum of 4096 grid cells. Filename tokens such as `sprite`, `spritesheet`, `atlas`, `tileset`, `walk` and `idle` automatically offer grid setup; any picture can use Atlas manually. Rows and columns come first, with optional margins and spacing. Unused edge pixels are preserved. Grid setup and navigation do not change the picture, and edits participate in undo/redo across frames. Leave grid to resize or crop the whole sheet.

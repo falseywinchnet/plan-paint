@@ -35,6 +35,7 @@ int main(int argc, char** argv) {
             (*editor).settings.load();
             (*editor).recent.storage_path = paint::path_to_utf8(preferences / "recent.bin");
             (*editor).recent.load();
+            (*editor).asset_bookmark_path = paint::path_to_utf8(preferences / "asset-folders.txt");
         } catch (const std::exception&) {
             (*editor).custom_colors.storage_path.clear();
         }

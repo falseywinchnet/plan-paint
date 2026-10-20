@@ -33,7 +33,7 @@ struct NativeExercise {
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_formats_review = false,
-         icon_sheet_review = false, icon_export_review = false;
+         icon_sheet_review = false, icon_export_review = false, asset_browser_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -362,6 +362,12 @@ struct NativeExercise {
             }
             return;
         }
+        if (asset_browser_review) {
+            if (!painted || !window.find("asset-stamp") || !(*window.find("asset-stamp")).enabled()) {
+                throw std::runtime_error("Native asset browser preview did not render");
+            }
+            return;
+        }
         if (icon_sheet_review) {
             if (!painted || !window.find("sheet-export") || !(*window.find("sheet-export")).enabled()) {
                 throw std::runtime_error("Native contact sheet preview did not render");
@@ -404,6 +410,43 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (asset_browser_review) {
+            const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+            (*editor).asset_directory = (root / "assets").string();
+            (*editor).execute("browse-assets");
+            const std::shared_ptr<gf::ListBox> list =
+                std::dynamic_pointer_cast<gf::ListBox>(window.find("asset-list"));
+            const std::chrono::steady_clock::time_point deadline =
+                std::chrono::steady_clock::now() + std::chrono::seconds(15);
+            while ((*list).items().empty()) {
+                static_cast<void>(window.drain_posted_work());
+                if (std::chrono::steady_clock::now() > deadline) {
+                    throw std::runtime_error("Native asset directory timed out");
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            for (std::size_t index = 0; index < (*list).items().size(); ++index) {
+                if ((*list).items()[index] == "app-icon.png") {
+                    (*list).select_index(index);
+                    break;
+                }
+            }
+            while (!(*window.find("asset-stamp")).enabled()) {
+                static_cast<void>(window.drain_posted_work());
+                if (std::chrono::steady_clock::now() > deadline) {
+                    throw std::runtime_error("Native asset preview timed out");
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            window.perform_layout();
+            inspect_frame(window);
+            (*editor).close_editor_dialog();
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native asset browser close failed");
+            }
+            return;
+        }
         if (icon_export_review) {
             NativeRecoveryDirectory outputs;
             const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
@@ -656,8 +699,9 @@ int main(int argc, char** argv) {
         exercise.icon_formats_review = argc > 1 && std::string(argv[1]) == "--icon-formats";
         exercise.icon_sheet_review = argc > 1 && std::string(argv[1]) == "--icon-sheet";
         exercise.icon_export_review = argc > 1 && std::string(argv[1]) == "--icon-export";
+        exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
-            exercise.icon_sheet_review || exercise.icon_export_review) {
+            exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
