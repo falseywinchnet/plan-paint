@@ -1367,7 +1367,7 @@ void asset_browser_contracts() {
                 "file activation during preview did not finish opening");
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    require(editor.document.image.width == 8 && editor.document.filename == (root / "sample.png").string(),
+    require(editor.document.image.width == 8 && editor.document.filename == std::filesystem::canonical(root / "sample.png").string(),
             "approved asset open did not load the preview snapshot");
     // Rapid folder/selection replacement and close must reject queued deliveries.
     editor.execute("browse-assets");
