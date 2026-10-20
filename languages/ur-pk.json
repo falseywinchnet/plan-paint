@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "فولڈر اور تلاش لاگو کرنے کے لیے تلاش / تازہ کریں دبائیں۔",
   "Asset bookmark storage is unavailable.": "وسائل کے بک مارکس کا ذخیرہ دستیاب نہیں۔",
   "Asset changed while loading. Refresh its preview.": "لوڈ ہوتے وقت وسیلہ بدل گیا۔ پیش منظر تازہ کریں۔",
-  "Could not copy the asset path.": "وسیلے کا راستہ نقل نہیں ہو سکا۔"
+  "Could not copy the asset path.": "وسیلے کا راستہ نقل نہیں ہو سکا۔",
+  "Alpha tools": "الفا کے اوزار",
+  "Color": "رنگ",
+  "Apply": "لاگو کریں",
+  "Mask": "ماسک",
+  "Alpha statistics": "الفا کے اعداد",
+  "Copy alpha": "الفا کاپی کریں",
+  "Paste alpha": "الفا چسپاں کریں",
+  "Resize mask to image": "ماسک کو تصویر کے سائز میں بدلیں",
+  "The clipboard has no image.": "کلپ بورڈ میں تصویر نہیں ہے۔",
+  "Image changed. Reopen Alpha tools.": "تصویر بدل گئی۔ الفا کے اوزار دوبارہ کھولیں۔",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "ماسک کا RGB اوسط؛ اس کا الفا نظر انداز۔ اصل RGB محفوظ۔",
+  "Mask dimensions differ. Enable mask resizing to continue.": "سائز مختلف ہیں۔ ماسک کا سائز بدلنا فعال کریں۔",
+  "Alpha tools…": "الفا کے اوزار…"
 }

@@ -200,6 +200,45 @@ This browser currently provides a filename list and a selected-image preview.
 Thumbnail grids, multiple-asset job selection, metadata indexing and file-manager
 integration remain part of the broader production work.
 
+## Inspecting and transferring opacity
+
+For an ICO or CUR document, choose **Atlas → Alpha tools…**. Like other Atlas
+commands, opening the tool settles the current painting gesture and editable
+geometry. The tool operates on the **entire current representation**, even if a
+selection outline is present. Other sizes and depths are not targets.
+
+The owned window shows the original and proposed result. **Alpha** displays
+opacity as opaque grayscale: black is transparent, white is opaque and gray is
+partial opacity. **Color** composites the actual RGBA image over a checkerboard.
+Both previews fit without enlarging small artwork, using nearest sampling.
+Statistics show the minimum and maximum alpha and counts for alpha 0, 1–254,
+and 255. Changing the view does not change pixels or create history.
+
+**Copy alpha** copies the original representation's opacity as an ordinary,
+opaque grayscale clipboard image. **Paste alpha** reads an image from the
+clipboard and prepares a replacement opacity mask. The conversion is defined
+as `(R + G + B + 1) / 3` using integer division on encoded 8-bit channels. The
+mask's own alpha is ignored. Grayscale values therefore transfer exactly;
+colored masks use a rounded arithmetic mean, not perceptual luminance.
+
+Mismatched dimensions leave Apply unavailable until **Resize mask to image**
+is explicitly enabled. Resizing samples nearest pixel centers independently
+on each axis; it can change aspect ratio and does not interpolate. The original
+and mask dimensions remain visible. Disabling resizing restores the mismatch
+error without changing the document. **Reset** discards the staged mask.
+
+**Apply** changes alpha only, retaining every RGB byte, including hidden colors
+under fully transparent pixels. It creates one Undo entry and closes the window.
+An identical mask leaves Apply disabled. **Close** or Escape discards the preview.
+An intervening document or representation change rejects Apply and requires
+reopening the tool. Cursor hotspots and other representations remain unchanged.
+
+Legacy background-dependent XOR artwork cannot be treated as an ordinary alpha
+mask; the command reports that limitation before opening the tool. Clipboard
+geometry and host errors are validated before preparing a result. This workflow
+adds no layer or persistent channel document. Painting directly into an alpha
+mask and viewing alpha on the main canvas remain separate work.
+
 The broader [icon production interview](icon-editor-study/mockups.html) covers
 future palette, alpha, batch and additional asset-browsing capabilities. Its recommendations
 remain candidate designs; implemented features do not establish owner answers

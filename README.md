@@ -171,6 +171,8 @@ Icon and cursor size generation defaults to adding missing sizes while preservin
 
 **Atlas → Export…** writes separate PNGs for all representations, the current image or a selected sequence. Review filenames and choose Skip, Rename or Replace for existing destinations before running. Same-size variants keep distinct names; cancellation and per-file results remain visible, with a JSON report available to save.
 
+**Atlas → Alpha tools…** inspects the current icon or cursor image's opacity, copies it as a grayscale image, and previews a pasted replacement mask. Resizing a mismatched mask requires an explicit choice. Apply changes alpha while preserving RGB, including hidden colors, with one Undo step; other representations stay intact.
+
 Atlas uses flat canvases with a maximum of 4096 grid cells. Filename tokens such as `sprite`, `spritesheet`, `atlas`, `tileset`, `walk` and `idle` automatically offer grid setup; any picture can use Atlas manually. Rows and columns come first, with optional margins and spacing. Unused edge pixels are preserved. Grid setup and navigation do not change the picture, and edits participate in undo/redo across frames. Leave grid to resize or crop the whole sheet.
 
 ### Transform limits

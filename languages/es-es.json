@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "Pulse Buscar / actualizar para aplicar la carpeta y la búsqueda.",
   "Asset bookmark storage is unavailable.": "El almacenamiento de marcadores no está disponible.",
   "Asset changed while loading. Refresh its preview.": "El recurso cambió al cargarlo. Actualice su vista previa.",
-  "Could not copy the asset path.": "No se pudo copiar la ruta del recurso."
+  "Could not copy the asset path.": "No se pudo copiar la ruta del recurso.",
+  "Alpha tools": "Herramientas alfa",
+  "Color": "Color",
+  "Apply": "Aplicar",
+  "Mask": "Máscara",
+  "Alpha statistics": "Estadísticas alfa",
+  "Copy alpha": "Copiar alfa",
+  "Paste alpha": "Pegar alfa",
+  "Resize mask to image": "Ajustar máscara a imagen",
+  "The clipboard has no image.": "El portapapeles no contiene una imagen.",
+  "Image changed. Reopen Alpha tools.": "La imagen cambió. Abra de nuevo las herramientas alfa.",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "Media RGB de máscara; se ignora su alfa. Se conserva RGB.",
+  "Mask dimensions differ. Enable mask resizing to continue.": "Las dimensiones difieren. Active el ajuste de máscara.",
+  "Alpha tools…": "Herramientas alfa…"
 }

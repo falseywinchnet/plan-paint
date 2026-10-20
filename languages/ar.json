@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "اضغط بحث / تحديث لتطبيق المجلد والبحث.",
   "Asset bookmark storage is unavailable.": "تخزين إشارات الموارد غير متاح.",
   "Asset changed while loading. Refresh its preview.": "تغيّر المورد أثناء التحميل. حدّث معاينته.",
-  "Could not copy the asset path.": "تعذر نسخ مسار المورد."
+  "Could not copy the asset path.": "تعذر نسخ مسار المورد.",
+  "Alpha tools": "أدوات ألفا",
+  "Color": "اللون",
+  "Apply": "تطبيق",
+  "Mask": "القناع",
+  "Alpha statistics": "إحصاءات ألفا",
+  "Copy alpha": "نسخ ألفا",
+  "Paste alpha": "لصق ألفا",
+  "Resize mask to image": "تحجيم القناع إلى الصورة",
+  "The clipboard has no image.": "لا توجد صورة في الحافظة.",
+  "Image changed. Reopen Alpha tools.": "تغيرت الصورة. أعد فتح أدوات ألفا.",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "متوسط RGB للقناع؛ تُهمل ألفا القناع. يُحفظ RGB الأصلي.",
+  "Mask dimensions differ. Enable mask resizing to continue.": "الأبعاد مختلفة. فعّل تحجيم القناع للمتابعة.",
+  "Alpha tools…": "أدوات ألفا…"
 }

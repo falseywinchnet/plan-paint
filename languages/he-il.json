@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "לחצו חיפוש / רענון להחלת התיקייה והחיפוש.",
   "Asset bookmark storage is unavailable.": "אחסון סימניות המשאבים אינו זמין.",
   "Asset changed while loading. Refresh its preview.": "המשאב השתנה בזמן הטעינה. רעננו את התצוגה המקדימה.",
-  "Could not copy the asset path.": "לא ניתן להעתיק את נתיב המשאב."
+  "Could not copy the asset path.": "לא ניתן להעתיק את נתיב המשאב.",
+  "Alpha tools": "כלי אלפא",
+  "Color": "צבע",
+  "Apply": "החל",
+  "Mask": "מסכה",
+  "Alpha statistics": "נתוני אלפא",
+  "Copy alpha": "העתק אלפא",
+  "Paste alpha": "הדבק אלפא",
+  "Resize mask to image": "התאם מסכה לגודל התמונה",
+  "The clipboard has no image.": "אין תמונה בלוח.",
+  "Image changed. Reopen Alpha tools.": "התמונה השתנתה. פתח מחדש את כלי האלפא.",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "ממוצע RGB של המסכה; האלפא שלה לא נחשבת. RGB נשמר.",
+  "Mask dimensions differ. Enable mask resizing to continue.": "המידות שונות. אפשר שינוי גודל של המסכה.",
+  "Alpha tools…": "כלי אלפא…"
 }

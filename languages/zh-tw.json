@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "按「搜尋 / 重新整理」以套用資料夾與搜尋條件。",
   "Asset bookmark storage is unavailable.": "素材書籤儲存空間無法使用。",
   "Asset changed while loading. Refresh its preview.": "素材在載入時發生變更。請重新整理預覽。",
-  "Could not copy the asset path.": "無法複製素材路徑。"
+  "Could not copy the asset path.": "無法複製素材路徑。",
+  "Alpha tools": "透明度工具",
+  "Color": "色彩",
+  "Apply": "套用",
+  "Mask": "遮罩",
+  "Alpha statistics": "透明度統計",
+  "Copy alpha": "複製透明度",
+  "Paste alpha": "貼上透明度",
+  "Resize mask to image": "將遮罩縮放至影像大小",
+  "The clipboard has no image.": "剪貼簿中沒有影像。",
+  "Image changed. Reopen Alpha tools.": "影像已變更。請重新開啟透明度工具。",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "使用遮罩 RGB 均值，忽略其透明度。保留原圖 RGB。",
+  "Mask dimensions differ. Enable mask resizing to continue.": "尺寸不符。請啟用遮罩縮放。",
+  "Alpha tools…": "透明度工具…"
 }

@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "フォルダーと検索を適用するには「検索 / 更新」を押してください。",
   "Asset bookmark storage is unavailable.": "素材ブックマークの保存先を利用できません。",
   "Asset changed while loading. Refresh its preview.": "読み込み中に素材が変更されました。プレビューを更新してください。",
-  "Could not copy the asset path.": "素材のパスをコピーできませんでした。"
+  "Could not copy the asset path.": "素材のパスをコピーできませんでした。",
+  "Alpha tools": "アルファツール",
+  "Color": "色",
+  "Apply": "適用",
+  "Mask": "マスク",
+  "Alpha statistics": "アルファ統計",
+  "Copy alpha": "アルファをコピー",
+  "Paste alpha": "アルファを貼り付け",
+  "Resize mask to image": "マスクを画像サイズに合わせる",
+  "The clipboard has no image.": "クリップボードに画像がありません。",
+  "Image changed. Reopen Alpha tools.": "画像が変更されました。アルファツールを開き直してください。",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "マスクのRGB平均を使用。マスクのアルファは無視し、元のRGBを保持。",
+  "Mask dimensions differ. Enable mask resizing to continue.": "寸法が異なります。マスクのサイズ変更を有効にしてください。",
+  "Alpha tools…": "アルファツール…"
 }

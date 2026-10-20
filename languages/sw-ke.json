@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "Bonyeza Tafuta / onyesha upya kutumia folda na utafutaji.",
   "Asset bookmark storage is unavailable.": "Hifadhi ya alamisho za rasilimali haipatikani.",
   "Asset changed while loading. Refresh its preview.": "Rasilimali imebadilika ilipokuwa ikipakiwa. Onyesha hakiki upya.",
-  "Could not copy the asset path.": "Imeshindwa kunakili njia ya rasilimali."
+  "Could not copy the asset path.": "Imeshindwa kunakili njia ya rasilimali.",
+  "Alpha tools": "Zana za alfa",
+  "Color": "Rangi",
+  "Apply": "Tekeleza",
+  "Mask": "Barakoa",
+  "Alpha statistics": "Takwimu za alfa",
+  "Copy alpha": "Nakili alfa",
+  "Paste alpha": "Bandika alfa",
+  "Resize mask to image": "Linganisha ukubwa wa barakoa na picha",
+  "The clipboard has no image.": "Ubao wa kunakili hauna picha.",
+  "Image changed. Reopen Alpha tools.": "Picha imebadilika. Fungua tena zana za alfa.",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "Wastani wa RGB ya barakoa; alfa yake hupuuzwa. RGB huhifadhiwa.",
+  "Mask dimensions differ. Enable mask resizing to continue.": "Vipimo vinatofautiana. Washa kubadilisha ukubwa wa barakoa.",
+  "Alpha tools…": "Zana za alfa…"
 }

@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "ফোল্ডার ও অনুসন্ধান প্রয়োগ করতে খুঁজুন / রিফ্রেশ চাপুন।",
   "Asset bookmark storage is unavailable.": "উপকরণের বুকমার্ক সংরক্ষণ অনুপলব্ধ।",
   "Asset changed while loading. Refresh its preview.": "লোডের সময় উপকরণ বদলেছে। পূর্বরূপ রিফ্রেশ করুন।",
-  "Could not copy the asset path.": "উপকরণের পথ কপি করা যায়নি।"
+  "Could not copy the asset path.": "উপকরণের পথ কপি করা যায়নি।",
+  "Alpha tools": "আলফা সরঞ্জাম",
+  "Color": "রং",
+  "Apply": "প্রয়োগ",
+  "Mask": "মাস্ক",
+  "Alpha statistics": "আলফার পরিসংখ্যান",
+  "Copy alpha": "আলফা কপি",
+  "Paste alpha": "আলফা পেস্ট",
+  "Resize mask to image": "মাস্ক ছবির মাপে আনুন",
+  "The clipboard has no image.": "ক্লিপবোর্ডে ছবি নেই।",
+  "Image changed. Reopen Alpha tools.": "ছবি বদলেছে। আলফা সরঞ্জাম আবার খুলুন।",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "মাস্কের RGB গড়; তার আলফা উপেক্ষিত। মূল RGB অক্ষত।",
+  "Mask dimensions differ. Enable mask resizing to continue.": "মাপ আলাদা। মাস্কের মাপ বদলানো চালু করুন।",
+  "Alpha tools…": "আলফা সরঞ্জাম…"
 }

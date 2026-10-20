@@ -62,6 +62,9 @@ void EditorDialog::stop_carpet() {
 }
 void EditorDialog::on_attached_to_window() {
     Control::on_attached_to_window();
+    if (kind_ == EditorDialogKind::alpha_tools) {
+        render_alpha_tools();
+    }
     if (kind_ == EditorDialogKind::asset_browser) {
         request_assets(true);
     }

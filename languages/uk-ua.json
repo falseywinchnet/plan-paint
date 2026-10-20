@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "Натисніть Пошук / оновлення, щоб застосувати теку й пошук.",
   "Asset bookmark storage is unavailable.": "Сховище закладок ресурсів недоступне.",
   "Asset changed while loading. Refresh its preview.": "Ресурс змінився під час завантаження. Оновіть перегляд.",
-  "Could not copy the asset path.": "Не вдалося скопіювати шлях до ресурсу."
+  "Could not copy the asset path.": "Не вдалося скопіювати шлях до ресурсу.",
+  "Alpha tools": "Інструменти альфа",
+  "Color": "Колір",
+  "Apply": "Застосувати",
+  "Mask": "Маска",
+  "Alpha statistics": "Статистика альфа",
+  "Copy alpha": "Копіювати альфа",
+  "Paste alpha": "Вставити альфа",
+  "Resize mask to image": "Припасувати маску до зображення",
+  "The clipboard has no image.": "Буфер обміну не містить зображення.",
+  "Image changed. Reopen Alpha tools.": "Зображення змінено. Відкрийте інструменти альфа знову.",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "Середнє RGB маски; її альфа ігнорується. RGB зберігається.",
+  "Mask dimensions differ. Enable mask resizing to continue.": "Розміри різняться. Дозвольте зміну розміру маски.",
+  "Alpha tools…": "Інструменти альфа…"
 }

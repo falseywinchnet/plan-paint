@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "按“搜索 / 刷新”以应用文件夹和搜索条件。",
   "Asset bookmark storage is unavailable.": "素材书签存储不可用。",
   "Asset changed while loading. Refresh its preview.": "素材在加载时发生变化。请刷新预览。",
-  "Could not copy the asset path.": "无法复制素材路径。"
+  "Could not copy the asset path.": "无法复制素材路径。",
+  "Alpha tools": "透明度工具",
+  "Color": "颜色",
+  "Apply": "应用",
+  "Mask": "蒙版",
+  "Alpha statistics": "透明度统计",
+  "Copy alpha": "复制透明度",
+  "Paste alpha": "粘贴透明度",
+  "Resize mask to image": "将蒙版缩放至图像大小",
+  "The clipboard has no image.": "剪贴板中没有图像。",
+  "Image changed. Reopen Alpha tools.": "图像已更改。请重新打开透明度工具。",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "使用蒙版 RGB 均值，忽略其透明度。保留原图 RGB。",
+  "Mask dimensions differ. Enable mask resizing to continue.": "尺寸不匹配。请启用蒙版缩放。",
+  "Alpha tools…": "透明度工具…"
 }

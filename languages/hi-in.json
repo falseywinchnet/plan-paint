@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "फ़ोल्डर और खोज लागू करने के लिए खोजें / ताज़ा करें दबाएँ।",
   "Asset bookmark storage is unavailable.": "संसाधन बुकमार्क संग्रहण उपलब्ध नहीं है।",
   "Asset changed while loading. Refresh its preview.": "लोड करते समय संसाधन बदला। पूर्वावलोकन ताज़ा करें।",
-  "Could not copy the asset path.": "संसाधन पथ कॉपी नहीं हो सका।"
+  "Could not copy the asset path.": "संसाधन पथ कॉपी नहीं हो सका।",
+  "Alpha tools": "अल्फ़ा उपकरण",
+  "Color": "रंग",
+  "Apply": "लागू करें",
+  "Mask": "मास्क",
+  "Alpha statistics": "अल्फ़ा आँकड़े",
+  "Copy alpha": "अल्फ़ा कॉपी करें",
+  "Paste alpha": "अल्फ़ा पेस्ट करें",
+  "Resize mask to image": "मास्क को चित्र के आकार में बदलें",
+  "The clipboard has no image.": "क्लिपबोर्ड में कोई चित्र नहीं है।",
+  "Image changed. Reopen Alpha tools.": "चित्र बदल गया। अल्फ़ा उपकरण दोबारा खोलें।",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "मास्क के RGB का औसत; उसका अल्फ़ा अनदेखा। मूल RGB सुरक्षित।",
+  "Mask dimensions differ. Enable mask resizing to continue.": "आकार अलग हैं। मास्क का आकार बदलना सक्षम करें।",
+  "Alpha tools…": "अल्फ़ा उपकरण…"
 }

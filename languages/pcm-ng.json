@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "Press Search / refresh to apply di folder and search.",
   "Asset bookmark storage is unavailable.": "Storage for asset bookmarks no dey available.",
   "Asset changed while loading. Refresh its preview.": "Asset change as e dey load. Refresh di preview.",
-  "Could not copy the asset path.": "E no fit copy di asset path."
+  "Could not copy the asset path.": "E no fit copy di asset path.",
+  "Alpha tools": "Alpha tools",
+  "Color": "Colour",
+  "Apply": "Apply",
+  "Mask": "Mask",
+  "Alpha statistics": "Alpha numbers",
+  "Copy alpha": "Copy alpha",
+  "Paste alpha": "Paste alpha",
+  "Resize mask to image": "Make mask size match picture",
+  "The clipboard has no image.": "Clipboard no get picture.",
+  "Image changed. Reopen Alpha tools.": "Picture don change. Open Alpha tools again.",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "Use mask RGB average; ignore mask alpha. Keep picture RGB.",
+  "Mask dimensions differ. Enable mask resizing to continue.": "Sizes no match. Allow mask resizing to continue.",
+  "Alpha tools…": "Alpha tools…"
 }

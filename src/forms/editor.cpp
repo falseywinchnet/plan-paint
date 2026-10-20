@@ -1,10 +1,11 @@
-#include "localization.hpp"
 #include "forms/editor.hpp"
+#include "alpha_tools.hpp"
 #include "codecs.hpp"
+#include "cursors/tool_cursors.hpp"
 #include "forms/atlas.hpp"
 #include "forms/display.hpp"
+#include "localization.hpp"
 #include "platform.hpp"
-#include "cursors/tool_cursors.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -1856,6 +1857,22 @@ void Editor::save_path(const std::string& path) {
     rebuild_file_menu();
     refresh();
 }
+void Editor::copy_alpha_image(const Image& source) {
+    const Image image = alpha_image(source);
+    gf::HostImageView view{static_cast<unsigned>(image.width), static_cast<unsigned>(image.height),
+                           static_cast<std::uint64_t>(image.width) * 4,
+                           std::as_bytes(std::span<const Color>(image.pixels))};
+    if (!services().write_clipboard_image(view).accepted()) {
+        throw std::runtime_error(tr("Could not copy the image to the clipboard"));
+    }
+}
+Image Editor::read_alpha_mask() {
+    const gf::HostClipboardImageResult result = services().read_clipboard_image();
+    if (!result.status.accepted()) {
+        throw std::runtime_error(tr("Could not read the image clipboard"));
+    }
+    return result.has_image ? validated_clipboard_image(result.image) : Image{};
+}
 void Editor::copy() {
     Image image = document.selection.active ? document.selected_image() : document.visible_image();
     gf::HostImageView view{static_cast<unsigned>(image.width), static_cast<unsigned>(image.height),
@@ -2041,6 +2058,10 @@ void Editor::execute(const std::string& command) {
             finish_controls();
             if (command == "atlas-gallery") {
                 open_editor_dialog(EditorDialogKind::atlas_gallery);
+            } else if (command == "atlas-alpha-tools" &&
+                       (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
+                document.require_rgba_transform();
+                open_editor_dialog(EditorDialogKind::alpha_tools);
             } else if (command == "atlas-compare" &&
                        (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
                 open_editor_dialog(EditorDialogKind::icon_sheet);

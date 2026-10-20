@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "فولڈر تے تلاش لاگو کرن لئی لبھو / تازہ کرو دباؤ۔",
   "Asset bookmark storage is unavailable.": "وسیلے دے بک مارک دی ذخیرہ گاہ دستیاب نہیں۔",
   "Asset changed while loading. Refresh its preview.": "لوڈ ہوندے ویلے وسیلہ بدل گیا۔ پیش منظر تازہ کرو۔",
-  "Could not copy the asset path.": "وسیلے دا راہ نقل نہیں ہو سکیا۔"
+  "Could not copy the asset path.": "وسیلے دا راہ نقل نہیں ہو سکیا۔",
+  "Alpha tools": "الفا دے اوزار",
+  "Color": "رنگ",
+  "Apply": "لاگو کرو",
+  "Mask": "ماسک",
+  "Alpha statistics": "الفا دے اعداد",
+  "Copy alpha": "الفا کاپی کرو",
+  "Paste alpha": "الفا چسپاں کرو",
+  "Resize mask to image": "ماسک نوں تصویر دے سائز وچ بدلو",
+  "The clipboard has no image.": "کلپ بورڈ وچ تصویر نہیں۔",
+  "Image changed. Reopen Alpha tools.": "تصویر بدل گئی۔ الفا دے اوزار دوبارہ کھولو۔",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "ماسک دا RGB اوسط؛ اوہدا الفا نظر انداز۔ اصل RGB محفوظ۔",
+  "Mask dimensions differ. Enable mask resizing to continue.": "سائز وکھرے نیں۔ ماسک دا سائز بدلنا چالو کرو۔",
+  "Alpha tools…": "الفا دے اوزار…"
 }

@@ -805,5 +805,18 @@
   "Press Search / refresh to apply the folder and search.": "ਫੋਲਡਰ ਅਤੇ ਖੋਜ ਲਾਗੂ ਕਰਨ ਲਈ ਲੱਭੋ / ਤਾਜ਼ਾ ਕਰੋ ਦਬਾਓ।",
   "Asset bookmark storage is unavailable.": "ਸਰੋਤ ਬੁੱਕਮਾਰਕ ਸਟੋਰੇਜ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।",
   "Asset changed while loading. Refresh its preview.": "ਲੋਡ ਹੋਣ ਵੇਲੇ ਸਰੋਤ ਬਦਲ ਗਿਆ। ਝਲਕ ਤਾਜ਼ਾ ਕਰੋ।",
-  "Could not copy the asset path.": "ਸਰੋਤ ਦਾ ਮਾਰਗ ਨਕਲ ਨਹੀਂ ਹੋ ਸਕਿਆ।"
+  "Could not copy the asset path.": "ਸਰੋਤ ਦਾ ਮਾਰਗ ਨਕਲ ਨਹੀਂ ਹੋ ਸਕਿਆ।",
+  "Alpha tools": "ਅਲਫ਼ਾ ਸੰਦ",
+  "Color": "ਰੰਗ",
+  "Apply": "ਲਾਗੂ ਕਰੋ",
+  "Mask": "ਮਾਸਕ",
+  "Alpha statistics": "ਅਲਫ਼ਾ ਅੰਕੜੇ",
+  "Copy alpha": "ਅਲਫ਼ਾ ਕਾਪੀ ਕਰੋ",
+  "Paste alpha": "ਅਲਫ਼ਾ ਪੇਸਟ ਕਰੋ",
+  "Resize mask to image": "ਮਾਸਕ ਨੂੰ ਤਸਵੀਰ ਦੇ ਆਕਾਰ ਵਿੱਚ ਬਦਲੋ",
+  "The clipboard has no image.": "ਕਲਿੱਪਬੋਰਡ ਵਿੱਚ ਤਸਵੀਰ ਨਹੀਂ ਹੈ।",
+  "Image changed. Reopen Alpha tools.": "ਤਸਵੀਰ ਬਦਲ ਗਈ। ਅਲਫ਼ਾ ਸੰਦ ਮੁੜ ਖੋਲ੍ਹੋ।",
+  "Mask RGB mean; mask alpha ignored. RGB is preserved.": "ਮਾਸਕ ਦਾ RGB ਔਸਤ; ਉਸ ਦਾ ਅਲਫ਼ਾ ਅਣਡਿੱਠਾ। ਅਸਲ RGB ਸੁਰੱਖਿਅਤ।",
+  "Mask dimensions differ. Enable mask resizing to continue.": "ਆਕਾਰ ਵੱਖਰੇ ਹਨ। ਮਾਸਕ ਦਾ ਆਕਾਰ ਬਦਲਣਾ ਚਾਲੂ ਕਰੋ।",
+  "Alpha tools…": "ਅਲਫ਼ਾ ਸੰਦ…"
 }
