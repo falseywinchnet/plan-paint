@@ -257,6 +257,18 @@ IconBatchPlan plan_icon_batch(const std::vector<std::string>& sources, const std
     IconBatchPlan plan;
     plan.settings = settings;
     plan.directory = std::filesystem::canonical(path_from_utf8(directory));
+    if (settings.new_directory) {
+        const std::filesystem::path parent = plan.directory;
+        plan.directory = parent / "Plan Paint output";
+        int suffix = 2;
+        while (occupied(plan.directory)) {
+            if (suffix > 10000) {
+                throw std::runtime_error("Too many output folders. Choose another destination.");
+            }
+            plan.directory = parent / ("Plan Paint output " + std::to_string(suffix++));
+        }
+        plan.create_directory = true;
+    }
     AssetPreview stamp;
     const Image* stamp_image = nullptr;
     if (settings.operation == IconBatchOperation::Palette && !settings.palette_path.empty()) {
@@ -372,6 +384,8 @@ void run_icon_batch(IconBatchPlan& plan, const std::atomic<bool>& cancel, IconBa
         }
     }
     std::size_t loaded_index = plan.sources.size();
+    bool directory_created = false;
+    std::string directory_error;
     for (IconBatchEntry& entry : plan.entries) {
         if (entry.state != IconExportState::Planned) {
             continue;
@@ -403,7 +417,16 @@ void run_icon_batch(IconBatchPlan& plan, const std::atomic<bool>& cancel, IconBa
                 }
             }
             const std::filesystem::path target = plan.directory / path_from_utf8(entry.filename);
-            if (std::filesystem::canonical(plan.directory) != plan.directory) {
+            if (!directory_error.empty()) {
+                throw std::runtime_error(directory_error);
+            }
+            if (plan.create_directory && !directory_created && occupied(plan.directory)) {
+                directory_error = "Reviewed new output folder is now occupied. Review the batch again.";
+                throw std::runtime_error(directory_error);
+            }
+            const std::filesystem::path checked_directory =
+                plan.create_directory && !directory_created ? plan.directory.parent_path() : plan.directory;
+            if (std::filesystem::canonical(checked_directory) != checked_directory) {
                 throw std::runtime_error("Output folder changed since review.");
             }
             protect_sources(plan, target);
@@ -435,6 +458,20 @@ void run_icon_batch(IconBatchPlan& plan, const std::atomic<bool>& cancel, IconBa
                 }
                 if (stamp_image) {
                     verify_stamp(stamp, plan.stamp_source);
+                }
+                if (plan.create_directory && !directory_created) {
+                    try {
+                        if (std::filesystem::canonical(plan.directory.parent_path()) != plan.directory.parent_path()) {
+                            throw std::runtime_error("Output folder changed since review.");
+                        }
+                        if (!std::filesystem::create_directory(plan.directory)) {
+                            throw std::runtime_error("Reviewed new output folder is now occupied. Review the batch again.");
+                        }
+                        directory_created = true;
+                    } catch (const std::exception& error) {
+                        directory_error = error.what();
+                        throw;
+                    }
                 }
                 write_file_atomic(bytes, path_to_utf8(target), "Could not publish batch output.",
                                   entry.replaces_existing);
@@ -476,7 +513,8 @@ std::string icon_batch_report(const IconBatchPlan& plan) {
     }
     const IconBatchSettings& settings = plan.settings;
     json << "{\n\"schemaVersion\":1,\"operation\":" << quote(operation)
-         << ",\"directory\":" << quote(path_to_utf8(plan.directory)) << ",\"collision\":"
+         << ",\"directory\":" << quote(path_to_utf8(plan.directory))
+         << ",\"createDirectory\":" << (plan.create_directory ? "true" : "false") << ",\"collision\":"
          << quote(settings.collision == IconExportCollision::Skip     ? "skip"
                   : settings.collision == IconExportCollision::Rename ? "rename"
                                                                       : "replace")

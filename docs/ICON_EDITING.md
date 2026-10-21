@@ -584,8 +584,20 @@ Choose one of six operations:
   PNG; ICO and CUR retain their container kind, representation order, dimensions
   and cursor hotspots. Its placement and transparency controls are described below.
 
-Choose an existing destination folder and **Skip existing**, **Rename outputs**
-or **Replace existing**, then select **Review outputs**. Review decodes and
+Choose a destination folder. The default **New output folder** mode proposes a
+child named `Plan Paint output`, or the next free numbered name such as
+`Plan Paint output 2`. The destination initially follows the first source's folder;
+the folder picker or path field can change it. The review shows the full proposed
+child path. It creates no directories or files. **Run** creates that exact folder
+only when the first output is ready to publish. If the name becomes occupied after
+review, run fails and requires another review instead of reusing the folder or
+silently changing its name. Cancellation or stale input before publication leaves
+no new folder. Completed outputs remain in their folder if later work fails or is
+cancelled.
+
+Choose **Skip existing**, **Rename outputs** or **Replace existing** to write
+directly into the selected existing destination, then select **Review outputs**.
+Review decodes and
 validates the sources and prepares names without writing files. The manifest
 shows each input-to-output relationship, state and diagnostic. Changing any job
 setting invalidates the review. **Run** is enabled only for a review with at least

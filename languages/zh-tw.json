@@ -893,5 +893,6 @@
   "Source image": "來源影像",
   "Target images": "目標影像",
   "Upscaling": "放大",
-  "Open as new image": "作為新影像開啟"
+  "Open as new image": "作為新影像開啟",
+  "New output folder": "新增輸出資料夾"
 }

@@ -12,6 +12,7 @@ struct IconBatchSettings {
     std::vector<int> sizes{16, 24, 32, 48, 64, 128, 256};
     IconStateRecipe recipe = icon_state_preset(IconStatePreset::Disabled);
     IconExportCollision collision = IconExportCollision::Skip;
+    bool new_directory = true;
     std::string stamp_path;
     IconStampSettings stamp;
     std::string palette_path;
@@ -32,6 +33,7 @@ struct IconBatchEntry {
 struct IconBatchPlan {
     IconBatchSettings settings;
     std::filesystem::path directory;
+    bool create_directory = false;
     std::vector<IconBatchSource> sources;
     std::vector<IconBatchEntry> entries;
     IconBatchSource stamp_source;

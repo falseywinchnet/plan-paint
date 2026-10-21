@@ -33,6 +33,48 @@ void cancel_after_one(const paint::IconBatchPlan& plan, void* context) {
         (*static_cast<std::atomic<bool>*>(context)).store(true);
     }
 }
+void new_output_folder_contracts() {
+    Directory root;
+    const std::filesystem::path source_path = root.path / "source.png";
+    paint::Image image;
+    image.reset(20, 12, {40, 120, 200, 255});
+    paint::save_image(image, paint::path_to_utf8(source_path));
+    const std::vector<std::string> sources{paint::path_to_utf8(source_path)};
+    paint::IconBatchSettings settings;
+    settings.sizes = {16, 32};
+    std::atomic<bool> cancel{false};
+    paint::IconBatchPlan plan = paint::plan_icon_batch(sources, paint::path_to_utf8(root.path), settings, cancel);
+    require(plan.create_directory && plan.directory.filename() == "Plan Paint output" &&
+                !std::filesystem::exists(plan.directory) && paint::icon_batch_ready(plan),
+            "default review reserves a new child name without creating a folder");
+    require(paint::icon_batch_report(plan).find("\"createDirectory\":true") != std::string::npos,
+            "report records creation of the reviewed folder");
+    cancel.store(true);
+    paint::run_icon_batch(plan, cancel);
+    require(plan.entries[0].state == paint::IconExportState::Cancelled && !std::filesystem::exists(plan.directory),
+            "cancelling before publication creates no folder");
+    cancel.store(false);
+    plan = paint::plan_icon_batch(sources, paint::path_to_utf8(root.path), settings, cancel);
+    std::filesystem::create_directory(plan.directory);
+    paint::run_icon_batch(plan, cancel);
+    require(plan.entries[0].state == paint::IconExportState::Failed && std::filesystem::is_empty(plan.directory),
+            "a newly occupied folder is not silently adopted even when empty");
+    plan = paint::plan_icon_batch(sources, paint::path_to_utf8(root.path), settings, cancel);
+    require(plan.directory.filename() == "Plan Paint output 2" && !std::filesystem::exists(plan.directory),
+            "fresh review chooses and discloses the next available child name");
+    paint::run_icon_batch(plan, cancel);
+    require(plan.entries[0].state == paint::IconExportState::Completed &&
+                std::filesystem::is_regular_file(plan.directory / plan.entries[0].filename),
+            "execution creates the reviewed folder and publishes the icon inside it");
+    const paint::ImageContainer output = paint::load_container(paint::path_to_utf8(plan.directory / plan.entries[0].filename));
+    require(output.frames.size() == 2 && output.frames[0].image.width == 16,
+            "new-folder mode retains ordinary generation behavior");
+    plan = paint::plan_icon_batch(sources, paint::path_to_utf8(root.path), settings, cancel);
+    paint::write_file_atomic({'x'}, paint::path_to_utf8(source_path), "changed source fixture");
+    paint::run_icon_batch(plan, cancel);
+    require(plan.entries[0].state == paint::IconExportState::Failed && !std::filesystem::exists(plan.directory),
+            "a stale source fails without leaving an empty output folder");
+}
 void svg_batch_contracts() {
     Directory root;
     const std::filesystem::path output = root.path / "out";
@@ -47,6 +89,7 @@ void svg_batch_contracts() {
             "captured SVG generation does not reread a deleted source path");
     paint::write_file_atomic(bytes, path, "SVG fixture");
     paint::IconBatchSettings settings;
+    settings.new_directory = false;
     settings.sizes = {16, 32, 48};
     std::atomic<bool> cancel{false};
     paint::IconBatchPlan plan = paint::plan_icon_batch({path}, paint::path_to_utf8(output), settings, cancel);
@@ -94,6 +137,7 @@ void shared_palette_batch_contracts() {
     paint::write_file_atomic(paint::encode_icon_container({paint::ContainerKind::Cursor, {first, second}}),
                              source, "cursor fixture");
     paint::IconBatchSettings settings;
+    settings.new_directory = false;
     settings.operation = paint::IconBatchOperation::Palette;
     settings.palette_path = path;
     settings.palette.bits_per_pixel = 4;
@@ -137,6 +181,7 @@ void batch_contracts() {
     paint::save_image(image, picture);
     std::atomic<bool> cancel{false};
     paint::IconBatchSettings settings;
+    settings.new_directory = false;
     settings.sizes = {16, 32};
     paint::IconBatchPlan job = paint::plan_icon_batch({picture}, folder, settings, cancel);
     require(paint::icon_batch_ready(job) && std::filesystem::is_empty(output), "review is write-free");
@@ -231,6 +276,7 @@ void cursor_and_report_contracts() {
     const paint::ImageContainer original = paint::load_container(source);
     std::atomic<bool> cancel{false};
     paint::IconBatchSettings settings;
+    settings.new_directory = false;
     settings.operation = paint::IconBatchOperation::Normalize;
     settings.sizes = {16};
     paint::IconBatchPlan job =
@@ -311,6 +357,7 @@ void stamp_contracts() {
     paint::save_image(source, input);
     paint::save_image(stamp, fixed);
     paint::IconBatchSettings batch;
+    batch.new_directory = false;
     batch.operation = paint::IconBatchOperation::Stamp;
     batch.stamp_path = fixed;
     std::atomic<bool> cancel{false};
@@ -352,6 +399,7 @@ void stamp_container_contracts() {
     const std::string fixed = paint::path_to_utf8(root.path / "badge.png");
     paint::save_image(stamp, fixed);
     paint::IconBatchSettings settings;
+    settings.new_directory = false;
     settings.operation = paint::IconBatchOperation::Stamp;
     settings.stamp_path = fixed;
     settings.stamp.anchor = 8;
@@ -449,6 +497,7 @@ void stamp_container_contracts() {
 int main() {
     try {
         batch_contracts();
+        new_output_folder_contracts();
         svg_batch_contracts();
         shared_palette_batch_contracts();
         cursor_and_report_contracts();

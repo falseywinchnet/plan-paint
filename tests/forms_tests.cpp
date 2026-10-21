@@ -1459,7 +1459,20 @@ void icon_batch_contracts() {
             "batch uses native multi-file picker");
     const std::shared_ptr<gf::TextBox> destination =
         std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-destination"));
+    const std::shared_ptr<gf::ComboBox> output_mode =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("batch-collision"));
+    require((*output_mode).selected_index().value_or(99) == 0 && !(*destination).text().empty(),
+            "batch defaults to a new output folder beside the first source");
     (*destination).set_text(root.string());
+    routed_button(window, "batch-review");
+    await_batch(window);
+    const std::shared_ptr<gf::TextBox> manifest =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-manifest"));
+    require((*window.find("batch-run")).enabled() && std::filesystem::is_empty(root) &&
+                (*manifest).text().find("Plan Paint output") != std::string::npos,
+            "new-folder review discloses the full child path without creating it");
+    (*output_mode).set_selected_index(1);
+    require(!(*window.find("batch-run")).enabled(), "changing output mode revokes the review");
     routed_button(window, "batch-review");
     await_batch(window);
     require((*window.find("batch-run")).enabled() && std::filesystem::is_empty(root),

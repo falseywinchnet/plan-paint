@@ -141,11 +141,11 @@ void EditorDialog::initialize_icon_batch() {
     put(batch_destination_, {165, 246, 375, 28});
     const std::shared_ptr<gf::Button> folder =
         button("batch-folder", tr("Choose folder…"), {550, 246, 190, 28});
-    label("batch-collision-label", tr("Existing files"), {20, 282, 140, 28});
+    label("batch-collision-label", tr("Output"), {20, 282, 140, 28});
     batch_collision_ = gf::make_control<gf::ComboBox>(gf::StableId("batch-collision"));
-    (*batch_collision_).set_items({tr("Skip existing"), tr("Rename outputs"), tr("Replace existing")});
+    (*batch_collision_).set_items({tr("New output folder"), tr("Skip existing"), tr("Rename outputs"), tr("Replace existing")});
     (*batch_collision_).set_selected_index(0);
-    (*batch_collision_).set_accessible_name(tr("Existing files"));
+    (*batch_collision_).set_accessible_name(tr("Output"));
     put(batch_collision_, {165, 282, 280, 28});
     const std::shared_ptr<gf::Button> review =
         button("batch-review", tr("Review outputs"), {550, 282, 190, 28});
@@ -213,6 +213,10 @@ void EditorDialog::refresh_batch_sources() {
                              path_to_utf8(path_from_utf8(path).filename()) + " — " + path);
         }
         (*batch_sources_).set_items(labels);
+        if ((*batch_destination_).text().empty() && !(*editor).batch_sources.empty()) {
+            (*batch_destination_).set_text(path_to_utf8(
+                std::filesystem::absolute(path_from_utf8((*editor).batch_sources.front())).parent_path()));
+        }
     }
 }
 void EditorDialog::stop_icon_batch() {
@@ -304,8 +308,9 @@ void EditorDialog::start_icon_batch(bool execute) {
     job.settings.operation =
         static_cast<IconBatchOperation>((*batch_operation_).selected_index().value_or(0));
     job.settings.sizes_policy = static_cast<IconSizePolicy>((*batch_policy_).selected_index().value_or(0));
-    job.settings.collision =
-        static_cast<IconExportCollision>((*batch_collision_).selected_index().value_or(0));
+    const std::size_t output_mode = (*batch_collision_).selected_index().value_or(0);
+    job.settings.new_directory = output_mode == 0;
+    job.settings.collision = static_cast<IconExportCollision>(output_mode == 0 ? 0 : output_mode - 1);
     job.settings.sizes.clear();
     for (std::size_t index = 0; index < batch_sizes_.size(); ++index) {
         if ((*batch_sizes_[index]).checked()) {
@@ -349,6 +354,10 @@ void EditorDialog::deliver_icon_batch(const std::shared_ptr<IconBatchJob>& job) 
         error = (*job).error;
     }
     std::ostringstream text;
+    if (!published.directory.empty()) {
+        text << tr(published.create_directory ? "New output folder" : "Destination folder") << ": "
+             << path_to_utf8(published.directory) << '\n';
+    }
     int completed = 0, failed = 0, skipped = 0, cancelled = 0;
     for (const IconBatchEntry& entry : published.entries) {
         text << '#' << entry.source + 1 << ' '
