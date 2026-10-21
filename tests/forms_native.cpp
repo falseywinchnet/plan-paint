@@ -37,7 +37,7 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_svg_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
+         advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
@@ -446,8 +446,14 @@ struct NativeExercise {
         if (icon_effects_review) {
             const gf::Control::Ptr apply = window.find("effect-apply");
             const std::shared_ptr<gf::TextBox> status = std::dynamic_pointer_cast<gf::TextBox>(window.find("effect-status"));
-            if (!painted || !apply || !status || (*status).text().find("clipped") == std::string::npos ||
+            if (!painted || !apply || !status || (!advanced_effects_review && (*status).text().find("clipped") == std::string::npos) ||
                 (*apply).absolute_bounds().bottom() > window.client_size().height) { throw std::runtime_error("Native effect preview did not fit or render"); }
+            if (advanced_effects_review) {
+                const gf::Control::Ptr last=window.find("effect-value-4");
+                if (!last || !(*last).visible() || (*last).absolute_bounds().right()>window.client_size().width) {
+                    throw std::runtime_error("Native levels controls did not fit");
+                }
+            }
             return;
         }
         if (icon_ribbon_review) {
@@ -769,6 +775,15 @@ struct NativeExercise {
             (*editor).execute("atlas-effects");
             const std::shared_ptr<gf::ComboBox> choice = std::dynamic_pointer_cast<gf::ComboBox>(window.find("effect-choice"));
             (*choice).set_selected_index(6);
+            if (advanced_effects_review) {
+                const std::shared_ptr<gf::CheckBox> advanced=std::dynamic_pointer_cast<gf::CheckBox>(window.find("effect-advanced"));
+                (*advanced).perform_click();
+                (*choice).set_selected_index(9);
+                const std::shared_ptr<gf::NumericUpDown> gamma=std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("effect-value-2"));
+                (*gamma).set_value(1.5);
+                const std::shared_ptr<gf::NumericUpDown> black=std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("effect-value-0"));
+                (*black).set_value(16);
+            }
             window.perform_layout();
             (*editor).invalidate(gf::Dirty::paint);
             inspect_frame(window);
@@ -1191,7 +1206,8 @@ int main(int argc, char** argv) {
         exercise.icon_validation_review = argc > 1 && std::string(argv[1]) == "--icon-validation";
         exercise.toolbar_strip_review = argc > 1 && std::string(argv[1]) == "--toolbar-strip";
         exercise.numeric_transform_review = argc > 1 && std::string(argv[1]) == "--numeric-transform";
-        exercise.icon_effects_review = argc > 1 && std::string(argv[1]) == "--icon-effects";
+        exercise.advanced_effects_review = argc > 1 && std::string(argv[1]) == "--advanced-effects";
+        exercise.icon_effects_review = exercise.advanced_effects_review || (argc > 1 && std::string(argv[1]) == "--icon-effects");
         exercise.icon_batch_review = argc > 1 && std::string(argv[1]) == "--icon-batch";
         exercise.icon_stamp_review = argc > 1 && std::string(argv[1]) == "--icon-stamp";
         exercise.icon_shared_review = argc > 1 && std::string(argv[1]) == "--icon-shared-palette";

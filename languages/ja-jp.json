@@ -943,5 +943,17 @@
   "File unavailable on disk.": "ディスク上のファイルを利用できません。",
   "Reload and discard local edits? Save a copy first to keep them.": "再読み込みしてローカルの編集を破棄しますか？残すには先にコピーを保存してください。",
   "Reload from disk…": "ディスクから再読み込み…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ファイルが変更されたか、利用できなくなりました。ローカルの画像で上書きしますか？"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ファイルが変更されたか、利用できなくなりました。ローカルの画像で上書きしますか？",
+  "Advanced": "詳細",
+  "Gamma": "ガンマ",
+  "Levels": "レベル",
+  "Find edges": "エッジ検出",
+  "Enhance edges": "エッジ強調",
+  "Contour": "輪郭",
+  "Emboss": "エンボス",
+  "Input black": "入力黒点",
+  "Input white": "入力白点",
+  "Output black": "出力黒点",
+  "Output white": "出力白点",
+  "Repeat effect…": "効果を繰り返す…"
 }

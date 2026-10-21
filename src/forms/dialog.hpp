@@ -135,10 +135,14 @@ class EditorDialog final : public gui_forms::Control {
     void render_icon_effects();
     void effect_choice_changed(std::optional<std::size_t>);
     void effect_number_changed(double);
+    void effect_advanced_changed(gui_forms::ButtonBase&);
+    void restore_icon_effect(const IconEffectSettings& settings);
     void effect_text_changed(const std::string&);
     void effect_clicked(gui_forms::ButtonBase&);
     Image effect_source_;
     IconEffectResult effect_result_;
+    IconEffectSettings effect_settings_;
+    std::shared_ptr<gui_forms::CheckBox> effect_advanced_;
     std::uint64_t effect_revision_ = 0, effect_epoch_ = 0;
     int effect_current_ = -1;
     std::shared_ptr<gui_forms::ComboBox> effect_choice_;

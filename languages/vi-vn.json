@@ -943,5 +943,17 @@
   "File unavailable on disk.": "Tệp trên đĩa không khả dụng.",
   "Reload and discard local edits? Save a copy first to keep them.": "Tải lại và bỏ các chỉnh sửa cục bộ? Lưu một bản sao trước để giữ lại.",
   "Reload from disk…": "Tải lại từ đĩa…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "Tệp đã thay đổi hoặc không còn khả dụng. Ghi đè bằng hình cục bộ?"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "Tệp đã thay đổi hoặc không còn khả dụng. Ghi đè bằng hình cục bộ?",
+  "Advanced": "Nâng cao",
+  "Gamma": "Gamma",
+  "Levels": "Mức",
+  "Find edges": "Tìm cạnh",
+  "Enhance edges": "Tăng cường cạnh",
+  "Contour": "Đường viền",
+  "Emboss": "Chạm nổi",
+  "Input black": "Đen đầu vào",
+  "Input white": "Trắng đầu vào",
+  "Output black": "Đen đầu ra",
+  "Output white": "Trắng đầu ra",
+  "Repeat effect…": "Lặp lại hiệu ứng…"
 }

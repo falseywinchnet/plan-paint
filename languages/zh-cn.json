@@ -943,5 +943,17 @@
   "File unavailable on disk.": "磁盘上的文件不可用。",
   "Reload and discard local edits? Save a copy first to keep them.": "重新加载并放弃本地编辑？如需保留，请先保存副本。",
   "Reload from disk…": "从磁盘重新加载…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "文件已更改或不可用。要用本地绘图覆盖它吗？"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "文件已更改或不可用。要用本地绘图覆盖它吗？",
+  "Advanced": "高级",
+  "Gamma": "伽马",
+  "Levels": "色阶",
+  "Find edges": "查找边缘",
+  "Enhance edges": "增强边缘",
+  "Contour": "轮廓",
+  "Emboss": "浮雕",
+  "Input black": "输入黑场",
+  "Input white": "输入白场",
+  "Output black": "输出黑场",
+  "Output white": "输出白场",
+  "Repeat effect…": "重复效果…"
 }

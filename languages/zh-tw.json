@@ -943,5 +943,17 @@
   "File unavailable on disk.": "磁碟上的檔案無法使用。",
   "Reload and discard local edits? Save a copy first to keep them.": "重新載入並捨棄本機編輯？若要保留，請先儲存副本。",
   "Reload from disk…": "從磁碟重新載入…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "檔案已變更或無法使用。要以本機繪圖覆寫嗎？"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "檔案已變更或無法使用。要以本機繪圖覆寫嗎？",
+  "Advanced": "進階",
+  "Gamma": "伽瑪",
+  "Levels": "色階",
+  "Find edges": "尋找邊緣",
+  "Enhance edges": "增強邊緣",
+  "Contour": "輪廓",
+  "Emboss": "浮雕",
+  "Input black": "輸入黑點",
+  "Input white": "輸入白點",
+  "Output black": "輸出黑點",
+  "Output white": "輸出白點",
+  "Repeat effect…": "重複效果…"
 }

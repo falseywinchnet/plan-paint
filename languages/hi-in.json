@@ -943,5 +943,17 @@
   "File unavailable on disk.": "डिस्क पर फ़ाइल उपलब्ध नहीं है।",
   "Reload and discard local edits? Save a copy first to keep them.": "फिर लोड करके स्थानीय बदलाव हटाएँ? उन्हें रखने के लिए पहले एक प्रति सहेजें।",
   "Reload from disk…": "डिस्क से फिर लोड करें…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "डिस्क पर फ़ाइल बदली या अनुपलब्ध हो गई। स्थानीय चित्र से अधिलेखित करें?"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "डिस्क पर फ़ाइल बदली या अनुपलब्ध हो गई। स्थानीय चित्र से अधिलेखित करें?",
+  "Advanced": "उन्नत",
+  "Gamma": "गामा",
+  "Levels": "स्तर",
+  "Find edges": "किनारे खोजें",
+  "Enhance edges": "किनारे बढ़ाएँ",
+  "Contour": "समोच्च",
+  "Emboss": "उभार",
+  "Input black": "इनपुट काला",
+  "Input white": "इनपुट सफेद",
+  "Output black": "आउटपुट काला",
+  "Output white": "आउटपुट सफेद",
+  "Repeat effect…": "प्रभाव दोहराएँ…"
 }

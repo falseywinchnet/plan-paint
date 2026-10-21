@@ -83,6 +83,67 @@ Color hue_saturation(Color color, double degrees, double saturation) {
     return {byte((selected[0] + m) * 255), byte((selected[1] + m) * 255), byte((selected[2] + m) * 255),
             color.a};
 }
+double luminance(Color color) {
+    return 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b;
+}
+std::array<double, 3> neighbor(const Image& image, int x, int y, Color center) {
+    const Color sample = image.get(std::clamp(x, 0, image.width - 1), std::clamp(y, 0, image.height - 1));
+    const double alpha = sample.a / 255.0;
+    // Transparent samples contribute the center color, never their hidden RGB.
+    return {sample.r * alpha + center.r * (1 - alpha), sample.g * alpha + center.g * (1 - alpha),
+            sample.b * alpha + center.b * (1 - alpha)};
+}
+Image edge_effect(const Image& source, const IconEffectSettings& settings) {
+    Image result = source;
+    const double amount = settings.strength / 100;
+    if (amount == 0) {
+        return result;
+    }
+    for (int y = 0; y < source.height; ++y) {
+        for (int x = 0; x < source.width; ++x) {
+            const Color center = source.get(x, y);
+            if (!center.a) {
+                continue;
+            }
+            std::array<std::array<double, 3>, 9> samples;
+            std::array<double, 9> gray;
+            for (int dy = -1; dy <= 1; ++dy) {
+                for (int dx = -1; dx <= 1; ++dx) {
+                    const int index = (dy + 1) * 3 + dx + 1;
+                    samples[index] = neighbor(source, x + dx, y + dy, center);
+                    gray[index] =
+                        0.2126 * samples[index][0] + 0.7152 * samples[index][1] + 0.0722 * samples[index][2];
+                }
+            }
+            const std::array<double, 3> rgb{double(center.r), double(center.g), double(center.b)};
+            std::array<double, 3> output = rgb;
+            if (settings.effect == IconEffect::EdgeEnhance) {
+                for (int channel = 0; channel < 3; ++channel) {
+                    output[channel] +=
+                        amount * (4 * rgb[channel] - samples[1][channel] - samples[3][channel] -
+                                  samples[5][channel] - samples[7][channel]);
+                }
+            } else {
+                double target = 0;
+                if (settings.effect == IconEffect::EdgeFind) {
+                    const double gx = -gray[0] + gray[2] - 2 * gray[3] + 2 * gray[5] - gray[6] + gray[8];
+                    const double gy = -gray[0] - 2 * gray[1] - gray[2] + gray[6] + 2 * gray[7] + gray[8];
+                    target = std::hypot(gx, gy) / 4;
+                } else if (settings.effect == IconEffect::Contour) {
+                    target = 255 - std::abs(4 * luminance(center) - gray[1] - gray[3] - gray[5] - gray[7]);
+                } else {
+                    target = 128 + gray[8] - gray[0];
+                }
+                target = std::clamp(target, 0.0, 255.0);
+                for (int channel = 0; channel < 3; ++channel) {
+                    output[channel] += amount * (target - rgb[channel]);
+                }
+            }
+            result.set(x, y, {byte(output[0]), byte(output[1]), byte(output[2]), center.a});
+        }
+    }
+    return result;
+}
 Image fit_artwork(const Image& source, int padding) {
     if (padding * 2 >= std::min(source.width, source.height)) {
         throw std::runtime_error("Padding leaves no room for artwork.");
@@ -114,20 +175,25 @@ Image fit_artwork(const Image& source, int padding) {
 }
 } // namespace
 IconEffectResult render_icon_effect(const Image& source, const IconEffectSettings& settings) {
-    if (settings.effect < IconEffect::BrightnessContrast || settings.effect > IconEffect::Fit ||
+    if (settings.effect < IconEffect::BrightnessContrast || settings.effect > IconEffect::Emboss ||
         source.width < 1 || source.height < 1 || source.width > 256 || source.height > 256 ||
         source.pixels.size() != static_cast<std::size_t>(source.width) * source.height ||
         !in_range(settings.brightness, -100, 100) || !in_range(settings.contrast, -100, 100) ||
         !in_range(settings.hue, -180, 180) || !in_range(settings.saturation, 0, 200) ||
         !in_range(settings.opacity, 0, 100) || !in_range(settings.strength, 0, 300) || settings.radius < 0 ||
         settings.radius > 32 || settings.padding < 0 || settings.padding > 127 || settings.offset_x < -128 ||
-        settings.offset_x > 128 || settings.offset_y < -128 || settings.offset_y > 128) {
+        settings.offset_x > 128 || settings.offset_y < -128 || settings.offset_y > 128 ||
+        !in_range(settings.gamma, 0.1, 10) || settings.input_black < 0 || settings.input_white > 255 ||
+        settings.input_black >= settings.input_white || settings.output_black < 0 ||
+        settings.output_white > 255 || settings.output_black > settings.output_white) {
         throw std::runtime_error("Invalid icon effect settings or image dimensions.");
     }
     IconEffectResult result;
     result.image = source;
     result.bounds = {0, 0, source.width, source.height};
-    if (settings.effect == IconEffect::Fit) {
+    if (settings.effect >= IconEffect::EdgeFind && settings.effect <= IconEffect::Emboss) {
+        result.image = edge_effect(source, settings);
+    } else if (settings.effect == IconEffect::Fit) {
         result.image = fit_artwork(source, settings.padding);
     } else if (settings.effect == IconEffect::Blur) {
         result.image = gaussian(source, settings.radius);
@@ -185,6 +251,22 @@ IconEffectResult render_icon_effect(const Image& source, const IconEffectSetting
                 color = {gray, gray, gray, color.a};
             } else if (settings.effect == IconEffect::Opacity) {
                 color.a = byte(color.a * settings.opacity / 100);
+            } else if (settings.effect == IconEffect::Invert) {
+                color = {static_cast<std::uint8_t>(255 - color.r), static_cast<std::uint8_t>(255 - color.g),
+                         static_cast<std::uint8_t>(255 - color.b), color.a};
+            } else if (settings.effect == IconEffect::Gamma || settings.effect == IconEffect::Levels) {
+                const bool levels = settings.effect == IconEffect::Levels;
+                const double black = levels ? settings.input_black : 0,
+                             white = levels ? settings.input_white : 255;
+                const double low = levels ? settings.output_black : 0,
+                             high = levels ? settings.output_white : 255;
+                const std::array<double, 3> rgb{double(color.r), double(color.g), double(color.b)};
+                std::array<std::uint8_t, 3> mapped;
+                for (int channel = 0; channel < 3; ++channel) {
+                    const double value = std::clamp((rgb[channel] - black) / (white - black), 0.0, 1.0);
+                    mapped[channel] = byte(low + (high - low) * std::pow(value, 1 / settings.gamma));
+                }
+                color = {mapped[0], mapped[1], mapped[2], color.a};
             } else {
                 throw std::runtime_error("Unknown icon effect.");
             }

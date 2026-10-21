@@ -2232,6 +2232,50 @@ void icon_effect_controls() {
             "a stale preview cannot overwrite a newer image");
     editor.close_editor_dialog();
 }
+void advanced_effect_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor=*fixture.editor;
+    gf::Window& window=*fixture.window;
+    paint::ImageContainer source; source.kind=paint::ContainerKind::Icon;
+    paint::IconFrame frame; frame.image.reset(16,16,{64,100,180,91}); source.frames={frame};
+    editor.open_container(source,"");
+    editor.execute("atlas-effects"); window.perform_layout();
+    const std::shared_ptr<gf::ComboBox> choice=std::dynamic_pointer_cast<gf::ComboBox>(window.find("effect-choice"));
+    require((*choice).items().size()==8 && !(*window.find("effect-repeat")).enabled(),"basic effects remain prominent and empty repeat is disabled");
+    routed_button(window,"effect-advanced");
+    require((*choice).items().size()==15,"Advanced exposes every additional effect");
+    (*choice).set_selected_index(9);
+    const std::shared_ptr<gf::NumericUpDown> black=std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("effect-value-0"));
+    const std::shared_ptr<gf::NumericUpDown> white=std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("effect-value-1"));
+    const std::shared_ptr<gf::NumericUpDown> gamma=std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("effect-value-2"));
+    (*black).set_value(100); (*white).set_value(90);
+    require(!(*window.find("effect-apply")).enabled(),"invalid levels cannot be applied");
+    (*black).set_value(10); (*white).set_value(240); (*gamma).set_value(1.25);
+    const std::size_t history=editor.document.undo_history.size();
+    require(editor.document.undo_history.size()==history && paint::equal(editor.document.image.get(0,0),frame.image.get(0,0)),"live levels preview does not edit pixels");
+    routed_button(window,"effect-apply");
+    require(editor.document.undo_history.size()==history+1 && editor.last_icon_effect && (*editor.last_icon_effect).gamma==1.25,
+            "apply remembers fractional gamma and adds one transaction");
+    const paint::IconEffectSettings saved=*editor.last_icon_effect;
+    editor.execute("undo");
+    editor.execute("atlas-effects");
+    routed_button(window,"effect-repeat");
+    const std::shared_ptr<gf::ComboBox> repeated=std::dynamic_pointer_cast<gf::ComboBox>(window.find("effect-choice"));
+    const std::shared_ptr<gf::NumericUpDown> repeated_gamma=std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("effect-value-2"));
+    require((*repeated).selected_index()==9 && (*repeated_gamma).value()==1.25 && paint::equal(editor.document.image.get(0,0),frame.image.get(0,0)),
+            "repeat restores advanced controls without applying before review");
+    routed_button(window,"effect-apply");
+    const paint::Image expected=paint::render_icon_effect(frame.image,saved).image;
+    require(paint::equal(editor.document.image.get(0,0),expected.get(0,0)),"repeated effect matches saved settings exactly");
+    editor.execute("atlas-effects");
+    routed_button(window,"effect-advanced");
+    const std::shared_ptr<gf::ComboBox> advanced=std::dynamic_pointer_cast<gf::ComboBox>(window.find("effect-choice"));
+    (*advanced).set_selected_index(14);
+    routed_button(window,"effect-advanced");
+    require((*advanced).selected_index()==0 && !(*window.find("effect-apply")).enabled(),"hiding Advanced resets an advanced preview safely");
+    editor.close_editor_dialog();
+    require((*editor.last_icon_effect).effect==paint::IconEffect::Levels,"canceled previews do not replace last applied effect");
+}
 void alpha_tools_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5540,6 +5584,7 @@ void icon_production_contracts() {
         toolbar_strip_controls();
         numeric_transform_controls();
         icon_effect_controls();
+        advanced_effect_controls();
         icon_palette_contracts();
         indexed_canvas_contracts();
         icon_ribbon_contracts();

@@ -14,6 +14,102 @@ bool same(const paint::Image& left, const paint::Image& right) {
            std::equal(left.pixels.begin(), left.pixels.end(), right.pixels.begin(), right.pixels.end(),
                       paint::equal);
 }
+void advanced_contracts() {
+    paint::Image source;
+    source.reset(5, 3, {64, 120, 220, 127});
+    source.set(0, 0, {91, 37, 203, 0});
+    paint::IconEffectSettings settings;
+    settings.effect = paint::IconEffect::Gamma;
+    require(same(paint::render_icon_effect(source, settings).image, source),
+            "neutral gamma is exact including hidden RGB");
+    settings.gamma = 2;
+    require(paint::equal(paint::render_icon_effect(source, settings).image.get(2, 1), {128, 175, 237, 127}),
+            "gamma uses encoded channels and reciprocal exponent");
+    settings.effect = paint::IconEffect::Levels;
+    settings.gamma = 1;
+    settings.input_black = 20;
+    settings.input_white = 220;
+    source.set(2, 1, {20, 120, 220, 127});
+    require(paint::equal(paint::render_icon_effect(source, settings).image.get(2, 1), {0, 128, 255, 127}),
+            "levels maps input endpoints and midpoint");
+    settings.output_black = 10;
+    settings.output_white = 210;
+    settings.gamma = 2;
+    require(paint::equal(paint::render_icon_effect(source, settings).image.get(2, 1), {10, 151, 210, 127}),
+            "levels applies gamma before output endpoint mapping");
+    settings.input_white = settings.input_black;
+    bool rejected = false;
+    try {
+        static_cast<void>(paint::render_icon_effect(source, settings));
+    } catch (const std::exception&) {
+        rejected = true;
+    }
+    require(rejected, "levels rejects zero input range rather than dividing by zero");
+    settings = {};
+    settings.effect = paint::IconEffect::Invert;
+    const paint::Image inverted = paint::render_icon_effect(source, settings).image;
+    require(paint::equal(inverted.get(2, 1), {235, 135, 35, 127}) &&
+                paint::equal(inverted.get(0, 0), source.get(0, 0)),
+            "inversion preserves alpha and transparent hidden RGB");
+    require(same(paint::render_icon_effect(inverted, settings).image, source), "double inversion is exact");
+    source.reset(7, 5, {0, 0, 0, 255});
+    for (int y = 0; y < 5; ++y) {
+        for (int x = 3; x < 7; ++x) {
+            source.set(x, y, {255, 255, 255, 255});
+        }
+    }
+    settings.effect = paint::IconEffect::EdgeFind;
+    const paint::Image edges = paint::render_icon_effect(source, settings).image;
+    require(edges.get(0, 2).r == 0 && edges.get(2, 2).r == 255 && edges.get(3, 2).r == 255 &&
+                edges.get(6, 2).r == 0,
+            "Sobel detects step with no false image-boundary edge");
+    settings.effect = paint::IconEffect::Contour;
+    const paint::Image contour = paint::render_icon_effect(source, settings).image;
+    require(contour.get(0, 2).r == 255 && contour.get(2, 2).r == 0 && contour.get(3, 2).r == 0 &&
+                contour.get(6, 2).r == 255,
+            "contour puts dark four-neighbor transitions on white");
+    settings.effect = paint::IconEffect::Emboss;
+    const paint::Image emboss = paint::render_icon_effect(source, settings).image;
+    require(emboss.get(0, 2).r == 128 && emboss.get(2, 2).r == 255 && emboss.get(6, 2).r == 128,
+            "emboss relief has a defined southeast light direction and neutral gray base");
+    source.reset(3, 3, {100, 100, 100, 255});
+    source.set(1, 1, {120, 130, 140, 91});
+    settings.effect = paint::IconEffect::EdgeEnhance;
+    require(paint::equal(paint::render_icon_effect(source, settings).image.get(1, 1), {200, 250, 255, 91}),
+            "edge enhancement uses per-channel four-neighbor Laplacian and saturates");
+    const paint::IconEffect filters[] = {paint::IconEffect::EdgeFind, paint::IconEffect::EdgeEnhance,
+                                         paint::IconEffect::Contour, paint::IconEffect::Emboss};
+    for (const paint::IconEffect filter : filters) {
+        settings.effect = filter;
+        settings.strength = 0;
+        require(same(paint::render_icon_effect(source, settings).image, source),
+                "zero strength keeps exact pixels");
+        settings.strength = 100;
+        paint::Image hidden = source;
+        hidden.set(0, 0, {255, 0, 255, 0});
+        paint::Image other = hidden;
+        other.set(0, 0, {0, 255, 0, 0});
+        const paint::Image first = paint::render_icon_effect(hidden, settings).image;
+        const paint::Image second = paint::render_icon_effect(other, settings).image;
+        for (std::size_t index = 1; index < first.pixels.size(); ++index) {
+            require(paint::equal(first.pixels[index], second.pixels[index]),
+                    "hidden RGB cannot contaminate a visible neighbor");
+            require(first.pixels[index].a == hidden.pixels[index].a,
+                    "edge filters preserve every alpha byte");
+        }
+        require(paint::equal(first.get(0, 0), hidden.get(0, 0)),
+                "edge filters preserve transparent stored pixels");
+        paint::Image single;
+        single.reset(1, 1, {40, 40, 40, 109});
+        const paint::Color pixel = paint::render_icon_effect(single, settings).image.get(0, 0);
+        const int expected = filter == paint::IconEffect::EdgeFind  ? 0
+                             : filter == paint::IconEffect::Contour ? 255
+                             : filter == paint::IconEffect::Emboss  ? 128
+                                                                    : 40;
+        require(pixel.r == expected && pixel.g == expected && pixel.b == expected && pixel.a == 109,
+                "one-pixel bounds are clamped safely");
+    }
+}
 void contracts() {
     paint::Image source;
     source.reset(16, 16, {80, 90, 100, 0});
@@ -128,6 +224,7 @@ void contracts() {
 int main() {
     try {
         contracts();
+        advanced_contracts();
         std::cout << "Icon effects contracts passed\n";
         return 0;
     } catch (const std::exception& error) {
