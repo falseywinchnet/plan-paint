@@ -649,7 +649,7 @@ std::shared_ptr<gf::NumericUpDown> Ribbon::number(const std::string& id, const s
                                                   double value, int decimals) {
     std::shared_ptr<gf::Label> label = gf::make_control<gf::Label>(gf::StableId(id + "-label"), text);
     (*label).set_font({gf::FontRole::control, 14, 400, false});
-    const double label_width = id == "spiro-scale" ? 70 : 113;
+    const double label_width = id == "spiro-scale" ? 70 : id == "geometry-corners" ? 165 : 113;
     option(label, {bounds.x, bounds.y, label_width, bounds.height});
     std::shared_ptr<gf::NumericUpDown> control = gf::make_control<gf::NumericUpDown>(gf::StableId(id));
     (*control).set_range(minimum, maximum);
@@ -791,6 +791,7 @@ void Ribbon::add_options() {
         *this, gf::Delegate<std::optional<std::size_t>>::bind<Ribbon, &Ribbon::render_quality_changed>(*this)));
     building_page_ = 8;
     check("continuous-path", tr("Continuous path"), {12, 65, 210, 25});
+    corner_radius_ = number("geometry-corners", tr("Corner radius (px)"), {480, 36, 330, 28}, 0, 4096, 0, 1);
     check("edit-path-nodes", tr("Edit nodes"), {244, 65, 210, 25});
     check("outline", tr("Edge"), {12, 94, 90, 25});
     check("fill", tr("Fill"), {116, 94, 100, 25});
@@ -1091,6 +1092,7 @@ void Ribbon::show_page() {
         if (id == "render-quality") {
             visible = visible && geometry;
         }
+        if (id.starts_with("geometry-")) { visible = visible && geometry; }
         if (id == "smooth-lines") {
             visible = visible && !geometry;
         }
@@ -1213,6 +1215,7 @@ void Ribbon::options_changed(double) {
     ink.material_angle = (*angle_).value();
     (*editor).spiro.refresh_peg((*editor).spiro.selected_peg);
     (*editor).document.ink.size = static_cast<int>((*tool_size_).value());
+    (*editor).document.ink.geometry.corner_radius = (*corner_radius_).value();
     if ((*editor).text.note) {
         (*(*editor).text.note).padding = static_cast<int>((*sticky_padding_).value());
         const Rect bounds = (*editor).text.bounds;
@@ -1907,6 +1910,7 @@ void Ribbon::synchronize() {
     (*load_).set_value(material.pigment_load);
     (*angle_).set_value(material.material_angle);
     (*tool_size_).set_value(document.ink.size);
+    (*corner_radius_).set_value(document.ink.geometry.corner_radius);
     (*render_quality_).set_selected_index(!document.ink.smooth ? 0 : document.ink.supersample ? 2 : 1);
     (*picker_mode_).set_selected_index(static_cast<std::size_t>((*editor).picker_mode));
     (*text_size_).set_value((*editor).text.style.size);

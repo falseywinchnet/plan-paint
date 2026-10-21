@@ -424,8 +424,12 @@ static Ink enlarged_ink(const Ink& ink) {
     }
     return result;
 }
-void polygon(Image& image, const std::vector<Point>& points, const Ink& ink, bool outline, bool fill,
+void polygon(Image& image, const std::vector<Point>& vertices, const Ink& ink, bool outline, bool fill,
              bool closed, Brush fill_brush, const Ink* fill_material) {
+    const std::vector<Point> rounded = ink.geometry.corner_radius > 0
+        ? soften_corners(vertices, ink.geometry.corner_radius, closed, ink.supersample ? 0.03125 : 0.125)
+        : std::vector<Point>{};
+    const std::vector<Point>& points = ink.geometry.corner_radius > 0 ? rounded : vertices;
     if (!ink.smooth || !ink.supersample || points.empty()) {
         polygon_native(image, points, ink, outline, fill, closed, fill_brush, fill_material, {});
         return;

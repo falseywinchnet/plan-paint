@@ -528,6 +528,7 @@ Ink Document::alternate_ink() const {
     result.secondary.a = 0;
     result.transparent_pattern = true;
     result.size = ink.size;
+    result.geometry = ink.geometry;
     result.smooth = ink.smooth;
     result.supersample = ink.supersample;
     return result;

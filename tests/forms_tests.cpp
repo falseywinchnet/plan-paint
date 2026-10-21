@@ -2379,6 +2379,31 @@ void await_reveal(gf::Window& window) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
+void geometry_corner_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.choose_shape(paint::Shape::Rectangle);
+    open_tab(window, "tool-tab");
+    const std::shared_ptr<gf::NumericUpDown> radius = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("geometry-corners"));
+    require(radius && (*radius).visible(), "shape ribbon must expose corner radius");
+    (*radius).set_value(16);
+    editor.document.shape_outline = false; editor.document.shape_fill = true;
+    fixture.drag(10, 10, 90, 80);
+    require(white(editor.document.image.get(11, 11)) && !white(editor.document.image.get(45, 45)),
+            "ribbon corner setting did not affect the committed filled shape");
+    editor.execute("undo");
+    require(white(editor.document.image.get(45, 45)), "softened shape must undo as one edit");
+    (*radius).set_value(0);
+    fixture.drag(10, 10, 90, 80);
+    require(!white(editor.document.image.get(11, 11)), "zero radius must restore square corners");
+    editor.choose_tool(paint::Tool::Pencil);
+    open_tab(window, "tool-tab");
+    require(!(*radius).visible(), "geometry radius should not be offered for pencil painting");
+    editor.choose_tool(paint::Tool::Path);
+    open_tab(window, "tool-tab");
+    require((*radius).visible(), "paths must expose corner softening too");
+}
 void sticky_note_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5885,6 +5910,7 @@ int main(int argc, char** argv) {
         }
         canvas_controls_without_dragging();
         sticky_note_contracts();
+        geometry_corner_controls();
         custom_pattern_canvas_is_independent();
         tool_cursor_routes();
         freehand_wand_picker_and_size();
