@@ -6,6 +6,7 @@
 #include "icon_export.hpp"
 #include "icon_sheet.hpp"
 #include "icon_states.hpp"
+#include "icon_effects.hpp"
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
@@ -48,6 +49,7 @@ enum class EditorDialogKind {
     alpha_tools,
     icon_palette,
     icon_states,
+    icon_effects,
     properties,
     settings,
     english_help,
@@ -102,6 +104,22 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_icon_effects();
+    void render_icon_effects();
+    void effect_choice_changed(std::optional<std::size_t>);
+    void effect_number_changed(double);
+    void effect_text_changed(const std::string&);
+    void effect_clicked(gui_forms::ButtonBase&);
+    Image effect_source_;
+    IconEffectResult effect_result_;
+    std::uint64_t effect_revision_ = 0, effect_epoch_ = 0;
+    int effect_current_ = -1;
+    std::shared_ptr<gui_forms::ComboBox> effect_choice_;
+    std::vector<std::shared_ptr<gui_forms::NumericUpDown>> effect_values_;
+    std::vector<std::shared_ptr<gui_forms::Label>> effect_labels_;
+    std::shared_ptr<gui_forms::TextBox> effect_color_, effect_status_;
+    std::shared_ptr<gui_forms::RasterCanvas> effect_before_, effect_after_;
+    std::shared_ptr<gui_forms::Button> effect_apply_;
     void initialize_icon_batch();
     void initialize_batch_palette();
     void read_batch_palette(IconBatchSettings& settings) const;

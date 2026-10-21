@@ -894,5 +894,19 @@
   "Target images": "対象画像",
   "Upscaling": "拡大",
   "Open as new image": "新しい画像として開く",
-  "New output folder": "新しい出力フォルダー"
+  "New output folder": "新しい出力フォルダー",
+  "Effects": "効果",
+  "Brightness / contrast": "明るさ / コントラスト",
+  "Hue / saturation": "色相 / 彩度",
+  "Grayscale": "グレースケール",
+  "Contrast %": "コントラスト %",
+  "Shadow": "影",
+  "Fit artwork within image": "画像内に絵を収める",
+  "Radius (px)": "半径 (px)",
+  "Strength %": "強度 %",
+  "Offset X": "X オフセット",
+  "Offset Y": "Y オフセット",
+  "Pink border: image bounds. Pixels outside are clipped.": "ピンクの枠は画像の境界です。外側のピクセルは切り取られます。",
+  "Image changed. Reopen Effects.": "画像が変更されました。効果を開き直してください。",
+  "Invalid color": "無効な色"
 }

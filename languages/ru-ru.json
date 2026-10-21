@@ -894,5 +894,19 @@
   "Target images": "Целевые изображения",
   "Upscaling": "Увеличение",
   "Open as new image": "Открыть как новое изображение",
-  "New output folder": "Новая папка вывода"
+  "New output folder": "Новая папка вывода",
+  "Effects": "Эффекты",
+  "Brightness / contrast": "Яркость / контраст",
+  "Hue / saturation": "Тон / насыщенность",
+  "Grayscale": "Оттенки серого",
+  "Contrast %": "Контраст %",
+  "Shadow": "Тень",
+  "Fit artwork within image": "Вписать рисунок в изображение",
+  "Radius (px)": "Радиус (пкс)",
+  "Strength %": "Сила %",
+  "Offset X": "Смещение X",
+  "Offset Y": "Смещение Y",
+  "Pink border: image bounds. Pixels outside are clipped.": "Розовая рамка: границы изображения. Пиксели снаружи обрезаются.",
+  "Image changed. Reopen Effects.": "Изображение изменилось. Откройте Эффекты заново.",
+  "Invalid color": "Недопустимый цвет"
 }

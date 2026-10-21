@@ -13,10 +13,10 @@ IconPanel::IconPanel(gf::StableId id, std::weak_ptr<Editor> editor)
     : Control(std::move(id)), editor_(std::move(editor)) {}
 void IconPanel::initialize_control_tree() {
     const char* ids[] = {"sizes",   "gallery", "hotspot",  "palette", "alpha-tools", "states",
-                         "compare", "export",  "previous", "next",    "batch",       "index-paint"};
+                         "compare", "export",  "previous", "next",    "batch",       "index-paint", "effects"};
     const std::string labels[] = {tr("Icon sizes…"),  tr("Gallery…"), tr("Hotspot…"), tr("Palette…"),
                                   tr("Alpha tools…"), tr("States…"),  tr("Compare…"), tr("Export…"),
-                                  tr("Previous"),     tr("Next"),     tr("Batch…"),   tr("Index paint")};
+                                  tr("Previous"),     tr("Next"),     tr("Batch…"),   tr("Index paint"), tr("Effects")};
     for (std::size_t index = 0; index < std::size(ids); ++index) {
         const std::shared_ptr<gf::Button> command =
             gf::make_control<gf::Button>(gf::StableId(std::string("icon-") + ids[index]), labels[index]);
@@ -53,14 +53,15 @@ void IconPanel::arrange(gf::Rect bounds) {
     // Production spans two columns; the remaining width belongs to image selection.
     const gf::Rect placements[] = {{6, 4, 102, 24},   {6, 30, 102, 24},   {6, 56, 102, 24},
                                    {120, 4, 102, 24}, {120, 30, 102, 24}, {234, 4, 102, 24},
-                                   {348, 4, 102, 24}, {234, 34, 102, 24}};
+                                   {348, 4, 102, 24}, {234, 30, 102, 24}};
     for (std::size_t index = 0; index < std::size(placements); ++index) {
         set_child_layout(commands_[index], placements[index]);
     }
     set_child_layout(commands_[8], {bounds.width - 162, 96, 76, 20});
     set_child_layout(commands_[9], {bounds.width - 82, 96, 76, 20});
-    set_child_layout(commands_[10], {348, 34, 102, 24});
+    set_child_layout(commands_[10], {348, 30, 102, 24});
     set_child_layout(commands_[11], {120, 56, 102, 24});
+    set_child_layout(commands_[12], {234, 56, 102, 24});
     for (std::size_t index = 0; index < 3; ++index) {
         set_child_layout(groups_[index],
                          {index * command_width, 80, index == 2 ? command_width * 2 : command_width, 15});

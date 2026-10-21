@@ -894,5 +894,19 @@
   "Target images": "Immagini di destinazione",
   "Upscaling": "Ingrandimento",
   "Open as new image": "Apri come nuova immagine",
-  "New output folder": "Nuova cartella di output"
+  "New output folder": "Nuova cartella di output",
+  "Effects": "Effetti",
+  "Brightness / contrast": "Luminosità / contrasto",
+  "Hue / saturation": "Tonalità / saturazione",
+  "Grayscale": "Scala di grigi",
+  "Contrast %": "Contrasto %",
+  "Shadow": "Ombra",
+  "Fit artwork within image": "Adatta il disegno dentro l’immagine",
+  "Radius (px)": "Raggio (px)",
+  "Strength %": "Intensità %",
+  "Offset X": "Scostamento X",
+  "Offset Y": "Scostamento Y",
+  "Pink border: image bounds. Pixels outside are clipped.": "Bordo rosa: limiti dell’immagine. I pixel esterni vengono tagliati.",
+  "Image changed. Reopen Effects.": "L’immagine è cambiata. Riapri Effetti.",
+  "Invalid color": "Colore non valido"
 }

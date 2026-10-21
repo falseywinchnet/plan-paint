@@ -894,5 +894,19 @@
   "Target images": "تصاویر هدف",
   "Upscaling": "بزرگ‌نمایی",
   "Open as new image": "باز کردن به‌عنوان تصویر جدید",
-  "New output folder": "پوشهٔ خروجی جدید"
+  "New output folder": "پوشهٔ خروجی جدید",
+  "Effects": "جلوه‌ها",
+  "Brightness / contrast": "روشنایی / کنتراست",
+  "Hue / saturation": "فام / اشباع",
+  "Grayscale": "خاکستری",
+  "Contrast %": "کنتراست %",
+  "Shadow": "سایه",
+  "Fit artwork within image": "جا دادن طرح در تصویر",
+  "Radius (px)": "شعاع (پیکسل)",
+  "Strength %": "شدت %",
+  "Offset X": "جابجایی X",
+  "Offset Y": "جابجایی Y",
+  "Pink border: image bounds. Pixels outside are clipped.": "کادر صورتی: مرز تصویر. پیکسل‌های بیرون بریده می‌شوند.",
+  "Image changed. Reopen Effects.": "تصویر تغییر کرده است. جلوه‌ها را دوباره باز کنید.",
+  "Invalid color": "رنگ نامعتبر"
 }

@@ -894,5 +894,19 @@
   "Target images": "ਟੀਚੇ ਵਾਲੇ ਚਿੱਤਰ",
   "Upscaling": "ਵੱਡਾ ਕਰਨਾ",
   "Open as new image": "ਨਵੇਂ ਚਿੱਤਰ ਵਜੋਂ ਖੋਲ੍ਹੋ",
-  "New output folder": "ਨਵਾਂ ਆਉਟਪੁੱਟ ਫੋਲਡਰ"
+  "New output folder": "ਨਵਾਂ ਆਉਟਪੁੱਟ ਫੋਲਡਰ",
+  "Effects": "ਪ੍ਰਭਾਵ",
+  "Brightness / contrast": "ਚਮਕ / ਕੰਟ੍ਰਾਸਟ",
+  "Hue / saturation": "ਰੰਗਤ / ਸੰਤ੍ਰਿਪਤਾ",
+  "Grayscale": "ਸਲੇਟੀ ਰੰਗ",
+  "Contrast %": "ਕੰਟ੍ਰਾਸਟ %",
+  "Shadow": "ਪਰਛਾਵਾਂ",
+  "Fit artwork within image": "ਚਿੱਤਰ ਅੰਦਰ ਕਲਾਕਾਰੀ ਫਿੱਟ ਕਰੋ",
+  "Radius (px)": "ਅਰਧ-ਵਿਆਸ (px)",
+  "Strength %": "ਤੀਬਰਤਾ %",
+  "Offset X": "X ਖਿਸਕਾਅ",
+  "Offset Y": "Y ਖਿਸਕਾਅ",
+  "Pink border: image bounds. Pixels outside are clipped.": "ਗੁਲਾਬੀ ਹੱਦ: ਚਿੱਤਰ ਦੀ ਸੀਮਾ। ਬਾਹਰਲੇ ਪਿਕਸਲ ਕੱਟੇ ਜਾਣਗੇ।",
+  "Image changed. Reopen Effects.": "ਚਿੱਤਰ ਬਦਲ ਗਿਆ। ਪ੍ਰਭਾਵ ਦੁਬਾਰਾ ਖੋਲ੍ਹੋ।",
+  "Invalid color": "ਗਲਤ ਰੰਗ"
 }

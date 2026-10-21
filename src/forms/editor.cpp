@@ -2111,6 +2111,10 @@ void Editor::execute(const std::string& command) {
                        (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
                 document.require_rgba_transform();
                 open_editor_dialog(EditorDialogKind::icon_palette);
+            } else if (command == "atlas-effects" &&
+                       (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
+                document.require_rgba_transform();
+                open_editor_dialog(EditorDialogKind::icon_effects);
             } else if (command == "atlas-alpha-tools" &&
                        (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
                 document.require_rgba_transform();

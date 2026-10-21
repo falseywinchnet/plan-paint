@@ -894,5 +894,19 @@
   "Target images": "लक्ष्य चित्र",
   "Upscaling": "आकार बढ़ाना",
   "Open as new image": "नए चित्र के रूप में खोलें",
-  "New output folder": "नया आउटपुट फ़ोल्डर"
+  "New output folder": "नया आउटपुट फ़ोल्डर",
+  "Effects": "प्रभाव",
+  "Brightness / contrast": "चमक / कंट्रास्ट",
+  "Hue / saturation": "वर्ण / संतृप्ति",
+  "Grayscale": "ग्रेस्केल",
+  "Contrast %": "कंट्रास्ट %",
+  "Shadow": "छाया",
+  "Fit artwork within image": "चित्र के भीतर कलाकृति फ़िट करें",
+  "Radius (px)": "त्रिज्या (पिक्सेल)",
+  "Strength %": "तीव्रता %",
+  "Offset X": "X विस्थापन",
+  "Offset Y": "Y विस्थापन",
+  "Pink border: image bounds. Pixels outside are clipped.": "गुलाबी सीमा: चित्र की सीमा। बाहर के पिक्सेल कटेंगे।",
+  "Image changed. Reopen Effects.": "चित्र बदल गया। प्रभाव फिर खोलें।",
+  "Invalid color": "अमान्य रंग"
 }

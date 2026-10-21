@@ -894,5 +894,19 @@
   "Target images": "תמונות יעד",
   "Upscaling": "הגדלה",
   "Open as new image": "פתיחה כתמונה חדשה",
-  "New output folder": "תיקיית פלט חדשה"
+  "New output folder": "תיקיית פלט חדשה",
+  "Effects": "אפקטים",
+  "Brightness / contrast": "בהירות / ניגודיות",
+  "Hue / saturation": "גוון / רוויה",
+  "Grayscale": "גווני אפור",
+  "Contrast %": "ניגודיות %",
+  "Shadow": "צל",
+  "Fit artwork within image": "התאמת הציור בתוך התמונה",
+  "Radius (px)": "רדיוס (פיקסלים)",
+  "Strength %": "עוצמה %",
+  "Offset X": "היסט X",
+  "Offset Y": "היסט Y",
+  "Pink border: image bounds. Pixels outside are clipped.": "מסגרת ורודה: גבולות התמונה. פיקסלים מחוץ לה ייחתכו.",
+  "Image changed. Reopen Effects.": "התמונה השתנתה. פתחו מחדש את האפקטים.",
+  "Invalid color": "צבע לא תקין"
 }

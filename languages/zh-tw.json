@@ -894,5 +894,19 @@
   "Target images": "目標影像",
   "Upscaling": "放大",
   "Open as new image": "作為新影像開啟",
-  "New output folder": "新增輸出資料夾"
+  "New output folder": "新增輸出資料夾",
+  "Effects": "效果",
+  "Brightness / contrast": "亮度 / 對比度",
+  "Hue / saturation": "色相 / 飽和度",
+  "Grayscale": "灰階",
+  "Contrast %": "對比度 %",
+  "Shadow": "陰影",
+  "Fit artwork within image": "將圖案配合至影像內",
+  "Radius (px)": "半徑 (px)",
+  "Strength %": "強度 %",
+  "Offset X": "X 位移",
+  "Offset Y": "Y 位移",
+  "Pink border: image bounds. Pixels outside are clipped.": "粉紅色邊框表示影像邊界。外部像素將被裁切。",
+  "Image changed. Reopen Effects.": "影像已變更。請重新開啟效果。",
+  "Invalid color": "無效色彩"
 }

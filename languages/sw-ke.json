@@ -894,5 +894,19 @@
   "Target images": "Picha lengwa",
   "Upscaling": "Kukuza",
   "Open as new image": "Fungua kama picha mpya",
-  "New output folder": "Folda mpya ya matokeo"
+  "New output folder": "Folda mpya ya matokeo",
+  "Effects": "Athari",
+  "Brightness / contrast": "Mwangaza / utofautishaji",
+  "Hue / saturation": "Toni / uenezi wa rangi",
+  "Grayscale": "Kijivu",
+  "Contrast %": "Utofautishaji %",
+  "Shadow": "Kivuli",
+  "Fit artwork within image": "Tosheleza mchoro ndani ya picha",
+  "Radius (px)": "Nusu kipenyo (px)",
+  "Strength %": "Nguvu %",
+  "Offset X": "Uhamisho X",
+  "Offset Y": "Uhamisho Y",
+  "Pink border: image bounds. Pixels outside are clipped.": "Mpaka wa waridi: mipaka ya picha. Pikseli za nje hukatwa.",
+  "Image changed. Reopen Effects.": "Picha imebadilika. Fungua Athari tena.",
+  "Invalid color": "Rangi si halali"
 }

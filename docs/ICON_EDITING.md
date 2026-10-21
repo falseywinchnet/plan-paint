@@ -139,6 +139,43 @@ The existing SVG import restrictions remain in force, including rejection of
 unsupported filters and embedded raster image elements. Vector parsing limits,
 bundled font fallback, and the renderer are the same as ordinary SVG import.
 
+## Effects and explicit artwork fitting
+
+Choose **Icon → Effects** for the current ICO/CUR image. The window shows the
+original and the prepared result. Small images use matching integer enlargement
+with sharp pixel edges. Choosing an effect starts with its default
+parameters; **Reset** restores those defaults. Changing controls never changes
+the document. **Apply** commits exactly the prepared pixels as one Undo step;
+Close or Escape cancels. A neutral result disables Apply, and a stale preview
+cannot overwrite a changed document or another representation. Cursor hotspots
+and all other representations stay unchanged. Indexed images become RGBA when
+their pixels change; background-dependent XOR images must be converted explicitly
+before these effects can run.
+
+| Effect | Controls and numerical behavior |
+| --- | --- |
+| Brightness / contrast | Brightness −100…100 adds `brightness × 255 / 100` to encoded RGB. Contrast −100…100 scales distance from 127.5 by `2^(contrast/25)`. Both default to zero. Alpha is retained. |
+| Hue / saturation | Hue −180…180 degrees rotates HSV hue. Saturation 0…200% multiplies HSV saturation and clamps it to 1. Defaults are 0 degrees and 100%. Value and alpha stay unchanged. |
+| Grayscale | Rounded encoded RGB weights 0.2126 red + 0.7152 green + 0.0722 blue. Alpha stays unchanged. |
+| Opacity | 0…100%, default 100%. Multiplies alpha; RGB, including hidden transparent RGB, is retained. |
+| Blur | Integer radius 0…32 pixels, default 2. Separable Gaussian with sigma `max(0.5, radius/3)`, normalized over the finite radius. Samples beyond the image are transparent. Filtering uses double-precision premultiplied encoded RGB and alpha, with no byte rounding between passes. Radius zero is exact identity. |
+| Sharpen | The same blur radius, plus strength 0…300%, default 100%. Adds `strength/100 × (original RGB − blurred RGB)` and clamps; original alpha is retained. Zero strength or zero radius is exact identity. |
+| Shadow | Gaussian radius 0…32, X/Y offsets −128…128 pixels, opacity 0…100%, and a hex color. Defaults: radius 2, offset (+2,+2), black at 55%. Source alpha shapes the shadow; artwork is composited over it. |
+| Fit artwork within image | Explicit separate operation, with integer padding 0…127 pixels, default 2. Crops the nonzero-alpha bounds, scales proportionally with CONV* into the available rectangle, and centers on transparent padding. It may enlarge small artwork. Padding must leave at least one pixel on both axes; completely transparent artwork is unchanged. |
+
+All effects keep the current image dimensions. Color adjustments skip fully
+transparent pixels, preserving hidden RGB. Numerical channels are rounded to the
+nearest byte after clamping. Blur and shadow produce transparent black where no
+coverage remains. The effects window is bounded to the supported 1…256-pixel icon
+dimensions.
+
+The **Shadow** preview includes its entire overflow. A pink border marks the image
+bounds, and the status counts nontransparent pixels outside them. Those pixels
+are clipped from the applied image; the pink border is only a preview annotation.
+To make room, close the shadow preview, explicitly apply **Fit artwork within
+image**, then reopen Shadow. Shadow never automatically shrinks or expands the
+artwork or canvas.
+
 ## Comparison and contact sheets
 
 Open an ICO or CUR and choose **Atlas → Compare…**. The owned comparison window
