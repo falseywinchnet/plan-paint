@@ -922,5 +922,19 @@
   "Cell height": "Urefu wa seli",
   "Horizontal gap": "Pengo la mlalo",
   "Vertical gap": "Pengo la wima",
-  "Opaque matte output": "Toleo lenye mandharinyuma yasiyopitisha mwanga"
+  "Opaque matte output": "Toleo lenye mandharinyuma yasiyopitisha mwanga",
+  "Validate": "Thibitisha",
+  "Icon validation": "Uthibitishaji wa aikoni",
+  "Required sizes": "Vipimo vinavyohitajika",
+  "Any depth": "Kina chochote",
+  "Missing profile sizes": "Vipimo vya wasifu vinavyokosekana",
+  "Duplicate size/depth entries": "Vipimo/kina vilivyorudiwa",
+  "Alpha counts: zero / partial / opaque": "Hesabu za alfa: sifuri / kiasi / isiyopenya",
+  "Alpha changes on save": "Mabadiliko ya alfa wakati wa kuhifadhi",
+  "Legacy XOR pixels": "Pikseli za XOR za zamani",
+  "Compatibility notes": "Maelezo ya utangamano",
+  "PNG entries require PNG-aware icon consumers.": "Maingizo ya PNG yanahitaji programu za aikoni zinazotumia PNG.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "Alfa ya kiasi na XOR ya zamani hutegemea programu lengwa.",
+  "Test custom dimensions and cursor hotspots in the target application.": "Jaribu vipimo maalumu na sehemu tendaji za kishale katika programu lengwa.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Muhtasari wa uundaji, athari na mikanda huonyesha ukuzaji na upunguzaji wa mipaka; pikseli zilizohifadhiwa hazina historia hiyo."
 }

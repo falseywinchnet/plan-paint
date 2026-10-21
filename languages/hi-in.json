@@ -922,5 +922,19 @@
   "Cell height": "सेल ऊँचाई",
   "Horizontal gap": "क्षैतिज अंतर",
   "Vertical gap": "ऊर्ध्वाधर अंतर",
-  "Opaque matte output": "अपारदर्शी पृष्ठभूमि आउटपुट"
+  "Opaque matte output": "अपारदर्शी पृष्ठभूमि आउटपुट",
+  "Validate": "जाँचें",
+  "Icon validation": "आइकन सत्यापन",
+  "Required sizes": "आवश्यक आकार",
+  "Any depth": "कोई भी गहराई",
+  "Missing profile sizes": "प्रोफ़ाइल में अनुपस्थित आकार",
+  "Duplicate size/depth entries": "दोहराए गए आकार/गहराई",
+  "Alpha counts: zero / partial / opaque": "अल्फ़ा गणना: शून्य / आंशिक / अपारदर्शी",
+  "Alpha changes on save": "सहेजते समय अल्फ़ा परिवर्तन",
+  "Legacy XOR pixels": "पुराने XOR पिक्सेल",
+  "Compatibility notes": "संगतता टिप्पणियाँ",
+  "PNG entries require PNG-aware icon consumers.": "PNG प्रविष्टियों के लिए PNG समर्थित आइकन अनुप्रयोग चाहिए।",
+  "Partial alpha and legacy XOR depend on the target consumer.": "आंशिक अल्फ़ा और पुराना XOR लक्ष्य अनुप्रयोग पर निर्भर हैं।",
+  "Test custom dimensions and cursor hotspots in the target application.": "लक्ष्य अनुप्रयोग में कस्टम आयाम और कर्सर हॉटस्पॉट जाँचें।",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "निर्माण, प्रभाव और पट्टी पूर्वावलोकन आवर्धन और कटाव दिखाते हैं; सहेजे गए पिक्सेल यह इतिहास नहीं रखते।"
 }

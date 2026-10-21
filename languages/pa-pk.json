@@ -922,5 +922,19 @@
   "Cell height": "خانے دی اونچائی",
   "Horizontal gap": "افقی فاصلہ",
   "Vertical gap": "عمودی فاصلہ",
-  "Opaque matte output": "غیر شفاف پس منظر آؤٹ پٹ"
+  "Opaque matte output": "غیر شفاف پس منظر آؤٹ پٹ",
+  "Validate": "جانچو",
+  "Icon validation": "آئیکن دی جانچ",
+  "Required sizes": "لوڑیں دے سائز",
+  "Any depth": "کوئی وی گہرائی",
+  "Missing profile sizes": "پروفائل وچ گم سائز",
+  "Duplicate size/depth entries": "دہرائے سائز تے گہرائی",
+  "Alpha counts: zero / partial / opaque": "الفا گنتی: صفر / جزوی / غیر شفاف",
+  "Alpha changes on save": "محفوظ کرن ویلے الفا تبدیلیاں",
+  "Legacy XOR pixels": "پرانے XOR پکسل",
+  "Compatibility notes": "مطابقت دے نوٹ",
+  "PNG entries require PNG-aware icon consumers.": "PNG اندراجاں لئی PNG نوں سمجھن والی آئیکن ایپ چاہیدی اے۔",
+  "Partial alpha and legacy XOR depend on the target consumer.": "جزوی الفا تے پرانا XOR ہدف ایپ اُتے منحصر نیں۔",
+  "Test custom dimensions and cursor hotspots in the target application.": "ہدف ایپ وچ اپنی مرضی دے ماپ تے کرسر ہاٹ سپاٹ جانچو۔",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "بنان، اثرات تے پٹی دے پیش منظر وڈا کرن تے کٹائی دسدے نیں؛ محفوظ پکسل ایہہ تاریخ نئیں رکھدے۔"
 }

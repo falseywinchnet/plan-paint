@@ -922,5 +922,19 @@
   "Cell height": "单元格高度",
   "Horizontal gap": "水平间距",
   "Vertical gap": "垂直间距",
-  "Opaque matte output": "不透明底色输出"
+  "Opaque matte output": "不透明底色输出",
+  "Validate": "验证",
+  "Icon validation": "图标验证",
+  "Required sizes": "必需尺寸",
+  "Any depth": "任意色深",
+  "Missing profile sizes": "缺少的配置尺寸",
+  "Duplicate size/depth entries": "重复的尺寸和色深",
+  "Alpha counts: zero / partial / opaque": "Alpha 计数：零 / 半透明 / 不透明",
+  "Alpha changes on save": "保存时的 Alpha 变化",
+  "Legacy XOR pixels": "旧式 XOR 像素",
+  "Compatibility notes": "兼容性说明",
+  "PNG entries require PNG-aware icon consumers.": "PNG 条目需要支持 PNG 的图标使用程序。",
+  "Partial alpha and legacy XOR depend on the target consumer.": "半透明 Alpha 和旧式 XOR 的显示取决于目标程序。",
+  "Test custom dimensions and cursor hotspots in the target application.": "请在目标程序中测试自定义尺寸和光标热点。",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "生成、效果和图带预览会报告放大与裁切；保存的像素不保留这些历史信息。"
 }

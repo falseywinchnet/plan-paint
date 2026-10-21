@@ -259,6 +259,7 @@ void EditorDialog::initialize_control_tree() {
         return;
     }
     if (kind_ == EditorDialogKind::toolbar_strip) { initialize_toolbar_strip(); return; }
+    if (kind_ == EditorDialogKind::icon_validation) { initialize_icon_validation(); return; }
     if (kind_ == EditorDialogKind::icon_sheet) {
         initialize_icon_sheet();
         return;
@@ -758,7 +759,7 @@ void EditorDialog::on_key_preview(gf::KeyEvent& event) {
         }
         event.handled = true;
     } else if (event.physical_key == gf::PhysicalKey::enter) {
-        if (kind_ == EditorDialogKind::icon_batch || kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::toolbar_strip || kind_ == EditorDialogKind::icon_sheet ||
+        if (kind_ == EditorDialogKind::icon_batch || kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_validation || kind_ == EditorDialogKind::toolbar_strip || kind_ == EditorDialogKind::icon_sheet ||
             kind_ == EditorDialogKind::asset_browser || kind_ == EditorDialogKind::alpha_tools ||
             kind_ == EditorDialogKind::icon_palette || kind_ == EditorDialogKind::icon_states || kind_ == EditorDialogKind::numeric_transform || kind_ == EditorDialogKind::icon_effects) {
             return; // The focused command owns Enter; never run a disk job implicitly.
@@ -803,6 +804,8 @@ std::string EditorDialog::title() const {
         return tr("Atlas frames");
     case EditorDialogKind::toolbar_strip:
         return tr("Toolbar strip");
+    case EditorDialogKind::icon_validation:
+        return tr("Icon validation");
     case EditorDialogKind::icon_sheet:
         return tr("Compare / contact sheet");
     case EditorDialogKind::icon_export:

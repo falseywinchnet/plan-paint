@@ -922,5 +922,19 @@
   "Cell height": "Cell height",
   "Horizontal gap": "Horizontal gap",
   "Vertical gap": "Vertical gap",
-  "Opaque matte output": "Output with solid background"
+  "Opaque matte output": "Output with solid background",
+  "Validate": "Check",
+  "Icon validation": "Icon check",
+  "Required sizes": "Sizes we need",
+  "Any depth": "Any depth",
+  "Missing profile sizes": "Profile sizes wey no dey",
+  "Duplicate size/depth entries": "Size/depth entries wey repeat",
+  "Alpha counts: zero / partial / opaque": "Alpha counts: zero / partial / solid",
+  "Alpha changes on save": "Alpha changes when you save",
+  "Legacy XOR pixels": "Old XOR pixels",
+  "Compatibility notes": "Compatibility notes",
+  "PNG entries require PNG-aware icon consumers.": "PNG entries need icon apps wey sabi PNG.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "Partial alpha and old XOR depend on the app wey go use am.",
+  "Test custom dimensions and cursor hotspots in the target application.": "Test custom sizes and cursor hotspots inside the app wey go use am.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Generation, effect and strip previews show enlargement and clipping; saved pixels no keep that history."
 }

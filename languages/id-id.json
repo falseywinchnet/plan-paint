@@ -922,5 +922,19 @@
   "Cell height": "Tinggi sel",
   "Horizontal gap": "Celah horizontal",
   "Vertical gap": "Celah vertikal",
-  "Opaque matte output": "Keluaran dengan latar buram"
+  "Opaque matte output": "Keluaran dengan latar buram",
+  "Validate": "Validasi",
+  "Icon validation": "Validasi ikon",
+  "Required sizes": "Ukuran yang diperlukan",
+  "Any depth": "Kedalaman apa pun",
+  "Missing profile sizes": "Ukuran profil yang hilang",
+  "Duplicate size/depth entries": "Entri ukuran/kedalaman duplikat",
+  "Alpha counts: zero / partial / opaque": "Jumlah alfa: nol / sebagian / buram",
+  "Alpha changes on save": "Perubahan alfa saat menyimpan",
+  "Legacy XOR pixels": "Piksel XOR lama",
+  "Compatibility notes": "Catatan kompatibilitas",
+  "PNG entries require PNG-aware icon consumers.": "Entri PNG memerlukan aplikasi ikon yang mendukung PNG.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "Alfa sebagian dan XOR lama bergantung pada aplikasi tujuan.",
+  "Test custom dimensions and cursor hotspots in the target application.": "Uji dimensi khusus dan titik aktif kursor pada aplikasi tujuan.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Pratinjau pembuatan, efek, dan strip melaporkan pembesaran dan pemotongan; piksel tersimpan tidak menyimpan riwayat itu."
 }

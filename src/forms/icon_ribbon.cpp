@@ -13,10 +13,10 @@ IconPanel::IconPanel(gf::StableId id, std::weak_ptr<Editor> editor)
     : Control(std::move(id)), editor_(std::move(editor)) {}
 void IconPanel::initialize_control_tree() {
     const char* ids[] = {"sizes",   "gallery", "hotspot",  "palette", "alpha-tools", "states",
-                         "compare", "export",  "previous", "next",    "batch",       "index-paint", "effects", "transform"};
+                         "compare", "export",  "previous", "next",    "batch",       "index-paint", "effects", "transform", "validate"};
     const std::string labels[] = {tr("Icon sizes…"),  tr("Gallery…"), tr("Hotspot…"), tr("Palette…"),
                                   tr("Alpha tools…"), tr("States…"),  tr("Compare…"), tr("Export…"),
-                                  tr("Previous"),     tr("Next"),     tr("Batch…"),   tr("Index paint"), tr("Effects"), tr("Transform")};
+                                  tr("Previous"),     tr("Next"),     tr("Batch…"),   tr("Index paint"), tr("Effects"), tr("Transform"), tr("Validate")};
     for (std::size_t index = 0; index < std::size(ids); ++index) {
         const std::shared_ptr<gf::Button> command =
             gf::make_control<gf::Button>(gf::StableId(std::string("icon-") + ids[index]), labels[index]);
@@ -63,13 +63,14 @@ void IconPanel::arrange(gf::Rect bounds) {
     set_child_layout(commands_[11], {120, 56, 102, 24});
     set_child_layout(commands_[12], {234, 56, 102, 24});
     set_child_layout(commands_[13], {348, 56, 102, 24});
+    set_child_layout(commands_[14], {6,96,102,20});
     for (std::size_t index = 0; index < 3; ++index) {
         set_child_layout(groups_[index],
                          {index * command_width, 80, index == 2 ? command_width * 2 : command_width, 15});
     }
     const double strip_width = std::max(1.0, bounds.width - command_plane_width - 12);
     set_child_layout(strip_, {command_plane_width + 6, 4, strip_width, 90});
-    set_child_layout(status_, {6, 96, std::max(1.0, bounds.width - 174), 20});
+    set_child_layout(status_, {114, 96, std::max(1.0, bounds.width - 282), 20});
 }
 void IconPanel::on_paint(gf::Painter& painter, gf::Rect) {
     for (const int index : {1, 2, 4}) {

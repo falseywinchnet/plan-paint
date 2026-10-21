@@ -922,5 +922,19 @@
   "Cell height": "Висота комірки",
   "Horizontal gap": "Проміжок по X",
   "Vertical gap": "Проміжок по Y",
-  "Opaque matte output": "Вивід із непрозорим тлом"
+  "Opaque matte output": "Вивід із непрозорим тлом",
+  "Validate": "Перевірити",
+  "Icon validation": "Перевірка значків",
+  "Required sizes": "Потрібні розміри",
+  "Any depth": "Будь-яка глибина",
+  "Missing profile sizes": "Відсутні розміри профілю",
+  "Duplicate size/depth entries": "Повтори розміру/глибини",
+  "Alpha counts: zero / partial / opaque": "Кількість пікселів за альфа: нуль / часткова / непрозора",
+  "Alpha changes on save": "Зміни альфа під час збереження",
+  "Legacy XOR pixels": "Застарілі XOR-пікселі",
+  "Compatibility notes": "Примітки про сумісність",
+  "PNG entries require PNG-aware icon consumers.": "Записи PNG потребують підтримки PNG у програмі значків.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "Часткова прозорість і старий XOR залежать від цільової програми.",
+  "Test custom dimensions and cursor hotspots in the target application.": "Перевірте нестандартні розміри й активні точки курсора в цільовій програмі.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Попередній перегляд створення, ефектів і смуг показує збільшення та обрізання; збережені пікселі не містять цієї історії."
 }

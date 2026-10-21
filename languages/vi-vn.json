@@ -922,5 +922,19 @@
   "Cell height": "Chiều cao ô",
   "Horizontal gap": "Khoảng ngang",
   "Vertical gap": "Khoảng dọc",
-  "Opaque matte output": "Đầu ra có nền đục"
+  "Opaque matte output": "Đầu ra có nền đục",
+  "Validate": "Kiểm tra",
+  "Icon validation": "Kiểm tra biểu tượng",
+  "Required sizes": "Kích thước yêu cầu",
+  "Any depth": "Độ sâu bất kỳ",
+  "Missing profile sizes": "Kích thước còn thiếu",
+  "Duplicate size/depth entries": "Mục trùng kích thước/độ sâu",
+  "Alpha counts: zero / partial / opaque": "Số điểm ảnh alpha: không / một phần / đục",
+  "Alpha changes on save": "Thay đổi alpha khi lưu",
+  "Legacy XOR pixels": "Điểm ảnh XOR cũ",
+  "Compatibility notes": "Ghi chú tương thích",
+  "PNG entries require PNG-aware icon consumers.": "Các mục PNG cần ứng dụng biểu tượng hỗ trợ PNG.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "Alpha một phần và XOR cũ phụ thuộc vào ứng dụng đích.",
+  "Test custom dimensions and cursor hotspots in the target application.": "Hãy kiểm tra kích thước tùy chỉnh và điểm nóng con trỏ trong ứng dụng đích.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Xem trước tạo ảnh, hiệu ứng và dải ảnh báo phóng lớn và cắt xén; điểm ảnh đã lưu không giữ lịch sử đó."
 }
