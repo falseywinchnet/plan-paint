@@ -158,6 +158,16 @@ text placement, modal transactions, asynchronous cancellation, Atlas sequences,
 and icon/cursor round trips. The native fixture opens an actual application,
 drives canvas input, checks tool/history state, and closes through the host.
 
+`paint-clipboard-native` starts two native Paint processes on the same desktop.
+One copies a four-pixel RGBA specimen; the other pastes it and checks exact bytes,
+including hidden RGB and partial alpha. The producer then copies its alpha as an
+opaque grayscale image, and the consumer verifies the transferred mask. This
+exercises Paint's commands and native host services across a process boundary.
+The four-platform CI matrix enables it with `PAINT_CLIPBOARD_TEST_ISOLATED=1`.
+Ordinary local CTest runs report this test as skipped; enable it only on a test
+desktop whose clipboard is available for the exchange. Both processes remain
+alive while data is transferred, including X11 selection-owner requests.
+
 The toolkit's Linux integration tests exchange large UTF-8 and PNG clipboard
 payloads with an external X11 process, exercise INCR transfers and file drops,
 and accept actual open/save dialogs. Native app screenshots and interactive

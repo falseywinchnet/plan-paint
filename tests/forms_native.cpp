@@ -3,6 +3,8 @@
 #include "safe_file.hpp"
 #include "fixtures/icon_reference.hpp"
 #include "forms/editor.hpp"
+#include "native_clipboard.hpp"
+#include "paths.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>
@@ -40,6 +42,9 @@ struct NativeExercise {
          corners_review = false, sticky_review = false, opacity_review = false, stamp_placement_review = false, advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     bool geometry_styles_review = false, markers_review = false;
+    std::string clipboard_role;
+    std::filesystem::path clipboard_directory;
+    std::unique_ptr<paint::tests::NativeClipboardExchange> clipboard_exchange;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -680,6 +685,12 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (!clipboard_role.empty()) {
+            clipboard_exchange = std::make_unique<paint::tests::NativeClipboardExchange>(
+                *editor, window, handle, clipboard_directory, clipboard_role == "--clipboard-producer");
+            entered = true;
+            return;
+        }
         if (markers_review) {
             document.new_image(660, 280);
             const char* names[] = {"None", "Open arrow", "Triangle", "Diamond", "Circle", "Bar",
@@ -1430,6 +1441,15 @@ int main(int argc, char** argv) {
         NativeRecoveryDirectory recovery;
         NativeExercise exercise;
         exercise.keep_open = argc > 1;
+        if (argc > 1 && (std::string(argv[1]) == "--clipboard-producer" || std::string(argv[1]) == "--clipboard-consumer")) {
+            const char* isolated = std::getenv("PAINT_CLIPBOARD_TEST_ISOLATED");
+            if (argc != 3 || !isolated || std::string(isolated) != "1") {
+                throw std::runtime_error("Clipboard exchange requires an explicitly isolated test desktop");
+            }
+            exercise.clipboard_role = argv[1];
+            exercise.clipboard_directory = paint::path_from_utf8(argv[2]);
+            exercise.keep_open = false;
+        }
         exercise.healing_review = argc > 1 && std::string(argv[1]) == "--healing";
         exercise.icon_svg_review = argc > 1 && std::string(argv[1]) == "--icon-svg";
         exercise.icon_production_review = exercise.icon_svg_review || (argc > 1 && std::string(argv[1]) == "--icon-production");
@@ -1514,6 +1534,9 @@ int main(int argc, char** argv) {
             std::make_unique<gf::Window>(exercise.editor, options.initial_size), std::move(options));
         if (result.callback_exception) {
             std::rethrow_exception(result.callback_exception);
+        }
+        if (exercise.clipboard_exchange && !(*exercise.clipboard_exchange).success()) {
+            throw std::runtime_error((*exercise.clipboard_exchange).error());
         }
         if (!result.accepted() || !exercise.entered) {
             throw std::runtime_error("Native application startup failed: error=" +
