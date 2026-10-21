@@ -2,6 +2,8 @@
 
 Plan Paint's original code is MIT, Copyright (c) 2026 joshuah.rainstar@gmail.com.
 
+- PlaySuite paper generator, `falseywinchnet/games` commit `c5ea5a658c99042d4eed0aa800e910abadd9e131`: MIT License - Modified, Copyright (c) 2026 Joshuah Rainstar. The unmodified source and license are in `vendor/playsuite-paper`; packages include `licenses/PlaySuite-paper-LICENSE.txt`.
+
 - Dear ImGui (optional comparison frontend) v1.91.9b, commit f5befd2d29e66809cd1110a152e375a7f1981f06: MIT, Copyright Omar Cornut. See vendor/imgui/LICENSE.txt.
 - stb, commit 2c980bb59875b0d32144a71867fbdebb2f77cd20: MIT option selected. See vendor/stb/LICENSE.
 - SDL3 (optional comparison frontend): zlib license. https://github.com/libsdl-org/SDL/blob/main/LICENSE.txt

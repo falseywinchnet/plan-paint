@@ -805,6 +805,7 @@ void Ribbon::add_options() {
     button("stamp-shapes-menu", tr("Circle"), 100 + static_cast<int>(Shape::Circle), {12, 36, 204, 54}, false,
            true);
     check("stamp-transparent", tr("Transparent stamp"), {12, 94, 210, 25});
+    button("context-sticky-note", tr("Edit note…"), -1, {398, 36, 235, 30});
     button("context-stamp-apply", tr("Apply"), -1, {242, 36, 135, 30});
     button("context-stamp-cancel", tr("Cancel"), -1, {242, 79, 135, 30});
     std::shared_ptr<gf::Label> placement_hint = gf::make_control<gf::Label>(
@@ -1057,6 +1058,9 @@ void Ribbon::show_page() {
             if (id.starts_with("stamp-shape-") || id == "stamp-shapes-menu") {
                 visible = tool == Tool::Stamp;
             }
+        }
+        if (id == "context-sticky-note") {
+            visible = page_ == 8 && (*editor).sticky_note_placement();
         }
         const bool placement = (*editor).stamp_placement_active();
         if (id == "context-stamp-apply" || id == "context-stamp-cancel") {
@@ -2425,8 +2429,8 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
                      tr("Carpet generator…"), tr("Dithering brush")};
         }
         if (id == "tool-10") {
-            ids = {"tool-10", "stamp-add", "stamp-clear"};
-            texts = {tr("Capture / place stamp"), tr("Add material"), tr("Clear captured stamp")};
+            ids = {"tool-10", "sticky-note", "stamp-add", "stamp-clear"};
+            texts = {tr("Capture / place stamp"), tr("Sticky note…"), tr("Add material"), tr("Clear captured stamp")};
         }
         height = 8 + 30 * ids.size();
         for (std::size_t i = 0; i < ids.size(); ++i) {

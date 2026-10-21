@@ -10,6 +10,7 @@
 #include "icon_states.hpp"
 #include "icon_effects.hpp"
 #include "numeric_transform.hpp"
+#include "sticky_note.hpp"
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
@@ -33,6 +34,7 @@ struct IconStateJob;
 struct IconExportJob;
 struct IconBatchJob;
 struct NumericTransformJob;
+struct StickyNoteJob;
 struct AssetBrowserWorker;
 struct AssetRevealJob;
 struct AssetBrowserResult;
@@ -60,6 +62,7 @@ enum class EditorDialogKind {
     icon_states,
     icon_effects,
     numeric_transform,
+    sticky_note,
     properties,
     settings,
     english_help,
@@ -99,6 +102,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_icon_states(const std::shared_ptr<IconStateJob>& job);
     void deliver_icon_export();
     void deliver_icon_batch(const std::shared_ptr<IconBatchJob>& job);
+    void deliver_sticky_note(const std::shared_ptr<StickyNoteJob>& job);
     void deliver_numeric_transform(const std::shared_ptr<NumericTransformJob>& job);
     void deliver_asset_reveal(std::shared_ptr<AssetRevealJob> job);
     void deliver_asset_browser(std::shared_ptr<const AssetBrowserResult> result);
@@ -118,6 +122,24 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_sticky_note();
+    void start_sticky_note();
+    void stop_sticky_note();
+    void invalidate_sticky_note();
+    void sticky_note_number(double);
+    void sticky_note_choice(std::optional<std::size_t>);
+    void sticky_note_text(const std::string&);
+    void sticky_note_clicked(gui_forms::ButtonBase&);
+    std::shared_ptr<StickyNoteJob> sticky_job_;
+    std::thread sticky_worker_;
+    StickyNoteSettings sticky_settings_;
+    std::uint64_t sticky_revision_ = 0, sticky_epoch_ = 0;
+    std::vector<std::shared_ptr<gui_forms::NumericUpDown>> sticky_values_;
+    std::shared_ptr<gui_forms::TextBox> sticky_text_, sticky_paper_color_, sticky_ink_color_;
+    std::shared_ptr<gui_forms::ComboBox> sticky_paper_, sticky_font_;
+    std::shared_ptr<gui_forms::RasterCanvas> sticky_canvas_;
+    std::shared_ptr<gui_forms::Label> sticky_status_;
+    std::shared_ptr<gui_forms::Button> sticky_preview_, sticky_place_, sticky_seed_;
     void initialize_numeric_transform();
     void start_numeric_transform();
     void stop_numeric_transform();

@@ -2379,6 +2379,75 @@ void await_reveal(gf::Window& window) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
+void await_sticky_note(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (!(*window.find("sticky-preview")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now() < deadline, "sticky preview worker timed out");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+void sticky_note_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.sticky_note_settings.width = 64;
+    editor.sticky_note_settings.height = 64;
+    editor.sticky_note_settings.padding = 4;
+    editor.sticky_note_settings.font.size = 12;
+    editor.sticky_note_settings.text = "Plan";
+    const std::size_t history = editor.document.undo_history.size();
+    editor.execute("sticky-note");
+    await_sticky_note(window);
+    require((*window.find("sticky-place")).enabled(), "fitting note should be placeable");
+    const std::shared_ptr<gf::TextBox> text = std::dynamic_pointer_cast<gf::TextBox>(window.find("sticky-text"));
+    (*text).set_text(std::string(200, 'W'));
+    require(!(*window.find("sticky-place")).enabled(), "editing must invalidate the old preview");
+    routed_button(window, "sticky-preview"); await_sticky_note(window);
+    require(!(*window.find("sticky-place")).enabled(), "overflowing note must not be placeable");
+    (*text).set_text("Paint");
+    routed_button(window, "sticky-preview"); await_sticky_note(window);
+    routed_button(window, "sticky-place");
+    require(!window.find("editor-dialog") && editor.sticky_note_placement() &&
+                editor.document.undo_history.size() == history && (*window.find("context-sticky-note")).visible(),
+            "placing a note must stage pixels and expose Edit note without modifying the image");
+    fixture.click(60, 40);
+    editor.stamp_scale = 0.75; editor.stamp_angle = 15;
+    editor.regenerate_stamp(); await_background(fixture);
+    routed_button(window, "context-sticky-note"); await_sticky_note(window);
+    const std::shared_ptr<gf::TextBox> revised = std::dynamic_pointer_cast<gf::TextBox>(window.find("sticky-text"));
+    require((*revised).text() == "Paint", "Edit note lost the text");
+    (*revised).set_text("Revised");
+    routed_button(window, "sticky-preview"); await_sticky_note(window);
+    routed_button(window, "sticky-place"); await_background(fixture);
+    require(editor.stamp_scale == 0.75 && editor.stamp_angle == 15 && editor.sticky_note_settings.text == "Revised",
+            "revising the note lost its placement transform or text");
+    routed_button(window, "context-sticky-note");
+    routed_button(window, "dialog-cancel");
+    require(editor.sticky_note_placement(), "cancelling Edit note must retain the prior placement");
+    routed_button(window, "context-stamp-apply");
+    require(!editor.sticky_note_placement() && editor.document.undo_history.size() == history + 1 &&
+                !white(editor.document.image.get(60, 40)), "applying a note must preserve its anchor and make one edit");
+    editor.execute("undo");
+    require(white(editor.document.image.get(60, 40)), "note Undo did not restore the canvas");
+    editor.execute("sticky-note"); await_sticky_note(window);
+    const std::shared_ptr<gf::NumericUpDown> padding = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("sticky-value-3"));
+    (*padding).set_value(40);
+    routed_button(window, "sticky-preview");
+    require(!(*window.find("sticky-place")).enabled() &&
+                !(*std::dynamic_pointer_cast<gf::Label>(window.find("dialog-error"))).text().empty(),
+            "invalid padding must explain why the note cannot be placed");
+    (*padding).set_value(4);
+    routed_button(window, "sticky-preview"); await_sticky_note(window);
+    editor.document.checkpoint();
+    routed_button(window, "sticky-place");
+    require(window.find("editor-dialog") && !editor.sticky_note_placement(), "stale note must not replace a changed document");
+    editor.close_editor_dialog();
+    editor.execute("sticky-note");
+    editor.close_editor_dialog();
+    static_cast<void>(window.drain_posted_work());
+    require(!window.find("editor-dialog"), "late paper delivery reopened a cancelled dialog");
+}
 void imported_stamp_placement_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5831,6 +5900,7 @@ int main(int argc, char** argv) {
             throw std::runtime_error("Unknown forms test suite.");
         }
         canvas_controls_without_dragging();
+        sticky_note_contracts();
         custom_pattern_canvas_is_independent();
         tool_cursor_routes();
         freehand_wand_picker_and_size();

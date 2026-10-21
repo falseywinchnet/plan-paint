@@ -45,6 +45,7 @@ struct CarpetWork {
 };
 } // namespace
 EditorDialog::~EditorDialog() {
+    stop_sticky_note();
     stop_numeric_transform();
     stop_icon_batch();
     stop_icon_states();
@@ -69,6 +70,7 @@ void EditorDialog::on_attached_to_window() {
     Control::on_attached_to_window();
     if (kind_ == EditorDialogKind::icon_validation) { start_icon_validation(); }
     if (kind_ == EditorDialogKind::toolbar_strip) { start_toolbar_strip(); }
+    if (kind_ == EditorDialogKind::sticky_note) { start_sticky_note(); }
     if (kind_ == EditorDialogKind::numeric_transform) { start_numeric_transform(); }
     if (kind_ == EditorDialogKind::icon_states) {
         render_icon_states();
@@ -94,6 +96,7 @@ void EditorDialog::on_attached_to_window() {
     }
 }
 void EditorDialog::on_detaching_from_window(gf::Window& window) noexcept {
+    stop_sticky_note();
     stop_numeric_transform();
     stop_icon_batch();
     stop_icon_states();

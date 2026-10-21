@@ -444,6 +444,7 @@ void Editor::publish_stamp_preview() {
 }
 void Editor::reset_stamp() {
     stamp_placement_ = false;
+    sticky_placement_ = false;
     if (transform_preview_stamp_) {
         end_transform_preview();
     }
@@ -491,6 +492,22 @@ void Editor::use_asset_stamp(Image image) {
     stamp_placement_ = true;
     regenerate_stamp();
     (*ribbon_).show_tool_context();
+    refresh();
+}
+void Editor::use_sticky_note(Image image, const StickyNoteSettings& settings) {
+    const bool editing = sticky_note_placement();
+    const Point center = stamp_placement_center_;
+    const double scale = stamp_scale, angle = stamp_angle, hardness = stamp_hardness;
+    use_asset_stamp(std::move(image));
+    if (editing) {
+        stamp_placement_center_ = center;
+        stamp_scale = scale;
+        stamp_angle = angle;
+        stamp_hardness = hardness;
+        update_stamp_hardness();
+    }
+    sticky_note_settings = settings;
+    sticky_placement_ = true;
     refresh();
 }
 bool Editor::can_apply_stamp_placement() const {
