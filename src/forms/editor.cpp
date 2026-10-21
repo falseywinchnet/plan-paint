@@ -1746,6 +1746,28 @@ void Editor::open_container(ImageContainer image, const std::string& path) {
         execute("atlas-grid");
     }
 }
+void Editor::open_generated_image(Image image) {
+    if (image.width < 1 || image.height < 1 ||
+        image.pixels.size() != static_cast<std::size_t>(image.width) * image.height) {
+        throw std::runtime_error("The generated image is empty or incomplete.");
+    }
+    close_editor_dialog();
+    if (!can_replace()) {
+        if (!pending_save_path.empty()) {
+            deferred_generated_image = std::move(image);
+        }
+        return;
+    }
+    install_generated_image(std::move(image));
+}
+void Editor::install_generated_image(Image image) {
+    ImageContainer container;
+    container.frames.push_back({std::move(image), 0, 0, {}});
+    open_container(std::move(container), "");
+    // Generated artwork has no backing file, even before the first paint stroke.
+    document.revision = document.next_revision++;
+    refresh();
+}
 bool Editor::save(bool save_as) {
     finish_warp(false);
     finish_text(true);
@@ -1963,6 +1985,7 @@ void Editor::close_editor_dialog() {
     pending_save_path.clear();
     deferred_command.clear();
     deferred_open_path.clear();
+    deferred_generated_image = {};
     if (editor_dialog_focus_ && attached_window()) {
         static_cast<void>((*attached_window()).end_focus_scope(editor_dialog_focus_));
         editor_dialog_focus_ = {};
@@ -1972,8 +1995,11 @@ void Editor::close_editor_dialog() {
 }
 void Editor::complete_deferred_save() {
     std::string command = deferred_command, path = deferred_open_path;
+    Image generated = std::move(deferred_generated_image);
     close_editor_dialog();
-    if (!path.empty()) {
+    if (!generated.pixels.empty()) {
+        install_generated_image(std::move(generated));
+    } else if (!path.empty()) {
         open_file(path);
     } else if (!command.empty()) {
         execute(command);
