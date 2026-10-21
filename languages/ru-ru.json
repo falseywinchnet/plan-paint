@@ -922,5 +922,19 @@
   "Cell height": "Высота ячейки",
   "Horizontal gap": "Интервал по X",
   "Vertical gap": "Интервал по Y",
-  "Opaque matte output": "Вывод с непрозрачным фоном"
+  "Opaque matte output": "Вывод с непрозрачным фоном",
+  "Validate": "Проверить",
+  "Icon validation": "Проверка значков",
+  "Required sizes": "Требуемые размеры",
+  "Any depth": "Любая глубина",
+  "Missing profile sizes": "Отсутствующие размеры профиля",
+  "Duplicate size/depth entries": "Повторы размера/глубины",
+  "Alpha counts: zero / partial / opaque": "Число пикселей по альфа: ноль / частичная / непрозрачная",
+  "Alpha changes on save": "Изменения альфа при сохранении",
+  "Legacy XOR pixels": "Устаревшие XOR-пиксели",
+  "Compatibility notes": "Примечания о совместимости",
+  "PNG entries require PNG-aware icon consumers.": "Для записей PNG нужна поддержка PNG в программе значков.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "Частичная прозрачность и старый XOR зависят от целевой программы.",
+  "Test custom dimensions and cursor hotspots in the target application.": "Проверьте нестандартные размеры и активные точки курсора в целевой программе.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Предпросмотр создания, эффектов и полос сообщает об увеличении и обрезке; сохранённые пиксели не содержат этой истории."
 }

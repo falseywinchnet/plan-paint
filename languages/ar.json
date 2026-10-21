@@ -922,5 +922,19 @@
   "Cell height": "ارتفاع الخلية",
   "Horizontal gap": "الفجوة الأفقية",
   "Vertical gap": "الفجوة الرأسية",
-  "Opaque matte output": "إخراج بخلفية معتمة"
+  "Opaque matte output": "إخراج بخلفية معتمة",
+  "Validate": "تحقق",
+  "Icon validation": "التحقق من الأيقونات",
+  "Required sizes": "الأحجام المطلوبة",
+  "Any depth": "أي عمق",
+  "Missing profile sizes": "أحجام مفقودة من الملف التعريفي",
+  "Duplicate size/depth entries": "إدخالات مكررة للحجم والعمق",
+  "Alpha counts: zero / partial / opaque": "أعداد ألفا: صفر / جزئي / معتم",
+  "Alpha changes on save": "تغييرات ألفا عند الحفظ",
+  "Legacy XOR pixels": "بكسلات XOR القديمة",
+  "Compatibility notes": "ملاحظات التوافق",
+  "PNG entries require PNG-aware icon consumers.": "تتطلب إدخالات PNG تطبيقات أيقونات تدعم PNG.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "يعتمد ألفا الجزئي وXOR القديم على التطبيق المستهدف.",
+  "Test custom dimensions and cursor hotspots in the target application.": "اختبر الأبعاد المخصصة ونقاط المؤشر الفعالة في التطبيق المستهدف.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "تعرض معاينات الإنشاء والتأثيرات والأشرطة التكبير والقص؛ ولا تحتفظ البكسلات المحفوظة بهذا السجل."
 }

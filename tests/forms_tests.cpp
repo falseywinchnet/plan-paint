@@ -1959,6 +1959,49 @@ void icon_palette_contracts() {
     std::filesystem::remove(palette_path);
 }
 
+void await_validation(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline=std::chrono::steady_clock::now()+std::chrono::seconds(30);
+    while (!(*window.find("validation-check")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now()<deadline,"validation worker completes");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+void icon_validation_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor=*fixture.editor; gf::Window& window=*fixture.window;
+    TestServices services; gf::HostSession session(window,service_capabilities(),&services);
+    require(session.dispatch({1,0,gf::HostAttachEvent{{800,520},1}}).accepted(),"validation host attaches");
+    paint::ImageContainer source; source.kind=paint::ContainerKind::Icon;
+    paint::IconFrame frame; frame.image.reset(16,16,{60,120,210,128}); source.frames={frame,frame};
+    editor.open_container(source,"");
+    const std::uint64_t revision=editor.document.revision;
+    routed_button(window,"icon-validate"); await_validation(window);
+    const std::shared_ptr<gf::TextBox> report=std::dynamic_pointer_cast<gf::TextBox>(window.find("validation-report"));
+    require(report && (*report).text().find("Missing profile sizes: 24 32 48 64 128 256")!=std::string::npos &&
+        (*report).text().find("Duplicate size/depth entries: 1")!=std::string::npos,"validation lists actual missing and duplicate entries");
+    const std::shared_ptr<gf::TextBox> sizes=std::dynamic_pointer_cast<gf::TextBox>(window.find("validation-sizes"));
+    (*sizes).set_text("16");
+    require(!(*window.find("validation-save")).enabled(),"profile edits invalidate report");
+    routed_button(window,"validation-check"); await_validation(window);
+    require((*report).text().find("Missing profile sizes: 0")!=std::string::npos,"custom profile is explicit");
+    const std::shared_ptr<gf::ComboBox> depth=std::dynamic_pointer_cast<gf::ComboBox>(window.find("validation-depth"));
+    (*depth).set_selected_index(2); routed_button(window,"validation-check"); await_validation(window);
+    require((*report).text().find("Missing profile sizes: 16")!=std::string::npos,"depth requirement uses saved output depth");
+    const std::filesystem::path path=std::filesystem::temp_directory_path()/
+        ("paint-validation-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".json");
+    services.path=path.string(); routed_button(window,"validation-save");
+    const std::vector<std::uint8_t> bytes=paint::read_image_bytes(path.string());
+    const std::string json(bytes.begin(),bytes.end());
+    require(json.find("\"requiredDepth\":4")!=std::string::npos && json.find("\"duplicateOrdinals\":[[1,2]]")!=std::string::npos,"JSON captures reviewed profile and original ordinals");
+    std::filesystem::remove(path);
+    (*sizes).set_text("16,"); routed_button(window,"validation-check"); await_validation(window);
+    require(!(*window.find("validation-save")).enabled(),"invalid profile cannot save stale report");
+    (*sizes).set_text("16"); routed_button(window,"validation-check"); editor.close_editor_dialog();
+    static_cast<void>(window.drain_posted_work());
+    require(editor.document.revision==revision && editor.document.undo_history.empty() &&
+        paint::equal(editor.document.image.get(0,0),frame.image.get(0,0)),"validation and cancellation do not edit pixels or history");
+}
 void await_strip(gf::Window& window) {
     const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now()+std::chrono::seconds(30);
     while (!(*window.find("strip-preview")).enabled()) {
@@ -5412,6 +5455,7 @@ void icon_production_contracts() {
         icon_representation_export();
         asset_browser_contracts();
         alpha_tools_contracts();
+        icon_validation_controls();
         toolbar_strip_controls();
         numeric_transform_controls();
         icon_effect_controls();

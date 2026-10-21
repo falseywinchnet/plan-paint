@@ -922,5 +922,19 @@
   "Cell height": "Hauteur de cellule",
   "Horizontal gap": "Espacement horizontal",
   "Vertical gap": "Espacement vertical",
-  "Opaque matte output": "Sortie sur fond opaque"
+  "Opaque matte output": "Sortie sur fond opaque",
+  "Validate": "Valider",
+  "Icon validation": "Validation des icônes",
+  "Required sizes": "Tailles requises",
+  "Any depth": "Toute profondeur",
+  "Missing profile sizes": "Tailles de profil manquantes",
+  "Duplicate size/depth entries": "Doublons de taille/profondeur",
+  "Alpha counts: zero / partial / opaque": "Comptage alpha : nul / partiel / opaque",
+  "Alpha changes on save": "Modifications alpha à l’enregistrement",
+  "Legacy XOR pixels": "Pixels XOR anciens",
+  "Compatibility notes": "Notes de compatibilité",
+  "PNG entries require PNG-aware icon consumers.": "Les entrées PNG exigent une application d’icônes compatible PNG.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "L’alpha partiel et l’ancien XOR dépendent de l’application cible.",
+  "Test custom dimensions and cursor hotspots in the target application.": "Testez les dimensions personnalisées et les points actifs du curseur dans l’application cible.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Les aperçus de génération, d’effets et de bandes signalent agrandissement et rognage ; les pixels enregistrés ne conservent pas cet historique."
 }

@@ -922,5 +922,19 @@
   "Cell height": "ঘরের উচ্চতা",
   "Horizontal gap": "অনুভূমিক ফাঁক",
   "Vertical gap": "উল্লম্ব ফাঁক",
-  "Opaque matte output": "অস্বচ্ছ পটভূমি আউটপুট"
+  "Opaque matte output": "অস্বচ্ছ পটভূমি আউটপুট",
+  "Validate": "যাচাই",
+  "Icon validation": "আইকন যাচাই",
+  "Required sizes": "প্রয়োজনীয় মাপ",
+  "Any depth": "যেকোনো গভীরতা",
+  "Missing profile sizes": "প্রোফাইলে অনুপস্থিত মাপ",
+  "Duplicate size/depth entries": "পুনরাবৃত্ত মাপ/গভীরতা",
+  "Alpha counts: zero / partial / opaque": "আলফা গণনা: শূন্য / আংশিক / অস্বচ্ছ",
+  "Alpha changes on save": "সংরক্ষণে আলফা পরিবর্তন",
+  "Legacy XOR pixels": "পুরোনো XOR পিক্সেল",
+  "Compatibility notes": "সামঞ্জস্যের নোট",
+  "PNG entries require PNG-aware icon consumers.": "PNG এন্ট্রির জন্য PNG সমর্থিত আইকন অ্যাপ প্রয়োজন।",
+  "Partial alpha and legacy XOR depend on the target consumer.": "আংশিক আলফা এবং পুরোনো XOR গন্তব্য অ্যাপের ওপর নির্ভর করে।",
+  "Test custom dimensions and cursor hotspots in the target application.": "গন্তব্য অ্যাপে নিজস্ব মাপ এবং কার্সরের হটস্পট পরীক্ষা করুন।",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "তৈরি, প্রভাব এবং স্ট্রিপের পূর্বরূপ বড় করা ও ছাঁটাই দেখায়; সংরক্ষিত পিক্সেল সেই ইতিহাস রাখে না।"
 }

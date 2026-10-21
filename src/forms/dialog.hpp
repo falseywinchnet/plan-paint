@@ -5,6 +5,7 @@
 #include "icon_batch.hpp"
 #include "icon_export.hpp"
 #include "icon_sheet.hpp"
+#include "icon_validation.hpp"
 #include "toolbar_strip.hpp"
 #include "icon_states.hpp"
 #include "icon_effects.hpp"
@@ -26,6 +27,7 @@ class EditorDialog;
 struct CarpetRenderJob;
 struct DitherRenderJob;
 struct IconSheetJob;
+struct IconValidationJob;
 struct ToolbarStripJob;
 struct IconStateJob;
 struct IconExportJob;
@@ -47,6 +49,7 @@ enum class EditorDialogKind {
     hotspot,
     atlas_gallery,
     icon_sheet,
+    icon_validation,
     toolbar_strip,
     icon_export,
     icon_batch,
@@ -90,6 +93,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_carpet();
     void deliver_dither();
     void deliver_icon_sheet();
+    void deliver_icon_validation(const std::shared_ptr<IconValidationJob>& job);
     void deliver_toolbar_strip(const std::shared_ptr<ToolbarStripJob>& job);
     void deliver_icon_states(const std::shared_ptr<IconStateJob>& job);
     void deliver_icon_export();
@@ -295,6 +299,18 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::CheckBox> strip_fit_;
     std::shared_ptr<gui_forms::RasterCanvas> strip_canvas_;
     std::shared_ptr<gui_forms::Button> strip_preview_, strip_export_;
+    void initialize_icon_validation();
+    void start_icon_validation();
+    void stop_icon_validation();
+    void invalidate_icon_validation();
+    void validation_text(const std::string&);
+    void validation_choice(std::optional<std::size_t>);
+    void validation_clicked(gui_forms::ButtonBase&);
+    std::shared_ptr<IconValidationJob> validation_job_;
+    std::thread validation_worker_;
+    std::shared_ptr<gui_forms::TextBox> validation_sizes_, validation_report_;
+    std::shared_ptr<gui_forms::ComboBox> validation_depth_;
+    std::shared_ptr<gui_forms::Button> validation_check_, validation_save_;
     void initialize_icon_sheet();
     void render_icon_sheet_preview();
     void stop_icon_sheet();

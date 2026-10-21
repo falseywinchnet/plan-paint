@@ -37,7 +37,7 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_svg_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
+         icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
@@ -336,11 +336,11 @@ struct NativeExercise {
         control.invalidate_subtree(gf::Dirty::paint);
     }
     void inspect_frame(gf::Window& window) {
-        if (icon_effects_review || numeric_transform_review || toolbar_strip_review) {
+        if (icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
             repaint_tree(*window.root());
             repaint_tree(*window.find("editor-dialog"));
         }
-        const gf::Size size = icon_effects_review || numeric_transform_review || toolbar_strip_review ? window.client_size() : gf::Size{1280,820};
+        const gf::Size size = icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
         std::unique_ptr<gf::PaintFramebuffer> framebuffer = window.create_framebuffer(size, window.scale());
         if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
             throw std::runtime_error("Native framebuffer is unavailable");
@@ -405,6 +405,13 @@ struct NativeExercise {
                     throw std::runtime_error("Native SVG generation preview lost vector provenance");
                 }
             }
+            return;
+        }
+        if (icon_validation_review) {
+            const std::shared_ptr<gf::TextBox> report=std::dynamic_pointer_cast<gf::TextBox>(window.find("validation-report"));
+            const gf::Control::Ptr close=window.find("dialog-cancel");
+            if (!painted || !report || (*report).text().find("Duplicate size/depth entries: 1")==std::string::npos ||
+                (*close).absolute_bounds().bottom()>window.client_size().height) { throw std::runtime_error("Native validation report did not render or fit"); }
             return;
         }
         if (toolbar_strip_review) {
@@ -645,6 +652,21 @@ struct NativeExercise {
             if (!handle.request_close().accepted()) {
                 throw std::runtime_error("Native batch close failed");
             }
+            return;
+        }
+        if (icon_validation_review) {
+            paint::ImageContainer source; source.kind=paint::ContainerKind::Icon;
+            paint::IconFrame frame; frame.image.reset(16,16,{40,130,220,128}); source.frames={frame,frame};
+            frame.image.reset(32,32,{70,180,110,255}); source.frames.push_back(frame);
+            (*editor).open_container(source,""); (*editor).execute("atlas-validate");
+            const std::chrono::steady_clock::time_point deadline=std::chrono::steady_clock::now()+std::chrono::seconds(30);
+            while (!(*window.find("validation-check")).enabled()) {
+                static_cast<void>(window.drain_posted_work());
+                if (std::chrono::steady_clock::now()>deadline) { throw std::runtime_error("Native validation timed out"); }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            window.perform_layout(); inspect_frame(window); (*editor).close_editor_dialog(); entered=true;
+            if (!handle.request_close().accepted()) { throw std::runtime_error("Native validation close failed"); }
             return;
         }
         if (toolbar_strip_review) {
@@ -1131,6 +1153,7 @@ int main(int argc, char** argv) {
             (argc > 1 && std::string(argv[1]) == "--icon-palette");
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
+        exercise.icon_validation_review = argc > 1 && std::string(argv[1]) == "--icon-validation";
         exercise.toolbar_strip_review = argc > 1 && std::string(argv[1]) == "--toolbar-strip";
         exercise.numeric_transform_review = argc > 1 && std::string(argv[1]) == "--numeric-transform";
         exercise.icon_effects_review = argc > 1 && std::string(argv[1]) == "--icon-effects";
@@ -1143,7 +1166,7 @@ int main(int argc, char** argv) {
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
             exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
-            exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {
+            exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
@@ -1165,8 +1188,8 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size = exercise.icon_formats_review || exercise.icon_states_review ||
-                                       exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review || exercise.icon_sheet_review
+        options.initial_size = exercise.icon_export_review || exercise.icon_formats_review || exercise.icon_states_review ||
+                                       exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review || exercise.icon_sheet_review
                                    ? gf::Size{800, 520}
                                : exercise.compact ? gf::Size{800, 600}
                                                   : gf::Size{1280, 820};

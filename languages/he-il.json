@@ -922,5 +922,19 @@
   "Cell height": "גובה תא",
   "Horizontal gap": "רווח אופקי",
   "Vertical gap": "רווח אנכי",
-  "Opaque matte output": "פלט עם רקע אטום"
+  "Opaque matte output": "פלט עם רקע אטום",
+  "Validate": "אימות",
+  "Icon validation": "אימות סמלים",
+  "Required sizes": "גדלים נדרשים",
+  "Any depth": "כל עומק",
+  "Missing profile sizes": "גדלים חסרים בפרופיל",
+  "Duplicate size/depth entries": "רשומות גודל ועומק כפולות",
+  "Alpha counts: zero / partial / opaque": "ספירת אלפא: אפס / חלקית / אטומה",
+  "Alpha changes on save": "שינויי אלפא בשמירה",
+  "Legacy XOR pixels": "פיקסלי XOR ישנים",
+  "Compatibility notes": "הערות תאימות",
+  "PNG entries require PNG-aware icon consumers.": "רשומות PNG דורשות יישומי סמלים התומכים ב-PNG.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "אלפא חלקית ו-XOR ישן תלויים ביישום היעד.",
+  "Test custom dimensions and cursor hotspots in the target application.": "יש לבדוק ממדים מותאמים ונקודות פעילות של הסמן ביישום היעד.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "תצוגות מקדימות של יצירה, אפקטים ורצועות מציגות הגדלה וחיתוך; הפיקסלים השמורים אינם שומרים היסטוריה זו."
 }

@@ -1,5 +1,57 @@
 # Icon and cursor production
 
+## Validate an icon or cursor family
+
+**Icon → Validate** audits every current representation without editing the
+document. The default required square sizes are 16, 24, 32, 48, 64, 128 and 256
+at 32 bits per pixel. These are Plan Paint's selected production profile, not
+a claim that every consumer requires every size. Enter 1–32 distinct,
+comma-separated sizes in the 1–256 range, and choose 32 bpp, 8 bpp, 4 bpp or
+**Any depth**. A rectangular image does not satisfy a required square size.
+
+Each representation is encoded with the same ICO/CUR writer used by Save, then
+decoded in memory. This tests the actual retained or newly generated payload.
+The audit records the decoded output storage and depth, malformed image data,
+invalid hotspots, and encoding/decoding failures. A failed representation cannot
+satisfy the profile. Missing sizes are computed at the requested saved depth;
+changing an indexed image to ordinary RGBA may therefore make an indexed profile
+incomplete. Validation does not add missing sizes or change depth automatically.
+
+Duplicate groups contain original one-based ordinals sharing saved width, height
+and bit depth. Different depths at the same dimensions remain distinct. PNG and
+DIB representations with the same dimensions and depth are in the same duplicate
+group. Duplicates are advisory and are never deleted automatically.
+
+For each valid representation, the report shows imported encoding when available,
+current save encoding, and pixel counts for alpha zero, partial alpha (1–254),
+and opaque alpha (255). It keeps three distributions separate: the immutable
+source snapshot, current pixels, and pixels decoded from the saved payload. The
+alpha-change count compares current and decoded alpha at every pixel, so a change
+is visible even when aggregate counts happen to match. Legacy XOR pixels are
+counted separately: their zero-alpha canvas sentinels do not mean that the
+original icon is transparent on every background.
+
+The compatibility notes call out PNG-aware consumers, partial alpha, legacy XOR,
+custom dimensions and cursor hotspots. They describe conditions to verify in the
+target application; they are not a certification of that application. Microsoft's
+[icon resource overview](https://learn.microsoft.com/en-us/windows/win32/menurc/about-icons)
+describes multiple sizes and depths, while its
+[PNG icon format notes](https://devblogs.microsoft.com/oldnewthing/20101022-00/?p=12473)
+describe PNG entries and their alpha-derived masks.
+
+Upscaling is reported where sources and targets are selected in generation and
+strip previews. Shadow clipping is reported in the effect preview. The family
+audit does not invent that history from saved pixels.
+
+Changing the profile invalidates the report. **Validate** captures a fresh current
+family and runs the audit on a background worker; closing cancels it. **Save
+report** writes the reviewed snapshot as version-1 JSON. Its `requiredSizes` and
+`requiredDepth` describe the profile (`0` means any depth); `missingSizes`,
+`duplicateOrdinals`, and `frames` retain the findings. Frame ordinals are
+one-based. Alpha arrays follow the explicit `alphaBuckets` order of zero,
+partial, opaque. `valid` means that this representation encoded and decoded;
+it does not mean profile completeness or universal consumer compatibility.
+
 ## Toolbar strips from Atlas cells
 
 For a sprite sheet, **Atlas → Toolbar strip** uses the current Atlas cell grid.

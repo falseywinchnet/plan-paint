@@ -922,5 +922,19 @@
   "Cell height": "Zellenhöhe",
   "Horizontal gap": "Horizontaler Abstand",
   "Vertical gap": "Vertikaler Abstand",
-  "Opaque matte output": "Deckende Hintergrundausgabe"
+  "Opaque matte output": "Deckende Hintergrundausgabe",
+  "Validate": "Prüfen",
+  "Icon validation": "Symbolprüfung",
+  "Required sizes": "Erforderliche Größen",
+  "Any depth": "Beliebige Farbtiefe",
+  "Missing profile sizes": "Fehlende Profilgrößen",
+  "Duplicate size/depth entries": "Doppelte Größen/Farbtiefen",
+  "Alpha counts: zero / partial / opaque": "Alpha-Anzahlen: null / teilweise / deckend",
+  "Alpha changes on save": "Alpha-Änderungen beim Speichern",
+  "Legacy XOR pixels": "Alte XOR-Pixel",
+  "Compatibility notes": "Kompatibilitätshinweise",
+  "PNG entries require PNG-aware icon consumers.": "PNG-Einträge benötigen PNG-fähige Symbolprogramme.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "Teiltransparenz und altes XOR hängen vom Zielprogramm ab.",
+  "Test custom dimensions and cursor hotspots in the target application.": "Eigene Abmessungen und Cursor-Hotspots im Zielprogramm testen.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Erzeugungs-, Effekt- und Streifenvorschauen melden Vergrößerung und Beschnitt; gespeicherte Pixel enthalten diesen Verlauf nicht."
 }

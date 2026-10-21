@@ -922,5 +922,19 @@
   "Cell height": "セル高さ",
   "Horizontal gap": "横の間隔",
   "Vertical gap": "縦の間隔",
-  "Opaque matte output": "不透明な背景で出力"
+  "Opaque matte output": "不透明な背景で出力",
+  "Validate": "検証",
+  "Icon validation": "アイコン検証",
+  "Required sizes": "必要なサイズ",
+  "Any depth": "任意の色深度",
+  "Missing profile sizes": "プロファイルに不足するサイズ",
+  "Duplicate size/depth entries": "サイズと色深度の重複",
+  "Alpha counts: zero / partial / opaque": "アルファ別の数：ゼロ / 半透明 / 不透明",
+  "Alpha changes on save": "保存時のアルファ変更",
+  "Legacy XOR pixels": "従来の XOR ピクセル",
+  "Compatibility notes": "互換性の注意事項",
+  "PNG entries require PNG-aware icon consumers.": "PNG エントリには PNG 対応のアイコン利用アプリが必要です。",
+  "Partial alpha and legacy XOR depend on the target consumer.": "半透明アルファと従来の XOR の表示は対象アプリによって異なります。",
+  "Test custom dimensions and cursor hotspots in the target application.": "カスタムサイズとカーソルのホットスポットを対象アプリで確認してください。",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "生成・効果・画像帯のプレビューは拡大と切り抜きを報告します。保存されたピクセルにその履歴は残りません。"
 }

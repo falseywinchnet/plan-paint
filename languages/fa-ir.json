@@ -922,5 +922,19 @@
   "Cell height": "ارتفاع خانه",
   "Horizontal gap": "فاصلهٔ افقی",
   "Vertical gap": "فاصلهٔ عمودی",
-  "Opaque matte output": "خروجی با پس‌زمینهٔ مات"
+  "Opaque matte output": "خروجی با پس‌زمینهٔ مات",
+  "Validate": "اعتبارسنجی",
+  "Icon validation": "اعتبارسنجی آیکون",
+  "Required sizes": "اندازه‌های لازم",
+  "Any depth": "هر عمقی",
+  "Missing profile sizes": "اندازه‌های موجودنبودۀ نمایه",
+  "Duplicate size/depth entries": "ورودی‌های تکراری اندازه و عمق",
+  "Alpha counts: zero / partial / opaque": "شمار آلفا: صفر / جزئی / مات",
+  "Alpha changes on save": "تغییرات آلفا هنگام ذخیره",
+  "Legacy XOR pixels": "پیکسل‌های XOR قدیمی",
+  "Compatibility notes": "یادداشت‌های سازگاری",
+  "PNG entries require PNG-aware icon consumers.": "ورودی‌های PNG به برنامه‌های آیکون با پشتیبانی PNG نیاز دارند.",
+  "Partial alpha and legacy XOR depend on the target consumer.": "آلفای جزئی و XOR قدیمی به برنامۀ مقصد وابسته‌اند.",
+  "Test custom dimensions and cursor hotspots in the target application.": "اندازه‌های سفارشی و نقاط فعال مکان‌نما را در برنامۀ مقصد آزمایش کنید.",
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "پیش‌نمایش تولید، جلوه و نوار، بزرگ‌نمایی و برش را گزارش می‌کند؛ پیکسل‌های ذخیره‌شده این سابقه را نگه نمی‌دارند."
 }
