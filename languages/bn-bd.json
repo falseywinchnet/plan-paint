@@ -849,5 +849,8 @@
   "Variant exported.": "সংস্করণ রপ্তানি হয়েছে।",
   "Choose an ICO/CUR filename matching this export.": "এই রপ্তানির উপযোগী ICO/CUR ফাইলের নাম বেছে নিন।",
   "Export to a separate file; the source cannot be replaced.": "আলাদা ফাইলে রপ্তানি করুন; উৎস প্রতিস্থাপন করা যাবে না।",
-  "Choose a JSON filename for this report.": "এই প্রতিবেদনের জন্য JSON ফাইলের নাম বেছে নিন।"
+  "Choose a JSON filename for this report.": "এই প্রতিবেদনের জন্য JSON ফাইলের নাম বেছে নিন।",
+  "Icon": "আইকন",
+  "Color & alpha": "রং ও আলফা",
+  "Production": "উৎপাদন"
 }

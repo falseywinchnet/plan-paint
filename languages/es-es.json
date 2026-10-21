@@ -849,5 +849,8 @@
   "Variant exported.": "Variante exportada.",
   "Choose an ICO/CUR filename matching this export.": "Elija un nombre ICO/CUR que corresponda a esta exportación.",
   "Export to a separate file; the source cannot be replaced.": "Exporte a otro archivo; no se puede reemplazar el original.",
-  "Choose a JSON filename for this report.": "Elija un nombre de archivo JSON para este informe."
+  "Choose a JSON filename for this report.": "Elija un nombre de archivo JSON para este informe.",
+  "Icon": "Icono",
+  "Color & alpha": "Color y alfa",
+  "Production": "Producción"
 }

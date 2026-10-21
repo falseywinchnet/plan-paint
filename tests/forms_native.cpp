@@ -34,7 +34,8 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         alpha_tools_review = false, icon_palette_review = false, icon_states_review = false;
+         alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
+         icon_ribbon_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -349,6 +350,18 @@ struct NativeExercise {
             }
             return;
         }
+        if (icon_ribbon_review) {
+            const std::shared_ptr<gf::Button> tab =
+                std::dynamic_pointer_cast<gf::Button>(window.find("icon-tab"));
+            const std::shared_ptr<gf::Label> status =
+                std::dynamic_pointer_cast<gf::Label>(window.find("icon-status"));
+            if (!painted || !tab || !(*tab).selected() || !status ||
+                (*status).text().find("32 × 32") == std::string::npos ||
+                !(*window.find("icon-export")).enabled()) {
+                throw std::runtime_error("Native contextual icon ribbon did not render");
+            }
+            return;
+        }
         if (icon_states_review) {
             const std::shared_ptr<gf::RasterCanvas> preview =
                 std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("state-after"));
@@ -359,7 +372,7 @@ struct NativeExercise {
         }
         if (icon_formats_review) {
             const std::shared_ptr<gf::Label> status =
-                std::dynamic_pointer_cast<gf::Label>(window.find("atlas-status"));
+                std::dynamic_pointer_cast<gf::Label>(window.find("icon-status"));
             if (!painted || !status || (*status).text().find("Save: 32 bpp DIB") == std::string::npos) {
                 throw std::runtime_error("Native representation format status did not render");
             }
@@ -427,6 +440,20 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (icon_ribbon_review) {
+            const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+            document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
+            document.make_icon_sizes({16, 32, 48, 128, 256}, false);
+            (*editor).open_container(document.output_container(false), "");
+            (*editor).select_frame(1, false);
+            window.perform_layout();
+            inspect_frame(window);
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native icon ribbon close failed");
+            }
+            return;
+        }
         if (icon_states_review) {
             const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
             document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
@@ -597,8 +624,8 @@ struct NativeExercise {
             (*editor).execute("atlas-icons");
             (*editor).close_editor_dialog();
             window.perform_layout();
-            const gf::Rect panel = (*window.find("atlas-panel")).absolute_bounds();
-            const char* commands[] = {"atlas-alpha-tools", "atlas-palette"};
+            const gf::Rect panel = (*window.find("icon-panel")).absolute_bounds();
+            const char* commands[] = {"icon-alpha-tools", "icon-palette"};
             for (const char* command : commands) {
                 const gf::Rect bounds = (*window.find(command)).absolute_bounds();
                 if (bounds.y < panel.y || bounds.bottom() > panel.bottom()) {
@@ -607,8 +634,7 @@ struct NativeExercise {
                 const gf::Point point{bounds.x + bounds.width / 2, bounds.y + bounds.height / 2};
                 window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, point});
                 window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, point});
-                if (!window.find(std::string(command) == "atlas-palette" ? "palette-after"
-                                                                         : "alpha-before")) {
+                if (!window.find(std::string(command) == "icon-palette" ? "palette-after" : "alpha-before")) {
                     throw std::runtime_error("Native pointer could not open icon command");
                 }
                 (*editor).close_editor_dialog();
@@ -784,11 +810,13 @@ int main(int argc, char** argv) {
         exercise.icon_export_review = argc > 1 && std::string(argv[1]) == "--icon-export";
         exercise.icon_palette_review = argc > 1 && std::string(argv[1]) == "--icon-palette";
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
+        exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
         exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
-            exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review) {
+            exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
+            exercise.icon_ribbon_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
@@ -810,10 +838,11 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size = exercise.icon_formats_review || exercise.icon_states_review
-                                   ? gf::Size{800, 520}
-                               : exercise.compact ? gf::Size{800, 600}
-                                                  : gf::Size{1280, 820};
+        options.initial_size =
+            exercise.icon_formats_review || exercise.icon_states_review || exercise.icon_ribbon_review
+                ? gf::Size{800, 520}
+            : exercise.compact ? gf::Size{800, 600}
+                               : gf::Size{1280, 820};
         options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;
         options.ready = std::bind(&NativeExercise::ready, std::ref(exercise), std::placeholders::_1,

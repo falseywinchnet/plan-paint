@@ -849,5 +849,8 @@
   "Variant exported.": "バリエーションを書き出しました。",
   "Choose an ICO/CUR filename matching this export.": "この書き出しに合う ICO/CUR ファイル名を選んでください。",
   "Export to a separate file; the source cannot be replaced.": "別ファイルに書き出してください。元ファイルは置き換えられません。",
-  "Choose a JSON filename for this report.": "このレポートの JSON ファイル名を選んでください。"
+  "Choose a JSON filename for this report.": "このレポートの JSON ファイル名を選んでください。",
+  "Icon": "アイコン",
+  "Color & alpha": "色とアルファ",
+  "Production": "制作"
 }

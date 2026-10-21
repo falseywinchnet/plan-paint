@@ -849,5 +849,8 @@
   "Variant exported.": "Đã xuất biến thể.",
   "Choose an ICO/CUR filename matching this export.": "Chọn tên tệp ICO/CUR phù hợp với lần xuất này.",
   "Export to a separate file; the source cannot be replaced.": "Xuất sang tệp riêng; không thể thay thế tệp nguồn.",
-  "Choose a JSON filename for this report.": "Chọn tên tệp JSON cho báo cáo này."
+  "Choose a JSON filename for this report.": "Chọn tên tệp JSON cho báo cáo này.",
+  "Icon": "Biểu tượng",
+  "Color & alpha": "Màu và alpha",
+  "Production": "Sản xuất"
 }

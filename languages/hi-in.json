@@ -849,5 +849,8 @@
   "Variant exported.": "रूपांतर निर्यात हुआ।",
   "Choose an ICO/CUR filename matching this export.": "इस निर्यात से मेल खाता ICO/CUR फ़ाइल नाम चुनें।",
   "Export to a separate file; the source cannot be replaced.": "अलग फ़ाइल में निर्यात करें; स्रोत को बदला नहीं जा सकता।",
-  "Choose a JSON filename for this report.": "इस रिपोर्ट के लिए JSON फ़ाइल नाम चुनें।"
+  "Choose a JSON filename for this report.": "इस रिपोर्ट के लिए JSON फ़ाइल नाम चुनें।",
+  "Icon": "आइकन",
+  "Color & alpha": "रंग और अल्फ़ा",
+  "Production": "उत्पादन"
 }
