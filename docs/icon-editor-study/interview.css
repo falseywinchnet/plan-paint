@@ -377,13 +377,8 @@ textarea::placeholder { color: #6e8090; }
   .visual, .preview-card, .decision-example { print-color-adjust: exact; }
 }
 
-/* Outcome specimens and local question navigation. These are design examples,
+/* Outcome specimens. These are design examples,
    not measurements of a reference filter or codec. */
-.choice-overview { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 14px; }
-.choice-overview a { display:flex; align-items:center; gap:7px; padding:7px 9px; border:1px solid #b7c8d7; background:#f4f8fb; text-decoration:none; font-size:12px; }
-.choice-overview a:hover { background:#fff1cc; border-color:#a37a28; }
-.choice-overview b { color:#294f70; }
-.choice-overview .comments-jump { margin-left:auto; background:white; }
 .preview-card { scroll-margin-top:100px; }
 .result-specimen { border:1px solid #91a9bf; border-radius:3px; overflow:hidden; background:#eef4fa; }
 .result-content { padding:12px; }
@@ -407,11 +402,21 @@ textarea::placeholder { color: #6e8090; }
 .inspector-body .result-image { height:220px; }
 .inspector-body .result-image svg { width:160px; height:160px; }
 @media (max-width:700px) {
-  .choice-overview { gap:5px; }
-  .choice-overview a { width:100%; font-size:13px; }
-  .choice-overview .comments-jump { width:auto; margin-left:0; }
   .result-image { height:95px; }
   .visual-consequence { font-size:13px; }
   .question-end > span { display:none; }
 }
-@media print { .choice-overview { display:none; } }
+/* Keep the previews adjacent to the decision, including in the narrow app panel. */
+.visual-question .answer-heading { margin: 8px 0; }
+.visual-question .answer-heading span { font-size: 12px; }
+.choice-outcome { display: block; margin-top: 9px; padding-top: 9px; border-top: 1px solid #d1dce6; color: #425d75; }
+.choice-outcome b { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: 3px; }
+@media (max-width:700px) {
+  .visual-question .answer-heading span { display: inline; margin-left: 6px; }
+  .question-top { margin-bottom: 6px; }
+  .question-hint { margin: 6px 0 10px; }
+  .visual-choice { padding: 9px 11px; }
+  .visual-choice small { grid-column: 3; }
+  .preview-gallery { gap: 12px; }
+  .chapter, .question, #review, textarea, .preview-card { scroll-margin-top: 88px; }
+}
