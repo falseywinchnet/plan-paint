@@ -237,9 +237,105 @@ IconPaletteResult convert_icon_palette(const IconFrame& source, const IconPalett
     }
     std::shared_ptr<IconSource> encoded = std::make_shared<IconSource>();
     (*encoded).format = {IconStorage::Dib, options.bits_per_pixel, 1u << options.bits_per_pixel};
+    (*encoded).palette = result.palette;
+    (*encoded).palette.resize(1u << options.bits_per_pixel, {0, 0, 0, 255});
+    (*encoded).indices = indices;
     (*encoded).image = result.frame.image;
     (*encoded).payload = indexed_dib(result.frame.image, result.palette, indices, options.bits_per_pixel);
     result.frame.source = std::move(encoded);
+    return result;
+}
+bool has_icon_palette(const IconFrame& frame) {
+    if (frame.image.width < 1 || frame.image.height < 1 || frame.image.width > 256 ||
+        frame.image.height > 256 ||
+        frame.image.pixels.size() != static_cast<std::size_t>(frame.image.width) * frame.image.height ||
+        !icon_source_matches(frame)) {
+        return false;
+    }
+    const IconSource& encoded = *frame.source;
+    const unsigned depth = encoded.format.bits_per_pixel;
+    if (encoded.format.storage != IconStorage::Dib || (depth != 1 && depth != 4 && depth != 8) ||
+        encoded.palette.empty() || encoded.palette.size() > (1u << depth) ||
+        encoded.indices.size() != frame.image.pixels.size()) {
+        return false;
+    }
+    for (std::size_t i = 0; i < encoded.indices.size(); ++i) {
+        if (encoded.indices[i] >= encoded.palette.size() || legacy_xor_pixel(frame, i)) {
+            return false;
+        }
+    }
+    return true;
+}
+namespace {
+void require_palette(const IconFrame& frame, unsigned entry) {
+    if (!has_icon_palette(frame)) {
+        throw std::runtime_error("Convert this image to an indexed palette before editing entries.");
+    }
+    if (entry >= (*frame.source).palette.size()) {
+        throw std::runtime_error("Palette entry is outside the current palette.");
+    }
+}
+void publish_indexed_edit(IconFrame& frame, std::shared_ptr<IconSource> encoded) {
+    (*encoded).image = frame.image;
+    (*encoded).xor_pixels.clear();
+    (*encoded).payload =
+        indexed_dib(frame.image, (*encoded).palette, (*encoded).indices, (*encoded).format.bits_per_pixel);
+    (*encoded).format.palette_colors = 1u << (*encoded).format.bits_per_pixel;
+    (*encoded).palette.resize((*encoded).format.palette_colors, {0, 0, 0, 255});
+    frame.source = std::move(encoded);
+}
+} // namespace
+IconFrame edit_icon_palette_entry(const IconFrame& source, unsigned entry, Color color) {
+    require_palette(source, entry);
+    if (color.a != 255) {
+        throw std::runtime_error("Indexed palette entries require opaque RGB colors.");
+    }
+    const IconSource& original = *source.source;
+    for (std::size_t i = 0; i < original.indices.size(); ++i) {
+        if (original.indices[i] == entry && !source.image.pixels[i].a && (color.r || color.g || color.b)) {
+            throw std::runtime_error("This black entry is used by transparent pixels and must remain black.");
+        }
+    }
+    if (equal(original.palette[entry], color)) {
+        return source;
+    }
+    IconFrame result = source;
+    std::shared_ptr<IconSource> encoded = std::make_shared<IconSource>(original);
+    (*encoded).palette[entry] = color;
+    for (std::size_t i = 0; i < original.indices.size(); ++i) {
+        if (original.indices[i] == entry && result.image.pixels[i].a) {
+            result.image.pixels[i] = color;
+        }
+    }
+    publish_indexed_edit(result, std::move(encoded));
+    return result;
+}
+IconFrame paint_icon_indices(const IconFrame& source, const std::vector<std::size_t>& pixels, unsigned entry,
+                             bool transparent) {
+    require_palette(source, entry);
+    const IconSource& original = *source.source;
+    Color color = original.palette[entry];
+    if (transparent && (color.r || color.g || color.b)) {
+        throw std::runtime_error("Transparent indexed pixels require a black palette entry.");
+    }
+    color.a = transparent ? 0 : 255;
+    for (std::size_t pixel : pixels) {
+        if (pixel >= original.indices.size()) {
+            throw std::runtime_error("Indexed paint position is outside the current image.");
+        }
+    }
+    bool changed = false;
+    IconFrame result = source;
+    std::shared_ptr<IconSource> encoded = std::make_shared<IconSource>(original);
+    for (std::size_t pixel : pixels) {
+        changed = changed || (*encoded).indices[pixel] != entry || !equal(result.image.pixels[pixel], color);
+        (*encoded).indices[pixel] = entry;
+        result.image.pixels[pixel] = color;
+    }
+    if (!changed) {
+        return source;
+    }
+    publish_indexed_edit(result, std::move(encoded));
     return result;
 }
 } // namespace paint

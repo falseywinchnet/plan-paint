@@ -1,4 +1,5 @@
 #include "codecs.hpp"
+#include "icon_palette.hpp"
 #include "fixtures/icon_reference.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
@@ -36,7 +37,7 @@ struct NativeExercise {
          healing_review = false, icon_production_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
          alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
-         icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false;
+         icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -599,9 +600,28 @@ struct NativeExercise {
                                      static_cast<std::uint8_t>(x * 255 / 127)});
                 }
             }
+            if (icon_indexed_review) {
+                paint::IconPaletteOptions options;
+                options.bits_per_pixel = 4;
+                frame = paint::convert_icon_palette(frame, options).frame;
+            }
             icon.frames.push_back(std::move(frame));
             document.replace_container(std::move(icon), "alpha-study.ico");
             (*editor).execute(icon_palette_review ? "atlas-palette" : "atlas-alpha-tools");
+            if (icon_indexed_review) {
+                const std::shared_ptr<gf::ComboBox> mode =
+                    std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-mode"));
+                const std::shared_ptr<gf::ComboBox> entry =
+                    std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-entry"));
+                const std::shared_ptr<gf::TextBox> rgb =
+                    std::dynamic_pointer_cast<gf::TextBox>(window.find("palette-rgb"));
+                (*mode).set_selected_index(1);
+                (*entry).set_selected_index(7);
+                (*rgb).set_text("#F0B020");
+                if (!(*window.find("palette-apply")).enabled() || !document.undo_history.empty()) {
+                    throw std::runtime_error("Native indexed entry preview did not prepare without mutation");
+                }
+            }
             window.perform_layout();
             inspect_frame(window);
             entered = true;
@@ -915,7 +935,9 @@ int main(int argc, char** argv) {
         exercise.icon_formats_review = argc > 1 && std::string(argv[1]) == "--icon-formats";
         exercise.icon_sheet_review = argc > 1 && std::string(argv[1]) == "--icon-sheet";
         exercise.icon_export_review = argc > 1 && std::string(argv[1]) == "--icon-export";
-        exercise.icon_palette_review = argc > 1 && std::string(argv[1]) == "--icon-palette";
+        exercise.icon_indexed_review = argc > 1 && std::string(argv[1]) == "--icon-indexed";
+        exercise.icon_palette_review = exercise.icon_indexed_review ||
+            (argc > 1 && std::string(argv[1]) == "--icon-palette");
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
         exercise.icon_batch_review = argc > 1 && std::string(argv[1]) == "--icon-batch";

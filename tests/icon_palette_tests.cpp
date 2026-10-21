@@ -27,6 +27,70 @@ void check_roundtrip(const paint::IconFrame& frame, unsigned depth, paint::Conta
                 "cursor hotspot survives indexed conversion");
     }
 }
+void indexed_edit_contracts() {
+    paint::IconFrame source;
+    source.image.reset(2, 2, {20, 40, 60, 255});
+    source.image.set(1, 0, {220, 230, 240, 255});
+    source.hotspot_x = 1;
+    paint::IconPaletteOptions options;
+    options.bits_per_pixel = 1;
+    paint::IconFrame indexed = paint::convert_icon_palette(source, options).frame;
+    std::vector<std::uint8_t> bytes = paint::encode_icon_container({paint::ContainerKind::Cursor, {indexed}});
+    // Both entries have identical RGB, but the top-right pixel still uses entry 1.
+    for (std::size_t channel = 0; channel < 3; ++channel) {
+        bytes[22 + 44 + channel] = bytes[22 + 40 + channel];
+    }
+    indexed = paint::decode_icon_container(bytes.data(), bytes.size()).frames[0];
+    require(paint::has_icon_palette(indexed), "import retains editable indexed identities");
+    require((*indexed.source).indices == std::vector<unsigned>({0, 1, 0, 0}),
+            "import retains duplicate-color pixel indices");
+    const paint::IconFrame recolored = paint::edit_icon_palette_entry(indexed, 1, {170, 30, 80, 255});
+    require(paint::equal(recolored.image.get(1, 0), {170, 30, 80, 255}) &&
+                paint::equal(recolored.image.get(0, 0), indexed.image.get(0, 0)),
+            "entry editing changes only pixels using that index, not equal RGB entries");
+    require((*recolored.source).indices == (*indexed.source).indices && recolored.hotspot_x == 1,
+            "recolor retains indices and hotspot");
+    check_roundtrip(recolored, 1, paint::ContainerKind::Cursor);
+    const paint::IconFrame repainted = paint::paint_icon_indices(indexed, {0}, 1);
+    require(paint::equal(repainted.image.get(0, 0), indexed.image.get(0, 0)) &&
+                (*repainted.source).indices[0] == 1 && (*indexed.source).indices[0] == 0,
+            "index painting changes identity even when RGB is identical, preserving the original");
+    const paint::IconFrame painted_color = paint::edit_icon_palette_entry(repainted, 1, {1, 2, 3, 255});
+    require(paint::equal(painted_color.image.get(0, 0), {1, 2, 3, 255}) &&
+                paint::equal(painted_color.image.get(1, 0), {1, 2, 3, 255}),
+            "subsequent palette edit follows the newly painted indices");
+    require(paint::paint_icon_indices(indexed, {}, 1).source == indexed.source &&
+                paint::edit_icon_palette_entry(indexed, 1, (*indexed.source).palette[1]).source ==
+                    indexed.source,
+            "no-op edits preserve exact source payload identity");
+    bool rejected = false;
+    try {
+        static_cast<void>(paint::paint_icon_indices(indexed, {0, 4}, 1));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    require(rejected && (*indexed.source).indices[0] == 0, "invalid index edit is atomic");
+    paint::IconFrame modified = indexed;
+    modified.image.set(0, 0, {1, 2, 3, 255});
+    require(!paint::has_icon_palette(modified), "RGBA edits cannot use stale indices");
+    source.image.reset(2, 2, {0, 0, 0, 255});
+    source.image.set(1, 0, {250, 250, 250, 255});
+    source.image.set(0, 1, {0, 0, 0, 0});
+    const paint::IconFrame transparent = paint::convert_icon_palette(source, options).frame;
+    rejected = false;
+    try {
+        static_cast<void>(paint::edit_icon_palette_entry(transparent, 0, {255, 0, 0, 255}));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    require(rejected, "mask black cannot become a background-dependent XOR color");
+    const paint::IconFrame erased = paint::paint_icon_indices(transparent, {1}, 0, true);
+    require(erased.image.get(1, 0).a == 0, "indexed erase preserves a separate binary mask");
+    check_roundtrip(erased, 1, paint::ContainerKind::Cursor);
+    const paint::IconFrame opaque = paint::paint_icon_indices(erased, {1}, 0, false);
+    require(paint::equal(opaque.image.get(1, 0), {0, 0, 0, 255}), "black index can be opaque or transparent");
+    check_roundtrip(opaque, 1, paint::ContainerKind::Cursor);
+}
 void conversion_contracts() {
     paint::IconFrame source;
     source.image.reset(2, 2, {0, 0, 0, 255});
@@ -127,6 +191,7 @@ void conversion_contracts() {
 int main() {
     try {
         conversion_contracts();
+        indexed_edit_contracts();
         std::cout << "Icon palette contracts passed\n";
         return 0;
     } catch (const std::exception& error) {
