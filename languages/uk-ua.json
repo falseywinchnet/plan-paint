@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "Запитано батьківську теку; вибір файла недоступний.",
   "Requested file selection in the file manager.": "Запитано вибір файла у файловому менеджері.",
   "Position preview; Apply to paint. Escape cancels.": "Розмістіть зразок; «Застосувати» малює. Escape скасовує.",
-  "Opacity": "Непрозорість"
+  "Opacity": "Непрозорість",
+  "Sticky note": "Наліпка",
+  "Paper texture": "Текстура паперу",
+  "Book paper": "Книжковий папір",
+  "Copy paper": "Папір для копіювання",
+  "Recycled paper": "Перероблений папір",
+  "Wove paper": "Веленевий папір",
+  "Laid paper": "Папір верже",
+  "Bible paper": "Біблійний папір",
+  "Parchment": "Пергамент",
+  "Cotton rag": "Бавовняний папір",
+  "Kraft paper": "Крафт-папір",
+  "Night paper": "Нічний папір",
+  "Paper color": "Колір паперу",
+  "New paper": "Новий папір"
 }

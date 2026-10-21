@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "وڈے فولڈر دی درخواست کیتی؛ فائل چُننا دستیاب نہیں۔",
   "Requested file selection in the file manager.": "فائل مینیجر وچ فائل چُنن دی درخواست کیتی۔",
   "Position preview; Apply to paint. Escape cancels.": "جھلک رکھو؛ چتر بناؤن لئی لاگو کرو۔ Escape رد کردا اے۔",
-  "Opacity": "دھندلاپن"
+  "Opacity": "دھندلاپن",
+  "Sticky note": "چپکݨ والا نوٹ",
+  "Paper texture": "کاغذ دی بݨتر",
+  "Book paper": "کتابی کاغذ",
+  "Copy paper": "کاپی دا کاغذ",
+  "Recycled paper": "مُڑ بݨایا کاغذ",
+  "Wove paper": "بُݨیا کاغذ",
+  "Laid paper": "ریشے دار دھاریاں والا کاغذ",
+  "Bible paper": "پتلا کاغذ",
+  "Parchment": "چرمی کاغذ",
+  "Cotton rag": "سوتی کاغذ",
+  "Kraft paper": "کرافٹ کاغذ",
+  "Night paper": "رات دا کاغذ",
+  "Paper color": "کاغذ دا رنگ",
+  "New paper": "نواں کاغذ"
 }

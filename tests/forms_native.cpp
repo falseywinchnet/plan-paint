@@ -37,7 +37,7 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_svg_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         opacity_review = false, stamp_placement_review = false, advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
+         sticky_review = false, opacity_review = false, stamp_placement_review = false, advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
@@ -361,12 +361,13 @@ struct NativeExercise {
         return image;
     }
     void inspect_frame(gf::Window& window) {
+        if (sticky_review) { repaint_tree(*window.root()); }
         if (opacity_review || external_file_review || stamp_placement_review) { repaint_tree(*window.root()); }
         if (asset_browser_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
             repaint_tree(*window.root());
             repaint_tree(*window.find("editor-dialog"));
         }
-        const gf::Size size = opacity_review || asset_browser_review || external_file_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
+        const gf::Size size = sticky_review || opacity_review || asset_browser_review || external_file_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
         bool painted = false;
         paint::Image image = render_snapshot(window, size, painted);
         const gf::Rect pixel = (*editor).canvas().bitmap_to_client({120, 120, 1, 1});
@@ -376,6 +377,34 @@ struct NativeExercise {
                                               static_cast<int>(sample.y * window.scale()));
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
+        if (sticky_review) {
+            for (const char* id : {"sticky-paper", "sticky-width", "sticky-height", "sticky-padding", "text-font", "text-place"}) {
+                const gf::Control::Ptr control = window.find(id);
+                if (!painted || !control || !(*control).visible() || !(*control).enabled()) {
+                    throw std::runtime_error("Native inline note ribbon lost a required control");
+                }
+                const gf::Rect bounds = (*control).absolute_bounds();
+                if (bounds.x < 0 || bounds.y < 0 || bounds.right() > size.width || bounds.bottom() > size.height) {
+                    throw std::runtime_error("Native note ribbon does not fit the window");
+                }
+            }
+            if (window.find("editor-dialog") || !(*editor).text.active || !(*editor).text.note) {
+                throw std::runtime_error("Sticky note must be edited on canvas without a popup");
+            }
+            const paint::Rect note = (*editor).text.bounds;
+            const gf::Rect rectangle = (*editor).canvas().bitmap_to_client({note.x, note.y, note.w, note.h});
+            const gf::Point origin = (*editor).canvas().point_to_window({rectangle.x, rectangle.y});
+            std::size_t paper = 0, ink = 0;
+            for (int y = static_cast<int>((origin.y + 4) * window.scale()); y < (origin.y + rectangle.height - 4) * window.scale(); ++y) {
+                for (int x = static_cast<int>((origin.x + 4) * window.scale()); x < (origin.x + rectangle.width - 4) * window.scale(); ++x) {
+                    const paint::Color color = image.get(x, y);
+                    if (color.r > 180 && color.g > 150 && color.b < 190) { ++paper; }
+                    if (color.r < 100 && color.g < 100 && color.b < 100) { ++ink; }
+                }
+            }
+            if (paper < 1000 || ink < 100) { throw std::runtime_error("Native inline paper and text did not render"); }
+            return;
+        }
         if (opacity_review) {
             const std::shared_ptr<paint::forms::SwatchButton> primary =
                 std::dynamic_pointer_cast<paint::forms::SwatchButton>(window.find("primary"));
@@ -614,6 +643,18 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (sticky_review) {
+            (*editor).execute("sticky-note");
+            gf::TextInputEvent text{"Plan the next step\n\nMake something useful."};
+            (*editor).text_input(text);
+            window.perform_layout();
+            inspect_frame(window);
+            (*editor).execute("text-place");
+            document.saved_revision = document.revision;
+            entered = true;
+            if (!handle.request_close().accepted()) { throw std::runtime_error("Native sticky close failed"); }
+            return;
+        }
         if (opacity_review) {
             const paint::Color primary_colors[] = {{240, 30, 80, 128}, {0, 0, 0, 0},
                 {255, 255, 255, 255}, {128, 128, 128, 254}, {128, 128, 128, 128}};
@@ -1310,6 +1351,7 @@ int main(int argc, char** argv) {
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
         exercise.opacity_review = argc > 1 && (std::string(argv[1]) == "--opacity" || std::string(argv[1]) == "--opacity-compact");
+        exercise.sticky_review = argc > 1 && (std::string(argv[1]) == "--sticky" || std::string(argv[1]) == "--sticky-compact");
         exercise.stamp_placement_review = argc > 1 && std::string(argv[1]) == "--stamp-placement";
         exercise.external_file_review = argc > 1 && std::string(argv[1]) == "--external-file";
         exercise.icon_validation_review = argc > 1 && std::string(argv[1]) == "--icon-validation";
@@ -1323,7 +1365,7 @@ int main(int argc, char** argv) {
         exercise.icon_batch_review = exercise.icon_batch_review || exercise.icon_stamp_review || exercise.icon_shared_review;
         exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
-        if (exercise.opacity_review || exercise.stamp_placement_review || exercise.external_file_review || exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
+        if (exercise.sticky_review || exercise.opacity_review || exercise.stamp_placement_review || exercise.external_file_review || exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
             exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
             exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {
@@ -1333,7 +1375,7 @@ int main(int argc, char** argv) {
                                          std::string(argv[1]) == "--features-compact");
         exercise.interface_review = argc > 1 && (std::string(argv[1]) == "--interface" ||
                                                  std::string(argv[1]) == "--interface-compact");
-        exercise.compact = argc > 1 && (std::string(argv[1]) == "--opacity-compact" || std::string(argv[1]) == "--features-compact" ||
+        exercise.compact = argc > 1 && (std::string(argv[1]) == "--sticky-compact" || std::string(argv[1]) == "--opacity-compact" || std::string(argv[1]) == "--features-compact" ||
                                         std::string(argv[1]) == "--interface-compact");
         if (exercise.interface_review && argc > 2) {
             exercise.backing = std::clamp(std::stoi(argv[2]), 0, paint::canvas_backing_count - 1);
@@ -1348,7 +1390,7 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size = exercise.asset_browser_review || exercise.external_file_review || exercise.icon_export_review || exercise.icon_formats_review || exercise.icon_states_review ||
+        options.initial_size = (exercise.sticky_review && exercise.compact) || exercise.asset_browser_review || exercise.external_file_review || exercise.icon_export_review || exercise.icon_formats_review || exercise.icon_states_review ||
                                        exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review || exercise.icon_sheet_review
                                    ? gf::Size{800, 520}
                                : exercise.compact ? gf::Size{800, 600}

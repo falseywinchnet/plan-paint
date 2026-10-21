@@ -2155,6 +2155,16 @@ void Editor::execute(const std::string& command) {
         return;
     }
     try {
+        if (command == "sticky-new-paper" && text.note) {
+            ++(*text.note).seed;
+            refresh();
+            return;
+        }
+        if (command == "sticky-note") {
+            document.require_rgba_transform();
+            insert_sticky_note();
+            return;
+        }
         if (command == "stamp-apply") { apply_stamp_placement(); return; }
         if (command == "stamp-cancel") { cancel_stamp_placement(); return; }
         if (command == "reload") { reload_file(); return; }

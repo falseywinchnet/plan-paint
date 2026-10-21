@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "تم طلب فتح المجلد الحاوي؛ تحديد الملف غير متاح.",
   "Requested file selection in the file manager.": "تم طلب تحديد الملف في مدير الملفات.",
   "Position preview; Apply to paint. Escape cancels.": "ضع المعاينة؛ طبّق للرسم. Escape للإلغاء.",
-  "Opacity": "العتامة"
+  "Opacity": "العتامة",
+  "Sticky note": "ملاحظة لاصقة",
+  "Paper texture": "ملمس الورق",
+  "Book paper": "ورق الكتب",
+  "Copy paper": "ورق النسخ",
+  "Recycled paper": "ورق معاد تدويره",
+  "Wove paper": "ورق منسوج",
+  "Laid paper": "ورق مسطر الألياف",
+  "Bible paper": "ورق رقيق",
+  "Parchment": "رق",
+  "Cotton rag": "ورق قطني",
+  "Kraft paper": "ورق كرافت",
+  "Night paper": "ورق ليلي",
+  "Paper color": "لون الورق",
+  "New paper": "ورق جديد"
 }

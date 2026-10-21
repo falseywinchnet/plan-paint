@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "We request the folder; file selection no dey available.",
   "Requested file selection in the file manager.": "We request file selection for file manager.",
   "Position preview; Apply to paint. Escape cancels.": "Place preview; Apply go paint am. Escape go cancel.",
-  "Opacity": "How solid e be"
+  "Opacity": "How solid e be",
+  "Sticky note": "Sticky note",
+  "Paper texture": "Paper texture",
+  "Book paper": "Book paper",
+  "Copy paper": "Copy paper",
+  "Recycled paper": "Recycled paper",
+  "Wove paper": "Wove paper",
+  "Laid paper": "Laid paper",
+  "Bible paper": "Bible paper",
+  "Parchment": "Parchment",
+  "Cotton rag": "Cotton rag",
+  "Kraft paper": "Kraft paper",
+  "Night paper": "Night paper",
+  "Paper color": "Paper colour",
+  "New paper": "New paper"
 }

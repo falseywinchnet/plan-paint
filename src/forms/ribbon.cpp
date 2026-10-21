@@ -917,6 +917,7 @@ void Ribbon::add_options() {
     button("text-cancel", tr("Cancel"), -1, {1166, 35, 92, 25});
     button("text-fit", tr("Fit height"), -1, {1068, 64, 92, 25});
     button("text-reset-effects", tr("Reset"), -1, {1166, 64, 92, 25});
+    initialize_sticky_ribbon();
     initialize_gradient();
     building_page_ = 1;
 }
@@ -1080,7 +1081,7 @@ void Ribbon::show_page() {
         if (id == "patterns-tab") {
             control.set_enabled(ink);
         }
-        control.set_visible(visible && (!collapsed_ || button_pages_[i] == 0));
+        control.set_visible(sticky_visibility(id, visible) && (!collapsed_ || button_pages_[i] == 0));
     }
     for (std::size_t i = 0; i < option_controls_.size(); ++i) {
         gf::Control& control = *option_controls_[i];
@@ -1156,7 +1157,7 @@ void Ribbon::show_page() {
         if (id == "stamp-transparent" || id.starts_with("stamp-width") || id.starts_with("stamp-height")) {
             visible = visible && !placement;
         }
-        control.set_visible(visible && !collapsed_);
+        control.set_visible(sticky_visibility(id, visible) && !collapsed_);
     }
     invalidate(gf::Dirty::layout | gf::Dirty::paint);
     (*editor).invalidate(gf::Dirty::layout | gf::Dirty::paint);
@@ -1212,6 +1213,12 @@ void Ribbon::options_changed(double) {
     ink.material_angle = (*angle_).value();
     (*editor).spiro.refresh_peg((*editor).spiro.selected_peg);
     (*editor).document.ink.size = static_cast<int>((*tool_size_).value());
+    if ((*editor).text.note) {
+        (*(*editor).text.note).padding = static_cast<int>((*sticky_padding_).value());
+        const Rect bounds = (*editor).text.bounds;
+        (*editor).text.resize({bounds.x, bounds.y, static_cast<int>((*sticky_width_).value()),
+                              static_cast<int>((*sticky_height_).value())});
+    }
     (*editor).text.style.size = static_cast<int>((*text_size_).value());
     (*editor).text.style.outline_width = (*text_outline_).value();
     (*editor).text.style.skew = (*text_skew_).value();
@@ -1610,7 +1617,8 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
         const std::vector<std::string> labels =
             selection ? std::vector<std::string>{tr("Selection"), tr("Rotation"), tr("Mesh"), tr("Finish"), tr("Controls")}
             : page_ == 16
-                ? std::vector<std::string>{tr("Font"), tr("Letter treatment"), tr("Transform"), tr("Colors"), tr("Finish text")}
+                ? std::vector<std::string>{tr("Font"), (*editor).text.note ? tr("Paper texture") : tr("Letter treatment"),
+                    (*editor).text.note ? tr("Size") : tr("Transform"), tr("Colors"), tr("Finish text")}
             : page_ == 128
                 ? std::vector<std::string>{tr("Guides"), tr("Inserts"), tr("Pegs · drag into a hole"), tr("Load and operate")}
             : page_ == 256 ? std::vector<std::string>{tr("Presets"), tr("Color stops"), tr("Direction and selected stop")}
@@ -1719,6 +1727,9 @@ void Ribbon::synchronize() {
             }
         }
         bool selected = false;
+        if (id == "text-place") {
+            control.set_text((*editor).text.note ? tr("Apply") : tr("Place text"));
+        }
         if (id.starts_with("tool-") && id != "tool-tab") {
             selected = document.tool == ribbon_tools[std::stoi(id.substr(5))] ||
                        (id == "tool-0" && document.tool == Tool::Lasso) ||
@@ -1797,6 +1808,7 @@ void Ribbon::synchronize() {
             static_assert(std::size(names) == static_cast<std::size_t>(Tool::Spirograph) + 1);
             control.set_text(page_ == 128  ? tr("Spirograph")
                              : page_ == 32 ? tr("Transform")
+                             : (*editor).text.note ? tr("Sticky note")
                                            : names[static_cast<int>(document.tool)]);
             control.set_accessible_name(page_ == 128 ? tr("Spirograph tools")
                                         : page_ == 32
@@ -1884,6 +1896,7 @@ void Ribbon::synchronize() {
         ordered_tab_page_ = page_;
     }
     synchronizing_ = true;
+    synchronize_sticky_ribbon();
     (*spiro_scale_).set_value((*editor).spiro.scale);
     const Ink& material = (*editor).spiro.selected_peg >= 0
                               ? (*editor).spiro.pegs[(*editor).spiro.selected_peg].effect
@@ -2425,8 +2438,8 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
                      tr("Carpet generator…"), tr("Dithering brush")};
         }
         if (id == "tool-10") {
-            ids = {"tool-10", "stamp-add", "stamp-clear"};
-            texts = {tr("Capture / place stamp"), tr("Add material"), tr("Clear captured stamp")};
+            ids = {"tool-10", "sticky-note", "stamp-add", "stamp-clear"};
+            texts = {tr("Capture / place stamp"), tr("Sticky note"), tr("Add material"), tr("Clear captured stamp")};
         }
         height = 8 + 30 * ids.size();
         for (std::size_t i = 0; i < ids.size(); ++i) {

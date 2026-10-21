@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "Folder induk diminta; pemilihan berkas tidak tersedia.",
   "Requested file selection in the file manager.": "Pemilihan berkas diminta di pengelola berkas.",
   "Position preview; Apply to paint. Escape cancels.": "Posisikan pratinjau; Terapkan untuk melukis. Escape membatalkan.",
-  "Opacity": "Opasitas"
+  "Opacity": "Opasitas",
+  "Sticky note": "Catatan tempel",
+  "Paper texture": "Tekstur kertas",
+  "Book paper": "Kertas buku",
+  "Copy paper": "Kertas fotokopi",
+  "Recycled paper": "Kertas daur ulang",
+  "Wove paper": "Kertas tenun",
+  "Laid paper": "Kertas bergaris serat",
+  "Bible paper": "Kertas Alkitab",
+  "Parchment": "Perkamen",
+  "Cotton rag": "Kertas katun",
+  "Kraft paper": "Kertas kraft",
+  "Night paper": "Kertas malam",
+  "Paper color": "Warna kertas",
+  "New paper": "Kertas baru"
 }

@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "Đã yêu cầu thư mục chứa; không thể chọn tệp.",
   "Requested file selection in the file manager.": "Đã yêu cầu chọn tệp trong trình quản lý tệp.",
   "Position preview; Apply to paint. Escape cancels.": "Đặt bản xem trước; Áp dụng để vẽ. Escape hủy.",
-  "Opacity": "Độ đục"
+  "Opacity": "Độ đục",
+  "Sticky note": "Giấy ghi chú",
+  "Paper texture": "Kết cấu giấy",
+  "Book paper": "Giấy sách",
+  "Copy paper": "Giấy photocopy",
+  "Recycled paper": "Giấy tái chế",
+  "Wove paper": "Giấy vân dệt",
+  "Laid paper": "Giấy vân sọc",
+  "Bible paper": "Giấy kinh thánh",
+  "Parchment": "Giấy da",
+  "Cotton rag": "Giấy sợi bông",
+  "Kraft paper": "Giấy kraft",
+  "Night paper": "Giấy đêm",
+  "Paper color": "Màu giấy",
+  "New paper": "Giấy mới"
 }

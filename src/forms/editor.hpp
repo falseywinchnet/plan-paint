@@ -225,6 +225,8 @@ class Editor final : public gui_forms::Control {
     RevealHandler reveal_asset = &reveal_in_file_manager;
     void open_browser_asset(const AssetPreview& preview);
     void use_asset_stamp(Image image);
+    void insert_sticky_note();
+    StickyNoteSettings sticky_note_settings;
     bool stamp_placement_active() const { return stamp_placement_; }
     bool can_apply_stamp_placement() const;
     void apply_stamp_placement();

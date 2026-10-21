@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "親フォルダーの表示を要求しました。ファイルの選択は利用できません。",
   "Requested file selection in the file manager.": "ファイル管理にファイルの選択を要求しました。",
   "Position preview; Apply to paint. Escape cancels.": "プレビューを配置し、適用で描画。Escapeでキャンセル。",
-  "Opacity": "不透明度"
+  "Opacity": "不透明度",
+  "Sticky note": "付箋",
+  "Paper texture": "紙の質感",
+  "Book paper": "書籍用紙",
+  "Copy paper": "コピー用紙",
+  "Recycled paper": "再生紙",
+  "Wove paper": "網目紙",
+  "Laid paper": "簀目紙",
+  "Bible paper": "薄葉紙",
+  "Parchment": "羊皮紙",
+  "Cotton rag": "コットン紙",
+  "Kraft paper": "クラフト紙",
+  "Night paper": "夜色の紙",
+  "Paper color": "紙の色",
+  "New paper": "新しい紙"
 }

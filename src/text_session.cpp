@@ -21,6 +21,9 @@ void TextSession::clear() {
     undo_.clear();
     redo_.clear();
     signature_.clear();
+    paper_signature_.clear();
+    paper_ = {};
+    note.reset();
     preview = {};
     layout = {};
 }
@@ -37,13 +40,36 @@ void TextSession::refresh(Color foreground, Color background) {
         std::to_string(background.a) + ":" + std::to_string(style.contour) + ":" +
         scalar_key(style.outline_width) + ":" + scalar_key(style.skew) + ":" + scalar_key(style.perspective) +
         ":" + scalar_key(style.warp) + ":" + std::to_string(static_cast<int>(style.word_art));
+    const int padding = inset();
+    if (note) {
+        signature += ":paper:" + std::to_string((*note).paper) + ":" + std::to_string((*note).seed) +
+                     ":" + to_hex((*note).paper_color) + ":" + std::to_string(padding);
+    }
     if (signature == signature_) {
         return;
     }
-    layout = layout_text(edit.content, style, bounds.w);
-    preview.reset(bounds.w, bounds.h, style.opaque ? background : Color{0, 0, 0, 0});
-    render_text(preview, {0, 0}, layout, style, foreground, background);
-    if (style.skew != 0 || style.perspective != 0 || style.warp != 0) {
+    TextStyle lettering = style;
+    if (note) { lettering.opaque = false; }
+    layout = layout_text(edit.content, lettering, bounds.w - 2 * padding);
+    if (note) {
+        const std::string paper_key = std::to_string(bounds.w) + ":" + std::to_string(bounds.h) + ":" +
+            std::to_string((*note).paper) + ":" + std::to_string((*note).seed) + ":" + to_hex((*note).paper_color);
+        if (paper_key != paper_signature_) {
+            StickyNoteSettings settings = *note;
+            settings.width = bounds.w; settings.height = bounds.h;
+            paper_ = render_sticky_paper(settings);
+            paper_signature_ = paper_key;
+        }
+        preview = paper_;
+        Image letters;
+        letters.reset(bounds.w - 2 * padding, bounds.h - 2 * padding, {0, 0, 0, 0});
+        render_text(letters, {0, 0}, layout, lettering, foreground, background);
+        composite(preview, letters, padding, padding);
+    } else {
+        preview.reset(bounds.w, bounds.h, style.opaque ? background : Color{0, 0, 0, 0});
+        render_text(preview, {0, 0}, layout, style, foreground, background);
+    }
+    if (!note && (style.skew != 0 || style.perspective != 0 || style.warp != 0)) {
         Image source = std::move(preview);
         preview.reset(bounds.w, bounds.h, {0, 0, 0, 0});
         for (int y = 0; y < bounds.h; ++y) {
@@ -133,6 +159,7 @@ std::size_t TextSession::caret_at(Point point) const {
 // A bounded trapezoid/shear followed by a sine bend. The analytic inverse is
 // shared by raster sampling and pointer selection so text remains editable.
 Point TextSession::display_point(Point point) const {
+    if (note) { return {point.x + inset(), point.y + inset()}; }
     double u = point.x / bounds.w, v = point.y / bounds.h;
     double skew = std::clamp(style.skew * bounds.h / bounds.w, -0.7, 0.7);
     double perspective = std::clamp(style.perspective, -0.8, 0.8);
@@ -143,6 +170,7 @@ Point TextSession::display_point(Point point) const {
     return {x * bounds.w, y * bounds.h};
 }
 Point TextSession::source_point(Point point) const {
+    if (note) { return {point.x - inset(), point.y - inset()}; }
     double x = point.x / bounds.w, y = point.y / bounds.h;
     double skew = std::clamp(style.skew * bounds.h / bounds.w, -0.7, 0.7);
     double perspective = std::clamp(style.perspective, -0.8, 0.8);
@@ -155,7 +183,11 @@ Point TextSession::source_point(Point point) const {
 }
 void TextSession::resize(Rect rectangle) {
     bounds = rectangle;
-    bounds.w = std::clamp(bounds.w, 24, 8192);
-    bounds.h = std::clamp(bounds.h, 24, std::min(8192, 16000000 / bounds.w));
+    const int maximum = note ? 4096 : 8192;
+    bounds.w = std::clamp(bounds.w, 24, maximum);
+    bounds.h = std::clamp(bounds.h, 24, std::min(maximum, 16000000 / bounds.w));
+}
+int TextSession::inset() const {
+    return note ? std::clamp((*note).padding, 0, (std::min(bounds.w, bounds.h) - 1) / 2) : 0;
 }
 } // namespace paint

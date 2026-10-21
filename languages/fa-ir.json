@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "پوشهٔ دربرگیرنده درخواست شد؛ انتخاب فایل در دسترس نیست.",
   "Requested file selection in the file manager.": "انتخاب فایل در مدیر فایل درخواست شد.",
   "Position preview; Apply to paint. Escape cancels.": "پیش‌نمایش را قرار دهید؛ برای رسم اعمال کنید. Escape لغو می‌کند.",
-  "Opacity": "تیرگی"
+  "Opacity": "تیرگی",
+  "Sticky note": "یادداشت چسبان",
+  "Paper texture": "بافت کاغذ",
+  "Book paper": "کاغذ کتاب",
+  "Copy paper": "کاغذ کپی",
+  "Recycled paper": "کاغذ بازیافتی",
+  "Wove paper": "کاغذ بافته",
+  "Laid paper": "کاغذ خط‌دار الیافی",
+  "Bible paper": "کاغذ نازک",
+  "Parchment": "کاغذ پوستی",
+  "Cotton rag": "کاغذ پنبه‌ای",
+  "Kraft paper": "کاغذ کرافت",
+  "Night paper": "کاغذ شب",
+  "Paper color": "رنگ کاغذ",
+  "New paper": "کاغذ تازه"
 }

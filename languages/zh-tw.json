@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "已要求開啟所在資料夾；無法選取檔案。",
   "Requested file selection in the file manager.": "已要求檔案管理員選取檔案。",
   "Position preview; Apply to paint. Escape cancels.": "放置預覽，點擊套用繪製。Escape 取消。",
-  "Opacity": "不透明度"
+  "Opacity": "不透明度",
+  "Sticky note": "便利貼",
+  "Paper texture": "紙張紋理",
+  "Book paper": "書籍紙",
+  "Copy paper": "影印紙",
+  "Recycled paper": "再生紙",
+  "Wove paper": "布紋紙",
+  "Laid paper": "簾紋紙",
+  "Bible paper": "字典紙",
+  "Parchment": "羊皮紙",
+  "Cotton rag": "棉纖維紙",
+  "Kraft paper": "牛皮紙",
+  "Night paper": "夜色紙",
+  "Paper color": "紙張色彩",
+  "New paper": "更換紙張"
 }

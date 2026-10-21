@@ -1,5 +1,7 @@
 #pragma once
 #include "text.hpp"
+#include "sticky_note.hpp"
+#include <optional>
 namespace paint {
 struct TextEditState {
     std::string content;
@@ -15,6 +17,8 @@ class TextSession {
     TextEditState edit;
     TextLayout layout;
     Image preview;
+    std::optional<StickyNoteSettings> note;
+    int inset() const;
     void begin(Point origin);
     void refresh(Color foreground, Color background);
     bool replace(const std::string& inserted);
@@ -28,5 +32,7 @@ class TextSession {
   private:
     std::vector<TextEditState> undo_, redo_;
     std::string signature_;
+    std::string paper_signature_;
+    Image paper_;
 };
 } // namespace paint

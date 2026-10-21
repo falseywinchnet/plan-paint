@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "Übergeordneten Ordner angefordert; Dateiauswahl nicht verfügbar.",
   "Requested file selection in the file manager.": "Dateiauswahl im Dateimanager angefordert.",
   "Position preview; Apply to paint. Escape cancels.": "Vorschau platzieren; Anwenden zum Malen. Escape bricht ab.",
-  "Opacity": "Deckkraft"
+  "Opacity": "Deckkraft",
+  "Sticky note": "Haftnotiz",
+  "Paper texture": "Papierstruktur",
+  "Book paper": "Buchpapier",
+  "Copy paper": "Kopierpapier",
+  "Recycled paper": "Recyclingpapier",
+  "Wove paper": "Velinpapier",
+  "Laid paper": "Vergépapier",
+  "Bible paper": "Dünndruckpapier",
+  "Parchment": "Pergament",
+  "Cotton rag": "Baumwollpapier",
+  "Kraft paper": "Kraftpapier",
+  "Night paper": "Nachtpapier",
+  "Paper color": "Papierfarbe",
+  "New paper": "Neues Papier"
 }

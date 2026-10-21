@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "Folda inayohifadhi imeombwa; kuchagua faili hakupatikani.",
   "Requested file selection in the file manager.": "Uchaguzi wa faili umeombwa katika kidhibiti faili.",
   "Position preview; Apply to paint. Escape cancels.": "Weka hakiki; Tekeleza ili kuchora. Escape hughairi.",
-  "Opacity": "Uwazi hafifu"
+  "Opacity": "Uwazi hafifu",
+  "Sticky note": "Kumbuka ya kubandika",
+  "Paper texture": "Umbile la karatasi",
+  "Book paper": "Karatasi ya kitabu",
+  "Copy paper": "Karatasi ya nakala",
+  "Recycled paper": "Karatasi iliyosindikwa upya",
+  "Wove paper": "Karatasi iliyofumwa",
+  "Laid paper": "Karatasi yenye mistari ya nyuzi",
+  "Bible paper": "Karatasi ya Biblia",
+  "Parchment": "Ngozi ya kuandikia",
+  "Cotton rag": "Karatasi ya pamba",
+  "Kraft paper": "Karatasi ya kraft",
+  "Night paper": "Karatasi ya usiku",
+  "Paper color": "Rangi ya karatasi",
+  "New paper": "Karatasi mpya"
 }

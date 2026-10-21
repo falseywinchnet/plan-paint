@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "Pasta solicitada; seleção do arquivo indisponível.",
   "Requested file selection in the file manager.": "Seleção do arquivo solicitada ao gerenciador.",
   "Position preview; Apply to paint. Escape cancels.": "Posicione a prévia; Aplicar para pintar. Escape cancela.",
-  "Opacity": "Opacidade"
+  "Opacity": "Opacidade",
+  "Sticky note": "Nota adesiva",
+  "Paper texture": "Textura do papel",
+  "Book paper": "Papel de livro",
+  "Copy paper": "Papel de cópia",
+  "Recycled paper": "Papel reciclado",
+  "Wove paper": "Papel velino",
+  "Laid paper": "Papel vergê",
+  "Bible paper": "Papel bíblia",
+  "Parchment": "Pergaminho",
+  "Cotton rag": "Papel de algodão",
+  "Kraft paper": "Papel kraft",
+  "Night paper": "Papel noturno",
+  "Paper color": "Cor do papel",
+  "New paper": "Novo papel"
 }

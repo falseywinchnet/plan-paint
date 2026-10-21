@@ -2379,6 +2379,59 @@ void await_reveal(gf::Window& window) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
+void sticky_note_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.sticky_note_settings.width = 80;
+    editor.sticky_note_settings.height = 64;
+    editor.sticky_note_settings.padding = 4;
+    editor.sticky_note_settings.font.size = 12;
+    const std::size_t history = editor.document.undo_history.size();
+    editor.execute("sticky-note");
+    window.perform_layout();
+    require(!window.find("editor-dialog") && editor.text.active && editor.text.note &&
+                window.focused_control().get() == &editor.canvas() &&
+                (*window.find("sticky-paper")).visible() && (*window.find("sticky-width")).visible(),
+            "sticky insertion must immediately edit on canvas with ribbon settings, without a popup");
+    require(editor.document.undo_history.size() == history && !editor.text.preview.pixels.empty(),
+            "blank note paper should be visible while the canvas remains unchanged");
+    gf::TextInputEvent input{"Plan"};
+    editor.text_input(input);
+    require(input.handled && editor.text.edit.content == "Plan", "canvas typing did not edit the note");
+    editor.execute("undo");
+    require(editor.text.edit.content.empty() && editor.text.note, "text Undo must keep the paper");
+    editor.execute("redo");
+    require(editor.text.edit.content == "Plan", "inline note text Redo failed");
+    const std::shared_ptr<gf::NumericUpDown> width = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("sticky-width"));
+    (*width).set_value(96);
+    const std::shared_ptr<gf::ComboBox> paper = std::dynamic_pointer_cast<gf::ComboBox>(window.find("sticky-paper"));
+    (*paper).set_selected_index(8);
+    const std::shared_ptr<gf::TextBox> color = std::dynamic_pointer_cast<gf::TextBox>(window.find("sticky-color"));
+    (*color).set_text("#BBDDEE");
+    require(editor.text.bounds.w == 96 && (*editor.text.note).paper == 8 &&
+                (*editor.text.note).paper_color.b == 238 && editor.text.edit.content == "Plan",
+            "ribbon settings must update the current note without discarding text");
+    const std::uint32_t seed = (*editor.text.note).seed;
+    routed_button(window, "sticky-new-paper");
+    require((*editor.text.note).seed == seed + 1, "New paper did not update the inline note");
+    const paint::Rect bounds = editor.text.bounds;
+    const paint::Image preview = editor.text.preview;
+    editor.execute("text-place");
+    require(!editor.text.active && editor.document.undo_history.size() == history + 1,
+            "finishing a sticky note must create one pixel edit");
+    require(paint::equal(editor.document.image.get(bounds.x + 2, bounds.y + 2), preview.get(2, 2)),
+            "committed paper differs from its live preview");
+    editor.execute("undo");
+    require(white(editor.document.image.get(bounds.x + 2, bounds.y + 2)), "sticky Undo did not restore the canvas");
+    editor.execute("sticky-note");
+    editor.execute("text-cancel");
+    require(!editor.text.active && !editor.text.note, "Cancel must discard inline paper and text");
+    editor.choose_tool(paint::Tool::Text);
+    fixture.click(20, 20);
+    require(editor.text.active && !editor.text.note && !(*window.find("sticky-paper")).visible(),
+            "ordinary text must not inherit a note background or paper controls");
+}
 void imported_stamp_placement_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -4629,7 +4682,7 @@ void select_all_delete_without_drag() {
     gf::KeyEvent select{gf::KeyAction::down, gf::PhysicalKey::a};
     select.modifiers = gf::Modifier::control;
     require(window.dispatch_key(select), "Ctrl+A selects artwork from ribbon focus");
-    require(editor.document.selection.active && window.focused_control() == window.find("canvas"),
+    require(editor.document.selection.active && window.focused_control().get() == &editor.canvas(),
             "Select all transfers keyboard focus to the selected artwork");
     require(window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::delete_forward}),
             "Delete works immediately after Select all without a pointer gesture");
@@ -5831,6 +5884,7 @@ int main(int argc, char** argv) {
             throw std::runtime_error("Unknown forms test suite.");
         }
         canvas_controls_without_dragging();
+        sticky_note_contracts();
         custom_pattern_canvas_is_independent();
         tool_cursor_routes();
         freehand_wand_picker_and_size();

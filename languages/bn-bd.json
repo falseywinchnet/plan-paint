@@ -962,5 +962,19 @@
   "Requested containing folder; file selection is unavailable.": "ধারক ফোল্ডার খোলার অনুরোধ হয়েছে; ফাইল নির্বাচন উপলব্ধ নয়।",
   "Requested file selection in the file manager.": "ফাইল ম্যানেজারে ফাইল নির্বাচনের অনুরোধ হয়েছে।",
   "Position preview; Apply to paint. Escape cancels.": "প্রিভিউ বসান; আঁকতে প্রয়োগ করুন। Escape বাতিল করে।",
-  "Opacity": "অস্বচ্ছতা"
+  "Opacity": "অস্বচ্ছতা",
+  "Sticky note": "আঠালো নোট",
+  "Paper texture": "কাগজের বুনট",
+  "Book paper": "বইয়ের কাগজ",
+  "Copy paper": "কপি কাগজ",
+  "Recycled paper": "পুনর্ব্যবহৃত কাগজ",
+  "Wove paper": "বোনা কাগজ",
+  "Laid paper": "আঁশের রেখাযুক্ত কাগজ",
+  "Bible paper": "পাতলা কাগজ",
+  "Parchment": "পার্চমেন্ট",
+  "Cotton rag": "তুলার কাগজ",
+  "Kraft paper": "ক্রাফট কাগজ",
+  "Night paper": "রাতের কাগজ",
+  "Paper color": "কাগজের রং",
+  "New paper": "নতুন কাগজ"
 }
