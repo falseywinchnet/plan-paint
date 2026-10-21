@@ -908,5 +908,11 @@
   "Offset Y": "Versatz Y",
   "Pink border: image bounds. Pixels outside are clipped.": "Rosa Rahmen: Bildgrenzen. Pixel außerhalb werden abgeschnitten.",
   "Image changed. Reopen Effects.": "Bild geändert. Effekte erneut öffnen.",
-  "Invalid color": "Ungültige Farbe"
+  "Invalid color": "Ungültige Farbe",
+  "Sampling": "Abtastung",
+  "Scale X %": "X-Skalierung %",
+  "Scale Y %": "Y-Skalierung %",
+  "CONV* point": "CONV* Punkt",
+  "CONV* minification": "CONV* Verkleinerung",
+  "CONV* area": "CONV* Fläche"
 }

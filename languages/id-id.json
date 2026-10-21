@@ -908,5 +908,11 @@
   "Offset Y": "Offset Y",
   "Pink border: image bounds. Pixels outside are clipped.": "Bingkai merah muda: batas gambar. Piksel di luar dipotong.",
   "Image changed. Reopen Effects.": "Gambar berubah. Buka kembali Efek.",
-  "Invalid color": "Warna tidak valid"
+  "Invalid color": "Warna tidak valid",
+  "Sampling": "Pengambilan sampel",
+  "Scale X %": "Skala X %",
+  "Scale Y %": "Skala Y %",
+  "CONV* point": "CONV* titik",
+  "CONV* minification": "CONV* pengecilan",
+  "CONV* area": "CONV* area"
 }

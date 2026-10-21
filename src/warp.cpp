@@ -1175,6 +1175,7 @@ struct AffineJob {
     const AffineStencil& stencil;
     Image& output;
     bool area = false;
+    const std::atomic<bool>* cancelled = nullptr;
     std::atomic<int> next_row{0};
 };
 static void affine_worker(AffineJob& job) {
@@ -1184,6 +1185,7 @@ static void affine_worker(AffineJob& job) {
     const ConvWarpField& field = job.field;
     std::vector<Color>& pixels = job.output.pixels;
     for (;;) {
+        if (job.cancelled && (*job.cancelled).load(std::memory_order_relaxed)) { return; }
         int y = job.next_row.fetch_add(1, std::memory_order_relaxed);
         if (y >= height) {
             return;
@@ -1192,6 +1194,7 @@ static void affine_worker(AffineJob& job) {
         double row_y = inverse.yy * y + inverse.ty;
         std::size_t offset = static_cast<std::size_t>(y) * width;
         for (int x = 0; x < width; ++x) {
+            if (x % 64 == 0 && job.cancelled && (*job.cancelled).load(std::memory_order_relaxed)) { return; }
             Point centre{row_x + inverse.xx * x, row_y + inverse.yx * x};
             WarpSample total;
             if (job.area) {
@@ -1364,7 +1367,8 @@ Rect affine_bounds(const ConvWarpField& field, const AffineMap& map) {
     return result;
 }
 void render_affine(const ConvWarpField& field, const AffineMap& map, int width, int height,
-                   Image& destination, WarpSampling sampling) {
+                   Image& destination, WarpSampling sampling, const std::atomic<bool>* cancelled) {
+    if (cancelled && (*cancelled).load(std::memory_order_relaxed)) { throw std::runtime_error("CONV rendering cancelled."); }
     if (field.width() < 1) {
         throw std::invalid_argument("Compile the CONV material first.");
     }
@@ -1374,11 +1378,13 @@ void render_affine(const ConvWarpField& field, const AffineMap& map, int width, 
     SampleRule rule = sample_rule(map_footprint(inverse), sampling);
     AffineStencil stencil = prepare_affine_stencil(inverse, rule);
     AffineJob job{field, inverse, stencil, output, sampling == WarpSampling::Area};
+    job.cancelled = cancelled;
     if (output.pixels.size() < 65536) {
         affine_worker(job);
     } else {
         affine_executor(sampling).execute(job);
     }
+    if (cancelled && (*cancelled).load(std::memory_order_relaxed)) { throw std::runtime_error("CONV rendering cancelled."); }
     destination = std::move(output);
 }
 

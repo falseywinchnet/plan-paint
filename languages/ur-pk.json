@@ -908,5 +908,11 @@
   "Offset Y": "Y منتقلی",
   "Pink border: image bounds. Pixels outside are clipped.": "گلابی سرحد: تصویر کی حدود۔ باہر کے پکسل کٹ جائیں گے۔",
   "Image changed. Reopen Effects.": "تصویر بدل گئی۔ اثرات دوبارہ کھولیں۔",
-  "Invalid color": "غلط رنگ"
+  "Invalid color": "غلط رنگ",
+  "Sampling": "نمونہ گیری",
+  "Scale X %": "X پیمانہ %",
+  "Scale Y %": "Y پیمانہ %",
+  "CONV* point": "CONV* نقطہ",
+  "CONV* minification": "CONV* تصغیر",
+  "CONV* area": "CONV* رقبہ"
 }

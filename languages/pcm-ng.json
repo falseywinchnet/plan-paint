@@ -908,5 +908,11 @@
   "Offset Y": "Y shift",
   "Pink border: image bounds. Pixels outside are clipped.": "Pink border na image boundary. Pixels outside go cut off.",
   "Image changed. Reopen Effects.": "Image don change. Open Effects again.",
-  "Invalid color": "Color no valid"
+  "Invalid color": "Color no valid",
+  "Sampling": "Sampling",
+  "Scale X %": "X scale %",
+  "Scale Y %": "Y scale %",
+  "CONV* point": "CONV* point",
+  "CONV* minification": "CONV* make smaller",
+  "CONV* area": "CONV* area"
 }

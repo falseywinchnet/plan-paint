@@ -908,5 +908,11 @@
   "Offset Y": "Смещение Y",
   "Pink border: image bounds. Pixels outside are clipped.": "Розовая рамка: границы изображения. Пиксели снаружи обрезаются.",
   "Image changed. Reopen Effects.": "Изображение изменилось. Откройте Эффекты заново.",
-  "Invalid color": "Недопустимый цвет"
+  "Invalid color": "Недопустимый цвет",
+  "Sampling": "Выборка",
+  "Scale X %": "Масштаб X %",
+  "Scale Y %": "Масштаб Y %",
+  "CONV* point": "CONV* точка",
+  "CONV* minification": "CONV* уменьшение",
+  "CONV* area": "CONV* площадь"
 }

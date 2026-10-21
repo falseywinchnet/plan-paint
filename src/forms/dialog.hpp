@@ -7,6 +7,7 @@
 #include "icon_sheet.hpp"
 #include "icon_states.hpp"
 #include "icon_effects.hpp"
+#include "numeric_transform.hpp"
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
@@ -27,6 +28,7 @@ struct IconSheetJob;
 struct IconStateJob;
 struct IconExportJob;
 struct IconBatchJob;
+struct NumericTransformJob;
 struct AssetBrowserWorker;
 struct AssetBrowserResult;
 enum class EditorDialogKind {
@@ -50,6 +52,7 @@ enum class EditorDialogKind {
     icon_palette,
     icon_states,
     icon_effects,
+    numeric_transform,
     properties,
     settings,
     english_help,
@@ -87,6 +90,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_icon_states(const std::shared_ptr<IconStateJob>& job);
     void deliver_icon_export();
     void deliver_icon_batch(const std::shared_ptr<IconBatchJob>& job);
+    void deliver_numeric_transform(const std::shared_ptr<NumericTransformJob>& job);
     void deliver_asset_browser(std::shared_ptr<const AssetBrowserResult> result);
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
@@ -104,6 +108,21 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_numeric_transform();
+    void start_numeric_transform();
+    void stop_numeric_transform();
+    void invalidate_numeric_transform();
+    void numeric_transform_number(double);
+    void numeric_transform_choice(std::optional<std::size_t>);
+    void numeric_transform_clicked(gui_forms::ButtonBase&);
+    std::shared_ptr<const NumericTransformSource> numeric_source_;
+    std::shared_ptr<NumericTransformJob> numeric_job_;
+    std::thread numeric_worker_;
+    std::vector<std::shared_ptr<gui_forms::NumericUpDown>> numeric_values_;
+    std::shared_ptr<gui_forms::ComboBox> numeric_sampling_;
+    std::shared_ptr<gui_forms::RasterCanvas> numeric_before_, numeric_after_;
+    std::shared_ptr<gui_forms::Label> numeric_status_;
+    std::shared_ptr<gui_forms::Button> numeric_preview_, numeric_apply_;
     void initialize_icon_effects();
     void render_icon_effects();
     void effect_choice_changed(std::optional<std::size_t>);

@@ -908,5 +908,11 @@
   "Offset Y": "Y সরণ",
   "Pink border: image bounds. Pixels outside are clipped.": "গোলাপি সীমানা: ছবির সীমা। বাইরের পিক্সেল কাটা যাবে।",
   "Image changed. Reopen Effects.": "ছবি বদলেছে। প্রভাব আবার খুলুন।",
-  "Invalid color": "অবৈধ রং"
+  "Invalid color": "অবৈধ রং",
+  "Sampling": "স্যাম্পলিং",
+  "Scale X %": "X স্কেল %",
+  "Scale Y %": "Y স্কেল %",
+  "CONV* point": "CONV* বিন্দু",
+  "CONV* minification": "CONV* ছোট করা",
+  "CONV* area": "CONV* ক্ষেত্র"
 }

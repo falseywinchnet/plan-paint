@@ -908,5 +908,11 @@
   "Offset Y": "Uhamisho Y",
   "Pink border: image bounds. Pixels outside are clipped.": "Mpaka wa waridi: mipaka ya picha. Pikseli za nje hukatwa.",
   "Image changed. Reopen Effects.": "Picha imebadilika. Fungua Athari tena.",
-  "Invalid color": "Rangi si halali"
+  "Invalid color": "Rangi si halali",
+  "Sampling": "Usampulishaji",
+  "Scale X %": "Kipimo X %",
+  "Scale Y %": "Kipimo Y %",
+  "CONV* point": "CONV* nukta",
+  "CONV* minification": "CONV* upunguzaji",
+  "CONV* area": "CONV* eneo"
 }

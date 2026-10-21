@@ -1,5 +1,37 @@
 # Icon and cursor production
 
+## Numeric transforms
+
+**Icon → Transform** and **Home → Rotate and flip → Transform** open the same
+before/after dialog. An active selection is the source; otherwise the current
+image is the source. Other icon representations and cursor hotspots are unchanged.
+
+Offsets accept −16384 to +16384 pixels; X and Y scales independently accept
+1–1600%; the clockwise angle accepts −360° to +360°. Controls retain two decimal
+places. Scale is applied about the source pixel-center midpoint
+`((width−1)/2, (height−1)/2)`, then clockwise rotation, then the offset. Positive
+X moves right and positive Y moves down. Scaling does not resize the document.
+The whole-image result is clipped to the existing canvas, with transparent pixels
+where the transformed image has no coverage. A transformed selection retains its
+floating bounds and remains editable, including portions outside the canvas.
+
+Sampling offers **CONV* point**, **CONV* minification** (default), and **CONV* area**,
+using the same continuous premultiplied material as Reshape. Point evaluates the
+material at output pixel centers; minification integrates a footprint when
+shrinking; area integrates the output pixel footprint even at unit scale.
+Integer translation with point or minification sampling copies exact RGBA bytes,
+including RGB under zero alpha. Neutral settings with these two modes create no
+edit. Area sampling can change pixel values at unit scale.
+
+**Preview** computes from the captured original on a background worker. Editing
+a control invalidates the previous result and disables Apply until another
+preview completes. Closing cancels outstanding work. Preview panes composite
+on a transparency checkerboard; small images use integer enlargement for
+inspection. **Apply** creates one Undo step. Undo restores both pixels and
+selection state. A newer image, representation or selection invalidates a stale
+preview before any edit. Unsupported background-dependent legacy XOR remains
+protected by the existing RGBA transformation guard.
+
 ## Contextual Icon ribbon
 
 Opening an ICO or CUR selects the **Icon** tab. Ordinary bitmap and sprite-sheet
