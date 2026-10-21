@@ -875,5 +875,8 @@
   "Bottom right": "أسفل اليمين",
   "Foreground": "المقدمة",
   "Original size": "الحجم الأصلي",
-  "Fit image": "ملاءمة الصورة"
+  "Fit image": "ملاءمة الصورة",
+  "Import palette…": "استيراد لوحة ألوان…",
+  "Export palette…": "تصدير لوحة ألوان…",
+  "Shared palette": "لوحة ألوان مشتركة"
 }

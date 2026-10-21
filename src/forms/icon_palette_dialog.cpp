@@ -18,7 +18,7 @@ void EditorDialog::initialize_icon_palette() {
     label("palette-mode-label", tr("Operation"), {20, 48, 150, 28});
     palette_mode_ = gf::make_control<gf::ComboBox>(gf::StableId("palette-mode"));
     (*palette_mode_).set_accessible_name(tr("Operation"));
-    (*palette_mode_).set_items({tr("Palette conversion"), tr("Palette entries")});
+    (*palette_mode_).set_items({tr("Palette conversion"), tr("Palette entries"), tr("Shared palette")});
     (*palette_mode_).set_selected_index(has_icon_palette(palette_source_) ? 1 : 0);
     put(palette_mode_, {180, 48, 580, 28});
     const std::size_t first_conversion = controls_.size();
@@ -85,6 +85,14 @@ void EditorDialog::initialize_icon_palette() {
           {20, 432, 740, 20});
     error_ = gf::make_control<gf::Label>(gf::StableId("dialog-error"));
     put(error_, {20, 453, 740, 20});
+    const std::shared_ptr<gf::Button> import_button =
+        button("palette-import", tr("Import palette…"), {20, 474, 160, 28});
+    palette_export_ = button("palette-export", tr("Export palette…"), {190, 474, 160, 28});
+    for (const std::shared_ptr<gf::Button>& control : {import_button, palette_export_}) {
+        subscriptions_.push_back((*control).clicked().subscribe(
+            *this,
+            gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::palette_file_clicked>(*this)));
+    }
     palette_apply_ = button("palette-apply", tr("Apply"), {550, 474, 100, 28});
     button("dialog-cancel", tr("Close"), {660, 474, 100, 28});
     subscriptions_.push_back(
@@ -152,6 +160,7 @@ void EditorDialog::render_icon_palette() {
     }
     palette_result_ = {};
     (*palette_apply_).set_enabled(false);
+    (*palette_export_).set_enabled(false);
     (*error_).set_text("");
     (*palette_status_).set_text("");
     publish_image(render_asset_preview(palette_source_, 355, 164), *palette_before_);
@@ -164,6 +173,7 @@ void EditorDialog::render_icon_palette() {
             }
             const unsigned entry = static_cast<unsigned>((*palette_entry_).selected_index().value_or(0));
             palette_result_ = edit_icon_palette_entry(palette_source_, entry, color);
+            (*palette_export_).set_enabled(true);
             publish_image(render_asset_preview(palette_result_, 355, 164), *palette_after_);
             const std::vector<unsigned>& indices = (*palette_source_.source).indices;
             std::ostringstream status;
@@ -185,7 +195,14 @@ void EditorDialog::render_icon_palette() {
         if (!from_hex(std::string((*palette_matte_).text()), options.matte)) {
             throw std::runtime_error(tr("Enter a matte color as #RRGGBB."));
         }
+        if ((*palette_mode_).selected_index().value_or(0) == 2) {
+            if (palette_file_colors_.empty()) {
+                throw std::runtime_error("Import a palette file before using Shared palette.");
+            }
+            options.fixed_palette = palette_file_colors_;
+        }
         IconPaletteResult converted = convert_icon_palette(palette_source_, options);
+        (*palette_export_).set_enabled(true);
         std::ostringstream text;
         text << tr("Current image") << ": " << converted.frame.image.width << " × "
              << converted.frame.image.height << " · " << options.bits_per_pixel << " bpp DIB · "
@@ -203,6 +220,34 @@ void EditorDialog::render_icon_palette() {
         (*palette_apply_).set_enabled(!unchanged);
     } catch (const std::exception& exception) {
         (*error_).set_text(tr(exception.what()));
+    }
+}
+void EditorDialog::palette_file_clicked(gf::ButtonBase& control) {
+    const std::shared_ptr<EditorDialog> keep_alive =
+        std::static_pointer_cast<EditorDialog>(shared_from_this());
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    if (!editor) {
+        return;
+    }
+    try {
+        if (control.stable_id().value() == "palette-import") {
+            const std::string path = (*editor).choose_palette_file();
+            if (path.empty()) {
+                return;
+            }
+            std::vector<Color> colors = load_icon_palette(path);
+            palette_file_colors_ = std::move(colors);
+            (*palette_depth_)
+                .set_selected_index(palette_file_colors_.size() <= 2    ? 0
+                                    : palette_file_colors_.size() <= 16 ? 1
+                                                                        : 2);
+            (*palette_mode_).set_selected_index(2);
+            render_icon_palette();
+        } else if (palette_result_.source && (*palette_export_).enabled()) {
+            static_cast<void>((*editor).export_palette((*palette_result_.source).palette));
+        }
+    } catch (const std::exception& error) {
+        (*error_).set_text(error.what());
     }
 }
 void EditorDialog::palette_clicked(gf::ButtonBase&) {

@@ -189,12 +189,34 @@ IconPaletteResult convert_icon_palette(const IconFrame& source, const IconPalett
     }
     const bool transparent = result.transparent_pixels != 0;
     const unsigned first_color = transparent ? 1 : 0;
-    result.palette = palette_for(prepared, (1u << options.bits_per_pixel) - first_color, transparent);
-    if (transparent) {
-        result.palette.insert(result.palette.begin(), {0, 0, 0, 255});
+    unsigned transparent_index = 0;
+    if (options.fixed_palette.empty()) {
+        result.palette = palette_for(prepared, (1u << options.bits_per_pixel) - first_color, transparent);
+        if (transparent) {
+            result.palette.insert(result.palette.begin(), {0, 0, 0, 255});
+        }
+    } else {
+        if (options.fixed_palette.size() > (1u << options.bits_per_pixel)) {
+            throw std::runtime_error("The shared palette exceeds the selected color depth.");
+        }
+        result.palette = options.fixed_palette;
+        bool black = false;
+        for (std::size_t index = 0; index < result.palette.size(); ++index) {
+            const Color color = result.palette[index];
+            if (color.a != 255) {
+                throw std::runtime_error("Palette entries require opaque RGB colors.");
+            }
+            if (!black && !color.r && !color.g && !color.b) {
+                transparent_index = static_cast<unsigned>(index);
+                black = true;
+            }
+        }
+        if (transparent && !black) {
+            throw std::runtime_error("A shared palette needs a black entry for transparent icon pixels.");
+        }
     }
     result.frame.image = prepared;
-    std::vector<unsigned> indices(image.pixels.size(), 0);
+    std::vector<unsigned> indices(image.pixels.size(), transparent_index);
     std::vector<std::array<double, 3>> current(image.width + 2), next(image.width + 2);
     for (int y = 0; y < image.height; ++y) {
         for (int x = 0; x < image.width; ++x) {

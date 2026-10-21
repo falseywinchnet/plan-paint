@@ -875,5 +875,8 @@
   "Bottom right": "Bottom right",
   "Foreground": "Front",
   "Original size": "Original size",
-  "Fit image": "Fit picture"
+  "Fit image": "Fit picture",
+  "Import palette…": "Import palette…",
+  "Export palette…": "Export palette…",
+  "Shared palette": "Palette wey all go use"
 }

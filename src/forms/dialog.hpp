@@ -103,6 +103,12 @@ class EditorDialog final : public gui_forms::Control {
 
   private:
     void initialize_icon_batch();
+    void initialize_batch_palette();
+    void read_batch_palette(IconBatchSettings& settings) const;
+    std::vector<std::shared_ptr<gui_forms::Control>> batch_palette_controls_;
+    std::shared_ptr<gui_forms::TextBox> batch_palette_path_, batch_palette_matte_;
+    std::shared_ptr<gui_forms::ComboBox> batch_palette_depth_, batch_palette_dither_;
+    std::shared_ptr<gui_forms::NumericUpDown> batch_palette_threshold_;
     void initialize_batch_stamp();
     void read_batch_stamp(IconBatchSettings& settings) const;
     void show_batch_stamp(const IconBatchPlan& plan);
@@ -201,6 +207,9 @@ class EditorDialog final : public gui_forms::Control {
     void initialize_icon_palette();
     void render_icon_palette();
     void palette_clicked(gui_forms::ButtonBase&);
+    void palette_file_clicked(gui_forms::ButtonBase&);
+    std::vector<Color> palette_file_colors_;
+    std::shared_ptr<gui_forms::Button> palette_export_;
     void palette_choice_changed(std::optional<std::size_t>);
     void palette_entry_changed(std::optional<std::size_t>);
     void palette_number_changed(double);

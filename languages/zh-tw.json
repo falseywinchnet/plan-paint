@@ -875,5 +875,8 @@
   "Bottom right": "右下",
   "Foreground": "前景",
   "Original size": "原始大小",
-  "Fit image": "符合影像"
+  "Fit image": "符合影像",
+  "Import palette…": "匯入調色盤…",
+  "Export palette…": "匯出調色盤…",
+  "Shared palette": "共用調色盤"
 }

@@ -87,7 +87,7 @@ void EditorDialog::initialize_icon_batch() {
     batch_operation_ = gf::make_control<gf::ComboBox>(gf::StableId("batch-operation"));
     (*batch_operation_)
         .set_items({tr("Convert to ICO"), tr("Normalize sizes"), tr("Icon state variants"),
-                    tr("Export representations"), tr("Stamp")});
+                    tr("Export representations"), tr("Stamp"), tr("Shared palette")});
     (*batch_operation_).set_selected_index(0);
     put(batch_operation_, {260, 48, 480, 28});
     const std::size_t normal_begin = controls_.size();
@@ -199,6 +199,7 @@ void EditorDialog::initialize_icon_batch() {
                 gf::Delegate<const std::string&>::bind<EditorDialog, &EditorDialog::batch_text_changed>(
                     *this)));
     initialize_batch_stamp();
+    initialize_batch_palette();
     refresh_batch_sources();
     invalidate_batch();
 }
@@ -241,10 +242,13 @@ void EditorDialog::update_batch_controls() {
     const std::size_t operation = (*batch_operation_).selected_index().value_or(0);
     const bool stamping = operation == 4;
     for (const std::shared_ptr<gf::Control>& control : batch_normal_controls_) {
-        (*control).set_visible(!stamping);
+        (*control).set_visible(!stamping && operation != 5);
     }
     for (const std::shared_ptr<gf::Control>& control : batch_stamp_controls_) {
         (*control).set_visible(stamping);
+    }
+    for (const std::shared_ptr<gf::Control>& control : batch_palette_controls_) {
+        (*control).set_visible(operation == 5);
     }
     (*batch_sources_).set_requested_bounds({20, 48, 220, stamping ? 56.0 : 140.0});
     (*batch_stamp_matte_).set_enabled(stamping && (*batch_stamp_flatten_).checked());
@@ -312,6 +316,9 @@ void EditorDialog::start_icon_batch(bool execute) {
     job.settings.recipe.saturation = (*batch_saturation_).value();
     job.settings.recipe.brightness = (*batch_brightness_).value();
     job.settings.recipe.opacity = (*batch_opacity_).value();
+    if (job.settings.operation == IconBatchOperation::Palette) {
+        read_batch_palette(job.settings);
+    }
     if (job.settings.operation == IconBatchOperation::Stamp) {
         read_batch_stamp(job.settings);
     }
@@ -393,6 +400,11 @@ void EditorDialog::batch_clicked(gf::ButtonBase& control) {
             (*editor).batch_sources.insert((*editor).batch_sources.end(), files.begin(), files.end());
             refresh_batch_sources();
             invalidate_batch();
+        } else if (id == "batch-palette-browse") {
+            const std::string path = (*editor).choose_palette_file();
+            if (!path.empty()) {
+                (*batch_palette_path_).set_text(path);
+            }
         } else if (id == "batch-stamp-browse") {
             const std::vector<std::string> files = (*editor).choose_batch_sources(false);
             if (!files.empty()) {

@@ -875,5 +875,8 @@
   "Bottom right": "Унизу праворуч",
   "Foreground": "Передній план",
   "Original size": "Початковий розмір",
-  "Fit image": "Уписати в зображення"
+  "Fit image": "Уписати в зображення",
+  "Import palette…": "Імпорт палітри…",
+  "Export palette…": "Експорт палітри…",
+  "Shared palette": "Спільна палітра"
 }

@@ -6,6 +6,7 @@
 #include "forms/editor.hpp"
 #include "icon_palette.hpp"
 #include "localization.hpp"
+#include "safe_file.hpp"
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -1463,6 +1464,30 @@ void icon_batch_contracts() {
     require(stamped.get(0, 0).a == 255 && editor.document.revision == revision &&
                 editor.document.undo_history.size() == history,
             "stamp file output applies the matte without changing document history");
+    (*operation).set_selected_index(5);
+    require((*window.find("batch-palette-path")).visible() && !(*window.find("batch-stamp-path")).visible(),
+            "shared palette exposes its own conversion fields");
+    const std::string palette_text = paint::encode_icon_palette({{0, 0, 0, 255}, {255, 255, 255, 255}});
+    services.path = (root / "shared.gpl").string();
+    paint::write_file_atomic(std::vector<std::uint8_t>(palette_text.begin(), palette_text.end()), services.path, "palette fixture");
+    routed_button(window, "batch-palette-browse");
+    routed_button(window, "batch-review");
+    await_batch(window);
+    require(!(*window.find("batch-run")).enabled(), "large artwork requires explicit ICO size conversion first");
+    const std::shared_ptr<gf::ListBox> sources = std::dynamic_pointer_cast<gf::ListBox>(window.find("batch-sources"));
+    (*sources).select_index(0);
+    routed_button(window, "batch-remove");
+    services.path = (root / "app-icon-1-icon.ico").string();
+    routed_button(window, "batch-add");
+    routed_button(window, "batch-review");
+    await_batch(window);
+    require((*window.find("batch-run")).enabled(), "shared palette batch reviews through native file selection");
+    routed_button(window, "batch-run");
+    require(!(*window.find("batch-palette-depth")).enabled(), "running shared conversion freezes depth");
+    await_batch(window);
+    const paint::ImageContainer shared = paint::load_container((root / "app-icon-1-icon-1-palette.ico").string());
+    require(paint::has_icon_palette(shared.frames[0]) && editor.document.revision == revision,
+            "shared batch emits indexed ICO without document mutation");
     (*operation).set_selected_index(0);
     require(!(*window.find("batch-stamp-path")).visible() && (*window.find("batch-policy")).visible(),
             "leaving stamp operation restores profile fields");
@@ -1735,6 +1760,26 @@ void icon_palette_contracts() {
     const std::uint64_t before_close = editor.document.revision;
     routed_button(window, "dialog-cancel");
     require(editor.document.revision == before_close, "closing palette preview does not edit");
+    const std::filesystem::path palette_path = std::filesystem::temp_directory_path() /
+        ("paint-palette-ui-" + std::to_string(paint::recovery_time_ms()) + ".gpl");
+    const std::string palette_text = paint::encode_icon_palette({{0, 0, 0, 255}, {255, 255, 255, 255}});
+    paint::write_file_atomic(std::vector<std::uint8_t>(palette_text.begin(), palette_text.end()), palette_path.string(), "palette fixture");
+    services.path = palette_path.string();
+    editor.execute("atlas-palette");
+    routed_button(window, "palette-import");
+    const std::shared_ptr<gf::ComboBox> shared_mode = std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-mode"));
+    require((*shared_mode).selected_index().value_or(0) == 2 && (*window.find("palette-apply")).enabled() &&
+            editor.document.revision == before_close, "file import selects reviewed shared conversion without applying");
+    routed_button(window, "palette-export");
+    require(paint::load_icon_palette(palette_path.string()).size() == 2 && editor.document.revision == before_close,
+            "palette export writes exact preview colors without applying pixels");
+    routed_button(window, "palette-apply");
+    require(paint::has_icon_palette(editor.document.atlas.icons[0]) &&
+            (*editor.document.atlas.icons[0].source).format.bits_per_pixel == 1,
+            "imported two-color palette applies at fitted depth");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(1, 0), {1, 2, 3, 4}), "shared palette Apply has one reversible transaction");
+    std::filesystem::remove(palette_path);
 }
 
 void alpha_tools_contracts() {

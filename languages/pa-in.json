@@ -875,5 +875,8 @@
   "Bottom right": "ਹੇਠਾਂ ਸੱਜੇ",
   "Foreground": "ਅਗਲਾ ਪਾਸਾ",
   "Original size": "ਅਸਲ ਆਕਾਰ",
-  "Fit image": "ਤਸਵੀਰ ਵਿੱਚ ਫਿੱਟ ਕਰੋ"
+  "Fit image": "ਤਸਵੀਰ ਵਿੱਚ ਫਿੱਟ ਕਰੋ",
+  "Import palette…": "ਪੈਲੇਟ ਆਯਾਤ ਕਰੋ…",
+  "Export palette…": "ਪੈਲੇਟ ਨਿਰਯਾਤ ਕਰੋ…",
+  "Shared palette": "ਸਾਂਝਾ ਪੈਲੇਟ"
 }

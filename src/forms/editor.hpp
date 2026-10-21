@@ -219,6 +219,8 @@ class Editor final : public gui_forms::Control {
     std::string asset_directory, asset_bookmark_path;
     std::vector<std::string> batch_sources;
     std::vector<std::string> choose_batch_sources(bool multiple = true);
+    std::string choose_palette_file();
+    bool export_palette(const std::vector<Color>& colors);
     bool save_export_report(const std::string& report,
                             const std::string& suggested_name = "icon-export-report.json");
     bool export_icon_variant(const std::vector<std::uint8_t>& bytes, bool cursor,

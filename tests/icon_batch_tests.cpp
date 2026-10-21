@@ -3,6 +3,7 @@
 #include "icon_batch.hpp"
 #include "paths.hpp"
 #include "safe_file.hpp"
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 #include <limits>
@@ -30,6 +31,55 @@ void cancel_after_one(const paint::IconBatchPlan& plan, void* context) {
     if (plan.entries.front().state == paint::IconExportState::Completed) {
         (*static_cast<std::atomic<bool>*>(context)).store(true);
     }
+}
+void shared_palette_batch_contracts() {
+    Directory root;
+    const std::filesystem::path output = root.path / "out";
+    std::filesystem::create_directory(output);
+    const std::string path = paint::path_to_utf8(root.path / "shared.gpl");
+    const std::vector<paint::Color> colors{{220, 40, 20, 255}, {0, 0, 0, 255}, {20, 40, 220, 255}};
+    const std::string text = paint::encode_icon_palette(colors);
+    paint::write_file_atomic(std::vector<std::uint8_t>(text.begin(), text.end()), path, "palette fixture");
+    paint::IconFrame first, second;
+    first.image.reset(16, 16, {210, 45, 25, 255});
+    first.image.set(0, 0, {90, 80, 70, 0});
+    second.image.reset(32, 32, {25, 45, 210, 255});
+    second.hotspot_x = 9;
+    const std::string source = paint::path_to_utf8(root.path / "cursor.cur");
+    paint::write_file_atomic(paint::encode_icon_container({paint::ContainerKind::Cursor, {first, second}}),
+                             source, "cursor fixture");
+    paint::IconBatchSettings settings;
+    settings.operation = paint::IconBatchOperation::Palette;
+    settings.palette_path = path;
+    settings.palette.bits_per_pixel = 4;
+    std::atomic<bool> cancel{false};
+    paint::IconBatchPlan plan =
+        paint::plan_icon_batch({source, source}, paint::path_to_utf8(output), settings, cancel);
+    require(paint::icon_batch_ready(plan) && std::filesystem::is_empty(output),
+            "shared palette review writes nothing");
+    paint::write_file_atomic({'c', 'h', 'a', 'n', 'g', 'e', 'd'}, path, "changed palette fixture");
+    paint::run_icon_batch(plan, cancel);
+    for (const paint::IconBatchEntry& entry : plan.entries) {
+        require(entry.state == paint::IconExportState::Completed, "shared batch publishes captured palette");
+        const paint::ImageContainer result =
+            paint::load_container(paint::path_to_utf8(output / entry.filename));
+        require(result.kind == paint::ContainerKind::Cursor && result.frames.size() == 2 &&
+                    result.frames[1].hotspot_x == 9,
+                "shared conversion retains representations and hotspots");
+        for (const paint::IconFrame& frame : result.frames) {
+            require(
+                paint::has_icon_palette(frame) && (*frame.source).format.bits_per_pixel == 4 &&
+                    std::equal(colors.begin(), colors.end(), (*frame.source).palette.begin(), paint::equal),
+                "every output representation uses the same exact ordered palette");
+        }
+        require((*result.frames[0].source).indices[0] == 1 && result.frames[0].image.get(0, 0).a == 0,
+                "transparent mask uses retained shared black index");
+    }
+    const std::string report = paint::icon_batch_report(plan);
+    require(report.find("shared-palette") != std::string::npos &&
+                report.find("#DC2814") != std::string::npos &&
+                report.find("alphaThreshold") != std::string::npos,
+            "report records exact palette and conversion policy");
 }
 void batch_contracts() {
     Directory root;
@@ -354,6 +404,7 @@ void stamp_container_contracts() {
 int main() {
     try {
         batch_contracts();
+        shared_palette_batch_contracts();
         cursor_and_report_contracts();
         stamp_contracts();
         stamp_container_contracts();

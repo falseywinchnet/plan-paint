@@ -875,5 +875,8 @@
   "Bottom right": "ימין למטה",
   "Foreground": "קדמה",
   "Original size": "גודל מקורי",
-  "Fit image": "התאמה לתמונה"
+  "Fit image": "התאמה לתמונה",
+  "Import palette…": "ייבוא לוח צבעים…",
+  "Export palette…": "ייצוא לוח צבעים…",
+  "Shared palette": "לוח צבעים משותף"
 }

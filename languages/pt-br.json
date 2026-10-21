@@ -875,5 +875,8 @@
   "Bottom right": "Inferior direito",
   "Foreground": "Primeiro plano",
   "Original size": "Tamanho original",
-  "Fit image": "Ajustar à imagem"
+  "Fit image": "Ajustar à imagem",
+  "Import palette…": "Importar paleta…",
+  "Export palette…": "Exportar paleta…",
+  "Shared palette": "Paleta compartilhada"
 }

@@ -875,5 +875,8 @@
   "Bottom right": "Dưới phải",
   "Foreground": "Tiền cảnh",
   "Original size": "Kích thước gốc",
-  "Fit image": "Vừa ảnh"
+  "Fit image": "Vừa ảnh",
+  "Import palette…": "Nhập bảng màu…",
+  "Export palette…": "Xuất bảng màu…",
+  "Shared palette": "Bảng màu dùng chung"
 }

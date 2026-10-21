@@ -875,5 +875,8 @@
   "Bottom right": "Kanan bawah",
   "Foreground": "Latar depan",
   "Original size": "Ukuran asli",
-  "Fit image": "Sesuaikan gambar"
+  "Fit image": "Sesuaikan gambar",
+  "Import palette…": "Impor palet…",
+  "Export palette…": "Ekspor palet…",
+  "Shared palette": "Palet bersama"
 }

@@ -875,5 +875,8 @@
   "Bottom right": "Снизу справа",
   "Foreground": "Передний план",
   "Original size": "Исходный размер",
-  "Fit image": "Вписать в изображение"
+  "Fit image": "Вписать в изображение",
+  "Import palette…": "Импорт палитры…",
+  "Export palette…": "Экспорт палитры…",
+  "Shared palette": "Общая палитра"
 }

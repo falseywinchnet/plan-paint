@@ -71,6 +71,31 @@ ImageContainer transform(const AssetPreview& source, const IconBatchSettings& se
     if (settings.operation == IconBatchOperation::Representations) {
         return {};
     }
+    if (settings.operation == IconBatchOperation::Palette) {
+        if (settings.palette.fixed_palette.empty()) {
+            throw std::runtime_error("Choose a shared palette file.");
+        }
+        ImageContainer output;
+        output.kind = source.images.kind == ContainerKind::Image ? ContainerKind::Icon : source.images.kind;
+        summary = "Shared palette; " + std::to_string(settings.palette.fixed_palette.size()) + " entries; " +
+                  std::to_string(settings.palette.bits_per_pixel) + " bpp DIB";
+        for (std::size_t index = 0; index < source.images.frames.size(); ++index) {
+            if (cancel.load()) {
+                throw std::runtime_error("Cancelled during palette conversion.");
+            }
+            const IconFrame& frame = source.images.frames[index];
+            if (frame.image.width > 256 || frame.image.height > 256) {
+                throw std::runtime_error(
+                    "Shared icon palettes require images up to 256 pixels. Use Convert to ICO first.");
+            }
+            IconPaletteResult result = convert_icon_palette(frame, settings.palette);
+            summary += "; image #" + std::to_string(index + 1) + ": " +
+                       std::to_string(result.partial_pixels) + " partial-alpha pixels converted, " +
+                       std::to_string(result.transparent_pixels) + " transparent pixels";
+            output.frames.push_back(std::move(result.frame));
+        }
+        return output;
+    }
     if (settings.operation == IconBatchOperation::Stamp) {
         if (!stamp) {
             throw std::runtime_error("Choose a fixed stamp image.");
@@ -222,6 +247,9 @@ IconBatchPlan plan_icon_batch(const std::vector<std::string>& sources, const std
     plan.directory = std::filesystem::canonical(path_from_utf8(directory));
     AssetPreview stamp;
     const Image* stamp_image = nullptr;
+    if (settings.operation == IconBatchOperation::Palette && !settings.palette_path.empty()) {
+        plan.settings.palette.fixed_palette = load_icon_palette(settings.palette_path);
+    }
     if (settings.operation == IconBatchOperation::Stamp) {
         stamp = load_asset_preview(settings.stamp_path);
         require_rgba(stamp.images.frames.at(stamp.preferred));
@@ -265,7 +293,8 @@ IconBatchPlan plan_icon_batch(const std::vector<std::string>& sources, const std
                     plan.entries.push_back(std::move(frame_entry));
                 }
             } else {
-                const ImageContainer output = transform(source, settings, entry.summary, cancel, stamp_image);
+                const ImageContainer output =
+                    transform(source, plan.settings, entry.summary, cancel, stamp_image);
                 static_cast<void>(encode_output(output));
                 if (stamp_image) {
                     verify_stamp(stamp, plan.stamp_source);
@@ -279,6 +308,7 @@ IconBatchPlan plan_icon_batch(const std::vector<std::string>& sources, const std
                 }
                 const std::string kind = settings.operation == IconBatchOperation::Convert     ? "-icon"
                                          : settings.operation == IconBatchOperation::Normalize ? "-normalized"
+                                         : settings.operation == IconBatchOperation::Palette   ? "-palette"
                                          : settings.operation == IconBatchOperation::Stamp
                                              ? "-stamped"
                                              : "-" + icon_state_name(settings.recipe.preset);
@@ -425,6 +455,9 @@ std::string icon_batch_report(const IconBatchPlan& plan) {
     case IconBatchOperation::Representations:
         operation = "representations-to-png";
         break;
+    case IconBatchOperation::Palette:
+        operation = "shared-palette";
+        break;
     case IconBatchOperation::Stamp:
         operation = "fixed-image-stamp";
         break;
@@ -446,7 +479,19 @@ std::string icon_batch_report(const IconBatchPlan& plan) {
         }
         json << settings.sizes[index];
     }
-    json << "],\"recipe\":{\"preset\":" << quote(icon_state_name(settings.recipe.preset))
+    json << "],\"sharedPalette\":{\"source\":" << quote(settings.palette_path)
+         << ",\"bitsPerPixel\":" << settings.palette.bits_per_pixel
+         << ",\"alphaThreshold\":" << settings.palette.alpha_threshold
+         << ",\"matte\":" << quote(to_hex(settings.palette.matte)) << ",\"dither\":"
+         << quote(settings.palette.dither == IconPaletteDither::None ? "none" : "floyd-steinberg")
+         << ",\"colors\":[";
+    for (std::size_t index = 0; index < settings.palette.fixed_palette.size(); ++index) {
+        if (index) {
+            json << ',';
+        }
+        json << quote(to_hex(settings.palette.fixed_palette[index]));
+    }
+    json << "]},\"recipe\":{\"preset\":" << quote(icon_state_name(settings.recipe.preset))
          << ",\"saturationPercent\":" << settings.recipe.saturation
          << ",\"brightnessPercent\":" << settings.recipe.brightness
          << ",\"opacityPercent\":" << settings.recipe.opacity << ",\"palette\":"

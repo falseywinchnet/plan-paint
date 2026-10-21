@@ -875,5 +875,8 @@
   "Bottom right": "In basso a destra",
   "Foreground": "Primo piano",
   "Original size": "Dimensioni originali",
-  "Fit image": "Adatta all’immagine"
+  "Fit image": "Adatta all’immagine",
+  "Import palette…": "Importa tavolozza…",
+  "Export palette…": "Esporta tavolozza…",
+  "Shared palette": "Tavolozza condivisa"
 }
