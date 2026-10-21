@@ -832,5 +832,22 @@
   "Transparent pixels": "Píxeles transparentes",
   "Partial alpha converted": "Alfa parcial convertido",
   "Image changed. Reopen Palette conversion.": "La imagen cambió. Reabra la conversión de paleta.",
-  "Palette…": "Paleta…"
+  "Palette…": "Paleta…",
+  "States…": "Estados…",
+  "Icon state variants": "Variantes de estado de iconos",
+  "Preset": "Preajuste",
+  "Normal": "Normal",
+  "Hot": "Resaltado",
+  "Disabled": "Desactivado",
+  "Saturation %": "Saturación %",
+  "Brightness %": "Brillo %",
+  "Opacity %": "Opacidad %",
+  "Output": "Salida",
+  "Indexed sources → DIB": "Fuentes indexadas → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "Indexado: 1/4/8 bpp; 2→4. Alfa <128 transparente; en otro caso, fondo blanco.",
+  "Preview snapshot; source images stay unchanged.": "Vista de una instantánea; las imágenes originales no cambian.",
+  "Variant exported.": "Variante exportada.",
+  "Choose an ICO/CUR filename matching this export.": "Elija un nombre ICO/CUR que corresponda a esta exportación.",
+  "Export to a separate file; the source cannot be replaced.": "Exporte a otro archivo; no se puede reemplazar el original.",
+  "Choose a JSON filename for this report.": "Elija un nombre de archivo JSON para este informe."
 }

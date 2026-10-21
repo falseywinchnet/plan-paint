@@ -34,7 +34,7 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         alpha_tools_review = false, icon_palette_review = false;
+         alpha_tools_review = false, icon_palette_review = false, icon_states_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -349,6 +349,14 @@ struct NativeExercise {
             }
             return;
         }
+        if (icon_states_review) {
+            const std::shared_ptr<gf::RasterCanvas> preview =
+                std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("state-after"));
+            if (!painted || !preview || !(*preview).bitmap() || !(*window.find("state-export")).enabled()) {
+                throw std::runtime_error("Native state preview did not render");
+            }
+            return;
+        }
         if (icon_formats_review) {
             const std::shared_ptr<gf::Label> status =
                 std::dynamic_pointer_cast<gf::Label>(window.find("atlas-status"));
@@ -419,6 +427,32 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (icon_states_review) {
+            const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+            document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
+            document.make_icon_sizes({16, 32, 48, 128}, false);
+            (*editor).execute("atlas-states");
+            const std::chrono::steady_clock::time_point deadline =
+                std::chrono::steady_clock::now() + std::chrono::seconds(10);
+            while (!(*window.find("state-export")).enabled()) {
+                static_cast<void>(window.drain_posted_work());
+                if (std::chrono::steady_clock::now() > deadline) {
+                    throw std::runtime_error("Native state preview timed out");
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            const std::shared_ptr<gf::ComboBox> image =
+                std::dynamic_pointer_cast<gf::ComboBox>(window.find("state-image"));
+            (*image).set_selected_index(3);
+            window.perform_layout();
+            inspect_frame(window);
+            (*editor).close_editor_dialog();
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native state preview close failed");
+            }
+            return;
+        }
         if (alpha_tools_review || icon_palette_review) {
             paint::ImageContainer icon;
             icon.kind = paint::ContainerKind::Icon;
@@ -749,11 +783,12 @@ int main(int argc, char** argv) {
         exercise.icon_sheet_review = argc > 1 && std::string(argv[1]) == "--icon-sheet";
         exercise.icon_export_review = argc > 1 && std::string(argv[1]) == "--icon-export";
         exercise.icon_palette_review = argc > 1 && std::string(argv[1]) == "--icon-palette";
+        exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
-            exercise.alpha_tools_review || exercise.icon_palette_review) {
+            exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
@@ -775,9 +810,10 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size = exercise.icon_formats_review ? gf::Size{800, 520}
-                               : exercise.compact           ? gf::Size{800, 600}
-                                                            : gf::Size{1280, 820};
+        options.initial_size = exercise.icon_formats_review || exercise.icon_states_review
+                                   ? gf::Size{800, 520}
+                               : exercise.compact ? gf::Size{800, 600}
+                                                  : gf::Size{1280, 820};
         options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;
         options.ready = std::bind(&NativeExercise::ready, std::ref(exercise), std::placeholders::_1,

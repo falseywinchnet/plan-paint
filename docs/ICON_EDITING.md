@@ -310,6 +310,63 @@ Palette construction and dithering above are Plan Paint behavior, not a claim
 to reproduce another editor's numerical output. Shared batch palettes, palette
 file interchange, and direct palette-entry editing remain separate capabilities.
 
+## Normal, hot and disabled icon families
+
+Open an ICO or CUR and choose **Atlas → States…**. The window captures the
+current document as a preview snapshot. Choose all representations, the current
+image, or the selected Atlas sequence. Sequence order and repeated entries are
+preserved. Select a representation in the Preview list to compare its original
+pixels with its generated state.
+
+The presets are starting recipes with adjustable saturation, brightness and
+opacity. **Reset** restores the selected preset's numbers while retaining the
+chosen scope and output policy.
+
+| Preset | Saturation | Brightness | Opacity |
+| --- | ---: | ---: | ---: |
+| Normal | 100% | 0% | 100% |
+| Hot | 120% | +10% | 100% |
+| Disabled | 0% | 0% | 55% |
+
+Saturation accepts 0–200%, brightness −100–100%, and opacity 0–100%. These are
+Plan Paint recipes, independently defined in encoded RGB byte space. Version
+`plan-paint-icon-state-v1` computes gray as `0.2126R + 0.7152G + 0.0722B`.
+Each color channel becomes
+`gray + saturation/100 × (channel − gray) + brightness × 255/100`, clamped to
+0–255 and rounded to the nearest byte. Alpha becomes
+`round(alpha × opacity/100)`. Fully transparent source pixels retain their hidden
+RGB under the RGBA output policy. Calculations use double precision.
+
+**RGBA** emits the transformed pixels with continuous opacity. **Indexed sources
+→ DIB** converts 1-, 4- and 8-bit sources back to their corresponding indexed DIB
+depths; 2-bit indexed sources become 4-bit DIB. Other source depths produce RGBA.
+Indexed conversion uses the palette algorithm above, an alpha threshold of 128,
+a white matte and no dithering. The policy note remains visible, and the report
+identifies each representation's source and output format and counts partially
+transparent pixels converted by this policy.
+
+Every requested representation receives a result. Background-dependent legacy
+XOR pixels cannot be transformed by these recipes; a failed representation stays
+in the report and disables export of the requested family. Choosing a scope that
+excludes it can produce a complete export. The tool does not silently omit failed
+images. Images must fit the supported 1–256 pixel ICO/CUR dimensions, and cursor
+hotspots must remain within their image.
+
+**Export…** writes a separate standard ICO or CUR, retaining dimensions, order
+and cursor hotspots. The suggested filename adds `-normal`, `-hot` or `-disabled`
+to the source stem. A missing extension is added; a mismatched extension is
+rejected. The source path, its existing filesystem aliases, and the current
+document's path cannot be replaced by a state export. Replacement of another
+existing output follows the save dialog's overwrite confirmation and atomic
+per-file writing behavior.
+
+**Save report…** writes JSON containing the versioned recipe, output policy and
+per-image ready, failed or cancelled decisions. It requires a JSON filename.
+Preview changes and exports do not modify the document or its Undo history.
+Changing the document after opening the window does not change the captured
+snapshot: reopen States to capture newer artwork. Closing the window cancels
+pending work, and late results cannot replace a newer recipe preview.
+
 The broader [icon production interview](icon-editor-study/mockups.html) covers
 additional palette, alpha, batch and asset-browsing capabilities. Its recommendations
 remain candidate designs; implemented features do not establish owner answers

@@ -832,5 +832,22 @@
   "Transparent pixels": "透明ピクセル",
   "Partial alpha converted": "変換した半透明",
   "Image changed. Reopen Palette conversion.": "画像が変わりました。パレット変換を開き直してください。",
-  "Palette…": "パレット…"
+  "Palette…": "パレット…",
+  "States…": "状態…",
+  "Icon state variants": "アイコンの状態バリエーション",
+  "Preset": "プリセット",
+  "Normal": "通常",
+  "Hot": "強調",
+  "Disabled": "無効",
+  "Saturation %": "彩度 %",
+  "Brightness %": "明るさ %",
+  "Opacity %": "不透明度 %",
+  "Output": "出力",
+  "Indexed sources → DIB": "インデックス形式 → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "インデックス：1/4/8 bpp、2→4。アルファ <128 は透明、それ以外は白背景と合成。",
+  "Preview snapshot; source images stay unchanged.": "固定スナップショットのプレビュー。元画像は変更されません。",
+  "Variant exported.": "バリエーションを書き出しました。",
+  "Choose an ICO/CUR filename matching this export.": "この書き出しに合う ICO/CUR ファイル名を選んでください。",
+  "Export to a separate file; the source cannot be replaced.": "別ファイルに書き出してください。元ファイルは置き換えられません。",
+  "Choose a JSON filename for this report.": "このレポートの JSON ファイル名を選んでください。"
 }

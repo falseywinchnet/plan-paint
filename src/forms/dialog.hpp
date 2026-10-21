@@ -4,6 +4,7 @@
 #include "color_tools.hpp"
 #include "icon_export.hpp"
 #include "icon_sheet.hpp"
+#include "icon_states.hpp"
 #include "image.hpp"
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/canvas.hpp>
@@ -21,6 +22,7 @@ class EditorDialog;
 struct CarpetRenderJob;
 struct DitherRenderJob;
 struct IconSheetJob;
+struct IconStateJob;
 struct IconExportJob;
 struct AssetBrowserWorker;
 struct AssetBrowserResult;
@@ -42,6 +44,7 @@ enum class EditorDialogKind {
     asset_browser,
     alpha_tools,
     icon_palette,
+    icon_states,
     properties,
     settings,
     english_help,
@@ -76,6 +79,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_carpet();
     void deliver_dither();
     void deliver_icon_sheet();
+    void deliver_icon_states(const std::shared_ptr<IconStateJob>& job);
     void deliver_icon_export();
     void deliver_asset_browser(std::shared_ptr<const AssetBrowserResult> result);
     static constexpr bool initialize_tree_after_construction = true;
@@ -94,6 +98,26 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_icon_states();
+    void stop_icon_states();
+    void render_icon_states();
+    void show_icon_state_image(std::optional<std::size_t>);
+    void state_choice_changed(std::optional<std::size_t>);
+    void state_preset_changed(std::optional<std::size_t>);
+    void state_number_changed(double);
+    void state_clicked(gui_forms::ButtonBase&);
+    std::shared_ptr<const ImageContainer> state_source_;
+    std::vector<int> state_selected_;
+    int state_current_ = -1;
+    std::string state_source_path_;
+    bool state_updating_ = false;
+    std::shared_ptr<IconStateJob> state_job_;
+    std::thread state_worker_;
+    std::shared_ptr<gui_forms::ComboBox> state_scope_, state_preset_, state_policy_, state_image_;
+    std::shared_ptr<gui_forms::NumericUpDown> state_saturation_, state_brightness_, state_opacity_;
+    std::shared_ptr<gui_forms::RasterCanvas> state_before_, state_after_;
+    std::shared_ptr<gui_forms::TextBox> state_report_;
+    std::shared_ptr<gui_forms::Button> state_export_, state_save_report_;
     void initialize_asset_browser();
     void stop_asset_browser();
     void request_assets(bool scan);

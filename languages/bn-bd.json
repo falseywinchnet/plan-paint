@@ -832,5 +832,22 @@
   "Transparent pixels": "স্বচ্ছ পিক্সেল",
   "Partial alpha converted": "রূপান্তরিত আংশিক আলফা",
   "Image changed. Reopen Palette conversion.": "ছবি বদলেছে। প্যালেট রূপান্তর আবার খুলুন।",
-  "Palette…": "প্যালেট…"
+  "Palette…": "প্যালেট…",
+  "States…": "অবস্থা…",
+  "Icon state variants": "আইকনের অবস্থার সংস্করণ",
+  "Preset": "প্রিসেট",
+  "Normal": "স্বাভাবিক",
+  "Hot": "উজ্জ্বল",
+  "Disabled": "নিষ্ক্রিয়",
+  "Saturation %": "সম্পৃক্ততা %",
+  "Brightness %": "উজ্জ্বলতা %",
+  "Opacity %": "অস্বচ্ছতা %",
+  "Output": "আউটপুট",
+  "Indexed sources → DIB": "ইনডেক্সযুক্ত উৎস → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "ইনডেক্স: 1/4/8 বিট; 2→4। আলফা <128 স্বচ্ছ; অন্যথায় সাদা পটভূমি।",
+  "Preview snapshot; source images stay unchanged.": "স্থির অনুলিপির পূর্বরূপ; উৎস ছবি অপরিবর্তিত থাকে।",
+  "Variant exported.": "সংস্করণ রপ্তানি হয়েছে।",
+  "Choose an ICO/CUR filename matching this export.": "এই রপ্তানির উপযোগী ICO/CUR ফাইলের নাম বেছে নিন।",
+  "Export to a separate file; the source cannot be replaced.": "আলাদা ফাইলে রপ্তানি করুন; উৎস প্রতিস্থাপন করা যাবে না।",
+  "Choose a JSON filename for this report.": "এই প্রতিবেদনের জন্য JSON ফাইলের নাম বেছে নিন।"
 }

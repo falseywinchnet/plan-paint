@@ -832,5 +832,22 @@
   "Transparent pixels": "פיקסלים שקופים",
   "Partial alpha converted": "אלפא חלקי שהומר",
   "Image changed. Reopen Palette conversion.": "התמונה השתנתה. פתח מחדש את המרת לוח הצבעים.",
-  "Palette…": "לוח צבעים…"
+  "Palette…": "לוח צבעים…",
+  "States…": "מצבים…",
+  "Icon state variants": "גרסאות מצב של סמלים",
+  "Preset": "ערכה מוכנה",
+  "Normal": "רגיל",
+  "Hot": "מודגש",
+  "Disabled": "מושבת",
+  "Saturation %": "רוויה %",
+  "Brightness %": "בהירות %",
+  "Opacity %": "אטימות %",
+  "Output": "פלט",
+  "Indexed sources → DIB": "מקורות מאונדקסים → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "מאונדקס: 1/4/8 סיביות; 2→4. אלפא <128 שקוף; אחרת רקע לבן.",
+  "Preview snapshot; source images stay unchanged.": "תצוגה מקדימה של צילום קבוע; תמונות המקור אינן משתנות.",
+  "Variant exported.": "הגרסה יוצאה.",
+  "Choose an ICO/CUR filename matching this export.": "יש לבחור שם קובץ ICO/CUR המתאים לייצוא זה.",
+  "Export to a separate file; the source cannot be replaced.": "יש לייצא לקובץ נפרד; אי אפשר להחליף את המקור.",
+  "Choose a JSON filename for this report.": "יש לבחור שם קובץ JSON לדוח זה."
 }

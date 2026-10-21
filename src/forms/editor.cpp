@@ -1796,10 +1796,10 @@ void Editor::open_browser_asset(const AssetPreview& preview) {
         error(exception.what());
     }
 }
-bool Editor::save_export_report(const std::string& report) {
+bool Editor::save_export_report(const std::string& report, const std::string& suggested_name) {
     gf::HostSaveFileDialogRequest request;
     request.title = tr("Save report…");
-    request.suggested_name = "icon-export-report.json";
+    request.suggested_name = suggested_name;
     request.default_extension = "json";
     request.filters = {{"JSON", {"json"}}};
     const gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
@@ -1809,6 +1809,9 @@ bool Editor::save_export_report(const std::string& report) {
     std::string path = result.paths.front();
     if (image_extension(path).empty()) {
         path += ".json";
+    }
+    if (image_extension(path) != ".json") {
+        throw std::runtime_error(tr("Choose a JSON filename for this report."));
     }
     const std::vector<std::uint8_t> bytes(report.begin(), report.end());
     save_encoded_bytes(bytes, path);
@@ -2058,6 +2061,9 @@ void Editor::execute(const std::string& command) {
             finish_controls();
             if (command == "atlas-gallery") {
                 open_editor_dialog(EditorDialogKind::atlas_gallery);
+            } else if (command == "atlas-states" &&
+                       (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
+                open_editor_dialog(EditorDialogKind::icon_states);
             } else if (command == "atlas-palette" &&
                        (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {
                 document.require_rgba_transform();

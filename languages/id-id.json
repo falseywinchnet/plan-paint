@@ -832,5 +832,22 @@
   "Transparent pixels": "Piksel transparan",
   "Partial alpha converted": "Alfa parsial dikonversi",
   "Image changed. Reopen Palette conversion.": "Gambar berubah. Buka ulang konversi palet.",
-  "Palette…": "Palet…"
+  "Palette…": "Palet…",
+  "States…": "Status…",
+  "Icon state variants": "Varian status ikon",
+  "Preset": "Prasetel",
+  "Normal": "Normal",
+  "Hot": "Disorot",
+  "Disabled": "Nonaktif",
+  "Saturation %": "Saturasi %",
+  "Brightness %": "Kecerahan %",
+  "Opacity %": "Opasitas %",
+  "Output": "Keluaran",
+  "Indexed sources → DIB": "Sumber terindeks → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "Terindeks: 1/4/8 bpp; 2→4. Alfa <128 transparan; lainnya berlatar putih.",
+  "Preview snapshot; source images stay unchanged.": "Pratinjau salinan tetap; gambar sumber tidak berubah.",
+  "Variant exported.": "Varian diekspor.",
+  "Choose an ICO/CUR filename matching this export.": "Pilih nama berkas ICO/CUR yang sesuai dengan ekspor ini.",
+  "Export to a separate file; the source cannot be replaced.": "Ekspor ke berkas terpisah; sumber tidak dapat ditimpa.",
+  "Choose a JSON filename for this report.": "Pilih nama berkas JSON untuk laporan ini."
 }

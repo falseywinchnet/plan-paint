@@ -832,5 +832,22 @@
   "Transparent pixels": "Điểm ảnh trong suốt",
   "Partial alpha converted": "Alpha một phần đã đổi",
   "Image changed. Reopen Palette conversion.": "Ảnh đã đổi. Mở lại chuyển bảng màu.",
-  "Palette…": "Bảng màu…"
+  "Palette…": "Bảng màu…",
+  "States…": "Trạng thái…",
+  "Icon state variants": "Biến thể trạng thái biểu tượng",
+  "Preset": "Thiết lập sẵn",
+  "Normal": "Bình thường",
+  "Hot": "Nổi bật",
+  "Disabled": "Vô hiệu hóa",
+  "Saturation %": "Độ bão hòa %",
+  "Brightness %": "Độ sáng %",
+  "Opacity %": "Độ đục %",
+  "Output": "Đầu ra",
+  "Indexed sources → DIB": "Nguồn màu chỉ mục → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "Chỉ mục: 1/4/8 bpp; 2→4. Alpha <128 trong suốt; còn lại ghép nền trắng.",
+  "Preview snapshot; source images stay unchanged.": "Xem trước bản chụp cố định; ảnh nguồn không thay đổi.",
+  "Variant exported.": "Đã xuất biến thể.",
+  "Choose an ICO/CUR filename matching this export.": "Chọn tên tệp ICO/CUR phù hợp với lần xuất này.",
+  "Export to a separate file; the source cannot be replaced.": "Xuất sang tệp riêng; không thể thay thế tệp nguồn.",
+  "Choose a JSON filename for this report.": "Chọn tên tệp JSON cho báo cáo này."
 }

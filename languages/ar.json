@@ -832,5 +832,22 @@
   "Transparent pixels": "بكسلات شفافة",
   "Partial alpha converted": "ألفا الجزئي المحوّل",
   "Image changed. Reopen Palette conversion.": "تغيّرت الصورة. أعد فتح تحويل لوحة الألوان.",
-  "Palette…": "لوحة الألوان…"
+  "Palette…": "لوحة الألوان…",
+  "States…": "الحالات…",
+  "Icon state variants": "تنويعات حالة الأيقونة",
+  "Preset": "إعداد مسبق",
+  "Normal": "عادي",
+  "Hot": "مميز",
+  "Disabled": "معطل",
+  "Saturation %": "التشبع %",
+  "Brightness %": "السطوع %",
+  "Opacity %": "العتامة %",
+  "Output": "الإخراج",
+  "Indexed sources → DIB": "مصادر مفهرسة → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "مفهرس: 1/4/8 بت؛ 2→4. ألفا <128 شفاف؛ وإلا خلفية بيضاء.",
+  "Preview snapshot; source images stay unchanged.": "معاينة لقطة ثابتة؛ لا تتغير الصور المصدر.",
+  "Variant exported.": "تم تصدير التنويعة.",
+  "Choose an ICO/CUR filename matching this export.": "اختر اسم ملف ICO/CUR مطابقًا لهذا التصدير.",
+  "Export to a separate file; the source cannot be replaced.": "صدّر إلى ملف منفصل؛ لا يمكن استبدال المصدر.",
+  "Choose a JSON filename for this report.": "اختر اسم ملف JSON لهذا التقرير."
 }
