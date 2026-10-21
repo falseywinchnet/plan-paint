@@ -878,5 +878,7 @@
   "Fit image": "Sesuaikan gambar",
   "Import palette…": "Impor palet…",
   "Export palette…": "Ekspor palet…",
-  "Shared palette": "Palet bersama"
+  "Shared palette": "Palet bersama",
+  "Index paint": "Lukis indeks",
+  "Other painting tools return this image to RGBA output.": "Alat lukis lain mengembalikan gambar ini ke keluaran RGBA."
 }

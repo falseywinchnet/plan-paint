@@ -158,6 +158,10 @@ class Editor final : public gui_forms::Control {
     void select_frame(int index, bool sequence = false);
     void set_reference_frame(int index);
     bool atlas_wrap = false, atlas_preserve_alpha = false;
+    bool icon_index_paint = false;
+    unsigned icon_primary_index = 0, icon_alt_index = 1;
+    void choose_icon_index(unsigned entry, bool secondary);
+    bool icon_palette_available();
     Image atlas_reference;
     int reference_frame = -1;
     std::uint64_t canvas_revision = 1;
@@ -385,6 +389,11 @@ class Editor final : public gui_forms::Control {
     bool guide_moving_ = false, guide_connecting_ = false, guide_extending_ = false;
     Point guide_last_;
     Image paint_base_;
+    bool begin_indexed_paint(Point point, bool secondary);
+    void move_indexed_paint(Point point);
+    bool indexed_gesture_ = false, indexed_checkpoint_ = false;
+    unsigned indexed_entry_ = 0;
+    std::vector<std::uint8_t> indexed_allowed_;
     void paint_segment(Point start, Point end);
     bool atlas_painting() const;
     void paint_text_overlay(gui_forms::Painter& painter);

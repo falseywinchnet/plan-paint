@@ -878,5 +878,7 @@
   "Fit image": "Toshea picha",
   "Import palette…": "Ingiza paleti…",
   "Export palette…": "Hamisha paleti…",
-  "Shared palette": "Paleti ya pamoja"
+  "Shared palette": "Paleti ya pamoja",
+  "Index paint": "Chora kwa faharasa",
+  "Other painting tools return this image to RGBA output.": "Zana nyingine za kuchora hurudisha picha hii kwenye matokeo ya RGBA."
 }

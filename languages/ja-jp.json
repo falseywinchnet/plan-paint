@@ -878,5 +878,7 @@
   "Fit image": "画像に合わせる",
   "Import palette…": "パレットを読み込む…",
   "Export palette…": "パレットを書き出す…",
-  "Shared palette": "共通パレット"
+  "Shared palette": "共通パレット",
+  "Index paint": "インデックス描画",
+  "Other painting tools return this image to RGBA output.": "他の描画ツールを使うと、この画像はRGBA出力に戻ります。"
 }

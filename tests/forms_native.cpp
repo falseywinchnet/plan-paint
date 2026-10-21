@@ -38,7 +38,7 @@ struct NativeExercise {
          healing_review = false, icon_production_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
          alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
-         icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false;
+         icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -363,6 +363,14 @@ struct NativeExercise {
                                               static_cast<int>(sample.y * window.scale()));
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
+        if (icon_index_paint_review) {
+            const paint::IconFrame& frame = (*editor).document.atlas.icons[0];
+            if (!painted || !paint::has_icon_palette(frame) || !(*editor).icon_index_paint ||
+                !(*std::dynamic_pointer_cast<gf::Button>(window.find("icon-index-paint"))).selected()) {
+                throw std::runtime_error("Native indexed canvas or mode control did not render");
+            }
+            return;
+        }
         if (icon_batch_review) {
             const std::shared_ptr<gf::TextBox> manifest =
                 std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-manifest"));
@@ -472,6 +480,33 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (icon_index_paint_review) {
+            paint::IconFrame frame;
+            frame.image.reset(128, 128, {30, 90, 170, 255});
+            paint::IconPaletteOptions options;
+            options.bits_per_pixel = 4;
+            options.fixed_palette = {{30, 90, 170, 255}, {245, 180, 40, 255}, {0, 0, 0, 255}};
+            frame = paint::convert_icon_palette(frame, options).frame;
+            (*editor).open_container({paint::ContainerKind::Icon, {frame}}, "indexed-paint.ico");
+            (*editor).execute("atlas-palette");
+            const std::shared_ptr<gf::ComboBox> entry = std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-entry"));
+            (*entry).set_selected_index(1);
+            (*std::dynamic_pointer_cast<gf::Button>(window.find("palette-primary"))).perform_click();
+            stroke(window, {10, 30}, {100, 90});
+            (*editor).refresh();
+            window.perform_layout();
+            if (document.undo_history.size() != 1 || (*document.atlas.icons[0].source).indices[30 * 128 + 10] != 1) {
+                throw std::runtime_error("Native indexed pencil did not write an undoable palette index");
+            }
+            inspect_frame(window);
+            entered = true;
+            // The test owns this unsaved document; discard it before closing.
+            document.new_image(1, 1);
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native indexed canvas close failed");
+            }
+            return;
+        }
         if (icon_batch_review) {
             NativeRecoveryDirectory outputs("batch-output");
             NativeRecoveryDirectory inputs("batch-input");
@@ -955,6 +990,7 @@ int main(int argc, char** argv) {
         exercise.icon_formats_review = argc > 1 && std::string(argv[1]) == "--icon-formats";
         exercise.icon_sheet_review = argc > 1 && std::string(argv[1]) == "--icon-sheet";
         exercise.icon_export_review = argc > 1 && std::string(argv[1]) == "--icon-export";
+        exercise.icon_index_paint_review = argc > 1 && std::string(argv[1]) == "--icon-index-paint";
         exercise.icon_indexed_review = argc > 1 && std::string(argv[1]) == "--icon-indexed";
         exercise.icon_palette_review = exercise.icon_indexed_review ||
             (argc > 1 && std::string(argv[1]) == "--icon-palette");
@@ -969,7 +1005,7 @@ int main(int argc, char** argv) {
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
             exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
-            exercise.icon_ribbon_review || exercise.icon_batch_review) {
+            exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||

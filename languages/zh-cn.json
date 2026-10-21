@@ -878,5 +878,7 @@
   "Fit image": "适应图像",
   "Import palette…": "导入调色板…",
   "Export palette…": "导出调色板…",
-  "Shared palette": "共享调色板"
+  "Shared palette": "共享调色板",
+  "Index paint": "索引绘画",
+  "Other painting tools return this image to RGBA output.": "其他绘画工具会将此图像恢复为 RGBA 输出。"
 }

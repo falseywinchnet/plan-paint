@@ -209,7 +209,7 @@ class EditorDialog final : public gui_forms::Control {
     void palette_clicked(gui_forms::ButtonBase&);
     void palette_file_clicked(gui_forms::ButtonBase&);
     std::vector<Color> palette_file_colors_;
-    std::shared_ptr<gui_forms::Button> palette_export_;
+    std::shared_ptr<gui_forms::Button> palette_export_, palette_primary_, palette_alt_;
     void palette_choice_changed(std::optional<std::size_t>);
     void palette_entry_changed(std::optional<std::size_t>);
     void palette_number_changed(double);

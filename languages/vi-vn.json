@@ -878,5 +878,7 @@
   "Fit image": "Vừa ảnh",
   "Import palette…": "Nhập bảng màu…",
   "Export palette…": "Xuất bảng màu…",
-  "Shared palette": "Bảng màu dùng chung"
+  "Shared palette": "Bảng màu dùng chung",
+  "Index paint": "Vẽ theo chỉ số",
+  "Other painting tools return this image to RGBA output.": "Các công cụ vẽ khác đưa ảnh này trở lại đầu ra RGBA."
 }

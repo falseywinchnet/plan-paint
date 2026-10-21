@@ -878,5 +878,7 @@
   "Fit image": "Adatta all’immagine",
   "Import palette…": "Importa tavolozza…",
   "Export palette…": "Esporta tavolozza…",
-  "Shared palette": "Tavolozza condivisa"
+  "Shared palette": "Tavolozza condivisa",
+  "Index paint": "Pittura indicizzata",
+  "Other painting tools return this image to RGBA output.": "Gli altri strumenti di pittura riportano questa immagine all’uscita RGBA."
 }

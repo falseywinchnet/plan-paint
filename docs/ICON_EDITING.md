@@ -30,7 +30,8 @@ format, such as **1 bpp DIB** or **2 bpp PNG**. Same-size images remain separate
 representations. The strip status distinguishes **Source** from **Save**: Source
 describes the imported encoding; Save describes the encoding that the current
 image would use if saved now. Newly generated images show RGBA as their source.
-Home painting edits RGBA pixels. The Palette window separately edits retained indexed DIB entries by their exact index.
+Home tools normally paint RGBA. Index paint preserves stored palette indices for
+Pencil, Fill, Eraser and Picker; the Palette window edits retained DIB entries.
 
 An untouched imported representation retains its original standard PNG or DIB
 payload when saved to ICO or CUR. Editing a different representation does not
@@ -331,7 +332,7 @@ The public Windows bitmap layout is described by Microsoft's
 and [bitmap header types](https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types).
 Palette construction and dithering above are Plan Paint behavior, not a claim
 to reproduce another editor's numerical output. Shared batch palettes and file
-interchange are described below. Index-aware canvas painting remains separate work.
+interchange and index-aware canvas painting are described below.
 
 ## Editing indexed palette entries
 
@@ -357,6 +358,35 @@ representations and images changed through ordinary RGBA painting require
 explicit palette conversion before using this mode; indices are never guessed
 from equal pixel colors. Changing a preview leaves the document untouched, and
 an intervening document edit prevents a stale Apply.
+
+## Painting stored palette indices
+
+For a retained 1-, 4- or 8-bit DIB representation, **Icon → Index paint** enables
+index painting and selects Pencil. In **Palette → Palette entries**, choose an
+entry and press **Primary · Index paint** or **Alt · Index paint** to assign its
+exact index. These choices do not edit pixels. Apply a pending RGB entry change
+before choosing it for painting; the paint buttons are disabled while that change
+is previewed. The Icon status identifies the primary and alternate index numbers.
+
+Pencil writes a one-pixel line of the chosen index. Secondary-click uses the
+alternate index. Fill follows four-connected pixels with the same stored index
+and transparency bit: two entries with identical RGB remain distinct fill regions.
+Picker reads the exact stored index, including duplicate colors. Eraser uses a
+hard footprint at the current size and writes the first black palette entry with
+the transparent mask bit; it fails if the palette has no black entry. These tools
+write discrete indices rather than blending or introducing new colors.
+
+Wrapping applies to pencil/eraser footprints and fill connectivity. Selection and
+guide boundaries are binary in this mode: binary selections retain their inclusion mask, feathered selection coverage
+of at least 128 is included, and guide blocking of at least 50% is excluded. Alpha protection keeps
+transparent pixels untouched and prevents erasing. A floating pasted selection
+must be placed first. Each changed gesture creates one Undo step, even when only
+an index changes and the visible RGB stays the same. A no-op creates no Undo step.
+Saving preserves the edited indexed depth, indices, mask and cursor hotspots.
+
+Other painting tools continue to use RGBA and may invalidate retained indices.
+A subsequent indexed stroke then asks for palette conversion or for Index paint
+to be turned off. It does not guess index identity from the remaining RGB pixels.
 
 ## Palette files and shared batch colors
 

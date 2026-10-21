@@ -589,6 +589,9 @@ void Editor::publish_path_preview() {
     publish_image(composed, *canvas_);
 }
 void Editor::refresh() {
+    if (document.atlas.kind != AtlasKind::Icon && document.atlas.kind != AtlasKind::Cursor) {
+        icon_index_paint = false;
+    }
     interface_themes.apply(*this, preview_interface_hue >= 0 ? preview_interface_hue : settings.interface_hue);
     if ((*custom_pattern).pixels.empty()) { (*custom_pattern).reset(8, 8); }
     document.ink.custom_pattern_revision = custom_pattern_revision;
@@ -664,7 +667,10 @@ void Editor::update_status() {
     (*status_).set_text((document.filename.empty()
                              ? tr("Untitled")
                              : std::filesystem::path(document.filename).filename().string()) +
-                        (document.dirty() ? " *" : "") + (background_busy() ? tr(" · Rendering…") : ""));
+                        (document.dirty() ? " *" : "") +
+                        (icon_index_paint ? " · " + tr("Index paint") + " #" + std::to_string(icon_primary_index) +
+                                                " / #" + std::to_string(icon_alt_index) : "") +
+                        (background_busy() ? tr(" · Rendering…") : ""));
     (*dimensions_status_)
         .set_text(std::to_string(document.image.width) + " × " + std::to_string(document.image.height) +
                   tr(" px"));
@@ -742,6 +748,9 @@ void Editor::release_gesture() {
     clear_transform_preview();
     rotating_view_ = false;
     dragging_ = false;
+    indexed_gesture_ = false;
+    indexed_checkpoint_ = false;
+    indexed_allowed_.clear();
     placing_shape_ = false;
     panning_ = false;
     picker_pending_ = false;
@@ -1151,6 +1160,9 @@ void Editor::begin(Point point, bool secondary) {
         zoom(secondary ? 0.5 : 2, screen(point));
         return;
     }
+    if (begin_indexed_paint(point, secondary)) {
+        return;
+    }
     if (document.tool == Tool::Picker) {
         Color color = sample_color(document.visible_image(), point, picker_mode);
         if (secondary) {
@@ -1271,6 +1283,10 @@ void Editor::begin(Point point, bool secondary) {
     move(point);
 }
 void Editor::move(Point point) {
+    if (indexed_gesture_) {
+        move_indexed_paint(point);
+        return;
+    }
     if (stabilize && (document.tool == Tool::Pencil || document.tool == Tool::Brush)) {
         point = stabilizer_.advance(point, stabilizer_lag);
     }

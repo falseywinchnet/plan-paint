@@ -878,5 +878,7 @@
   "Fit image": "ملاءمة الصورة",
   "Import palette…": "استيراد لوحة ألوان…",
   "Export palette…": "تصدير لوحة ألوان…",
-  "Shared palette": "لوحة ألوان مشتركة"
+  "Shared palette": "لوحة ألوان مشتركة",
+  "Index paint": "الرسم بالفهرس",
+  "Other painting tools return this image to RGBA output.": "أدوات الرسم الأخرى تعيد هذه الصورة إلى إخراج RGBA."
 }
