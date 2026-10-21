@@ -880,5 +880,17 @@
   "Export palette…": "تصدير لوحة ألوان…",
   "Shared palette": "لوحة ألوان مشتركة",
   "Index paint": "الرسم بالفهرس",
-  "Other painting tools return this image to RGBA output.": "أدوات الرسم الأخرى تعيد هذه الصورة إلى إخراج RGBA."
+  "Other painting tools return this image to RGBA output.": "أدوات الرسم الأخرى تعيد هذه الصورة إلى إخراج RGBA.",
+  "Add custom dimensions or another depth variant": "إضافة أبعاد مخصصة أو عمق لون آخر",
+  "Add image": "إضافة صورة",
+  "After": "بعد",
+  "Before": "قبل",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "اختر الهدف ومصدره وعمق اللون. حدّد كل استبدال على حدة.",
+  "Choose replacements individually": "اختيار الاستبدالات بشكل فردي",
+  "Discard custom target": "حذف الهدف المخصص",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "إخراج مفهرس: عتبة ألفا 128، خلفية بيضاء، دون تنقيط.",
+  "Replace this image": "استبدال هذه الصورة",
+  "Source image": "الصورة المصدر",
+  "Target images": "الصور الهدف",
+  "Upscaling": "تكبير"
 }

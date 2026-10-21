@@ -880,5 +880,17 @@
   "Export palette…": "Exportar paleta…",
   "Shared palette": "Paleta compartida",
   "Index paint": "Pintura por índice",
-  "Other painting tools return this image to RGBA output.": "Otras herramientas de pintura devuelven esta imagen a la salida RGBA."
+  "Other painting tools return this image to RGBA output.": "Otras herramientas de pintura devuelven esta imagen a la salida RGBA.",
+  "Add custom dimensions or another depth variant": "Añadir dimensiones propias u otra profundidad",
+  "Add image": "Añadir imagen",
+  "After": "Después",
+  "Before": "Antes",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "Elija un destino, su origen y profundidad. Marque cada sustitución.",
+  "Choose replacements individually": "Elegir sustituciones individualmente",
+  "Discard custom target": "Descartar destino personalizado",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "Salida indexada: umbral alfa 128, fondo blanco, sin tramado.",
+  "Replace this image": "Sustituir esta imagen",
+  "Source image": "Imagen de origen",
+  "Target images": "Imágenes de destino",
+  "Upscaling": "Ampliación"
 }

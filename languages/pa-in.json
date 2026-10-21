@@ -880,5 +880,17 @@
   "Export palette…": "ਪੈਲੇਟ ਨਿਰਯਾਤ ਕਰੋ…",
   "Shared palette": "ਸਾਂਝਾ ਪੈਲੇਟ",
   "Index paint": "ਇੰਡੈਕਸ ਪੇਂਟ",
-  "Other painting tools return this image to RGBA output.": "ਹੋਰ ਪੇਂਟਿੰਗ ਟੂਲ ਇਸ ਚਿੱਤਰ ਨੂੰ RGBA ਆਉਟਪੁੱਟ ਵਿੱਚ ਵਾਪਸ ਲਿਆਉਂਦੇ ਹਨ।"
+  "Other painting tools return this image to RGBA output.": "ਹੋਰ ਪੇਂਟਿੰਗ ਟੂਲ ਇਸ ਚਿੱਤਰ ਨੂੰ RGBA ਆਉਟਪੁੱਟ ਵਿੱਚ ਵਾਪਸ ਲਿਆਉਂਦੇ ਹਨ।",
+  "Add custom dimensions or another depth variant": "ਆਪਣੇ ਮਾਪ ਜਾਂ ਰੰਗ ਦੀ ਹੋਰ ਡੂੰਘਾਈ ਜੋੜੋ",
+  "Add image": "ਚਿੱਤਰ ਜੋੜੋ",
+  "After": "ਬਾਅਦ",
+  "Before": "ਪਹਿਲਾਂ",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "ਟੀਚਾ, ਸਰੋਤ ਅਤੇ ਰੰਗ ਦੀ ਡੂੰਘਾਈ ਚੁਣੋ। ਹਰ ਬਦਲੀ ਨੂੰ ਵੱਖਰੇ ਤੌਰ ਤੇ ਨਿਸ਼ਾਨ ਲਾਓ।",
+  "Choose replacements individually": "ਬਦਲੀਆਂ ਵੱਖ-ਵੱਖ ਚੁਣੋ",
+  "Discard custom target": "ਆਪਣਾ ਟੀਚਾ ਹਟਾਓ",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "ਇੰਡੈਕਸ ਨਤੀਜਾ: ਅਲਫਾ ਹੱਦ 128, ਚਿੱਟਾ ਪਿਛੋਕੜ, ਬਿਨਾਂ ਡਿਥਰਿੰਗ।",
+  "Replace this image": "ਇਹ ਚਿੱਤਰ ਬਦਲੋ",
+  "Source image": "ਸਰੋਤ ਚਿੱਤਰ",
+  "Target images": "ਟੀਚੇ ਵਾਲੇ ਚਿੱਤਰ",
+  "Upscaling": "ਵੱਡਾ ਕਰਨਾ"
 }

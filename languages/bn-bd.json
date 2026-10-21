@@ -880,5 +880,17 @@
   "Export palette…": "প্যালেট রপ্তানি…",
   "Shared palette": "যৌথ প্যালেট",
   "Index paint": "সূচক দিয়ে আঁকা",
-  "Other painting tools return this image to RGBA output.": "অন্যান্য আঁকার সরঞ্জাম এই ছবিকে RGBA আউটপুটে ফেরায়।"
+  "Other painting tools return this image to RGBA output.": "অন্যান্য আঁকার সরঞ্জাম এই ছবিকে RGBA আউটপুটে ফেরায়।",
+  "Add custom dimensions or another depth variant": "নিজস্ব মাপ বা অন্য রঙের গভীরতা যোগ করুন",
+  "Add image": "ছবি যোগ করুন",
+  "After": "পরে",
+  "Before": "আগে",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "লক্ষ্য, উৎস ও রঙের গভীরতা বাছুন। প্রতিটি প্রতিস্থাপন আলাদা চিহ্নিত করুন।",
+  "Choose replacements individually": "আলাদা করে প্রতিস্থাপন বাছুন",
+  "Discard custom target": "নিজস্ব লক্ষ্য বাদ দিন",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "সূচিবদ্ধ আউটপুট: আলফা সীমা 128, সাদা পটভূমি, ডিথারিং ছাড়া।",
+  "Replace this image": "এই ছবি প্রতিস্থাপন করুন",
+  "Source image": "উৎস ছবি",
+  "Target images": "লক্ষ্য ছবি",
+  "Upscaling": "বড় করা"
 }

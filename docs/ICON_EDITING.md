@@ -49,45 +49,60 @@ reopening a saved file reads the formats actually written to that file.
 
 ## Generating sizes
 
-Open an ICO or CUR document and select **Atlas → Icon sizes…** or **Cursor sizes…**.
-The current image is the source for generated sizes. The dialog identifies its
-dimensions, lists every proposed image change, and warns when a requested image
-would be larger than the source. Choose **Generate** to apply the reviewed plan,
-or **Cancel** to leave the document unchanged.
+Choose **Icon → Icon sizes…** (or **Cursor sizes…** for CUR). The checked size
+presets propose additions; existing images are kept by default. The target list
+identifies each existing image by its one-based ordinal, so same-size variants
+remain distinct. The manifest lists every keep, addition, replacement and removal
+before anything changes.
 
-Three modes control existing representations:
+Select a target to choose its **Source image** and **Color depth**. Each target
+starts with the current image as its source, but its choice is independent of
+all other targets. Source numbers refer to the document at dialog opening.
+Generated rows identify their source and flag **Upscaling** whenever either
+output dimension exceeds that source. Before and After show the selected target
+against a checkerboard; a new target has an empty Before preview. Previews fit
+inside their panels and are not a physical-pixel comparison.
 
-| Mode | Existing images | Missing selected sizes |
-|---|---|---|
-| Add missing sizes | Keep every existing image, including manually edited and same-size variants. This is the default. | Generate from the current image. |
-| Replace chosen sizes | Regenerate every existing square image whose dimensions are selected. Keep all other images. | Generate from the current image. |
-| Exact profile | Keep every image matching a selected square size; remove off-profile images. Same-size variants remain separate. | Generate from the current image. |
+Existing targets require **Replace this image** to be checked individually.
+Choosing the replacement policy alone never selects all same-size variants.
+Keeping one variant while replacing another of identical dimensions preserves
+the kept image's pixels and imported payload. **Exact profile** explicitly removes
+existing images whose dimensions are not among the checked square presets;
+its removals remain visible in the target list and manifest. Changing a preset
+retains source/depth choices for surviving rows and all custom additions.
 
-The review names existing images by their one-based image number and dimensions.
-It includes additions, replacements and removals before any pixels change.
-Unchecked sizes are removed only in Exact profile mode. An empty profile is
-rejected. A plan exceeding the supported 256 representations is rejected before
-the document changes. Repeating a target size in the underlying generation
-request does not create extra copies.
+Use **Add custom dimensions or another depth variant** to enter width and height
+independently, from 1 to 256 pixels, then **Add image**. The appended target can
+use RGBA, 4-bit DIB or 8-bit DIB, including another representation with the same
+size and a different depth. **Discard custom target** removes that proposed
+addition. All preset checkboxes can be cleared to build a custom-only profile.
+The final container must contain 1–256 representations.
 
-Generated representations contain RGBA pixels and use Paint's existing image
-resampler. Replacements flatten the current source artwork into each selected
-target. This is not palette-index editing or a promise to retain an imported
-encoding after replacement. Unchanged representations retain their pixels,
-legacy cursor data and original imported payloads.
+RGBA targets preserve continuous alpha. Indexed targets use the palette
+conversion described below: alpha threshold 128, white matte and no dithering.
+This policy is visible in the dialog whenever an indexed target is proposed.
+For different quantization settings, use Palette conversion after generation.
+Indexed targets save as their selected DIB depth, including 256-pixel images.
+RGBA save encoding follows the ordinary representation output rules above.
 
-New cursor hotspots follow the source cursor's pixel centers, rounded to the
-nearest target pixel and clamped inside the target image. Converting an ordinary
-image or icon into a cursor starts new hotspots at the upper-left pixel. A source
-with background-dependent legacy XOR pixels cannot be resampled; the operation
-reports that limitation before changing the document. Such images can still be
-kept or removed by an exact profile that requires no generation.
+Resizing uses Paint's CONV resampler, independently along the two axes; rectangular
+sources are stretched to the requested dimensions. Choose proportional target
+dimensions to retain their aspect ratio. Cursor hotspots follow the chosen
+source's pixel centers on each axis, round to the nearest target pixel and clamp
+inside the target. Sources from ordinary images or ICO start CUR hotspots at
+zero. Legacy XOR sources cannot generate new artwork, but can be kept unchanged.
 
-Generation is one document transaction. Undo restores all affected images and
-the source selection; Redo restores the generated set. A request that adds,
-replaces and removes nothing does not add an Undo step. The current image stays
-selected if it survives the operation. If it is removed, the last output image
-becomes current.
+**Generate** validates the complete request and finishes every result before
+publishing one document transaction. Every target reads the same original
+source snapshot, even if another target replaces or removes that source. An
+intervening document edit requires reopening the dialog. Errors do not leave
+partial results. **Cancel** leaves the document and history untouched.
+
+One Undo restores all representations and the source session; Redo restores the
+result. Keeping everything without generation or removal creates no Undo entry.
+The current image remains selected if it survives; otherwise the final output
+image becomes current. Batch normalization uses the separate size policies described under batch
+production below.
 
 ## Comparison and contact sheets
 

@@ -880,5 +880,17 @@
   "Export palette…": "Esporta tavolozza…",
   "Shared palette": "Tavolozza condivisa",
   "Index paint": "Pittura indicizzata",
-  "Other painting tools return this image to RGBA output.": "Gli altri strumenti di pittura riportano questa immagine all’uscita RGBA."
+  "Other painting tools return this image to RGBA output.": "Gli altri strumenti di pittura riportano questa immagine all’uscita RGBA.",
+  "Add custom dimensions or another depth variant": "Aggiungi dimensioni personalizzate o un’altra profondità",
+  "Add image": "Aggiungi immagine",
+  "After": "Dopo",
+  "Before": "Prima",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "Scegli una destinazione, la sorgente e la profondità. Seleziona ogni sostituzione.",
+  "Choose replacements individually": "Scegli le sostituzioni singolarmente",
+  "Discard custom target": "Scarta destinazione personalizzata",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "Uscita indicizzata: soglia alfa 128, fondo bianco, nessun dithering.",
+  "Replace this image": "Sostituisci questa immagine",
+  "Source image": "Immagine sorgente",
+  "Target images": "Immagini di destinazione",
+  "Upscaling": "Ingrandimento"
 }

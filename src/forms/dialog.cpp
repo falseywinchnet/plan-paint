@@ -557,50 +557,50 @@ void EditorDialog::initialize_control_tree() {
                 *this, gf::Delegate<double>::bind<EditorDialog, &EditorDialog::atlas_changed>(*this)));
         }
     } else if (kind_ == EditorDialogKind::icon_sizes || kind_ == EditorDialogKind::cursor_sizes) {
-        panel_ = {0, 0, 560, 490};
+        panel_ = {0, 0, 780, 510};
         label("icon-hint",
               tr("Source: current image") + " · " + std::to_string((*editor).document.image.width) + " × " +
                   std::to_string((*editor).document.image.height),
-              {22, 50, 516, 26});
+              {20, 44, 380, 26});
         const int sizes[] = {16, 24, 32, 48, 64, 96, 128, 256};
         for (int i = 0; i < 8; ++i) {
             std::shared_ptr<gf::CheckBox> field =
                 gf::make_control<gf::CheckBox>(gf::StableId("icon-size-" + std::to_string(sizes[i])),
                                                std::to_string(sizes[i]) + " × " + std::to_string(sizes[i]));
             (*field).set_checked(sizes[i] == 16 || sizes[i] == 32 || sizes[i] == 48 || sizes[i] == 256);
-            put(field, {22 + (i % 4) * 132.0, 90 + (i / 4) * 35.0, 124, 28});
+            put(field, {20 + (i % 4) * 95.0, 76 + (i / 4) * 28.0, 90, 26});
             icon_sizes_.push_back(field);
             subscriptions_.push_back((*field).clicked().subscribe(
                 *this,
                 gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::icon_size_clicked>(*this)));
         }
-        label("icon-policy-label", tr("Existing images"), {22, 172, 150, 28});
+        label("icon-policy-label", tr("Existing images"), {20, 140, 112, 28});
         icon_policy_ = gf::make_control<gf::ComboBox>(gf::StableId("icon-size-policy"));
         (*icon_policy_).set_accessible_name(tr("Existing images"));
         (*icon_policy_).add_item(tr("Add missing sizes; keep existing images"));
-        (*icon_policy_).add_item(tr("Replace chosen sizes; keep other images"));
+        (*icon_policy_).add_item(tr("Choose replacements individually"));
         (*icon_policy_).add_item(tr("Exact profile; remove unchecked sizes"));
         (*icon_policy_).set_selected_index(0);
-        put(icon_policy_, {174, 170, 364, 30});
+        put(icon_policy_, {136, 138, 264, 28});
         subscriptions_.push_back(
             (*icon_policy_)
                 .selected_index_changed()
                 .subscribe(*this, gf::Delegate<std::optional<std::size_t>>::bind<
                                       EditorDialog, &EditorDialog::icon_policy_changed>(*this)));
         label("icon-policy-hint",
-              tr("Generated images use RGBA pixels. Existing matching images are kept unless replacement is "
-                 "selected."),
-              {22, 212, 516, 42});
+              tr("Choose a target to set its source and depth. Check each replacement explicitly."),
+              {20, 176, 380, 38});
         (*std::static_pointer_cast<gf::Label>(controls_.back())).set_text_wrapping(gf::TextWrapping::word);
         icon_plan_ = gf::make_control<gf::Label>(gf::StableId("icon-size-plan"));
         (*icon_plan_).set_text_wrapping(gf::TextWrapping::word);
-        put(icon_plan_, {22, 260, 516, 28});
+        put(icon_plan_, {20, 216, 380, 26});
         icon_manifest_ = gf::make_control<gf::TextBox>(gf::StableId("icon-size-manifest"));
         (*icon_manifest_).set_multiline(true);
         (*icon_manifest_).set_auto_scroll(true);
         (*icon_manifest_).set_read_only(true);
         (*icon_manifest_).set_accessible_name(tr("Changes to icon images"));
-        put(icon_manifest_, {22, 296, 516, 94});
+        put(icon_manifest_, {20, 246, 380, 78});
+        initialize_icon_targets();
     } else if (kind_ == EditorDialogKind::hotspot) {
         panel_ = {0, 0, 430, 286};
         const Document& document = (*editor).document;
@@ -834,61 +834,6 @@ void EditorDialog::icon_size_clicked(gf::ButtonBase&) {
 }
 void EditorDialog::icon_policy_changed(std::optional<std::size_t>) {
     refresh_icon_plan();
-}
-void EditorDialog::refresh_icon_plan() {
-    const std::shared_ptr<Editor> editor = editor_.lock();
-    if (!editor || !icon_plan_ || !error_) {
-        return;
-    }
-    const Document& document = (*editor).document;
-    try {
-        std::vector<IconFrame> existing;
-        if (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor) {
-            existing = document.output_container(kind_ == EditorDialogKind::cursor_sizes).frames;
-        }
-        const IconSizePolicy policy =
-            static_cast<IconSizePolicy>((*icon_policy_).selected_index().value_or(0));
-        const IconSizePlan plan = plan_icon_sizes(existing, chosen_icon_sizes(), policy);
-        (*icon_plan_)
-            .set_text(tr("Keep: ") + std::to_string(plan.kept) + tr(" · Add: ") + std::to_string(plan.added) +
-                      tr(" · Replace: ") + std::to_string(plan.replaced) + tr(" · Remove: ") +
-                      std::to_string(plan.removed));
-        std::string manifest;
-        for (std::size_t index = 0; index < existing.size(); ++index) {
-            std::string action = tr("Remove");
-            for (const IconSizeStep& step : plan.steps) {
-                if (step.existing_index == static_cast<int>(index)) {
-                    action = step.generate ? tr("Replace") : tr("Keep");
-                    break;
-                }
-            }
-            const Image& image = existing[index].image;
-            manifest += action + " #" + std::to_string(index + 1) + " · " + std::to_string(image.width) +
-                        " × " + std::to_string(image.height) + "\n";
-        }
-        for (const IconSizeStep& step : plan.steps) {
-            if (step.existing_index < 0) {
-                manifest +=
-                    tr("Add") + " · " + std::to_string(step.size) + " × " + std::to_string(step.size) + "\n";
-            }
-        }
-        (*icon_manifest_).set_text(manifest);
-        (*icon_manifest_).select(gf::Utf8Offset{0}, gf::Utf8Offset{0});
-        std::string upscale;
-        for (const IconSizeStep& step : plan.steps) {
-            if (step.generate && (step.size > document.image.width || step.size > document.image.height)) {
-                if (!upscale.empty()) {
-                    upscale += ", ";
-                }
-                upscale += std::to_string(step.size);
-            }
-        }
-        (*error_).set_text(upscale.empty() ? "" : tr("Upscaling from the current image: ") + upscale);
-    } catch (const std::exception& error) {
-        (*icon_plan_).set_text("");
-        (*icon_manifest_).set_text("");
-        (*error_).set_text(tr(error.what()));
-    }
 }
 void EditorDialog::atlas_changed(double) {
     if (!error_ || atlas_numbers_.size() != 6) {
@@ -1261,10 +1206,7 @@ void EditorDialog::accept() {
             grid.spacing_y = static_cast<int>((*atlas_numbers_[5]).value());
             (*editor).document.configure_atlas(grid);
         } else if (kind_ == EditorDialogKind::icon_sizes || kind_ == EditorDialogKind::cursor_sizes) {
-            const IconSizePolicy policy =
-                static_cast<IconSizePolicy>((*icon_policy_).selected_index().value_or(0));
-            (*editor).document.make_icon_sizes(chosen_icon_sizes(), kind_ == EditorDialogKind::cursor_sizes,
-                                               policy);
+            apply_icon_targets();
         } else if (kind_ == EditorDialogKind::hotspot) {
             (*editor).document.set_hotspot(static_cast<int>((*atlas_numbers_[0]).value()),
                                            static_cast<int>((*atlas_numbers_[1]).value()));

@@ -880,5 +880,17 @@
   "Export palette…": "پیلیٹ برآمد کریں…",
   "Shared palette": "مشترکہ پیلیٹ",
   "Index paint": "انڈیکس پینٹ",
-  "Other painting tools return this image to RGBA output.": "دیگر پینٹنگ ٹولز اس تصویر کو RGBA آؤٹ پٹ میں واپس لاتے ہیں۔"
+  "Other painting tools return this image to RGBA output.": "دیگر پینٹنگ ٹولز اس تصویر کو RGBA آؤٹ پٹ میں واپس لاتے ہیں۔",
+  "Add custom dimensions or another depth variant": "اپنی پیمائش یا رنگ کی دوسری گہرائی شامل کریں",
+  "Add image": "تصویر شامل کریں",
+  "After": "بعد",
+  "Before": "پہلے",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "ہدف، ماخذ اور رنگ کی گہرائی منتخب کریں۔ ہر تبدیلی الگ نشان زد کریں۔",
+  "Choose replacements individually": "تبدیلیاں الگ الگ منتخب کریں",
+  "Discard custom target": "حسب ضرورت ہدف ہٹائیں",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "اشاریہ شدہ نتیجہ: الفا حد 128، سفید پس منظر، بغیر ڈِتھرنگ۔",
+  "Replace this image": "یہ تصویر بدلیں",
+  "Source image": "ماخذ تصویر",
+  "Target images": "ہدف تصاویر",
+  "Upscaling": "بڑا کرنا"
 }

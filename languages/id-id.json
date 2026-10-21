@@ -880,5 +880,17 @@
   "Export palette…": "Ekspor palet…",
   "Shared palette": "Palet bersama",
   "Index paint": "Lukis indeks",
-  "Other painting tools return this image to RGBA output.": "Alat lukis lain mengembalikan gambar ini ke keluaran RGBA."
+  "Other painting tools return this image to RGBA output.": "Alat lukis lain mengembalikan gambar ini ke keluaran RGBA.",
+  "Add custom dimensions or another depth variant": "Tambahkan ukuran khusus atau kedalaman lain",
+  "Add image": "Tambah gambar",
+  "After": "Sesudah",
+  "Before": "Sebelum",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "Pilih target, sumber, dan kedalamannya. Centang setiap penggantian.",
+  "Choose replacements individually": "Pilih penggantian satu per satu",
+  "Discard custom target": "Buang target khusus",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "Keluaran terindeks: ambang alfa 128, latar putih, tanpa dithering.",
+  "Replace this image": "Ganti gambar ini",
+  "Source image": "Gambar sumber",
+  "Target images": "Gambar target",
+  "Upscaling": "Pembesaran"
 }

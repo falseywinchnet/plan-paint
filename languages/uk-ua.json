@@ -880,5 +880,17 @@
   "Export palette…": "Експорт палітри…",
   "Shared palette": "Спільна палітра",
   "Index paint": "Малювання індексами",
-  "Other painting tools return this image to RGBA output.": "Інші інструменти малювання повертають це зображення до виводу RGBA."
+  "Other painting tools return this image to RGBA output.": "Інші інструменти малювання повертають це зображення до виводу RGBA.",
+  "Add custom dimensions or another depth variant": "Додати власні розміри або іншу глибину кольору",
+  "Add image": "Додати зображення",
+  "After": "Після",
+  "Before": "До",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "Виберіть ціль, її джерело та глибину кольору. Позначте кожну заміну.",
+  "Choose replacements individually": "Вибирати заміни окремо",
+  "Discard custom target": "Вилучити власну ціль",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "Індексований вивід: поріг альфа 128, біле тло, без дизерингу.",
+  "Replace this image": "Замінити це зображення",
+  "Source image": "Початкове зображення",
+  "Target images": "Цільові зображення",
+  "Upscaling": "Збільшення"
 }
