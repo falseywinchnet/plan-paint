@@ -982,5 +982,14 @@
   "Dashed": "虚线",
   "Dotted": "点线",
   "Organic": "自然感",
-  "Vary": "变换"
+  "Vary": "变换",
+  "Start marker": "起点标记",
+  "End marker": "终点标记",
+  "Open arrow": "开放箭头",
+  "Bar": "竖线",
+  "Exactly one": "恰好一个",
+  "Many": "多个",
+  "Zero or one": "零或一个",
+  "One or more": "一个或多个",
+  "Zero or more": "零或多个"
 }

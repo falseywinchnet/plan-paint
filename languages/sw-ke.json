@@ -982,5 +982,14 @@
   "Dashed": "Mistari mifupi",
   "Dotted": "Vitone",
   "Organic": "Asilia",
-  "Vary": "Badilisha"
+  "Vary": "Badilisha",
+  "Start marker": "Alama ya mwanzo",
+  "End marker": "Alama ya mwisho",
+  "Open arrow": "Mshale wazi",
+  "Bar": "Mstari",
+  "Exactly one": "Moja tu",
+  "Many": "Nyingi",
+  "Zero or one": "Sifuri au moja",
+  "One or more": "Moja au zaidi",
+  "Zero or more": "Sifuri au zaidi"
 }

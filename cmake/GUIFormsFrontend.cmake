@@ -217,6 +217,8 @@ if(APPLE OR WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
   add_test(NAME paint-corners-compact-native COMMAND paint-forms-native-tests --corners-compact)
   add_test(NAME paint-geometry-styles-native COMMAND paint-forms-native-tests --geometry-styles)
   add_test(NAME paint-geometry-styles-compact-native COMMAND paint-forms-native-tests --geometry-styles-compact)
+  add_test(NAME paint-markers-native COMMAND paint-forms-native-tests --markers)
+  add_test(NAME paint-markers-compact-native COMMAND paint-forms-native-tests --markers-compact)
   add_test(NAME paint-opacity-compact-native COMMAND paint-forms-native-tests --opacity-compact)
 endif()
 # Explicit offline authoring target; not part of application builds or installation.

@@ -982,5 +982,14 @@
   "Dashed": "متقطع",
   "Dotted": "منقط",
   "Organic": "عضوي",
-  "Vary": "تنويع"
+  "Vary": "تنويع",
+  "Start marker": "علامة البداية",
+  "End marker": "علامة النهاية",
+  "Open arrow": "سهم مفتوح",
+  "Bar": "شَرطة",
+  "Exactly one": "واحد فقط",
+  "Many": "متعدد",
+  "Zero or one": "صفر أو واحد",
+  "One or more": "واحد أو أكثر",
+  "Zero or more": "صفر أو أكثر"
 }

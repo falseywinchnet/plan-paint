@@ -982,5 +982,14 @@
   "Dashed": "破線",
   "Dotted": "点線",
   "Organic": "自然な揺らぎ",
-  "Vary": "変化"
+  "Vary": "変化",
+  "Start marker": "始点マーカー",
+  "End marker": "終点マーカー",
+  "Open arrow": "開いた矢印",
+  "Bar": "棒",
+  "Exactly one": "必ず1つ",
+  "Many": "複数",
+  "Zero or one": "0または1",
+  "One or more": "1以上",
+  "Zero or more": "0以上"
 }

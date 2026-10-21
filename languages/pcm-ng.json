@@ -982,5 +982,14 @@
   "Dashed": "Dash line",
   "Dotted": "Dot line",
   "Organic": "Organic",
-  "Vary": "Change am"
+  "Vary": "Change am",
+  "Start marker": "Start mark",
+  "End marker": "End mark",
+  "Open arrow": "Open arrow",
+  "Bar": "Bar",
+  "Exactly one": "Only one",
+  "Many": "Plenty",
+  "Zero or one": "Zero or one",
+  "One or more": "One or more",
+  "Zero or more": "Zero or more"
 }

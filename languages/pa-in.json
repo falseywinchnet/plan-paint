@@ -982,5 +982,14 @@
   "Dashed": "ਡੈਸ਼ ਵਾਲੀ",
   "Dotted": "ਬਿੰਦੀਆਂ ਵਾਲੀ",
   "Organic": "ਕੁਦਰਤੀ",
-  "Vary": "ਬਦਲੋ"
+  "Vary": "ਬਦਲੋ",
+  "Start marker": "ਸ਼ੁਰੂਆਤੀ ਚਿੰਨ੍ਹ",
+  "End marker": "ਅੰਤਲਾ ਚਿੰਨ੍ਹ",
+  "Open arrow": "ਖੁੱਲ੍ਹਾ ਤੀਰ",
+  "Bar": "ਡੰਡੀ",
+  "Exactly one": "ਠੀਕ ਇੱਕ",
+  "Many": "ਕਈ",
+  "Zero or one": "ਸਿਫ਼ਰ ਜਾਂ ਇੱਕ",
+  "One or more": "ਇੱਕ ਜਾਂ ਵੱਧ",
+  "Zero or more": "ਸਿਫ਼ਰ ਜਾਂ ਵੱਧ"
 }

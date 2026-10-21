@@ -982,5 +982,14 @@
   "Dashed": "Gestrichelt",
   "Dotted": "Gepunktet",
   "Organic": "Organisch",
-  "Vary": "Variieren"
+  "Vary": "Variieren",
+  "Start marker": "Startmarkierung",
+  "End marker": "Endmarkierung",
+  "Open arrow": "Offener Pfeil",
+  "Bar": "Strich",
+  "Exactly one": "Genau eins",
+  "Many": "Viele",
+  "Zero or one": "Null oder eins",
+  "One or more": "Eins oder mehr",
+  "Zero or more": "Null oder mehr"
 }

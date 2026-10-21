@@ -2433,6 +2433,32 @@ void geometry_style_controls() {
     require(!(*style).visible() && !(*organic).visible() && !(*window.find("geometry-vary")).visible(),
             "geometry styling must not appear in the pencil ribbon");
 }
+void geometry_marker_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.choose_shape(paint::Shape::Line);
+    editor.document.ink.size = 4;
+    open_tab(window, "tool-tab");
+    const std::shared_ptr<gf::ComboBox> first = std::dynamic_pointer_cast<gf::ComboBox>(window.find("geometry-start"));
+    const std::shared_ptr<gf::ComboBox> last = std::dynamic_pointer_cast<gf::ComboBox>(window.find("geometry-end"));
+    require(first && last && (*first).visible() && (*last).visible(), "line ribbon must expose both endpoints");
+    (*first).set_selected_index(static_cast<std::size_t>(paint::EndpointMarker::Circle));
+    (*last).set_selected_index(static_cast<std::size_t>(paint::EndpointMarker::ZeroMany));
+    fixture.drag(10, 30, 110, 30);
+    require(white(editor.document.image.get(16, 30)) && !white(editor.document.image.get(110, 37)),
+            "independent ribbon markers did not draw the hollow circle and crow's foot");
+    editor.execute("undo");
+    require(white(editor.document.image.get(110, 37)), "endpoint markers must undo with their line");
+    editor.choose_shape(paint::Shape::Rectangle);
+    open_tab(window, "tool-tab");
+    require(!(*first).visible() && !(*last).visible(), "closed shapes must hide endpoint-only settings");
+    editor.choose_tool(paint::Tool::Path);
+    editor.document.continuous_path = false;
+    editor.refresh();
+    open_tab(window, "tool-tab");
+    require((*first).visible() && !(*first).enabled(), "closed paths must disable endpoint markers");
+}
 void sticky_note_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5941,6 +5967,7 @@ int main(int argc, char** argv) {
         sticky_note_contracts();
         geometry_corner_controls();
         geometry_style_controls();
+        geometry_marker_controls();
         custom_pattern_canvas_is_independent();
         tool_cursor_routes();
         freehand_wand_picker_and_size();

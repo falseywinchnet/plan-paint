@@ -794,6 +794,24 @@ void Ribbon::add_options() {
     corner_radius_ = number("geometry-corners", tr("Corner radius (px)"), {480, 36, 330, 28}, 0, 4096, 0, 1);
     geometry_organic_ = number("geometry-organic", tr("Organic"), {840, 36, 260, 28}, 0, 3, 0, 2);
     button("geometry-vary", tr("Vary"), -1, {1120, 36, 140, 28});
+    const std::vector<std::string> markers{tr("None"), tr("Open arrow"), tr("Triangle"), tr("Diamond"),
+        tr("Circle"), tr("Bar"), tr("Exactly one"), tr("Many"), tr("Zero or one"), tr("One or more"), tr("Zero or more")};
+    geometry_start_ = gf::make_control<gf::ComboBox>(gf::StableId("geometry-start"));
+    geometry_end_ = gf::make_control<gf::ComboBox>(gf::StableId("geometry-end"));
+    for (int index = 0; index < 2; ++index) {
+        const std::shared_ptr<gf::ComboBox> marker = index == 0 ? geometry_start_ : geometry_end_;
+        const std::string id = index == 0 ? "geometry-start" : "geometry-end";
+        const std::string name = index == 0 ? tr("Start marker") : tr("End marker");
+        const std::shared_ptr<gf::Label> label = gf::make_control<gf::Label>(gf::StableId(id + "-label"), name);
+        option(label, {840.0 + index * 220, 68, 200, 22});
+        (*marker).set_items(markers);
+        (*marker).set_accessible_name(name);
+        (*marker).set_drop_down_width(240);
+        (*marker).set_maximum_drop_down_items(endpoint_marker_count);
+        option(marker, {840.0 + index * 220, 94, 200, 28});
+        subscriptions_.push_back((*marker).selected_index_changed().subscribe(*this,
+            gf::Delegate<std::optional<std::size_t>>::bind<Ribbon, &Ribbon::geometry_markers_changed>(*this)));
+    }
     const std::shared_ptr<gf::Label> stroke_label = gf::make_control<gf::Label>(
         gf::StableId("geometry-stroke-label"), tr("Stroke style"));
     option(stroke_label, {480, 79, 165, 28});
@@ -1107,6 +1125,12 @@ void Ribbon::show_page() {
             visible = visible && geometry;
         }
         if (id.starts_with("geometry-")) { visible = visible && geometry; }
+        if (id.starts_with("geometry-start") || id.starts_with("geometry-end")) {
+            const Shape shape = (*editor).document.shape;
+            visible = visible && (tool == Tool::Path || (tool == Tool::Shape &&
+                (shape == Shape::Line || shape == Shape::Bezier || shape == Shape::Arc)));
+            control.set_enabled(tool != Tool::Path || (*editor).document.continuous_path);
+        }
         if (id == "smooth-lines") {
             visible = visible && !geometry;
         }
@@ -1196,6 +1220,19 @@ void Ribbon::geometry_stroke_changed(std::optional<std::size_t> index) {
     const std::shared_ptr<Editor> editor = editor_.lock();
     if (!synchronizing_ && editor && index && *index < 3) {
         (*editor).document.ink.geometry.stroke = static_cast<StrokeStyle>(*index);
+        (*editor).document.sync_curve();
+        (*editor).document.sync_path();
+        (*editor).refresh();
+    }
+}
+void Ribbon::geometry_markers_changed(std::optional<std::size_t>) {
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    if (!synchronizing_ && editor) {
+        const std::size_t first = (*geometry_start_).selected_index().value_or(0);
+        const std::size_t last = (*geometry_end_).selected_index().value_or(0);
+        if (first >= endpoint_marker_count || last >= endpoint_marker_count) { return; }
+        (*editor).document.ink.geometry.start = static_cast<EndpointMarker>(first);
+        (*editor).document.ink.geometry.end = static_cast<EndpointMarker>(last);
         (*editor).document.sync_curve();
         (*editor).document.sync_path();
         (*editor).refresh();
@@ -1939,6 +1976,8 @@ void Ribbon::synchronize() {
     (*corner_radius_).set_value(document.ink.geometry.corner_radius);
     (*geometry_organic_).set_value(document.ink.geometry.organic);
     (*geometry_stroke_).set_selected_index(static_cast<std::size_t>(document.ink.geometry.stroke));
+    (*geometry_start_).set_selected_index(static_cast<std::size_t>(document.ink.geometry.start));
+    (*geometry_end_).set_selected_index(static_cast<std::size_t>(document.ink.geometry.end));
     (*render_quality_).set_selected_index(!document.ink.smooth ? 0 : document.ink.supersample ? 2 : 1);
     (*picker_mode_).set_selected_index(static_cast<std::size_t>((*editor).picker_mode));
     (*text_size_).set_value((*editor).text.style.size);

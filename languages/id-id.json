@@ -982,5 +982,14 @@
   "Dashed": "Putus-putus",
   "Dotted": "Titik-titik",
   "Organic": "Organik",
-  "Vary": "Variasikan"
+  "Vary": "Variasikan",
+  "Start marker": "Penanda awal",
+  "End marker": "Penanda akhir",
+  "Open arrow": "Panah terbuka",
+  "Bar": "Garis",
+  "Exactly one": "Tepat satu",
+  "Many": "Banyak",
+  "Zero or one": "Nol atau satu",
+  "One or more": "Satu atau lebih",
+  "Zero or more": "Nol atau lebih"
 }

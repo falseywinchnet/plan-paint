@@ -982,5 +982,14 @@
   "Dashed": "Nét đứt",
   "Dotted": "Nét chấm",
   "Organic": "Tự nhiên",
-  "Vary": "Biến đổi"
+  "Vary": "Biến đổi",
+  "Start marker": "Dấu đầu",
+  "End marker": "Dấu cuối",
+  "Open arrow": "Mũi tên mở",
+  "Bar": "Vạch",
+  "Exactly one": "Đúng một",
+  "Many": "Nhiều",
+  "Zero or one": "Không hoặc một",
+  "One or more": "Một hoặc nhiều",
+  "Zero or more": "Không hoặc nhiều"
 }

@@ -982,5 +982,14 @@
   "Dashed": "ڈیش والی",
   "Dotted": "نقطیاں والی",
   "Organic": "قدرتی",
-  "Vary": "بدلو"
+  "Vary": "بدلو",
+  "Start marker": "شروع دا نشان",
+  "End marker": "آخر دا نشان",
+  "Open arrow": "کھلا تیر",
+  "Bar": "ڈنڈی",
+  "Exactly one": "ٹھیک اک",
+  "Many": "کئی",
+  "Zero or one": "صفر یا اک",
+  "One or more": "اک یا ودھ",
+  "Zero or more": "صفر یا ودھ"
 }
