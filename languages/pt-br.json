@@ -960,5 +960,6 @@
   "Revealing in file manager…": "Mostrando no gerenciador de arquivos…",
   "Could not reveal the selected asset.": "Não foi possível mostrar o recurso selecionado.",
   "Requested containing folder; file selection is unavailable.": "Pasta solicitada; seleção do arquivo indisponível.",
-  "Requested file selection in the file manager.": "Seleção do arquivo solicitada ao gerenciador."
+  "Requested file selection in the file manager.": "Seleção do arquivo solicitada ao gerenciador.",
+  "Position preview; Apply to paint. Escape cancels.": "Posicione a prévia; Aplicar para pintar. Escape cancela."
 }

@@ -614,6 +614,10 @@ void Editor::publish_path_preview() {
     publish_image(composed, *canvas_);
 }
 void Editor::refresh() {
+    if (stamp_placement_ && (document.revision != stamp_placement_revision_ ||
+                             document.atlas_epoch != stamp_placement_epoch_)) {
+        reset_stamp();
+    }
     if (document.atlas.kind != AtlasKind::Icon && document.atlas.kind != AtlasKind::Cursor) {
         icon_index_paint = false;
     }
@@ -642,6 +646,8 @@ void Editor::refresh() {
         publish_image(composed, *canvas_);
     } else if (document.tool == Tool::Path && document.path.extending) {
         publish_path_preview();
+    } else if (stamp_placement_) {
+        publish_image(stamp_placement_image(), *canvas_);
     } else if (preview_active_) {
         Image composed = preview_;
         if (document.selection.active) {
@@ -796,6 +802,9 @@ void Editor::release_gesture() {
     (*canvas_).set_pointer_capture(false);
 }
 void Editor::finish_controls(bool deselect) {
+    if (stamp_placement_) {
+        reset_stamp();
+    }
     finish_text(true);
     finish_warp(false);
     release_gesture();
@@ -926,7 +935,8 @@ void Editor::pointer(const gf::PointerEvent& event) {
                         canvas().set_view_origin({point.x - rotation_pivot_.x / canvas().zoom(),
                                                   point.y - rotation_pivot_.y / canvas().zoom()});
                         if (first_rotation) {
-                            canvas().publish_source(document.visible_image(), {});
+                            canvas().publish_source(stamp_placement_ ? stamp_placement_image()
+                                                                    : document.visible_image(), {});
                         }
                         canvas().invalidate(gf::Dirty::paint);
                     }
@@ -1047,6 +1057,17 @@ void Editor::pointer(const gf::PointerEvent& event) {
             }
             return;
         }
+        if (stamp_placement_ && !panning_ && event.button != gf::PointerButton::middle) {
+            if (event.action == gf::PointerAction::down && event.button == gf::PointerButton::primary) {
+                if (window()) { static_cast<void>((*window()).request_focus(canvas_)); }
+                begin(point, false);
+            } else if (event.action == gf::PointerAction::move && dragging_) {
+                move(point);
+            } else if (event.action == gf::PointerAction::up && dragging_) {
+                end(point);
+            }
+            return;
+        }
         if (spiro_pointer(event, point)) {
             return;
         }
@@ -1145,6 +1166,13 @@ void Editor::pointer(const gf::PointerEvent& event) {
     }
 }
 void Editor::begin(Point point, bool secondary) {
+    if (stamp_placement_) {
+        stamp_placement_center_ = point;
+        dragging_ = true;
+        (*canvas_).set_pointer_capture(true);
+        refresh();
+        return;
+    }
     start_ = last_ = current_ = point;
     gesture_ink_ = secondary ? document.alternate_ink() : document.primary_ink();
     gesture_fill_ink_ = secondary ? document.primary_ink() : document.body_ink();
@@ -1308,6 +1336,11 @@ void Editor::begin(Point point, bool secondary) {
     move(point);
 }
 void Editor::move(Point point) {
+    if (stamp_placement_) {
+        stamp_placement_center_ = point;
+        refresh();
+        return;
+    }
     if (indexed_gesture_) {
         move_indexed_paint(point);
         return;
@@ -1437,6 +1470,12 @@ void Editor::move(Point point) {
     }
 }
 void Editor::end(Point point) {
+    if (stamp_placement_) {
+        stamp_placement_center_ = point;
+        release_gesture();
+        refresh();
+        return;
+    }
     move(point);
     point = current_;
     if (curve_handle_ < 0 && !moving_selection_) {
@@ -1529,6 +1568,11 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
     if (window() && (*window()).focused_control() == canvas_ && text.active && text_key(event)) {
         return;
     }
+    if (stamp_placement_ && event.physical_key == gf::PhysicalKey::escape) {
+        cancel_stamp_placement();
+        event.handled = true;
+        return;
+    }
     if (window() && (*window()).focused_control() != canvas_) {
         gf::Control::Ptr focused = (*window()).focused_control();
         if (focused) {
@@ -1610,7 +1654,7 @@ void Editor::on_key_preview(gf::KeyEvent& event) {
             pick_hotspot = false;
             action = "release";
         } else if (event.physical_key == gf::PhysicalKey::enter) {
-            action = "finish-path";
+            action = stamp_placement_ ? "stamp-apply" : "finish-path";
         } else if (event.physical_key == gf::PhysicalKey::delete_forward ||
                    event.physical_key == gf::PhysicalKey::backspace) {
             action = "delete";
@@ -2111,6 +2155,8 @@ void Editor::execute(const std::string& command) {
         return;
     }
     try {
+        if (command == "stamp-apply") { apply_stamp_placement(); return; }
+        if (command == "stamp-cancel") { cancel_stamp_placement(); return; }
         if (command == "reload") { reload_file(); return; }
         if (command == "guide-edit") {
             edit_guide();

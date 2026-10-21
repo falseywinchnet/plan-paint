@@ -960,5 +960,6 @@
   "Revealing in file manager…": "در حال نمایش در مدیر فایل…",
   "Could not reveal the selected asset.": "نمایش مورد انتخاب‌شده ممکن نشد.",
   "Requested containing folder; file selection is unavailable.": "پوشهٔ دربرگیرنده درخواست شد؛ انتخاب فایل در دسترس نیست.",
-  "Requested file selection in the file manager.": "انتخاب فایل در مدیر فایل درخواست شد."
+  "Requested file selection in the file manager.": "انتخاب فایل در مدیر فایل درخواست شد.",
+  "Position preview; Apply to paint. Escape cancels.": "پیش‌نمایش را قرار دهید؛ برای رسم اعمال کنید. Escape لغو می‌کند."
 }

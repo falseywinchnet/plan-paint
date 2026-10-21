@@ -960,5 +960,6 @@
   "Revealing in file manager…": "Відкриття у файловому менеджері…",
   "Could not reveal the selected asset.": "Не вдалося показати вибраний ресурс.",
   "Requested containing folder; file selection is unavailable.": "Запитано батьківську теку; вибір файла недоступний.",
-  "Requested file selection in the file manager.": "Запитано вибір файла у файловому менеджері."
+  "Requested file selection in the file manager.": "Запитано вибір файла у файловому менеджері.",
+  "Position preview; Apply to paint. Escape cancels.": "Розмістіть зразок; «Застосувати» малює. Escape скасовує."
 }

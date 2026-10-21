@@ -2379,6 +2379,127 @@ void await_reveal(gf::Window& window) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
+void imported_stamp_placement_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    paint::Image asset;
+    asset.reset(4, 4, {12, 80, 180, 128});
+    const std::size_t history = editor.document.undo_history.size();
+    const std::uint64_t revision = editor.document.revision;
+    editor.use_asset_stamp(asset);
+    window.perform_layout();
+    require(editor.stamp_placement_active() && editor.can_apply_stamp_placement() &&
+                (*window.find("context-stamp-apply")).visible() &&
+                (*window.find("context-stamp-cancel")).visible() &&
+                !(*window.find("context-stamp-add")).visible(),
+            "imported placement needs visible Apply/Cancel and no material capture commands");
+    fixture.drag(16, 16, 60, 40);
+    editor.stamp_scale = 2;
+    editor.stamp_angle = 90;
+    editor.regenerate_stamp();
+    editor.refresh();
+    require(!editor.can_apply_stamp_placement() && !(*window.find("context-stamp-apply")).enabled(),
+            "stale transform preview must not be applied while rendering");
+    editor.apply_stamp_placement();
+    require(editor.document.revision == revision, "premature Apply changed the document");
+    await_background(fixture);
+    require(editor.can_apply_stamp_placement(), "completed stamp transform did not enable Apply");
+    routed_button(window, "context-stamp-cancel");
+    require(!editor.stamp_placement_active() && editor.document.revision == revision &&
+                editor.document.undo_history.size() == history && white(editor.document.image.get(60, 40)),
+            "Cancel must discard the placement without a document edit");
+
+    editor.use_asset_stamp(asset);
+    fixture.click(30, 30);
+    gf::KeyEvent escape;
+    escape.action = gf::KeyAction::down;
+    escape.physical_key = gf::PhysicalKey::escape;
+    window.dispatch_key(escape);
+    require(!editor.stamp_placement_active() && editor.document.revision == revision,
+            "Escape must cancel imported placement");
+
+    editor.use_asset_stamp(asset);
+    editor.stamp_scale = 2;
+    editor.regenerate_stamp();
+    editor.cancel_stamp_placement();
+    await_background(fixture);
+    require(!editor.stamp_placement_active() && editor.document.stamp.pixels.empty(),
+            "late transform completion resurrected a cancelled stamp");
+
+    editor.use_asset_stamp(asset);
+    editor.choose_tool(paint::Tool::Pencil);
+    require(!editor.stamp_placement_active() && editor.document.revision == revision,
+            "changing tools must discard imported placement without painting");
+
+    // The bitmap anchor survives moving the pointer to the ribbon and a rotated view.
+    editor.use_asset_stamp(asset);
+    editor.canvas().view_angle = 0.2;
+    fixture.click(40.25, 40.25);
+    fixture.pointer(gf::PointerAction::move, 75, 65, gf::PointerButton::none);
+    editor.apply_stamp_placement();
+    paint::Image expected;
+    expected.reset(128, 96);
+    paint::composite(expected, asset, 38, 38);
+    for (std::size_t index = 0; index < expected.pixels.size(); ++index) {
+        require(paint::equal(editor.document.image.pixels[index], expected.pixels[index]),
+                "applied placement lost its bitmap anchor or alpha compositing");
+    }
+    require(editor.document.undo_history.size() == history + 1, "placement must be exactly one Undo");
+    editor.execute("undo");
+    require(white(editor.document.image.get(40, 40)), "placement Undo failed");
+    editor.execute("redo");
+    require(paint::equal(editor.document.image.get(40, 40), expected.get(40, 40)), "placement Redo failed");
+
+    editor.use_asset_stamp(asset);
+    editor.document.checkpoint();
+    editor.refresh();
+    require(!editor.stamp_placement_active(), "an unrelated edit must invalidate an old placement");
+
+    // Captured stamps retain continuous deposition, not the import-only staging workflow.
+    editor.canvas().view_angle = 0;
+    editor.document.new_image(128, 96);
+    editor.document.image.set(10, 10, {240, 20, 10, 255});
+    editor.reset_stamp();
+    editor.stamp_width = editor.stamp_height = 2;
+    editor.document.stamp_shape = paint::StampShape::Square;
+    editor.choose_tool(paint::Tool::Stamp);
+    fixture.click(11, 11);
+    const std::size_t captured_history = editor.document.undo_history.size();
+    fixture.drag(30, 30, 50, 30);
+    require(!editor.stamp_placement_active() && editor.document.undo_history.size() == captured_history + 1 &&
+                !white(editor.document.image.get(40, 29)),
+            "canvas-captured stamp lost continuous repeat painting");
+
+    paint::ImageContainer icons;
+    icons.kind = paint::ContainerKind::Cursor;
+    paint::IconFrame small, large;
+    small.image.reset(16, 16, {0, 0, 0, 0});
+    small.hotspot_x = 3;
+    small.hotspot_y = 4;
+    large.image.reset(32, 32, {20, 90, 170, 255});
+    icons.frames = {small, large};
+    editor.open_container(icons, "");
+    editor.select_frame(0, false);
+    editor.use_asset_stamp(asset);
+    fixture.click(1, 1);
+    gf::KeyEvent enter;
+    enter.action = gf::KeyAction::down;
+    enter.physical_key = gf::PhysicalKey::enter;
+    window.dispatch_key(enter);
+    editor.document.sync_atlas();
+    require(!editor.stamp_placement_active() && editor.document.image.width == 16 &&
+                editor.document.image.height == 16 && editor.document.image.get(0, 0).a == 128 &&
+                editor.document.image.get(15, 15).a == 0 &&
+                editor.document.atlas.icons[0].hotspot_x == 3 && editor.document.atlas.icons[0].hotspot_y == 4 &&
+                paint::equal(editor.document.atlas.icons[1].image.get(0, 0), large.image.get(0, 0)),
+            "Enter must clip to the current icon bitmap without changing hotspots or another representation");
+    editor.use_asset_stamp(asset);
+    editor.select_frame(1, false);
+    require(!editor.stamp_placement_active() &&
+                paint::equal(editor.document.image.get(0, 0), large.image.get(0, 0)),
+            "switching icon representations must discard the old placement");
+}
 void asset_reveal_contracts() {
     RevealProbe probe;
     Fixture fixture;
@@ -2492,9 +2613,14 @@ void asset_browser_contracts() {
                 editor.document.undo_history.size() == history && editor.document.revision == revision &&
                 paint::equal(editor.document.stamp.get(0, 0), asset.get(0, 0)),
             "loading a stamp changed source pixels/history or lost alpha");
-    fixture.click(40, 40);
-    require(editor.document.undo_history.size() == history + 1 && !white(editor.document.image.get(40, 40)),
-            "stamp placement did not create a single reversible edit");
+    fixture.drag(20, 20, 40, 40);
+    require(editor.stamp_placement_active() && editor.document.undo_history.size() == history &&
+                editor.document.revision == revision && white(editor.document.image.get(40, 40)),
+            "moving the imported stamp must not paint or create history");
+    routed_button(window, "context-stamp-apply");
+    require(!editor.stamp_placement_active() && editor.document.undo_history.size() == history + 1 &&
+                !white(editor.document.image.get(40, 40)) && white(editor.document.image.get(20, 20)),
+            "Apply must flatten one stamp at its final position, without a painted drag trail");
     editor.document.undo();
     require(white(editor.document.image.get(40, 40)), "asset stamp Undo failed");
     // A cancelled save prompt preserves the edited document.
@@ -5644,6 +5770,7 @@ void icon_production_contracts() {
         icon_sheet_new_document();
         icon_representation_export();
         asset_browser_contracts();
+        imported_stamp_placement_contracts();
         asset_reveal_contracts();
         alpha_tools_contracts();
         external_file_reload();

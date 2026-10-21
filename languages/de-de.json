@@ -960,5 +960,6 @@
   "Revealing in file manager…": "Wird im Dateimanager gezeigt…",
   "Could not reveal the selected asset.": "Das ausgewählte Objekt konnte nicht angezeigt werden.",
   "Requested containing folder; file selection is unavailable.": "Übergeordneten Ordner angefordert; Dateiauswahl nicht verfügbar.",
-  "Requested file selection in the file manager.": "Dateiauswahl im Dateimanager angefordert."
+  "Requested file selection in the file manager.": "Dateiauswahl im Dateimanager angefordert.",
+  "Position preview; Apply to paint. Escape cancels.": "Vorschau platzieren; Anwenden zum Malen. Escape bricht ab."
 }

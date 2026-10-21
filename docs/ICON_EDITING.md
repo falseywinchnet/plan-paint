@@ -496,9 +496,25 @@ command, subject to the normal decoder limits.
 
 **Open** opens the complete image or icon container and honors the existing
 unsaved-document prompt. **Use as stamp** loads the chosen representation into
-the existing Stamp tool at its original dimensions and alpha. Loading the stamp
-does not itself change canvas pixels or create an Undo entry; placement uses the
-normal painting transaction and Undo. Background-dependent XOR images cannot
+the existing Stamp tool at its original dimensions and alpha, with one temporary
+placement preview. Click or drag to position it. Moving the pointer away after
+release leaves the preview anchored in bitmap coordinates, including in a rotated
+view. Scale, angle and hardness remain adjustable in the Stamp context ribbon.
+**Apply** (or Enter with the canvas focused) composites the final preview once
+into the current bitmap and creates one Undo entry. **Cancel** or Escape discards
+the preview without changing pixels or history. Leaving the tool, switching
+representations or making another document edit discards a pending placement.
+Saving before Apply saves the existing bitmap; the temporary placement is not
+part of a file or recovery image.
+
+The preview uses the same alpha composition, canvas clipping, guide constraints,
+selection constraints and atlas wrap/preserve-alpha settings as Apply. Placement
+uses integer top-left coordinates obtained by truncating the center minus half
+the transformed stamp dimensions. Apply is disabled until the latest requested
+scale or rotation finishes rendering; a late worker result cannot restore a
+cancelled placement. Apply and Cancel clear the imported stamp. Stamps captured
+from the canvas retain their existing continuous repeat-painting behavior.
+Background-dependent XOR images cannot
 be used as ordinary alpha stamps, and that action is visibly unavailable.
 **Copy path** copies the selected file or folder path.
 
