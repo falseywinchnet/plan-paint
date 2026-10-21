@@ -2186,6 +2186,28 @@ void icon_generation_review_and_cancel() {
     require(editor.document.atlas.count() == 3 && editor.document.atlas.icons[1].image.width == 24,
             "Undo restores an image removed by exact-profile generation");
 }
+void svg_icon_source_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path() / "fixtures/formats/import.svg";
+    editor.open_file(root.string());
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    std::shared_ptr<gf::TextBox> manifest = std::dynamic_pointer_cast<gf::TextBox>(window.find("icon-size-manifest"));
+    require((*manifest).text().find("SVG") != std::string::npos && (*manifest).text().find("Upscaling") == std::string::npos,
+            "generation review identifies the retained vector source at every target size");
+    routed_button(window, "dialog-cancel");
+    editor.document.checkpoint();
+    editor.document.image.set(0, 0, {50, 100, 200, 255});
+    editor.refresh();
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    manifest = std::dynamic_pointer_cast<gf::TextBox>(window.find("icon-size-manifest"));
+    require((*manifest).text().find("SVG") == std::string::npos && (*manifest).text().find("Upscaling") != std::string::npos,
+            "edited imports visibly switch generation to their current bitmap source");
+    editor.close_editor_dialog();
+}
 void explicit_icon_target_controls() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5220,6 +5242,7 @@ void canvas_controls_without_dragging() {
 void icon_production_contracts() {
         icon_generation_review_and_cancel();
         explicit_icon_target_controls();
+        svg_icon_source_controls();
         icon_representation_identity();
         icon_sheet_preview_and_export();
         icon_sheet_new_document();

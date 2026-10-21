@@ -2,6 +2,8 @@
 #include "document.hpp"
 #include "fixtures/icon_reference.hpp"
 #include "icon_sheet.hpp"
+#include "import_codecs.hpp"
+#include "conv.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -18,6 +20,51 @@ void same(const paint::Image& a, const paint::Image& b) {
         require(a.pixels[i].a == b.pixels[i].a && (!a.pixels[i].a || paint::equal(a.pixels[i], b.pixels[i])),
                 "pixel roundtrip differs");
     }
+}
+void svg_icon_targets() {
+    const std::string path = std::string(FORMAT_FIXTURES) + "/import.svg";
+    const paint::ImageContainer source = paint::load_container(path);
+    require(paint::svg_source_matches(source.frames[0]), "SVG container retains its validated source");
+    paint::Document document;
+    document.replace_container(source, path);
+    const std::vector<paint::IconGenerationTarget> targets = {
+        {0, -1, 16, 16, 32}, {0, -1, 32, 32, 32}, {0, -1, 96, 64, 32}};
+    document.generate_icon_targets(targets, {}, false);
+    bool differs_from_bitmap = false;
+    for (std::size_t index = 0; index < targets.size(); ++index) {
+        const paint::IconGenerationTarget& target = targets[index];
+        const paint::Image direct = paint::rasterize_svg(path, target.width, target.height);
+        same(document.atlas.icons[index].image, direct);
+        paint::Image scaled;
+        paint::conv_resize(source.frames[0].image, target.width, target.height, scaled);
+        differs_from_bitmap = differs_from_bitmap || !std::equal(scaled.pixels.begin(), scaled.pixels.end(), direct.pixels.begin(), direct.pixels.end(), paint::equal);
+        require(!document.atlas.icons[index].svg_source, "generated targets are independent ordinary pixel images");
+    }
+    require(differs_from_bitmap, "fixture must distinguish direct vector rasterization from bitmap resampling");
+    const std::vector<std::uint8_t> encoded = paint::encode_icon_container(document.output_container(false));
+    const paint::ImageContainer decoded = paint::decode_icon_container(encoded.data(), encoded.size());
+    for (std::size_t index = 0; index < decoded.frames.size(); ++index) {
+        same(decoded.frames[index].image, document.atlas.icons[index].image);
+        require(!decoded.frames[index].svg_source, "standard ICO output contains no retained vector source");
+    }
+    document.undo();
+    require(document.atlas.kind == paint::AtlasKind::None && paint::svg_source_matches(document.output_container(false).frames[0]),
+            "Undo generation restores the original raster and its vector eligibility");
+    document.checkpoint();
+    document.image.reset(160, 100, {30, 220, 70, 255});
+    require(!paint::svg_source_matches(document.output_container(false).frames[0]),
+            "pixel edits disable automatic use of original SVG geometry");
+    document.generate_icon_targets({{0, -1, 24, 24, 32}}, {}, false);
+    require(paint::equal(document.image.get(12, 12), {30, 220, 70, 255}),
+            "generation must preserve edited bitmap artwork instead of silently reverting to SVG");
+    document.undo();
+    document.undo();
+    require(paint::svg_source_matches(document.output_container(false).frames[0]),
+            "Undoing the pixel edit restores vector eligibility");
+    document.make_icon_sizes({16, 32}, false);
+    same(document.atlas.icons[0].image, paint::rasterize_svg(path, 16, 16));
+    document.new_image(12, 12);
+    require(!document.svg_source, "new ordinary documents release prior SVG provenance");
 }
 void imports() {
     std::string root = FORMAT_FIXTURES;
@@ -314,6 +361,7 @@ void atlas() {
 int main() {
     try {
         imports();
+        svg_icon_targets();
         icons();
         icon_sheets();
         atlas();

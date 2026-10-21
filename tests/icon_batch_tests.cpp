@@ -1,6 +1,7 @@
 #include "codecs.hpp"
 #include "fixtures/icon_reference.hpp"
 #include "icon_batch.hpp"
+#include "import_codecs.hpp"
 #include "paths.hpp"
 #include "safe_file.hpp"
 #include <algorithm>
@@ -31,6 +32,50 @@ void cancel_after_one(const paint::IconBatchPlan& plan, void* context) {
     if (plan.entries.front().state == paint::IconExportState::Completed) {
         (*static_cast<std::atomic<bool>*>(context)).store(true);
     }
+}
+void svg_batch_contracts() {
+    Directory root;
+    const std::filesystem::path output = root.path / "out";
+    std::filesystem::create_directory(output);
+    const std::string path = paint::path_to_utf8(root.path / "vector.svg");
+    const std::string svg = R"(<svg xmlns="http://www.w3.org/2000/svg" width="24.5" height="12.25" viewBox="0 0 24.5 12.25"><path d="M0.2 0.1L23.9 11.8M12 0V12" stroke="#e04080" stroke-width="0.7"/><circle cx="17.3" cy="4.2" r="2.7" fill="#20b0d0"/></svg>)";
+    const std::vector<std::uint8_t> bytes(svg.begin(), svg.end());
+    paint::write_file_atomic(bytes, path, "SVG fixture");
+    const paint::ImageContainer captured = paint::load_container(path);
+    std::filesystem::remove(paint::path_from_utf8(path));
+    require(paint::generate_icon_target(captured, {0, -1, 48, 24, 32}, false).image.width == 48,
+            "captured SVG generation does not reread a deleted source path");
+    paint::write_file_atomic(bytes, path, "SVG fixture");
+    paint::IconBatchSettings settings;
+    settings.sizes = {16, 32, 48};
+    std::atomic<bool> cancel{false};
+    paint::IconBatchPlan plan = paint::plan_icon_batch({path}, paint::path_to_utf8(output), settings, cancel);
+    require(paint::icon_batch_ready(plan) && plan.entries[0].summary.find("SVG rasterized independently") != std::string::npos &&
+                plan.entries[0].summary.find("UPSCALING") == std::string::npos && std::filesystem::is_empty(output),
+            "vector review identifies independent rasterization without a bitmap upscaling warning");
+    paint::run_icon_batch(plan, cancel);
+    require(plan.entries[0].state == paint::IconExportState::Completed, "SVG conversion publishes its complete family");
+    const paint::ImageContainer actual = paint::load_container(paint::path_to_utf8(output / plan.entries[0].filename));
+    for (std::size_t index = 0; index < settings.sizes.size(); ++index) {
+        const int size = settings.sizes[index];
+        const paint::Image direct = paint::rasterize_svg(path, size, size / 2);
+        const paint::Image& image = actual.frames[index].image;
+        require(image.width == size && image.height == size && image.get(0, 0).a == 0,
+                "batch centers vector artwork on a transparent square");
+        for (int y = 0; y < direct.height; ++y) {
+            for (int x = 0; x < direct.width; ++x) {
+                require(paint::equal(image.get(x, y + size / 4), direct.get(x, y)),
+                        "each size must rasterize at its own resolution using the fractional intrinsic aspect ratio");
+            }
+        }
+    }
+    settings.collision = paint::IconExportCollision::Rename;
+    plan = paint::plan_icon_batch({path}, paint::path_to_utf8(output), settings, cancel);
+    paint::write_file_atomic({'x'}, path, "changed SVG");
+    paint::run_icon_batch(plan, cancel);
+    require(plan.entries[0].state == paint::IconExportState::Failed &&
+                !std::filesystem::exists(output / plan.entries[0].filename),
+            "a changed vector source cannot publish an unreviewed batch output");
 }
 void shared_palette_batch_contracts() {
     Directory root;
@@ -404,6 +449,7 @@ void stamp_container_contracts() {
 int main() {
     try {
         batch_contracts();
+        svg_batch_contracts();
         shared_palette_batch_contracts();
         cursor_and_report_contracts();
         stamp_contracts();

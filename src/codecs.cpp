@@ -301,7 +301,15 @@ ImageContainer load_container(const std::string& path) {
         return decode_icon_container(bytes.data(), bytes.size());
     }
     ImageContainer result;
-    result.frames.push_back({load_image(path), 0, 0, {}});
+    if (ext == ".svg" || ext == ".svgz") {
+        const std::shared_ptr<const SvgSource> source = load_svg_source(path);
+        IconFrame frame;
+        frame.image = (*source).original;
+        frame.svg_source = source;
+        result.frames.push_back(std::move(frame));
+    } else {
+        result.frames.push_back({load_image(path), 0, 0, {}});
+    }
     return result;
 }
 void save_encoded_bytes(const std::vector<std::uint8_t>& bytes, const std::string& path) {

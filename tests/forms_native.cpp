@@ -35,7 +35,7 @@ struct NativeExercise {
     std::shared_ptr<paint::forms::Editor> editor;
     bool keep_open = false, resize_preview = false, features = false, compact = false, bugs = false,
          materials = false, interface_review = false, view_review = false, guide_review = false,
-         healing_review = false, icon_production_review = false, icon_formats_review = false,
+         healing_review = false, icon_production_review = false, icon_svg_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
          alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
@@ -391,6 +391,12 @@ struct NativeExercise {
                 (*after).committed_arranged_bounds().width < 160 ||
                 (*accept).committed_arranged_bounds().bottom() > window.client_size().height) {
                 throw std::runtime_error("Native icon generation review did not render");
+            }
+            if (icon_svg_review) {
+                const std::shared_ptr<gf::TextBox> manifest = std::dynamic_pointer_cast<gf::TextBox>(window.find("icon-size-manifest"));
+                if ((*manifest).text().find("SVG") == std::string::npos || (*manifest).text().find("Upscaling") != std::string::npos) {
+                    throw std::runtime_error("Native SVG generation preview lost vector provenance");
+                }
             }
             return;
         }
@@ -838,8 +844,13 @@ struct NativeExercise {
         }
         if (icon_production_review) {
             const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
-            document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
-            document.make_icon_sizes({16, 24, 32}, false);
+            if (icon_svg_review) {
+                const std::string path = (root / "tests/fixtures/formats/import.svg").string();
+                document.replace_container(paint::load_container(path), path);
+            } else {
+                document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
+                document.make_icon_sizes({16, 24, 32}, false);
+            }
             (*editor).refresh();
             (*editor).execute("atlas-icons");
             window.perform_layout();
@@ -851,7 +862,7 @@ struct NativeExercise {
                 std::dynamic_pointer_cast<gf::ListBox>(window.find("icon-target-list"));
             const std::shared_ptr<gf::ComboBox> depth =
                 std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-target-depth"));
-            (*targets).select_index(4);
+            (*targets).select_index(icon_svg_review ? 3 : 4);
             (*depth).set_selected_index(1);
             window.perform_layout();
             inspect_frame(window);
@@ -999,7 +1010,8 @@ int main(int argc, char** argv) {
         NativeExercise exercise;
         exercise.keep_open = argc > 1;
         exercise.healing_review = argc > 1 && std::string(argv[1]) == "--healing";
-        exercise.icon_production_review = argc > 1 && std::string(argv[1]) == "--icon-production";
+        exercise.icon_svg_review = argc > 1 && std::string(argv[1]) == "--icon-svg";
+        exercise.icon_production_review = exercise.icon_svg_review || (argc > 1 && std::string(argv[1]) == "--icon-production");
         exercise.icon_formats_review = argc > 1 && std::string(argv[1]) == "--icon-formats";
         exercise.icon_sheet_review = argc > 1 && std::string(argv[1]) == "--icon-sheet";
         exercise.icon_export_review = argc > 1 && std::string(argv[1]) == "--icon-export";
