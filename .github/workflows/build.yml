@@ -57,6 +57,7 @@ jobs:
     env:
       PAINT_RELEASE_VERSION: ${{ needs.prepare.outputs.version }}
       BUILD_JOBS: 2
+      PAINT_CLIPBOARD_TEST_ISOLATED: 1
       CC: clang
       CXX: clang++
       OBJCXX: clang++
