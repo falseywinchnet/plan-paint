@@ -69,10 +69,10 @@ struct BatchWork {
     }
 };
 } // namespace
-std::vector<std::string> Editor::choose_batch_sources() {
+std::vector<std::string> Editor::choose_batch_sources(bool multiple) {
     gf::HostOpenFileDialogRequest request;
-    request.title = tr("Add files…");
-    request.allow_multiple = true;
+    request.title = multiple ? tr("Add files…") : tr("Stamp image…");
+    request.allow_multiple = multiple;
     const gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
     return result.outcome == gf::HostDialogOutcome::accepted ? result.paths : std::vector<std::string>{};
 }
@@ -87,9 +87,10 @@ void EditorDialog::initialize_icon_batch() {
     batch_operation_ = gf::make_control<gf::ComboBox>(gf::StableId("batch-operation"));
     (*batch_operation_)
         .set_items({tr("Convert to ICO"), tr("Normalize sizes"), tr("Icon state variants"),
-                    tr("Export representations")});
+                    tr("Export representations"), tr("Stamp")});
     (*batch_operation_).set_selected_index(0);
     put(batch_operation_, {260, 48, 480, 28});
+    const std::size_t normal_begin = controls_.size();
     batch_policy_ = gf::make_control<gf::ComboBox>(gf::StableId("batch-policy"));
     (*batch_policy_)
         .set_items({tr("Add missing sizes; keep existing images"),
@@ -133,6 +134,7 @@ void EditorDialog::initialize_icon_batch() {
     put(batch_saturation_, {260, 212, 145, 28});
     put(batch_brightness_, {420, 212, 145, 28});
     put(batch_opacity_, {580, 212, 160, 28});
+    batch_normal_controls_.assign(controls_.begin() + normal_begin, controls_.end());
     label("batch-destination-label", tr("Destination folder"), {20, 246, 140, 28});
     batch_destination_ = gf::make_control<gf::TextBox>(gf::StableId("batch-destination"));
     (*batch_destination_).set_accessible_name(tr("Destination folder"));
@@ -196,6 +198,7 @@ void EditorDialog::initialize_icon_batch() {
                 *this,
                 gf::Delegate<const std::string&>::bind<EditorDialog, &EditorDialog::batch_text_changed>(
                     *this)));
+    initialize_batch_stamp();
     refresh_batch_sources();
     invalidate_batch();
 }
@@ -230,10 +233,21 @@ void EditorDialog::invalidate_batch() {
     (*batch_manifest_).set_text("");
     (*error_).set_text("");
     (*batch_status_).set_text(tr("Review outputs"));
+    (*batch_stamp_before_).clear_bitmap();
+    (*batch_stamp_after_).clear_bitmap();
     update_batch_controls();
 }
 void EditorDialog::update_batch_controls() {
     const std::size_t operation = (*batch_operation_).selected_index().value_or(0);
+    const bool stamping = operation == 4;
+    for (const std::shared_ptr<gf::Control>& control : batch_normal_controls_) {
+        (*control).set_visible(!stamping);
+    }
+    for (const std::shared_ptr<gf::Control>& control : batch_stamp_controls_) {
+        (*control).set_visible(stamping);
+    }
+    (*batch_sources_).set_requested_bounds({20, 48, 220, stamping ? 56.0 : 140.0});
+    (*batch_stamp_matte_).set_enabled(stamping && (*batch_stamp_flatten_).checked());
     (*batch_policy_).set_enabled(operation == 1);
     for (const std::shared_ptr<gf::CheckBox>& size : batch_sizes_) {
         (*size).set_enabled(operation < 2);
@@ -298,6 +312,9 @@ void EditorDialog::start_icon_batch(bool execute) {
     job.settings.recipe.saturation = (*batch_saturation_).value();
     job.settings.recipe.brightness = (*batch_brightness_).value();
     job.settings.recipe.opacity = (*batch_opacity_).value();
+    if (job.settings.operation == IconBatchOperation::Stamp) {
+        read_batch_stamp(job.settings);
+    }
     for (const std::shared_ptr<gf::Control>& control : batch_settings_) {
         (*control).set_enabled(false);
     }
@@ -351,6 +368,7 @@ void EditorDialog::deliver_icon_batch(const std::shared_ptr<IconBatchJob>& job) 
                   std::to_string(cancelled) + " " + tr("Cancelled"));
     (*error_).set_text(error);
     if (done) {
+        show_batch_stamp(published);
         for (const std::shared_ptr<gf::Control>& control : batch_settings_) {
             (*control).set_enabled(true);
         }
@@ -375,6 +393,11 @@ void EditorDialog::batch_clicked(gf::ButtonBase& control) {
             (*editor).batch_sources.insert((*editor).batch_sources.end(), files.begin(), files.end());
             refresh_batch_sources();
             invalidate_batch();
+        } else if (id == "batch-stamp-browse") {
+            const std::vector<std::string> files = (*editor).choose_batch_sources(false);
+            if (!files.empty()) {
+                (*batch_stamp_path_).set_text(files.front());
+            }
         } else if (id == "batch-remove") {
             const std::optional<std::size_t> selected = (*batch_sources_).selected_index();
             if (selected && *selected < (*editor).batch_sources.size()) {

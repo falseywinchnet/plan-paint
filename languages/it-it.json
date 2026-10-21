@@ -862,5 +862,18 @@
   "Run": "Esegui",
   "Source files": "File sorgente",
   "Batch…": "Serie…",
-  "Batch production…": "Produzione in serie…"
+  "Batch production…": "Produzione in serie…",
+  "Stamp image…": "Immagine timbro…",
+  "Anchor": "Ancoraggio",
+  "Top left": "In alto a sinistra",
+  "Top center": "In alto al centro",
+  "Top right": "In alto a destra",
+  "Middle left": "Al centro a sinistra",
+  "Middle right": "Al centro a destra",
+  "Bottom left": "In basso a sinistra",
+  "Bottom center": "In basso al centro",
+  "Bottom right": "In basso a destra",
+  "Foreground": "Primo piano",
+  "Original size": "Dimensioni originali",
+  "Fit image": "Adatta all’immagine"
 }

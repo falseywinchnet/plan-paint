@@ -862,5 +862,18 @@
   "Run": "実行",
   "Source files": "元のファイル",
   "Batch…": "一括処理…",
-  "Batch production…": "一括処理…"
+  "Batch production…": "一括処理…",
+  "Stamp image…": "スタンプ画像…",
+  "Anchor": "基準位置",
+  "Top left": "左上",
+  "Top center": "上中央",
+  "Top right": "右上",
+  "Middle left": "左中央",
+  "Middle right": "右中央",
+  "Bottom left": "左下",
+  "Bottom center": "下中央",
+  "Bottom right": "右下",
+  "Foreground": "前景",
+  "Original size": "元のサイズ",
+  "Fit image": "画像に合わせる"
 }

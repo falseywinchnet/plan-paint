@@ -398,7 +398,7 @@ file for this same window. The source list stays available while Plan Paint is
 open. It identifies duplicate selections by ordinal; selecting a file twice
 deliberately produces two separately named outputs.
 
-Choose one of four operations:
+Choose one of five operations:
 
 - **Convert to ICO** creates one ICO per source, with the checked sizes. It uses
   the largest-area source image, choosing the first representation on an area tie.
@@ -416,6 +416,9 @@ Choose one of four operations:
 - **Export representations** writes each decoded image to its own PNG. Source
   and representation ordinals keep duplicate dimensions and repeated inputs
   distinct. Background-dependent legacy XOR cannot be converted to PNG.
+- **Stamp** composites one fixed image onto every source. Ordinary images produce
+  PNG; ICO and CUR retain their container kind, representation order, dimensions
+  and cursor hotspots. Its placement and transparency controls are described below.
 
 Choose an existing destination folder and **Skip existing**, **Rename outputs**
 or **Replace existing**, then select **Review outputs**. Review decodes and
@@ -450,6 +453,61 @@ size policy, requested sizes, state recipe and per-output identity, result and
 diagnostic. Ordinals are one-based. `representationOrdinal` is null for whole
 container output. Full source paths are retained in the report even when the
 compact manifest shows only the filename.
+
+### Fixed-image batch stamping
+
+Choose **Stamp** in the batch operation list and use **Stamp image…** to select
+an ordinary supported image, ICO or CUR. A multi-image stamp uses its largest-area
+representation, with the first representation winning an area tie. The manifest
+identifies that representation and its dimensions. The stamp is loaded once per
+review or execution; source files are processed one at a time.
+
+Choose one of nine anchors, **Foreground** or **Background**, **Original size**
+or **Fit image**, X/Y offsets in pixels, scale percentage and opacity. Original
+size starts with the stamp's pixel dimensions. Fit image scales proportionally
+to fit each source representation before applying the percentage. Percentages
+range from 1 to 800; opacity ranges from 0 to 100. X/Y offsets range from −8192
+to 8192 and are applied after anchoring; positive offsets move right/down.
+
+The output always keeps the source canvas dimensions. Left/top anchors start at
+zero; right/bottom align the opposite edges; center anchoring floors half the
+remaining space, including negative offsets for oversized stamps. Scaled dimensions
+round to the nearest integer with a minimum of one pixel per axis. Resizing uses
+Plan Paint's CONV kernel. Scaled stamps are limited to 8192 pixels per axis and
+16,777,216 pixels in total.
+
+Composition uses Plan Paint's double-precision, straight-alpha source-over
+operation in encoded RGB. Stamp alpha is multiplied by opacity and rounded to
+the nearest byte before composition. Foreground paints the stamp over the
+source; Background paints the source over the stamp. Zero-alpha stamp pixels
+are a no-op, including preservation of hidden source RGB. **Opaque** composites
+the complete result onto the chosen **Matte RGB** color, making every output
+pixel fully opaque. Matte alpha is ignored. No persistent layers are created.
+
+**Review outputs** displays a bounded before/after proof of source **#1**, using
+its preferred representation. Proofs are scaled for inspection, not a claim of
+physical-pixel size. The manifest reports placement, scaled dimensions, upscaling
+and the number of nonzero-alpha stamp pixels clipped outside each representation.
+It lists all representations even when dimensions repeat. Changing any setting
+clears the proof and requires another review. The proof does not accumulate
+successive stamps.
+
+Changed ICO/CUR representations use the ordinary RGBA output policy. Completely
+unchanged representations retain their original encoded payload. Background-dependent
+legacy XOR in either a source or the chosen stamp image prevents export of the
+affected family. There is no silent omission of unsupported representations.
+
+Output names include `open-1-stamped.png`, `open-1-stamped.ico` or
+`open-1-stamped.cur`. Both the fixed stamp and every source are protected from
+replacement, including existing filesystem aliases. The stamp's size and modification
+time are rechecked before execution and publication, with the same ordinary-edit
+detection limits as batch sources. Cancellation and per-file atomicity follow
+the batch rules above.
+
+The JSON report's version-1 `stamp` object records the fixed image path, reviewed
+byte count, one-based image ordinal, scale mode, scale/opacity percentages,
+offsets, foreground/background order and matte settings. `anchor` is zero-based
+in a row-major 3 × 3 grid, from top-left (0) to bottom-right (8), with center (4).
 
 The broader [icon production interview](icon-editor-study/mockups.html) covers
 additional palette, alpha, batch and asset-browsing capabilities. Its recommendations

@@ -1,9 +1,11 @@
 #include "codecs.hpp"
+#include "fixtures/icon_reference.hpp"
 #include "icon_batch.hpp"
 #include "paths.hpp"
 #include "safe_file.hpp"
 #include <chrono>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 namespace {
 void require(bool condition, const char* message) {
@@ -158,11 +160,203 @@ void cursor_and_report_contracts() {
                 report.find("\"representationOrdinal\":null") != std::string::npos,
             "report records the operation, exact profile, recipe and image identity");
 }
+void stamp_contracts() {
+    paint::Image source, stamp;
+    source.reset(3, 3, {0, 0, 255, 128});
+    source.set(0, 0, {7, 8, 9, 0});
+    stamp.reset(1, 1, {255, 0, 0, 128});
+    paint::IconStampSettings settings;
+    paint::IconStampResult front = paint::compose_icon_stamp(source, stamp, settings);
+    require(front.placement.x == 1 && front.placement.y == 1 &&
+                paint::equal(front.image.get(1, 1), {170, 0, 85, 192}),
+            "centered front stamp uses Paint source-over");
+    settings.behind = true;
+    const paint::IconStampResult behind = paint::compose_icon_stamp(source, stamp, settings);
+    require(paint::equal(behind.image.get(1, 1), {85, 0, 170, 192}), "behind order reverses source-over");
+    settings.opacity = 0;
+    const paint::IconStampResult empty = paint::compose_icon_stamp(source, stamp, settings);
+    for (std::size_t index = 0; index < source.pixels.size(); ++index) {
+        require(paint::equal(empty.image.pixels[index], source.pixels[index]),
+                "zero opacity preserves hidden RGB and alpha");
+    }
+    settings.opacity = 100;
+    settings.behind = false;
+    settings.anchor = 0;
+    settings.offset_x = -1;
+    stamp.reset(2, 2, {255, 0, 0, 255});
+    front = paint::compose_icon_stamp(source, stamp, settings);
+    require(front.clipped_pixels == 2 && paint::equal(front.image.get(0, 0), {255, 0, 0, 255}),
+            "clipping counts nontransparent stamp pixels");
+    settings.offset_x = 0;
+    settings.flatten = true;
+    settings.matte = {0, 255, 0, 255};
+    front = paint::compose_icon_stamp(source, stamp, settings);
+    require(front.image.get(2, 2).a == 255 && front.image.get(2, 2).g == 127,
+            "matte flattens the complete canvas");
+    settings.flatten = false;
+    settings.scale = paint::IconStampScale::Fit;
+    source.reset(8, 4, {0, 0, 0, 0});
+    settings.anchor = 8;
+    front = paint::compose_icon_stamp(source, stamp, settings);
+    require(front.placement.w == 4 && front.placement.h == 4 && front.placement.x == 4 && front.upscaled,
+            "fit preserves stamp aspect and applies anchor");
+    settings.percent = std::numeric_limits<double>::quiet_NaN();
+    bool rejected = false;
+    try {
+        static_cast<void>(paint::compose_icon_stamp(source, stamp, settings));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    require(rejected, "nonfinite stamp parameters rejected before resizing");
+    Directory root;
+    const std::filesystem::path output = root.path / "out";
+    std::filesystem::create_directory(output);
+    const std::string input = paint::path_to_utf8(root.path / "base.png");
+    const std::string fixed = paint::path_to_utf8(root.path / "stamp.png");
+    paint::save_image(source, input);
+    paint::save_image(stamp, fixed);
+    paint::IconBatchSettings batch;
+    batch.operation = paint::IconBatchOperation::Stamp;
+    batch.stamp_path = fixed;
+    std::atomic<bool> cancel{false};
+    paint::IconBatchPlan job = paint::plan_icon_batch({input}, paint::path_to_utf8(output), batch, cancel);
+    require(paint::icon_batch_ready(job) && job.preview_before.width == 8 && job.preview_after.width == 8 &&
+                std::filesystem::is_empty(output),
+            "stamp preflight produces bounded before/after proofs without writing");
+    paint::run_icon_batch(job, cancel);
+    const paint::Image stamped = paint::load_image(paint::path_to_utf8(output / job.entries[0].filename));
+    require(stamped.width == 8 && stamped.height == 4 && stamped.get(3, 1).r == 255,
+            "ordinary source exports stamped PNG with unchanged dimensions");
+    batch.collision = paint::IconExportCollision::Rename;
+    job = paint::plan_icon_batch({input}, paint::path_to_utf8(output), batch, cancel);
+    stamp.reset(3, 3, {0, 255, 0, 255});
+    paint::save_image(stamp, fixed);
+    paint::run_icon_batch(job, cancel);
+    require(job.entries[0].state == paint::IconExportState::Failed &&
+                !std::filesystem::exists(output / job.entries[0].filename),
+            "changed fixed image invalidates reviewed stamp outputs");
+    require(paint::icon_batch_report(job).find("fixed-image-stamp") != std::string::npos,
+            "report identifies stamping operation");
+}
+void stamp_container_contracts() {
+    Directory root;
+    const std::filesystem::path output = root.path / "out";
+    std::filesystem::create_directory(output);
+    paint::IconFrame first, second;
+    first.image.reset(20, 10, {40, 60, 80, 128});
+    first.hotspot_x = 19;
+    first.hotspot_y = 8;
+    second.image.reset(16, 16, {10, 20, 30, 255});
+    second.hotspot_x = 3;
+    second.hotspot_y = 5;
+    const std::string source = paint::path_to_utf8(root.path / "family.cur");
+    paint::save_container({paint::ContainerKind::Cursor, {first, second, first}}, source);
+    const paint::ImageContainer original = paint::load_container(source);
+    paint::Image stamp;
+    stamp.reset(2, 2, {255, 0, 0, 255});
+    const std::string fixed = paint::path_to_utf8(root.path / "badge.png");
+    paint::save_image(stamp, fixed);
+    paint::IconBatchSettings settings;
+    settings.operation = paint::IconBatchOperation::Stamp;
+    settings.stamp_path = fixed;
+    settings.stamp.anchor = 8;
+    std::atomic<bool> cancel{false};
+    paint::IconBatchPlan job =
+        paint::plan_icon_batch({source}, paint::path_to_utf8(output), settings, cancel);
+    require(job.entries[0].summary.find("image #3") != std::string::npos,
+            "stamp manifest identifies every representation, including duplicates");
+    paint::run_icon_batch(job, cancel);
+    const paint::ImageContainer stamped =
+        paint::load_container(paint::path_to_utf8(output / job.entries[0].filename));
+    require(stamped.kind == paint::ContainerKind::Cursor && stamped.frames.size() == 3,
+            "stamp retains cursor kind and duplicate representations");
+    for (std::size_t index = 0; index < original.frames.size(); ++index) {
+        const paint::IconFrame& before = original.frames[index];
+        const paint::IconFrame& after = stamped.frames[index];
+        require(after.image.width == before.image.width && after.image.height == before.image.height &&
+                    after.hotspot_x == before.hotspot_x && after.hotspot_y == before.hotspot_y &&
+                    paint::equal(after.image.get(after.image.width - 1, after.image.height - 1),
+                                 {255, 0, 0, 255}),
+                "stamp applies independently at each size without moving cursor hotspots");
+    }
+    settings.collision = paint::IconExportCollision::Rename;
+    settings.stamp.opacity = 0;
+    job = paint::plan_icon_batch({source}, paint::path_to_utf8(output), settings, cancel);
+    paint::run_icon_batch(job, cancel);
+    const paint::ImageContainer unchanged =
+        paint::load_container(paint::path_to_utf8(output / job.entries[0].filename));
+    for (std::size_t index = 0; index < original.frames.size(); ++index) {
+        require((*unchanged.frames[index].source).payload == (*original.frames[index].source).payload,
+                "no-op stamping preserves original encoded representation payloads");
+    }
+    settings.stamp.opacity = 100;
+    job = paint::plan_icon_batch({source}, paint::path_to_utf8(output), settings, cancel);
+    cancel.store(true);
+    paint::run_icon_batch(job, cancel);
+    require(job.entries[0].state == paint::IconExportState::Cancelled &&
+                !std::filesystem::exists(output / job.entries[0].filename),
+            "cancelled stamp job publishes no unstarted output");
+    cancel.store(false);
+    const std::string base = paint::path_to_utf8(root.path / "base.png");
+    paint::save_image(first.image, base);
+    settings.stamp_path = paint::path_to_utf8(output / "base-1-stamped.png");
+    paint::save_image(stamp, settings.stamp_path);
+    settings.collision = paint::IconExportCollision::Replace;
+    job = paint::plan_icon_batch({base}, paint::path_to_utf8(output), settings, cancel);
+    require(!paint::icon_batch_ready(job) && job.entries[0].state == paint::IconExportState::Failed,
+            "review cannot replace the fixed stamp even under Replace policy");
+    settings.stamp_path = fixed;
+    settings.collision = paint::IconExportCollision::Rename;
+    job = paint::plan_icon_batch({base}, paint::path_to_utf8(output), settings, cancel);
+    std::filesystem::create_hard_link(paint::path_from_utf8(fixed), output / job.entries[0].filename);
+    paint::run_icon_batch(job, cancel);
+    require(job.entries[0].state == paint::IconExportState::Failed && paint::load_image(fixed).width == 2,
+            "execution protects a late hard-link alias of the fixed image");
+    paint::Image small;
+    small.reset(3, 3, {0, 0, 0, 0});
+    stamp.reset(4, 4, {255, 0, 0, 255});
+    const paint::IconStampResult centered = paint::compose_icon_stamp(small, stamp, {});
+    require(centered.placement.x == -1 && centered.placement.y == -1 && centered.clipped_pixels == 7,
+            "oversized odd center differences consistently round toward negative infinity");
+    const std::string report = paint::icon_batch_report(job);
+    require(report.find("\"anchor\":8") != std::string::npos &&
+                report.find("\"scaleMode\":\"natural\"") != std::string::npos &&
+                report.find("\"sourceImageOrdinal\":1") != std::string::npos,
+            "report records stamp source identity, anchor and scale contract");
+    const paint::ImageContainer indexed =
+        paint::decode_icon_container(paint::test::indexed_icon, sizeof(paint::test::indexed_icon));
+    const std::string indexed_path = paint::path_to_utf8(root.path / "indexed.ico");
+    paint::save_container(indexed, indexed_path);
+    job = paint::plan_icon_batch({indexed_path}, paint::path_to_utf8(output), settings, cancel);
+    paint::run_icon_batch(job, cancel);
+    const paint::ImageContainer rgba =
+        paint::load_container(paint::path_to_utf8(output / job.entries[0].filename));
+    require(paint::icon_output_format(rgba.frames[0], rgba.kind).bits_per_pixel == 32 &&
+                paint::equal(rgba.frames[0].image.get(0, 0), {255, 0, 0, 255}),
+            "edited indexed input produces RGBA without silently reusing the old palette");
+    const paint::ImageContainer legacy =
+        paint::decode_icon_container(paint::test::legacy_cursor, sizeof(paint::test::legacy_cursor));
+    const std::string legacy_path = paint::path_to_utf8(root.path / "legacy.cur");
+    paint::save_container(legacy, legacy_path);
+    job = paint::plan_icon_batch({legacy_path}, paint::path_to_utf8(output), settings, cancel);
+    require(!paint::icon_batch_ready(job) && job.entries[0].state == paint::IconExportState::Failed,
+            "background-dependent source fails as a complete family");
+    settings.stamp_path = legacy_path;
+    bool rejected = false;
+    try {
+        static_cast<void>(paint::plan_icon_batch({source}, paint::path_to_utf8(output), settings, cancel));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    require(rejected, "background-dependent fixed stamp is rejected before review");
+}
 } // namespace
 int main() {
     try {
         batch_contracts();
         cursor_and_report_contracts();
+        stamp_contracts();
+        stamp_container_contracts();
         std::cout << "Icon batch: conversion, normalization, state, PNG, cancellation, stale input and "
                      "collisions passed\n";
         return 0;

@@ -862,5 +862,18 @@
   "Run": "Starten",
   "Source files": "Quelldateien",
   "Batch…": "Stapel…",
-  "Batch production…": "Stapelverarbeitung…"
+  "Batch production…": "Stapelverarbeitung…",
+  "Stamp image…": "Stempelbild…",
+  "Anchor": "Anker",
+  "Top left": "Oben links",
+  "Top center": "Oben mittig",
+  "Top right": "Oben rechts",
+  "Middle left": "Mitte links",
+  "Middle right": "Mitte rechts",
+  "Bottom left": "Unten links",
+  "Bottom center": "Unten mittig",
+  "Bottom right": "Unten rechts",
+  "Foreground": "Vordergrund",
+  "Original size": "Originalgröße",
+  "Fit image": "Bild einpassen"
 }

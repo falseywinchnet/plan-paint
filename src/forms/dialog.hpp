@@ -103,6 +103,9 @@ class EditorDialog final : public gui_forms::Control {
 
   private:
     void initialize_icon_batch();
+    void initialize_batch_stamp();
+    void read_batch_stamp(IconBatchSettings& settings) const;
+    void show_batch_stamp(const IconBatchPlan& plan);
     void stop_icon_batch();
     void start_icon_batch(bool execute);
     void batch_clicked(gui_forms::ButtonBase&);
@@ -124,6 +127,13 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::Label> batch_status_;
     std::shared_ptr<gui_forms::Button> batch_run_, batch_cancel_, batch_report_;
     std::vector<std::shared_ptr<gui_forms::Control>> batch_settings_;
+    std::vector<std::shared_ptr<gui_forms::Control>> batch_normal_controls_, batch_stamp_controls_;
+    std::shared_ptr<gui_forms::TextBox> batch_stamp_path_, batch_stamp_matte_;
+    std::shared_ptr<gui_forms::ComboBox> batch_stamp_anchor_, batch_stamp_order_, batch_stamp_scale_;
+    std::shared_ptr<gui_forms::NumericUpDown> batch_stamp_x_, batch_stamp_y_, batch_stamp_percent_,
+        batch_stamp_opacity_;
+    std::shared_ptr<gui_forms::CheckBox> batch_stamp_flatten_;
+    std::shared_ptr<gui_forms::RasterCanvas> batch_stamp_before_, batch_stamp_after_;
     void initialize_icon_states();
     void stop_icon_states();
     void render_icon_states();

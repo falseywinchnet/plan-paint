@@ -862,5 +862,18 @@
   "Run": "चलाएँ",
   "Source files": "स्रोत फ़ाइलें",
   "Batch…": "बैच…",
-  "Batch production…": "बैच प्रसंस्करण…"
+  "Batch production…": "बैच प्रसंस्करण…",
+  "Stamp image…": "मोहर की छवि…",
+  "Anchor": "एंकर",
+  "Top left": "ऊपर बाएँ",
+  "Top center": "ऊपर मध्य",
+  "Top right": "ऊपर दाएँ",
+  "Middle left": "मध्य बाएँ",
+  "Middle right": "मध्य दाएँ",
+  "Bottom left": "नीचे बाएँ",
+  "Bottom center": "नीचे मध्य",
+  "Bottom right": "नीचे दाएँ",
+  "Foreground": "अग्रभूमि",
+  "Original size": "मूल आकार",
+  "Fit image": "छवि में फ़िट करें"
 }

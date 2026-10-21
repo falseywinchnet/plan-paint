@@ -862,5 +862,18 @@
   "Run": "執行",
   "Source files": "來源檔案",
   "Batch…": "批次…",
-  "Batch production…": "批次製作…"
+  "Batch production…": "批次製作…",
+  "Stamp image…": "印章影像…",
+  "Anchor": "錨點",
+  "Top left": "左上",
+  "Top center": "上中",
+  "Top right": "右上",
+  "Middle left": "左中",
+  "Middle right": "右中",
+  "Bottom left": "左下",
+  "Bottom center": "下中",
+  "Bottom right": "右下",
+  "Foreground": "前景",
+  "Original size": "原始大小",
+  "Fit image": "符合影像"
 }

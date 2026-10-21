@@ -862,5 +862,18 @@
   "Run": "چلائیں",
   "Source files": "ماخذ فائلیں",
   "Batch…": "بیچ…",
-  "Batch production…": "بیچ پراسیسنگ…"
+  "Batch production…": "بیچ پراسیسنگ…",
+  "Stamp image…": "مہر کی تصویر…",
+  "Anchor": "لنگر",
+  "Top left": "اوپر بائیں",
+  "Top center": "اوپر درمیان",
+  "Top right": "اوپر دائیں",
+  "Middle left": "درمیان بائیں",
+  "Middle right": "درمیان دائیں",
+  "Bottom left": "نیچے بائیں",
+  "Bottom center": "نیچے درمیان",
+  "Bottom right": "نیچے دائیں",
+  "Foreground": "پیش منظر",
+  "Original size": "اصل سائز",
+  "Fit image": "تصویر میں فٹ کریں"
 }

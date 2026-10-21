@@ -862,5 +862,18 @@
   "Run": "Выполнить",
   "Source files": "Исходные файлы",
   "Batch…": "Пакет…",
-  "Batch production…": "Пакетная обработка…"
+  "Batch production…": "Пакетная обработка…",
+  "Stamp image…": "Изображение штампа…",
+  "Anchor": "Привязка",
+  "Top left": "Сверху слева",
+  "Top center": "Сверху по центру",
+  "Top right": "Сверху справа",
+  "Middle left": "Посередине слева",
+  "Middle right": "Посередине справа",
+  "Bottom left": "Снизу слева",
+  "Bottom center": "Снизу по центру",
+  "Bottom right": "Снизу справа",
+  "Foreground": "Передний план",
+  "Original size": "Исходный размер",
+  "Fit image": "Вписать в изображение"
 }

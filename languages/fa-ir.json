@@ -862,5 +862,18 @@
   "Run": "اجرا",
   "Source files": "فایل‌های مبدأ",
   "Batch…": "دسته…",
-  "Batch production…": "پردازش دسته‌ای…"
+  "Batch production…": "پردازش دسته‌ای…",
+  "Stamp image…": "تصویر مهر…",
+  "Anchor": "لنگر",
+  "Top left": "بالا چپ",
+  "Top center": "بالا وسط",
+  "Top right": "بالا راست",
+  "Middle left": "وسط چپ",
+  "Middle right": "وسط راست",
+  "Bottom left": "پایین چپ",
+  "Bottom center": "پایین وسط",
+  "Bottom right": "پایین راست",
+  "Foreground": "پیش‌زمینه",
+  "Original size": "اندازهٔ اصلی",
+  "Fit image": "برازش در تصویر"
 }

@@ -78,6 +78,8 @@ Asset input uses ordinary decoded pixels or explicit SVG rasterization. A single
 
 Batch stamping accepts one fixed image plus a source list, foreground/background choice, anchor, offset, scaling rule, output dimensions and alpha/matte. Candidate default is centered, natural size, clipped to each source canvas. Because reference alignment was not measured, this is an independent explicit rule.
 
+The implemented batch contract is documented in [fixed-image batch stamping](../ICON_EDITING.md#fixed-image-batch-stamping). It keeps each source's dimensions, exposes nine anchors, offsets, natural/fit scaling, opacity and optional matte, and reports clipping for every representation. The before/after proof is for the preferred image of source #1. These are independently specified Plan Paint behaviors, not measurements of Axialis formulas or owner answers to this interview.
+
 Acceptance: transparent stamp is a no-op; foreground/background produce known source-over results; repeated preview does not accumulate; Apply is one Undo for document editing. Disk jobs follow S10. Evidence: O12, A06–09.
 
 ## S09 — Representation export and normalization

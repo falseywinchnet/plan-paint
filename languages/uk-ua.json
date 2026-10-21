@@ -862,5 +862,18 @@
   "Run": "Виконати",
   "Source files": "Вихідні файли",
   "Batch…": "Пакет…",
-  "Batch production…": "Пакетна обробка…"
+  "Batch production…": "Пакетна обробка…",
+  "Stamp image…": "Зображення штампа…",
+  "Anchor": "Прив’язка",
+  "Top left": "Угорі ліворуч",
+  "Top center": "Угорі по центру",
+  "Top right": "Угорі праворуч",
+  "Middle left": "Посередині ліворуч",
+  "Middle right": "Посередині праворуч",
+  "Bottom left": "Унизу ліворуч",
+  "Bottom center": "Унизу по центру",
+  "Bottom right": "Унизу праворуч",
+  "Foreground": "Передній план",
+  "Original size": "Початковий розмір",
+  "Fit image": "Уписати в зображення"
 }
