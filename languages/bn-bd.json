@@ -982,5 +982,14 @@
   "Dashed": "ড্যাশযুক্ত",
   "Dotted": "বিন্দুযুক্ত",
   "Organic": "স্বাভাবিক ভঙ্গি",
-  "Vary": "বদলান"
+  "Vary": "বদলান",
+  "Start marker": "শুরুর চিহ্ন",
+  "End marker": "শেষের চিহ্ন",
+  "Open arrow": "খোলা তীর",
+  "Bar": "দাগ",
+  "Exactly one": "ঠিক একটি",
+  "Many": "অনেক",
+  "Zero or one": "শূন্য বা একটি",
+  "One or more": "এক বা একাধিক",
+  "Zero or more": "শূন্য বা একাধিক"
 }

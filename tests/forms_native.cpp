@@ -39,7 +39,7 @@ struct NativeExercise {
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
          corners_review = false, sticky_review = false, opacity_review = false, stamp_placement_review = false, advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
-    bool geometry_styles_review = false;
+    bool geometry_styles_review = false, markers_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -378,6 +378,20 @@ struct NativeExercise {
                                               static_cast<int>(sample.y * window.scale()));
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
+        if (markers_review) {
+            const std::shared_ptr<gf::ComboBox> first = std::dynamic_pointer_cast<gf::ComboBox>(window.find("geometry-start"));
+            const std::shared_ptr<gf::ComboBox> last = std::dynamic_pointer_cast<gf::ComboBox>(window.find("geometry-end"));
+            if (!painted || !first || !last || !(*first).visible() || !(*last).visible() ||
+                (*first).selected_index() != 1 || (*last).selected_index() != 10 ||
+                (*last).absolute_bounds().right() > size.width) {
+                throw std::runtime_error("Native marker ribbon controls are missing or clipped");
+            }
+            const gf::Rect pixel = (*editor).canvas().bitmap_to_client({200, 18, 1, 1});
+            const gf::Point sample = (*editor).canvas().point_to_window({pixel.x, pixel.y});
+            const paint::Color color = image.get(static_cast<int>(sample.x * window.scale()), static_cast<int>(sample.y * window.scale()));
+            if (color.b < 100 || color.r > 100) { throw std::runtime_error("Native marker gallery did not render"); }
+            return;
+        }
         if (corners_review) {
             if (geometry_styles_review) {
                 const std::shared_ptr<gf::ComboBox> style = std::dynamic_pointer_cast<gf::ComboBox>(window.find("geometry-stroke"));
@@ -666,6 +680,30 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (markers_review) {
+            document.new_image(660, 280);
+            const char* names[] = {"None", "Open arrow", "Triangle", "Diamond", "Circle", "Bar",
+                "Exactly one", "Many", "Zero or one", "One or more", "Zero or more"};
+            paint::TextStyle label; label.size = 12;
+            paint::Ink ink; ink.size = 3; ink.primary = {20, 65, 140, 255}; ink.supersample = true;
+            for (int index = 0; index < paint::endpoint_marker_count; ++index) {
+                const int column = index / 6, row = index % 6;
+                ink.geometry.start = ink.geometry.end = static_cast<paint::EndpointMarker>(index);
+                paint::draw_text(document.image, {12.0 + column * 330, 10.0 + row * 44}, names[index], label,
+                    {20, 40, 80, 255}, {}, "");
+                paint::polygon(document.image, {{150.0 + column * 330, 18.0 + row * 44},
+                    {300.0 + column * 330, 18.0 + row * 44}}, ink, true, false, false);
+            }
+            document.ink.geometry.start = paint::EndpointMarker::Arrow;
+            document.ink.geometry.end = paint::EndpointMarker::ZeroMany;
+            (*editor).choose_shape(paint::Shape::Line);
+            (*std::dynamic_pointer_cast<gf::Button>(window.find("tool-tab"))).perform_click();
+            (*editor).refresh(); window.perform_layout(); inspect_frame(window);
+            document.saved_revision = document.revision;
+            entered = true;
+            if (!handle.request_close().accepted()) { throw std::runtime_error("Native marker review close failed"); }
+            return;
+        }
         if (corners_review) {
             document.new_image(660, 280);
             paint::Ink ink; ink.primary = {20, 65, 140, 255}; ink.secondary = {55, 135, 220, 255};
@@ -1408,7 +1446,8 @@ int main(int argc, char** argv) {
         exercise.sticky_review = argc > 1 && (std::string(argv[1]) == "--sticky" || std::string(argv[1]) == "--sticky-compact");
         exercise.corners_review = argc > 1 && (std::string(argv[1]) == "--corners" || std::string(argv[1]) == "--corners-compact");
         exercise.geometry_styles_review = argc > 1 && (std::string(argv[1]) == "--geometry-styles" || std::string(argv[1]) == "--geometry-styles-compact");
-        exercise.corners_review = exercise.corners_review || exercise.geometry_styles_review;
+        exercise.markers_review = argc > 1 && (std::string(argv[1]) == "--markers" || std::string(argv[1]) == "--markers-compact");
+        exercise.corners_review = exercise.corners_review || exercise.geometry_styles_review || exercise.markers_review;
         exercise.stamp_placement_review = argc > 1 && std::string(argv[1]) == "--stamp-placement";
         exercise.external_file_review = argc > 1 && std::string(argv[1]) == "--external-file";
         exercise.icon_validation_review = argc > 1 && std::string(argv[1]) == "--icon-validation";
@@ -1438,6 +1477,7 @@ int main(int argc, char** argv) {
             exercise.backing = std::clamp(std::stoi(argv[2]), 0, paint::canvas_backing_count - 1);
         }
         exercise.compact = exercise.compact || (argc > 1 && std::string(argv[1]) == "--geometry-styles-compact");
+        exercise.compact = exercise.compact || (argc > 1 && std::string(argv[1]) == "--markers-compact");
         if (exercise.interface_review && argc > 3) { exercise.hue = std::clamp(std::stoi(argv[3]), 0, 359); }
         exercise.materials = argc > 1 && std::string(argv[1]) == "--materials";
         exercise.view_review = argc > 1 && std::string(argv[1]) == "--view";

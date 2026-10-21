@@ -982,5 +982,14 @@
   "Dashed": "מקווקו",
   "Dotted": "מנוקד",
   "Organic": "אורגני",
-  "Vary": "גיוון"
+  "Vary": "גיוון",
+  "Start marker": "סמן התחלה",
+  "End marker": "סמן סיום",
+  "Open arrow": "חץ פתוח",
+  "Bar": "פס",
+  "Exactly one": "אחד בדיוק",
+  "Many": "רבים",
+  "Zero or one": "אפס או אחד",
+  "One or more": "אחד או יותר",
+  "Zero or more": "אפס או יותר"
 }

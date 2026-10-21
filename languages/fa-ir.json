@@ -982,5 +982,14 @@
   "Dashed": "خط‌چین",
   "Dotted": "نقطه‌چین",
   "Organic": "طبیعی",
-  "Vary": "تنوع"
+  "Vary": "تنوع",
+  "Start marker": "نشان آغاز",
+  "End marker": "نشان پایان",
+  "Open arrow": "پیکان باز",
+  "Bar": "خط",
+  "Exactly one": "دقیقاً یکی",
+  "Many": "چندین",
+  "Zero or one": "صفر یا یکی",
+  "One or more": "یک یا بیشتر",
+  "Zero or more": "صفر یا بیشتر"
 }

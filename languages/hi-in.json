@@ -982,5 +982,14 @@
   "Dashed": "डैश वाली",
   "Dotted": "बिंदुओं वाली",
   "Organic": "प्राकृतिक",
-  "Vary": "बदलें"
+  "Vary": "बदलें",
+  "Start marker": "आरंभ चिह्न",
+  "End marker": "अंत चिह्न",
+  "Open arrow": "खुला तीर",
+  "Bar": "पट्टी",
+  "Exactly one": "ठीक एक",
+  "Many": "अनेक",
+  "Zero or one": "शून्य या एक",
+  "One or more": "एक या अधिक",
+  "Zero or more": "शून्य या अधिक"
 }

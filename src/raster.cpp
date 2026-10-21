@@ -381,8 +381,9 @@ bool inside_polygon(const std::vector<Point>& points, double x, double y) {
     return inside;
 }
 static void polygon_native(Image& image, const std::vector<Point>& points, const Ink& ink,
-                           bool outline, bool fill, bool closed, Brush fill_brush,
-                           const Ink* fill_material, RasterSpace space) {
+                           bool outline, bool fill, Brush fill_brush,
+                           const Ink* fill_material, RasterSpace space,
+                           const std::vector<StrokeSegment>& segments) {
     if (points.empty()) {
         return;
     }
@@ -397,8 +398,6 @@ static void polygon_native(Image& image, const std::vector<Point>& points, const
         material_fill(image, points, fill_ink, fill_brush, outline ? &boundary : nullptr, space);
     }
     if (outline) {
-        const std::vector<StrokeSegment> segments = styled_outline(points, ink.geometry.stroke,
-                                                                   std::max(1, ink.size), closed);
         if (ink.brush == Brush::Round || textured_brush(ink.brush)) {
             MaterialStroke coat(&boundary);
             for (const StrokeSegment& segment : segments) {
@@ -430,8 +429,12 @@ void polygon(Image& image, const std::vector<Point>& vertices, const Ink& ink, b
         ? organic_contour(corners, ink.geometry.organic, ink.geometry.seed, closed)
         : std::vector<Point>{};
     const std::vector<Point>& points = ink.geometry.organic > 0 ? varied : corners;
+    const std::vector<StrokeSegment> segments = outline
+        ? geometry_outline(points, ink.geometry, std::max(1, ink.size), closed,
+                           ink.supersample ? 0.03125 : 0.125)
+        : std::vector<StrokeSegment>{};
     if (!ink.smooth || !ink.supersample || points.empty()) {
-        polygon_native(image, points, ink, outline, fill, closed, fill_brush, fill_material, {});
+        polygon_native(image, points, ink, outline, fill, fill_brush, fill_material, {}, segments);
         return;
     }
     double left = points.front().x, right = left, top = points.front().y, bottom = top;
@@ -444,6 +447,12 @@ void polygon(Image& image, const std::vector<Point>& vertices, const Ink& ink, b
         top = std::min(top, point.y);
         bottom = std::max(bottom, point.y);
     }
+    for (const StrokeSegment& segment : segments) {
+        for (Point point : {segment.first, segment.last}) {
+            left = std::min(left, point.x); right = std::max(right, point.x);
+            top = std::min(top, point.y); bottom = std::max(bottom, point.y);
+        }
+    }
     const double padding = outline ? ink.size + 2.0 : 2.0;
     const int x0 = static_cast<int>(std::clamp(std::floor(left - padding), 0.0, double(image.width)));
     const int y0 = static_cast<int>(std::clamp(std::floor(top - padding), 0.0, double(image.height)));
@@ -455,6 +464,7 @@ void polygon(Image& image, const std::vector<Point>& vertices, const Ink& ink, b
     // sees the same pigment depth as an uninterrupted high-resolution render.
     constexpr int tile_size = 96, halo = 32;
     std::vector<Point> local(points.size());
+    std::vector<StrokeSegment> local_segments(segments.size());
     for (int y = y0; y < y1; y += tile_size) {
         for (int x = x0; x < x1; x += tile_size) {
             const int width = std::min(tile_size, x1 - x), height = std::min(tile_size, y1 - y);
@@ -470,8 +480,14 @@ void polygon(Image& image, const std::vector<Point>& vertices, const Ink& ink, b
                 local[i] = {(points[i].x - space.x) * 4 + 1.5,
                             (points[i].y - space.y) * 4 + 1.5};
             }
-            polygon_native(tile, local, enlarged, outline, fill, closed, fill_brush,
-                           fill_material ? &body : nullptr, space);
+            for (std::size_t i = 0; i < segments.size(); ++i) {
+                local_segments[i] = {{(segments[i].first.x - space.x) * 4 + 1.5,
+                                      (segments[i].first.y - space.y) * 4 + 1.5},
+                                     {(segments[i].last.x - space.x) * 4 + 1.5,
+                                      (segments[i].last.y - space.y) * 4 + 1.5}};
+            }
+            polygon_native(tile, local, enlarged, outline, fill, fill_brush,
+                           fill_material ? &body : nullptr, space, local_segments);
             for (int py = 0; py < height; ++py) {
                 for (int px = 0; px < width; ++px) {
                     const Color original = image.get(x + px, y + py);

@@ -194,6 +194,84 @@ void organic_geometry() {
     paint::polygon(image, square, ink, false, true, true);
     require(image.get(60, 60).a == 128, "Organic must preserve the fill's interior opacity");
 }
+void endpoint_markers() {
+    const std::vector<paint::Point> line{{20, 50}, {120, 50}};
+    for (int index = 0; index < paint::endpoint_marker_count; ++index) {
+        paint::GeometryStyle style;
+        style.start = style.end = static_cast<paint::EndpointMarker>(index);
+        const std::vector<paint::StrokeSegment> segments = paint::geometry_outline(line, style, 4, false);
+        const std::vector<paint::StrokeSegment> rotated =
+            paint::geometry_outline({{-50, 20}, {-50, 120}}, style, 4, false);
+        require(!segments.empty() && segments.size() == rotated.size(),
+                "endpoint marker geometry is missing");
+        for (std::size_t i = 0; i < segments.size(); ++i) {
+            require(near({-segments[i].first.y, segments[i].first.x}, rotated[i].first) &&
+                        near({-segments[i].last.y, segments[i].last.x}, rotated[i].last),
+                    "endpoint markers must rotate with the path tangent");
+        }
+        for (bool supersample : {false, true}) {
+            paint::Image image;
+            image.reset(150, 100, {0, 0, 0, 0});
+            paint::Ink ink;
+            ink.size = 4;
+            ink.primary = {30, 80, 190, 128};
+            ink.geometry = style;
+            ink.supersample = supersample;
+            paint::polygon(image, line, ink, true, false, false);
+            require(image.get(70, 50).a == 128, "endpoint markers lost the shaft");
+            for (paint::Color pixel : image.pixels) {
+                require(pixel.a <= 128, "marker and shaft overlaps compounded opacity");
+            }
+            if (style.start == paint::EndpointMarker::Circle) {
+                require(image.get(26, 50).a == 0, "shaft must not cross a hollow circle marker");
+            }
+            if (style.end == paint::EndpointMarker::Arrow) {
+                require(image.get(108, 57).a > 0, "arrow wing was clipped outside the shaft bounds");
+            }
+        }
+    }
+    paint::GeometryStyle style;
+    style.start = paint::EndpointMarker::Circle;
+    style.end = paint::EndpointMarker::ZeroMany;
+    const std::vector<paint::Point> closed{{10, 10}, {80, 10}, {80, 80}};
+    const std::vector<paint::StrokeSegment> plain =
+        paint::styled_outline(closed, paint::StrokeStyle::Solid, 4, true);
+    const std::vector<paint::StrokeSegment> marked = paint::geometry_outline(closed, style, 4, true);
+    require(plain.size() == marked.size(), "closed geometry must not acquire endpoint markers");
+    for (std::size_t i = 0; i < plain.size(); ++i) {
+        require(near(plain[i].first, marked[i].first) && near(plain[i].last, marked[i].last),
+                "endpoint settings changed a closed outline");
+    }
+    require(paint::geometry_outline({{10, 10}, {10, 10}}, style, 4, false).empty(),
+            "zero-length geometry must not invent a marker direction");
+    const std::vector<paint::StrokeSegment> short_line =
+        paint::geometry_outline({{10, 10}, {13, 10}}, style, 16, false);
+    for (const paint::StrokeSegment& segment : short_line) {
+        for (paint::Point point : {segment.first, segment.last}) {
+            require(std::isfinite(point.x) && std::isfinite(point.y) && point.x >= 10 - 1e-8 &&
+                        point.x <= 13 + 1e-8,
+                    "short-path markers must scale down without reversing the shaft");
+        }
+    }
+    paint::Document document;
+    document.new_image(150, 100);
+    document.ink.geometry = style;
+    document.add_path_node({20, 50});
+    document.add_path_node({120, 50});
+    document.end_path_geometry();
+    const paint::Image original = document.image;
+    document.checkpoint();
+    document.move_path_node(1, {100, 70});
+    const paint::Image moved = document.image;
+    document.undo();
+    require(document.path.runs.front().ink.geometry.end == paint::EndpointMarker::ZeroMany &&
+                std::equal(original.pixels.begin(), original.pixels.end(), document.image.pixels.begin(),
+                           paint::equal),
+            "undo must retain endpoint marker style and pixels");
+    document.redo();
+    require(std::equal(moved.pixels.begin(), moved.pixels.end(), document.image.pixels.begin(), paint::equal),
+            "redo must restore marker direction after a node edit");
+}
 } // namespace
 int main() {
     try {
@@ -202,6 +280,7 @@ int main() {
         path_history();
         outline_styles();
         organic_geometry();
+        endpoint_markers();
         std::cout << "Corner geometry and raster contracts passed\n";
         return 0;
     } catch (const std::exception& error) {

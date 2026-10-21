@@ -2,15 +2,32 @@
 #include "image.hpp"
 namespace paint {
 enum class StrokeStyle { Solid, Dashed, Dotted };
+enum class EndpointMarker {
+    None,
+    Arrow,
+    Triangle,
+    Diamond,
+    Circle,
+    Bar,
+    One,
+    Many,
+    ZeroOne,
+    OneMany,
+    ZeroMany
+};
+inline constexpr int endpoint_marker_count = 11;
 struct GeometryStyle {
     double corner_radius = 0;
     StrokeStyle stroke = StrokeStyle::Solid;
     double organic = 0;
     std::uint32_t seed = 1;
+    EndpointMarker start = EndpointMarker::None, end = EndpointMarker::None;
 };
 struct StrokeSegment {
     Point first, last;
 };
+std::vector<StrokeSegment> geometry_outline(const std::vector<Point>& points, const GeometryStyle& style,
+                                            double width, bool closed, double tolerance = 0.125);
 // Spacing follows arc length across vertices, with round-cap room in each gap.
 // Dots are zero-length segments using the same brush footprint as the outline.
 std::vector<StrokeSegment> styled_outline(const std::vector<Point>& points, StrokeStyle style, double width,
