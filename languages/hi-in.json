@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "PNG प्रविष्टियों के लिए PNG समर्थित आइकन अनुप्रयोग चाहिए।",
   "Partial alpha and legacy XOR depend on the target consumer.": "आंशिक अल्फ़ा और पुराना XOR लक्ष्य अनुप्रयोग पर निर्भर हैं।",
   "Test custom dimensions and cursor hotspots in the target application.": "लक्ष्य अनुप्रयोग में कस्टम आयाम और कर्सर हॉटस्पॉट जाँचें।",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "निर्माण, प्रभाव और पट्टी पूर्वावलोकन आवर्धन और कटाव दिखाते हैं; सहेजे गए पिक्सेल यह इतिहास नहीं रखते।"
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "निर्माण, प्रभाव और पट्टी पूर्वावलोकन आवर्धन और कटाव दिखाते हैं; सहेजे गए पिक्सेल यह इतिहास नहीं रखते।",
+  "File changed outside Plan Paint.": "Plan Paint के बाहर फ़ाइल बदली गई।",
+  "File changed while reading. Try again.": "पढ़ते समय फ़ाइल बदली। फिर कोशिश करें।",
+  "File missing from disk.": "डिस्क पर फ़ाइल नहीं है।",
+  "File unavailable on disk.": "डिस्क पर फ़ाइल उपलब्ध नहीं है।",
+  "Reload and discard local edits? Save a copy first to keep them.": "फिर लोड करके स्थानीय बदलाव हटाएँ? उन्हें रखने के लिए पहले एक प्रति सहेजें।",
+  "Reload from disk…": "डिस्क से फिर लोड करें…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "डिस्क पर फ़ाइल बदली या अनुपलब्ध हो गई। स्थानीय चित्र से अधिलेखित करें?"
 }

@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "PNG اندراجاں لئی PNG نوں سمجھن والی آئیکن ایپ چاہیدی اے۔",
   "Partial alpha and legacy XOR depend on the target consumer.": "جزوی الفا تے پرانا XOR ہدف ایپ اُتے منحصر نیں۔",
   "Test custom dimensions and cursor hotspots in the target application.": "ہدف ایپ وچ اپنی مرضی دے ماپ تے کرسر ہاٹ سپاٹ جانچو۔",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "بنان، اثرات تے پٹی دے پیش منظر وڈا کرن تے کٹائی دسدے نیں؛ محفوظ پکسل ایہہ تاریخ نئیں رکھدے۔"
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "بنان، اثرات تے پٹی دے پیش منظر وڈا کرن تے کٹائی دسدے نیں؛ محفوظ پکسل ایہہ تاریخ نئیں رکھدے۔",
+  "File changed outside Plan Paint.": "Plan Paint توں باہر فائل بدل گئی اے۔",
+  "File changed while reading. Try again.": "پڑھن ویلے فائل بدل گئی۔ مُڑ کوشش کرو۔",
+  "File missing from disk.": "ڈسک اُتے فائل نہیں اے۔",
+  "File unavailable on disk.": "ڈسک اُتے فائل دستیاب نہیں اے۔",
+  "Reload and discard local edits? Save a copy first to keep them.": "مُڑ لوڈ کرکے مقامی تبدیلیاں چھڈنیاں نیں؟ رکھن لئی پہلاں اک نقل محفوظ کرو۔",
+  "Reload from disk…": "ڈسک توں مُڑ لوڈ کرو…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ڈسک اُتے فائل بدل گئی یا دستیاب نہیں رہی۔ مقامی تصویر نال بدلنا اے؟"
 }

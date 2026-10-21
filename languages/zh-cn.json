@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "PNG 条目需要支持 PNG 的图标使用程序。",
   "Partial alpha and legacy XOR depend on the target consumer.": "半透明 Alpha 和旧式 XOR 的显示取决于目标程序。",
   "Test custom dimensions and cursor hotspots in the target application.": "请在目标程序中测试自定义尺寸和光标热点。",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "生成、效果和图带预览会报告放大与裁切；保存的像素不保留这些历史信息。"
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "生成、效果和图带预览会报告放大与裁切；保存的像素不保留这些历史信息。",
+  "File changed outside Plan Paint.": "文件已在 Plan Paint 外部更改。",
+  "File changed while reading. Try again.": "读取期间文件发生更改。请重试。",
+  "File missing from disk.": "磁盘上缺少文件。",
+  "File unavailable on disk.": "磁盘上的文件不可用。",
+  "Reload and discard local edits? Save a copy first to keep them.": "重新加载并放弃本地编辑？如需保留，请先保存副本。",
+  "Reload from disk…": "从磁盘重新加载…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "文件已更改或不可用。要用本地绘图覆盖它吗？"
 }

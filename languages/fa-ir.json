@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "ورودی‌های PNG به برنامه‌های آیکون با پشتیبانی PNG نیاز دارند.",
   "Partial alpha and legacy XOR depend on the target consumer.": "آلفای جزئی و XOR قدیمی به برنامۀ مقصد وابسته‌اند.",
   "Test custom dimensions and cursor hotspots in the target application.": "اندازه‌های سفارشی و نقاط فعال مکان‌نما را در برنامۀ مقصد آزمایش کنید.",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "پیش‌نمایش تولید، جلوه و نوار، بزرگ‌نمایی و برش را گزارش می‌کند؛ پیکسل‌های ذخیره‌شده این سابقه را نگه نمی‌دارند."
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "پیش‌نمایش تولید، جلوه و نوار، بزرگ‌نمایی و برش را گزارش می‌کند؛ پیکسل‌های ذخیره‌شده این سابقه را نگه نمی‌دارند.",
+  "File changed outside Plan Paint.": "فایل خارج از Plan Paint تغییر کرده است.",
+  "File changed while reading. Try again.": "فایل هنگام خواندن تغییر کرد. دوباره تلاش کنید.",
+  "File missing from disk.": "فایل روی دیسک پیدا نشد.",
+  "File unavailable on disk.": "فایل روی دیسک در دسترس نیست.",
+  "Reload and discard local edits? Save a copy first to keep them.": "بارگذاری دوباره و کنار گذاشتن ویرایش‌های محلی؟ برای حفظ آن‌ها ابتدا یک کپی ذخیره کنید.",
+  "Reload from disk…": "بارگذاری دوباره از دیسک…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "فایل تغییر کرده یا روی دیسک در دسترس نیست. با تصویر محلی بازنویسی شود؟"
 }

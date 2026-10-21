@@ -182,6 +182,7 @@ void Editor::recover_document() {
         atlas_reference = {};
         reference_frame = -1;
         document.replace_container(std::move(record.image), "");
+        reset_file_watch();
         document.revision = document.next_revision++;
         document.saved_revision = 0;
         recovery_session = std::move(candidate);

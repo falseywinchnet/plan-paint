@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "Для записей PNG нужна поддержка PNG в программе значков.",
   "Partial alpha and legacy XOR depend on the target consumer.": "Частичная прозрачность и старый XOR зависят от целевой программы.",
   "Test custom dimensions and cursor hotspots in the target application.": "Проверьте нестандартные размеры и активные точки курсора в целевой программе.",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Предпросмотр создания, эффектов и полос сообщает об увеличении и обрезке; сохранённые пиксели не содержат этой истории."
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Предпросмотр создания, эффектов и полос сообщает об увеличении и обрезке; сохранённые пиксели не содержат этой истории.",
+  "File changed outside Plan Paint.": "Файл изменён вне Plan Paint.",
+  "File changed while reading. Try again.": "Файл изменился во время чтения. Повторите попытку.",
+  "File missing from disk.": "Файл отсутствует на диске.",
+  "File unavailable on disk.": "Файл на диске недоступен.",
+  "Reload and discard local edits? Save a copy first to keep them.": "Перезагрузить и отменить локальные изменения? Чтобы сохранить их, сначала сохраните копию.",
+  "Reload from disk…": "Перезагрузить с диска…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "Файл изменился или стал недоступен. Перезаписать его локальным рисунком?"
 }

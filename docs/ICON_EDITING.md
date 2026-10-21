@@ -1,5 +1,34 @@
 # Icon and cursor production
 
+## External edits and explicit reload
+
+Opening or saving an image establishes its disk baseline. Plan Paint checks its
+file size and modification time once per second in a background task. A change
+shows a notice below the ribbon, with **Reload from disk…**. Missing files and
+unavailable paths have distinct notices; their reload button is disabled. The
+notice also works with the status bar hidden. This applies to ordinary images,
+icons and cursors; an external edit never replaces the working document by itself.
+
+**File → Reload from disk…** is also available without a notice. Reload replaces
+the complete document, including every icon representation and cursor hotspot.
+If there are unsaved edits or an active text, selection or reshape session, it
+asks before discarding them. The default is No. Save a copy first to preserve
+local work. A canceled reload retains editing state. A missing, corrupt or
+changing source fails before the working document is replaced. A successful
+reload starts a clean document and clears its previous undo history.
+
+Save checks the baseline again before replacing the current source. If the
+source changed, disappeared or became unavailable, replacement requires explicit
+confirmation, defaulting to No. Declining keeps the document dirty and the disk
+file intact. Saving to another path keeps the external source intact. A
+successful save or reload establishes a new baseline; opening or creating a
+different document retires outstanding checks for the previous file.
+
+These are metadata checks, not file locking or content hashes. A change that
+preserves both size and timestamp cannot be detected. Another application can
+still change the file between the last check and the read or write. No source
+application plug-in, proprietary bridge or private file format is involved.
+
 ## Validate an icon or cursor family
 
 **Icon → Validate** audits every current representation without editing the

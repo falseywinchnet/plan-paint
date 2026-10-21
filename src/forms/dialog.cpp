@@ -1245,7 +1245,7 @@ void EditorDialog::accept() {
             }
         }
         if (!(*editor).pending_save_path.empty()) {
-            (*editor).save_path((*editor).pending_save_path);
+            if (!(*editor).save_path((*editor).pending_save_path)) { return; }
         }
         (*editor).refresh();
         (*editor).complete_deferred_save();
