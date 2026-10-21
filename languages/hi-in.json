@@ -961,5 +961,6 @@
   "Could not reveal the selected asset.": "चयनित संसाधन नहीं दिखाया जा सका।",
   "Requested containing folder; file selection is unavailable.": "संबंधित फ़ोल्डर का अनुरोध किया गया; फ़ाइल चयन उपलब्ध नहीं है।",
   "Requested file selection in the file manager.": "फ़ाइल प्रबंधक में फ़ाइल चयन का अनुरोध किया गया।",
-  "Position preview; Apply to paint. Escape cancels.": "पूर्वावलोकन रखें; चित्र बनाने के लिए लागू करें। Escape रद्द करता है।"
+  "Position preview; Apply to paint. Escape cancels.": "पूर्वावलोकन रखें; चित्र बनाने के लिए लागू करें। Escape रद्द करता है।",
+  "Opacity": "अपारदर्शिता"
 }

@@ -961,5 +961,6 @@
   "Could not reveal the selected asset.": "Imeshindwa kuonyesha rasilimali iliyochaguliwa.",
   "Requested containing folder; file selection is unavailable.": "Folda inayohifadhi imeombwa; kuchagua faili hakupatikani.",
   "Requested file selection in the file manager.": "Uchaguzi wa faili umeombwa katika kidhibiti faili.",
-  "Position preview; Apply to paint. Escape cancels.": "Weka hakiki; Tekeleza ili kuchora. Escape hughairi."
+  "Position preview; Apply to paint. Escape cancels.": "Weka hakiki; Tekeleza ili kuchora. Escape hughairi.",
+  "Opacity": "Uwazi hafifu"
 }

@@ -961,5 +961,6 @@
   "Could not reveal the selected asset.": "לא ניתן להציג את המשאב שנבחר.",
   "Requested containing folder; file selection is unavailable.": "התבקשה תיקיית האב; בחירת קובץ אינה זמינה.",
   "Requested file selection in the file manager.": "התבקשה בחירת הקובץ במנהל הקבצים.",
-  "Position preview; Apply to paint. Escape cancels.": "מקם את התצוגה המקדימה; החל לציור. Escape מבטל."
+  "Position preview; Apply to paint. Escape cancels.": "מקם את התצוגה המקדימה; החל לציור. Escape מבטל.",
+  "Opacity": "אטימות"
 }

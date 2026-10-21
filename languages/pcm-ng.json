@@ -961,5 +961,6 @@
   "Could not reveal the selected asset.": "No fit show the asset wey you choose.",
   "Requested containing folder; file selection is unavailable.": "We request the folder; file selection no dey available.",
   "Requested file selection in the file manager.": "We request file selection for file manager.",
-  "Position preview; Apply to paint. Escape cancels.": "Place preview; Apply go paint am. Escape go cancel."
+  "Position preview; Apply to paint. Escape cancels.": "Place preview; Apply go paint am. Escape go cancel.",
+  "Opacity": "How solid e be"
 }

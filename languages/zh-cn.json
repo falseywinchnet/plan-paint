@@ -961,5 +961,6 @@
   "Could not reveal the selected asset.": "无法显示所选素材。",
   "Requested containing folder; file selection is unavailable.": "已请求打开所在文件夹；无法选中文件。",
   "Requested file selection in the file manager.": "已请求文件管理器选中文件。",
-  "Position preview; Apply to paint. Escape cancels.": "放置预览，点击应用绘制。Escape 取消。"
+  "Position preview; Apply to paint. Escape cancels.": "放置预览，点击应用绘制。Escape 取消。",
+  "Opacity": "不透明度"
 }

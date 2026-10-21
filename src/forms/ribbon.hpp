@@ -14,15 +14,24 @@ class IconPanel;
 Color ribbon_color(int index);
 std::shared_ptr<const gui_forms::Theme> ribbon_theme();
 std::shared_ptr<const gui_forms::Theme> gallery_theme();
+struct OpacityIndicator {
+    int percent = 100;
+    std::string text;
+    Color foreground, outline;
+};
+OpacityIndicator opacity_indicator(Color color);
 class SwatchButton final : public gui_forms::Button {
   public:
     SwatchButton(gui_forms::StableId id, std::string text, Color color);
     void set_color(Color color);
     void set_material(const Ink& ink);
+    void set_show_opacity(bool show);
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
 
   private:
     Color color_;
+    bool show_opacity_ = false;
+    void update_opacity_description();
     std::shared_ptr<gui_forms::ImageList> material_preview_;
     std::vector<Color> material_pixels_;
     std::optional<Ink> material_ink_;

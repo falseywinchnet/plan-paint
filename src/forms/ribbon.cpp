@@ -251,6 +251,19 @@ std::shared_ptr<const gf::Theme> ribbon_theme() {
     static const std::shared_ptr<const gf::Theme> theme = make_cobalt_theme();
     return theme;
 }
+OpacityIndicator opacity_indicator(Color color) {
+    OpacityIndicator indicator;
+    indicator.percent = color.a == 255 ? 100 : color.a == 0 ? 0 :
+        std::clamp((static_cast<int>(color.a) * 100 + 127) / 255, 1, 99);
+    if (color.a < 255) { indicator.text = std::to_string(indicator.percent) + "%"; }
+    indicator.foreground = {static_cast<std::uint8_t>(255 - color.r),
+                           static_cast<std::uint8_t>(255 - color.g),
+                           static_cast<std::uint8_t>(255 - color.b), 255};
+    const Color foreground = indicator.foreground;
+    const int brightness = 299 * foreground.r + 587 * foreground.g + 114 * foreground.b;
+    indicator.outline = brightness >= 128000 ? Color{0, 0, 0, 255} : Color{255, 255, 255, 255};
+    return indicator;
+}
 SwatchButton::SwatchButton(gf::StableId id, std::string text, Color color)
     : Button(std::move(id), std::move(text)), color_(color) {
     if ((*this).text().empty()) {
@@ -258,8 +271,20 @@ SwatchButton::SwatchButton(gf::StableId id, std::string text, Color color)
     }
 }
 void SwatchButton::set_color(Color color) {
+    if (equal(color_, color)) { return; }
     color_ = color;
+    update_opacity_description();
     invalidate(gf::Dirty::paint);
+}
+void SwatchButton::set_show_opacity(bool show) {
+    show_opacity_ = show;
+    update_opacity_description();
+    invalidate(gf::Dirty::paint);
+}
+void SwatchButton::update_opacity_description() {
+    const OpacityIndicator indicator = opacity_indicator(color_);
+    set_accessible_description(show_opacity_ ? tr("Opacity") + ": " +
+        std::to_string(indicator.percent) + "% (" + std::to_string(color_.a) + "/255)" : "");
 }
 static bool same_material(const Ink& left, const Ink& right) {
     return equal(left.primary, right.primary) && equal(left.secondary, right.secondary) &&
@@ -274,7 +299,7 @@ static bool same_material(const Ink& left, const Ink& right) {
            (!left.alternate || same_material(*left.alternate, *right.alternate));
 }
 void SwatchButton::set_material(const Ink& ink) {
-    color_ = ink.primary;
+    set_color(ink.primary);
     set_accessible_name(text() + ": " +
                         (ink.brush == Brush::Round ? tr(pattern_names[static_cast<int>(ink.pattern)])
                                                    : tr(brush_names[static_cast<int>(ink.brush)])));
@@ -336,6 +361,28 @@ void SwatchButton::on_paint(gf::Painter& painter, gf::Rect damage) {
     painter.draw_line({swatch.x + swatch.width - 1, swatch.y + 1},
                       {swatch.x + swatch.width - 1, swatch.y + swatch.height - 1},
                       gf::Color::rgba(25, 40, 55, 50), 1);
+    if (show_opacity_ && color_.a < 255) {
+        const OpacityIndicator indicator = opacity_indicator(color_);
+        gf::FontSpec font{gf::FontRole::control, std::clamp(swatch.width * 0.38, 8.0, 11.0), 700, false};
+        const double available = std::max(1.0, swatch.width - 6);
+        gf::Size size = painter.measure_text_utf8(indicator.text, font);
+        if (size.width > available) {
+            font.size *= available / size.width;
+            size = painter.measure_text_utf8(indicator.text, font);
+        }
+        const gf::Point origin{swatch.right() - 3 - size.width, swatch.bottom() - 3};
+        const Color foreground = indicator.foreground, outline = indicator.outline;
+        for (int y = -1; y <= 1; ++y) {
+            for (int x = -1; x <= 1; ++x) {
+                if (x || y) {
+                    painter.draw_text_utf8({origin.x + x, origin.y + y}, indicator.text, font,
+                                           gf::Color::rgba(outline.r, outline.g, outline.b));
+                }
+            }
+        }
+        painter.draw_text_utf8(origin, indicator.text, font,
+                               gf::Color::rgba(foreground.r, foreground.g, foreground.b));
+    }
 }
 namespace {
 class ShapeSwitchButton final : public gf::Button {
@@ -521,6 +568,7 @@ void Ribbon::initialize_control_tree() {
     secondary_ = gf::make_control<SwatchButton>(gf::StableId("secondary"), tr("Alt"), Color{255, 255, 255, 255});
     for (int i = 0; i < 2; ++i) {
         std::shared_ptr<SwatchButton> swatch = i == 0 ? primary_ : secondary_;
+        (*swatch).set_show_opacity(true);
         (*swatch).set_requested_bounds({821 + i * 48.0, 36, 44, 80});
         (*swatch).set_font({gf::FontRole::control, 14, 400, false});
         (*swatch).set_content_padding({0, 40, 0, 0});
@@ -1638,6 +1686,14 @@ void Ribbon::synchronize() {
     stored_alt.secondary.a = 0;
     stored_alt.transparent_pattern = true;
     (*secondary_).set_material(document.tool == Tool::Pencil ? pencil_ink(stored_alt) : stored_alt);
+    if (tooltips_) {
+        for (const std::shared_ptr<SwatchButton>& swatch : {primary_, secondary_}) {
+            const std::string description = (*swatch).accessible_name() + "\n" + (*swatch).accessible_description();
+            if ((*tooltips_).tool_tip(*swatch) != description) {
+                (*tooltips_).set_tool_tip(swatch, description);
+            }
+        }
+    }
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Button& control = *buttons_[i];
         std::string id(control.stable_id().value());

@@ -117,6 +117,7 @@ See [Carpet textures](docs/CARPET.md) for the controls, renderer and measured op
 
 - Selected tools and toggled command buttons use a gold fill.
 - Primary and Alt stay independently selectable, including with a solid Primary. Right-click drawing uses Alt, and Alt carries body remains available for shapes and paths.
+- Translucent Primary and Alt color boxes show an opacity percentage in their lower-right corner. The number uses the opaque RGB color's complement with a contrasting outline. Fully opaque colors have no badge; fully transparent colors show 0%. Intermediate values round to 1–99% so neither endpoint is mistaken for translucency. Tooltips and accessibility descriptions include the exact alpha byte out of 255. The badge describes the selected color, independently of brush texture, pattern gaps or No Color.
 - Removed Flux knots from the Mix brush effects.
 - Text caret blinking repaints the caret area instead of the whole canvas.
 
