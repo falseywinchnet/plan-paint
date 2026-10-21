@@ -2395,12 +2395,13 @@ void asset_reveal_contracts() {
     const std::shared_ptr<gf::ListBox> list=std::dynamic_pointer_cast<gf::ListBox>(window.find("asset-list"));
     require(!(*window.find("asset-reveal")).enabled(),"reveal requires a selected item");
     (*list).select_index(0); routed_button(window,"asset-reveal"); await_reveal(window);
-    require(probe.path==(root/"folder").string(),"folder reveal selects the folder itself");
+    const std::filesystem::path listing_root = std::filesystem::canonical(root);
+    require(probe.path==(listing_root/"folder").string(),"folder reveal selects the folder itself");
     (*list).select_index(1); await_assets(window);
     require(!(*window.find("asset-open")).enabled() && (*window.find("asset-reveal")).enabled(),"corrupt assets still support reveal");
     routed_button(window,"asset-reveal"); await_reveal(window);
     const std::shared_ptr<gf::Label> status=std::dynamic_pointer_cast<gf::Label>(window.find("asset-status"));
-    require(probe.path==path && (*status).text()=="Requested file selection in the file manager.","reveal dispatches selected path and reports request accurately");
+    require(probe.path==(listing_root/"broken.png").string() && (*status).text()=="Requested file selection in the file manager.","reveal dispatches selected path and reports request accurately");
     probe.result=paint::RevealOutcome::FolderRequested;
     routed_button(window,"asset-reveal"); await_reveal(window);
     require((*status).text().find("selection is unavailable")!=std::string::npos,"fallback explains missing file selection");
