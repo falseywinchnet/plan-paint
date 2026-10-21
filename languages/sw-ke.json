@@ -862,5 +862,18 @@
   "Run": "Endesha",
   "Source files": "Faili chanzo",
   "Batch…": "Kundi…",
-  "Batch production…": "Uchakataji wa kundi…"
+  "Batch production…": "Uchakataji wa kundi…",
+  "Stamp image…": "Picha ya muhuri…",
+  "Anchor": "Nanga",
+  "Top left": "Juu kushoto",
+  "Top center": "Juu katikati",
+  "Top right": "Juu kulia",
+  "Middle left": "Katikati kushoto",
+  "Middle right": "Katikati kulia",
+  "Bottom left": "Chini kushoto",
+  "Bottom center": "Chini katikati",
+  "Bottom right": "Chini kulia",
+  "Foreground": "Mbele",
+  "Original size": "Ukubwa asili",
+  "Fit image": "Toshea picha"
 }

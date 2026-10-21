@@ -862,5 +862,18 @@
   "Run": "চালান",
   "Source files": "উৎস ফাইল",
   "Batch…": "ব্যাচ…",
-  "Batch production…": "ব্যাচ প্রক্রিয়াকরণ…"
+  "Batch production…": "ব্যাচ প্রক্রিয়াকরণ…",
+  "Stamp image…": "স্ট্যাম্পের ছবি…",
+  "Anchor": "অ্যাঙ্কর",
+  "Top left": "উপরে বামে",
+  "Top center": "উপরে মাঝে",
+  "Top right": "উপরে ডানে",
+  "Middle left": "মাঝে বামে",
+  "Middle right": "মাঝে ডানে",
+  "Bottom left": "নিচে বামে",
+  "Bottom center": "নিচে মাঝে",
+  "Bottom right": "নিচে ডানে",
+  "Foreground": "অগ্রভাগ",
+  "Original size": "মূল আকার",
+  "Fit image": "ছবিতে মানানসই করুন"
 }

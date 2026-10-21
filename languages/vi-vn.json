@@ -862,5 +862,18 @@
   "Run": "Chạy",
   "Source files": "Tệp nguồn",
   "Batch…": "Hàng loạt…",
-  "Batch production…": "Xử lý hàng loạt…"
+  "Batch production…": "Xử lý hàng loạt…",
+  "Stamp image…": "Ảnh con dấu…",
+  "Anchor": "Điểm neo",
+  "Top left": "Trên trái",
+  "Top center": "Trên giữa",
+  "Top right": "Trên phải",
+  "Middle left": "Giữa trái",
+  "Middle right": "Giữa phải",
+  "Bottom left": "Dưới trái",
+  "Bottom center": "Dưới giữa",
+  "Bottom right": "Dưới phải",
+  "Foreground": "Tiền cảnh",
+  "Original size": "Kích thước gốc",
+  "Fit image": "Vừa ảnh"
 }

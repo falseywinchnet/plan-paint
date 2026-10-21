@@ -862,5 +862,18 @@
   "Run": "تشغيل",
   "Source files": "ملفات المصدر",
   "Batch…": "دفعة…",
-  "Batch production…": "معالجة دفعية…"
+  "Batch production…": "معالجة دفعية…",
+  "Stamp image…": "صورة الختم…",
+  "Anchor": "نقطة الارتكاز",
+  "Top left": "أعلى اليسار",
+  "Top center": "أعلى الوسط",
+  "Top right": "أعلى اليمين",
+  "Middle left": "وسط اليسار",
+  "Middle right": "وسط اليمين",
+  "Bottom left": "أسفل اليسار",
+  "Bottom center": "أسفل الوسط",
+  "Bottom right": "أسفل اليمين",
+  "Foreground": "المقدمة",
+  "Original size": "الحجم الأصلي",
+  "Fit image": "ملاءمة الصورة"
 }

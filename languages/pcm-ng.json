@@ -862,5 +862,18 @@
   "Run": "Run",
   "Source files": "Source files",
   "Batch…": "Batch…",
-  "Batch production…": "Batch production…"
+  "Batch production…": "Batch production…",
+  "Stamp image…": "Stamp picture…",
+  "Anchor": "Anchor",
+  "Top left": "Top left",
+  "Top center": "Top middle",
+  "Top right": "Top right",
+  "Middle left": "Middle left",
+  "Middle right": "Middle right",
+  "Bottom left": "Bottom left",
+  "Bottom center": "Bottom middle",
+  "Bottom right": "Bottom right",
+  "Foreground": "Front",
+  "Original size": "Original size",
+  "Fit image": "Fit picture"
 }

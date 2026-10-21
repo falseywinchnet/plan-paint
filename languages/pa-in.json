@@ -862,5 +862,18 @@
   "Run": "ਚਲਾਓ",
   "Source files": "ਸਰੋਤ ਫ਼ਾਈਲਾਂ",
   "Batch…": "ਬੈਚ…",
-  "Batch production…": "ਬੈਚ ਪ੍ਰਕਿਰਿਆ…"
+  "Batch production…": "ਬੈਚ ਪ੍ਰਕਿਰਿਆ…",
+  "Stamp image…": "ਮੋਹਰ ਦੀ ਤਸਵੀਰ…",
+  "Anchor": "ਐਂਕਰ",
+  "Top left": "ਉੱਪਰ ਖੱਬੇ",
+  "Top center": "ਉੱਪਰ ਵਿਚਕਾਰ",
+  "Top right": "ਉੱਪਰ ਸੱਜੇ",
+  "Middle left": "ਵਿਚਕਾਰ ਖੱਬੇ",
+  "Middle right": "ਵਿਚਕਾਰ ਸੱਜੇ",
+  "Bottom left": "ਹੇਠਾਂ ਖੱਬੇ",
+  "Bottom center": "ਹੇਠਾਂ ਵਿਚਕਾਰ",
+  "Bottom right": "ਹੇਠਾਂ ਸੱਜੇ",
+  "Foreground": "ਅਗਲਾ ਪਾਸਾ",
+  "Original size": "ਅਸਲ ਆਕਾਰ",
+  "Fit image": "ਤਸਵੀਰ ਵਿੱਚ ਫਿੱਟ ਕਰੋ"
 }

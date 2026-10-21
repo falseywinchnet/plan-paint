@@ -862,5 +862,18 @@
   "Run": "Ejecutar",
   "Source files": "Archivos de origen",
   "Batch…": "Lote…",
-  "Batch production…": "Producción por lotes…"
+  "Batch production…": "Producción por lotes…",
+  "Stamp image…": "Imagen del sello…",
+  "Anchor": "Anclaje",
+  "Top left": "Arriba izquierda",
+  "Top center": "Arriba centro",
+  "Top right": "Arriba derecha",
+  "Middle left": "Centro izquierda",
+  "Middle right": "Centro derecha",
+  "Bottom left": "Abajo izquierda",
+  "Bottom center": "Abajo centro",
+  "Bottom right": "Abajo derecha",
+  "Foreground": "Primer plano",
+  "Original size": "Tamaño original",
+  "Fit image": "Ajustar a imagen"
 }

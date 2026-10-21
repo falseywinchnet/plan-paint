@@ -1,15 +1,18 @@
 #pragma once
 #include "asset_browser.hpp"
 #include "icon_export.hpp"
+#include "icon_stamp.hpp"
 #include "icon_states.hpp"
 namespace paint {
-enum class IconBatchOperation { Convert, Normalize, States, Representations };
+enum class IconBatchOperation { Convert, Normalize, States, Representations, Stamp };
 struct IconBatchSettings {
     IconBatchOperation operation = IconBatchOperation::Convert;
     IconSizePolicy sizes_policy = IconSizePolicy::AddMissing;
     std::vector<int> sizes{16, 24, 32, 48, 64, 128, 256};
     IconStateRecipe recipe = icon_state_preset(IconStatePreset::Disabled);
     IconExportCollision collision = IconExportCollision::Skip;
+    std::string stamp_path;
+    IconStampSettings stamp;
 };
 struct IconBatchSource {
     std::string path;
@@ -28,9 +31,11 @@ struct IconBatchPlan {
     std::filesystem::path directory;
     std::vector<IconBatchSource> sources;
     std::vector<IconBatchEntry> entries;
+    IconBatchSource stamp_source;
+    Image preview_before, preview_after; // Bounded first-image proof, at most 96 by 96 each.
 };
 // Preflight and execution decode one bounded source at a time. No source pixels
-// are retained in the manifest. A changed source requires a fresh review.
+// are retained except bounded proof thumbnails. A changed source requires a fresh review.
 using IconBatchProgress = void (*)(const IconBatchPlan&, void*);
 IconBatchPlan plan_icon_batch(const std::vector<std::string>& sources, const std::string& directory,
                               const IconBatchSettings& settings, const std::atomic<bool>& cancel);

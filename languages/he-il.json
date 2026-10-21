@@ -862,5 +862,18 @@
   "Run": "הפעלה",
   "Source files": "קובצי מקור",
   "Batch…": "אצווה…",
-  "Batch production…": "עיבוד באצווה…"
+  "Batch production…": "עיבוד באצווה…",
+  "Stamp image…": "תמונת חותמת…",
+  "Anchor": "עוגן",
+  "Top left": "שמאל למעלה",
+  "Top center": "מרכז למעלה",
+  "Top right": "ימין למעלה",
+  "Middle left": "שמאל באמצע",
+  "Middle right": "ימין באמצע",
+  "Bottom left": "שמאל למטה",
+  "Bottom center": "מרכז למטה",
+  "Bottom right": "ימין למטה",
+  "Foreground": "קדמה",
+  "Original size": "גודל מקורי",
+  "Fit image": "התאמה לתמונה"
 }

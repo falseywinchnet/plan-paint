@@ -862,5 +862,18 @@
   "Run": "Executar",
   "Source files": "Arquivos de origem",
   "Batch…": "Lote…",
-  "Batch production…": "Produção em lote…"
+  "Batch production…": "Produção em lote…",
+  "Stamp image…": "Imagem do carimbo…",
+  "Anchor": "Âncora",
+  "Top left": "Superior esquerdo",
+  "Top center": "Superior central",
+  "Top right": "Superior direito",
+  "Middle left": "Centro esquerdo",
+  "Middle right": "Centro direito",
+  "Bottom left": "Inferior esquerdo",
+  "Bottom center": "Inferior central",
+  "Bottom right": "Inferior direito",
+  "Foreground": "Primeiro plano",
+  "Original size": "Tamanho original",
+  "Fit image": "Ajustar à imagem"
 }

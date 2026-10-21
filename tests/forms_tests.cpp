@@ -1423,6 +1423,49 @@ void icon_batch_contracts() {
     routed_button(window, "batch-report");
     require(std::filesystem::exists(root / "report.json"),
             "batch result report saves through the native dialog");
+    (*operation).set_selected_index(4);
+    window.perform_layout();
+    require((*window.find("batch-stamp-path")).visible() && !(*window.find("batch-policy")).visible() &&
+                !(*window.find("batch-opacity-label")).visible(),
+            "stamp settings replace incompatible profile and state fields");
+    services.path = (repository / "assets/app-icon.png").string();
+    routed_button(window, "batch-stamp-browse");
+    require(!services.multi_file_requested,
+            "fixed stamp uses a single-file picker rather than adding batch sources");
+    const std::shared_ptr<gf::CheckBox> opaque =
+        std::dynamic_pointer_cast<gf::CheckBox>(window.find("batch-stamp-flatten"));
+    const std::shared_ptr<gf::TextBox> matte =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-stamp-matte"));
+    require(!(*matte).enabled(), "matte is unavailable while alpha is retained");
+    (*opaque).set_checked(true);
+    (*matte).set_text("bad matte");
+    routed_button(window, "batch-review");
+    require(!(*window.find("batch-run")).enabled() && !(*window.find("batch-cancel")).enabled(),
+            "invalid matte does not start a worker or authorize output");
+    (*matte).set_text("#123456");
+    routed_button(window, "batch-review");
+    await_batch(window);
+    require((*window.find("batch-run")).enabled(), "fixed stamp can be reviewed");
+    const std::shared_ptr<gf::RasterCanvas> proof =
+        std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("batch-stamp-after"));
+    require(bool((*proof).bitmap()), "review publishes the first source proof");
+    const std::shared_ptr<gf::NumericUpDown> opacity =
+        std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("batch-stamp-opacity"));
+    (*opacity).set_value(50);
+    require(!(*window.find("batch-run")).enabled() && !(*proof).bitmap(),
+            "stamp recipe changes revoke the reviewed output and its proof");
+    routed_button(window, "batch-review");
+    await_batch(window);
+    routed_button(window, "batch-run");
+    require(!(*opacity).enabled() && !(*matte).enabled(), "stamp controls freeze during publication");
+    await_batch(window);
+    const paint::Image stamped = paint::load_image((root / "app-icon-1-stamped.png").string());
+    require(stamped.get(0, 0).a == 255 && editor.document.revision == revision &&
+                editor.document.undo_history.size() == history,
+            "stamp file output applies the matte without changing document history");
+    (*operation).set_selected_index(0);
+    require(!(*window.find("batch-stamp-path")).visible() && (*window.find("batch-policy")).visible(),
+            "leaving stamp operation restores profile fields");
     routed_button(window, "batch-review");
     editor.close_editor_dialog();
     static_cast<void>(window.drain_posted_work());

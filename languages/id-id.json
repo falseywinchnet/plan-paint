@@ -862,5 +862,18 @@
   "Run": "Jalankan",
   "Source files": "Berkas sumber",
   "Batch…": "Kelompok…",
-  "Batch production…": "Produksi kelompok…"
+  "Batch production…": "Produksi kelompok…",
+  "Stamp image…": "Gambar stempel…",
+  "Anchor": "Jangkar",
+  "Top left": "Kiri atas",
+  "Top center": "Tengah atas",
+  "Top right": "Kanan atas",
+  "Middle left": "Kiri tengah",
+  "Middle right": "Kanan tengah",
+  "Bottom left": "Kiri bawah",
+  "Bottom center": "Tengah bawah",
+  "Bottom right": "Kanan bawah",
+  "Foreground": "Latar depan",
+  "Original size": "Ukuran asli",
+  "Fit image": "Sesuaikan gambar"
 }

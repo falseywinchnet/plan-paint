@@ -862,5 +862,18 @@
   "Run": "چلاؤ",
   "Source files": "اصل فائلاں",
   "Batch…": "بیچ…",
-  "Batch production…": "بیچ کارروائی…"
+  "Batch production…": "بیچ کارروائی…",
+  "Stamp image…": "مہر دی تصویر…",
+  "Anchor": "لنگر",
+  "Top left": "اُتے کھبے",
+  "Top center": "اُتے وچکار",
+  "Top right": "اُتے سجے",
+  "Middle left": "وچکار کھبے",
+  "Middle right": "وچکار سجے",
+  "Bottom left": "تھلے کھبے",
+  "Bottom center": "تھلے وچکار",
+  "Bottom right": "تھلے سجے",
+  "Foreground": "اگلا پاسا",
+  "Original size": "اصل سائز",
+  "Fit image": "تصویر وچ فٹ کرو"
 }

@@ -15,6 +15,13 @@ bool occupied(const std::filesystem::path& path) {
     return std::filesystem::symlink_status(path).type() != std::filesystem::file_type::not_found;
 }
 void protect_sources(const IconBatchPlan& plan, const std::filesystem::path& target) {
+    if (!plan.stamp_source.path.empty()) {
+        const std::filesystem::path stamp = path_from_utf8(plan.stamp_source.path);
+        if (target == stamp || (std::filesystem::exists(target) && std::filesystem::exists(stamp) &&
+                                std::filesystem::equivalent(target, stamp))) {
+            throw std::runtime_error("An output would replace the fixed stamp image.");
+        }
+    }
     for (const IconBatchSource& source : plan.sources) {
         const std::filesystem::path input = path_from_utf8(source.path);
         if (target == input || (std::filesystem::exists(target) && std::filesystem::exists(input) &&
@@ -60,9 +67,36 @@ IconFrame fit_image(const IconFrame& source, int size, bool cursor) {
     return result;
 }
 ImageContainer transform(const AssetPreview& source, const IconBatchSettings& settings, std::string& summary,
-                         const std::atomic<bool>& cancel) {
+                         const std::atomic<bool>& cancel, const Image* stamp = nullptr) {
     if (settings.operation == IconBatchOperation::Representations) {
         return {};
+    }
+    if (settings.operation == IconBatchOperation::Stamp) {
+        if (!stamp) {
+            throw std::runtime_error("Choose a fixed stamp image.");
+        }
+        ImageContainer output;
+        output.kind = source.images.kind;
+        summary = settings.stamp.behind ? "Stamp behind; " : "Stamp in front; ";
+        summary += settings.stamp.flatten ? "opaque matte; " : "RGBA transparency; ";
+        summary += "keep image dimensions";
+        for (std::size_t index = 0; index < source.images.frames.size(); ++index) {
+            const IconFrame& original = source.images.frames[index];
+            require_rgba(original);
+            IconStampResult result = compose_icon_stamp(original.image, *stamp, settings.stamp, &cancel);
+            IconFrame frame = original;
+            frame.image = std::move(result.image);
+            output.frames.push_back(std::move(frame));
+            summary += "; image #" + std::to_string(index + 1) + " stamp " +
+                       std::to_string(result.placement.w) + "x" + std::to_string(result.placement.h) +
+                       " at " + std::to_string(result.placement.x) + "," +
+                       std::to_string(result.placement.y) + "; clipped " +
+                       std::to_string(result.clipped_pixels) + " nontransparent pixels";
+            if (result.upscaled) {
+                summary += "; UPSCALING";
+            }
+        }
+        return output;
     }
     if (settings.operation == IconBatchOperation::States) {
         std::vector<int> selected;
@@ -153,6 +187,27 @@ std::string quote(const std::string& value) {
     }
     return text.str() + '"';
 }
+std::vector<std::uint8_t> encode_output(const ImageContainer& output) {
+    return output.kind == ContainerKind::Image ? encode_png(output.frames.at(0).image)
+                                               : encode_icon_container(output);
+}
+Image proof_thumbnail(const Image& image) {
+    const double scale = std::min(1.0, 96.0 / std::max(image.width, image.height));
+    const int width = std::max(1, static_cast<int>(std::lround(image.width * scale)));
+    const int height = std::max(1, static_cast<int>(std::lround(image.height * scale)));
+    if (width == image.width && height == image.height) {
+        return image;
+    }
+    Image result;
+    conv_resize(image, width, height, result);
+    return result;
+}
+void verify_stamp(const AssetPreview& stamp, const IconBatchSource& reviewed) {
+    if (stamp.fingerprint.bytes != reviewed.fingerprint.bytes ||
+        stamp.fingerprint.modified != reviewed.fingerprint.modified || !asset_unchanged(stamp)) {
+        throw std::runtime_error("Fixed stamp changed since review. Review the batch again.");
+    }
+}
 } // namespace
 IconBatchPlan plan_icon_batch(const std::vector<std::string>& sources, const std::string& directory,
                               const IconBatchSettings& settings, const std::atomic<bool>& cancel) {
@@ -165,6 +220,14 @@ IconBatchPlan plan_icon_batch(const std::vector<std::string>& sources, const std
     IconBatchPlan plan;
     plan.settings = settings;
     plan.directory = std::filesystem::canonical(path_from_utf8(directory));
+    AssetPreview stamp;
+    const Image* stamp_image = nullptr;
+    if (settings.operation == IconBatchOperation::Stamp) {
+        stamp = load_asset_preview(settings.stamp_path);
+        require_rgba(stamp.images.frames.at(stamp.preferred));
+        plan.stamp_source = {stamp.path, stamp.fingerprint, stamp.preferred};
+        stamp_image = &stamp.images.frames.at(stamp.preferred).image;
+    }
     for (const std::string& path : sources) {
         IconBatchSource source;
         source.path = path_to_utf8(std::filesystem::weakly_canonical(path_from_utf8(path)));
@@ -202,13 +265,27 @@ IconBatchPlan plan_icon_batch(const std::vector<std::string>& sources, const std
                     plan.entries.push_back(std::move(frame_entry));
                 }
             } else {
-                const ImageContainer output = transform(source, settings, entry.summary, cancel);
-                static_cast<void>(encode_icon_container(output));
-                const std::string kind = settings.operation == IconBatchOperation::Convert ? "-icon"
-                                         : settings.operation == IconBatchOperation::Normalize
-                                             ? "-normalized"
+                const ImageContainer output = transform(source, settings, entry.summary, cancel, stamp_image);
+                static_cast<void>(encode_output(output));
+                if (stamp_image) {
+                    verify_stamp(stamp, plan.stamp_source);
+                    entry.summary = "Fixed image #" + std::to_string(stamp.preferred + 1) + " (" +
+                                    std::to_string((*stamp_image).width) + "x" +
+                                    std::to_string((*stamp_image).height) + "); " + entry.summary;
+                    if (index == 0) {
+                        plan.preview_before = proof_thumbnail(source.images.frames[source.preferred].image);
+                        plan.preview_after = proof_thumbnail(output.frames[source.preferred].image);
+                    }
+                }
+                const std::string kind = settings.operation == IconBatchOperation::Convert     ? "-icon"
+                                         : settings.operation == IconBatchOperation::Normalize ? "-normalized"
+                                         : settings.operation == IconBatchOperation::Stamp
+                                             ? "-stamped"
                                              : "-" + icon_state_name(settings.recipe.preset);
-                entry.filename = prefix + kind + (output.kind == ContainerKind::Cursor ? ".cur" : ".ico");
+                entry.filename = prefix + kind +
+                                 (output.kind == ContainerKind::Cursor  ? ".cur"
+                                  : output.kind == ContainerKind::Image ? ".png"
+                                                                        : ".ico");
                 choose_destination(plan, entry);
                 plan.entries.push_back(std::move(entry));
             }
@@ -239,6 +316,19 @@ void run_icon_batch(IconBatchPlan& plan, const std::atomic<bool>& cancel, IconBa
         throw std::runtime_error("Review a complete valid batch before running.");
     }
     AssetPreview loaded;
+    AssetPreview stamp;
+    const Image* stamp_image = nullptr;
+    std::string stamp_error;
+    if (plan.settings.operation == IconBatchOperation::Stamp) {
+        try {
+            stamp = load_asset_preview(plan.stamp_source.path);
+            verify_stamp(stamp, plan.stamp_source);
+            require_rgba(stamp.images.frames.at(stamp.preferred));
+            stamp_image = &stamp.images.frames.at(stamp.preferred).image;
+        } catch (const std::exception& error) {
+            stamp_error = error.what();
+        }
+    }
     std::size_t loaded_index = plan.sources.size();
     for (IconBatchEntry& entry : plan.entries) {
         if (entry.state != IconExportState::Planned) {
@@ -249,6 +339,9 @@ void run_icon_batch(IconBatchPlan& plan, const std::atomic<bool>& cancel, IconBa
             progress(plan, context);
         }
         try {
+            if (!stamp_error.empty()) {
+                throw std::runtime_error(stamp_error);
+            }
             if (cancel.load()) {
                 throw std::runtime_error("Cancelled before this output was published.");
             }
@@ -289,7 +382,7 @@ void run_icon_batch(IconBatchPlan& plan, const std::atomic<bool>& cancel, IconBa
                     bytes = encode_png(frame.image);
                 } else {
                     std::string summary;
-                    bytes = encode_icon_container(transform(loaded, plan.settings, summary, cancel));
+                    bytes = encode_output(transform(loaded, plan.settings, summary, cancel, stamp_image));
                 }
                 if (cancel.load()) {
                     throw std::runtime_error("Cancelled before this output was published.");
@@ -297,6 +390,9 @@ void run_icon_batch(IconBatchPlan& plan, const std::atomic<bool>& cancel, IconBa
                 // Recheck input identity after work and before publishing.
                 if (!asset_unchanged(loaded)) {
                     throw std::runtime_error("Source changed during processing; output was not written.");
+                }
+                if (stamp_image) {
+                    verify_stamp(stamp, plan.stamp_source);
                 }
                 write_file_atomic(bytes, path_to_utf8(target), "Could not publish batch output.",
                                   entry.replaces_existing);
@@ -329,6 +425,9 @@ std::string icon_batch_report(const IconBatchPlan& plan) {
     case IconBatchOperation::Representations:
         operation = "representations-to-png";
         break;
+    case IconBatchOperation::Stamp:
+        operation = "fixed-image-stamp";
+        break;
     }
     const IconBatchSettings& settings = plan.settings;
     json << "{\n\"schemaVersion\":1,\"operation\":" << quote(operation)
@@ -352,7 +451,16 @@ std::string icon_batch_report(const IconBatchPlan& plan) {
          << ",\"brightnessPercent\":" << settings.recipe.brightness
          << ",\"opacityPercent\":" << settings.recipe.opacity << ",\"palette\":"
          << quote(settings.recipe.palette == IconStatePalette::Rgba ? "rgba" : "indexed-dib")
-         << "},\"outputs\":[\n";
+         << "},\"stamp\":{\"version\":1,\"source\":" << quote(plan.stamp_source.path)
+         << ",\"reviewedSourceBytes\":" << plan.stamp_source.fingerprint.bytes
+         << ",\"sourceImageOrdinal\":" << plan.stamp_source.preferred + 1
+         << ",\"scaleMode\":" << quote(settings.stamp.scale == IconStampScale::Natural ? "natural" : "fit")
+         << ",\"scalePercent\":" << settings.stamp.percent << ",\"opacityPercent\":" << settings.stamp.opacity
+         << ",\"anchor\":" << settings.stamp.anchor << ",\"offsetX\":" << settings.stamp.offset_x
+         << ",\"offsetY\":" << settings.stamp.offset_y
+         << ",\"behind\":" << (settings.stamp.behind ? "true" : "false")
+         << ",\"flatten\":" << (settings.stamp.flatten ? "true" : "false")
+         << ",\"matte\":" << quote(to_hex(settings.stamp.matte)) << "},\"outputs\":[\n";
     for (std::size_t index = 0; index < plan.entries.size(); ++index) {
         const IconBatchEntry& entry = plan.entries[index];
         json << "{\"source\":" << quote(plan.sources[entry.source].path)
