@@ -1,8 +1,31 @@
 # Icon and cursor production
 
+## Contextual Icon ribbon
+
+Opening an ICO or CUR selects the **Icon** tab. Ordinary bitmap and sprite-sheet
+documents do not show that tab. Switching to Home or a painting tool retains the
+current representation; switching back to Icon does not change pixels or create
+an Undo entry. Selecting the active tab collapses or restores the ribbon using
+the same behavior as the other Paint tabs. Leaving the icon document returns an
+active Icon page to Home.
+
+The command plane groups **Images** (sizes, Gallery and cursor Hotspot), **Color
+& alpha** (Palette and Alpha tools), and **Production** (States, Compare and
+Export). For a CUR, Sizes opens cursor generation and Hotspot is enabled. For an
+ICO, Sizes opens icon generation and Hotspot remains unavailable. The horizontal
+representation strip uses the same selection, Ctrl-click sequence, reference
+and keyboard behavior as Atlas. Previous and Next step through the images or
+selected sequence. The status row shows the current image number, dimensions,
+imported format and current save encoding.
+
+**Home**, its tool-specific settings, and **Atlas** remain available. Atlas still
+owns sprite-grid editing and provides the original icon command routes. The
+workflows below are also available through their corresponding Icon commands.
+Asset browsing stays under **File → Browse assets…**.
+
 ## Representation formats and preservation
 
-The Atlas strip identifies each image by its ordinal, dimensions and imported
+The Icon and Atlas strips identify each image by its ordinal, dimensions and imported
 format, such as **1 bpp DIB** or **2 bpp PNG**. Same-size images remain separate
 representations. The strip status distinguishes **Source** from **Save**: Source
 describes the imported encoding; Save describes the encoding that the current

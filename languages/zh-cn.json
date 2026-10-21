@@ -849,5 +849,8 @@
   "Variant exported.": "变体已导出。",
   "Choose an ICO/CUR filename matching this export.": "请选择与本次导出匹配的 ICO/CUR 文件名。",
   "Export to a separate file; the source cannot be replaced.": "请导出到单独文件；不能替换源文件。",
-  "Choose a JSON filename for this report.": "请为此报告选择 JSON 文件名。"
+  "Choose a JSON filename for this report.": "请为此报告选择 JSON 文件名。",
+  "Icon": "图标",
+  "Color & alpha": "颜色与透明度",
+  "Production": "制作"
 }

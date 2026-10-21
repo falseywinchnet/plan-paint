@@ -849,5 +849,8 @@
   "Variant exported.": "تم تصدير التنويعة.",
   "Choose an ICO/CUR filename matching this export.": "اختر اسم ملف ICO/CUR مطابقًا لهذا التصدير.",
   "Export to a separate file; the source cannot be replaced.": "صدّر إلى ملف منفصل؛ لا يمكن استبدال المصدر.",
-  "Choose a JSON filename for this report.": "اختر اسم ملف JSON لهذا التقرير."
+  "Choose a JSON filename for this report.": "اختر اسم ملف JSON لهذا التقرير.",
+  "Icon": "أيقونة",
+  "Color & alpha": "اللون وألفا",
+  "Production": "الإنتاج"
 }

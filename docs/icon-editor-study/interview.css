@@ -1,13 +1,13 @@
 /* Independent Plan Paint specimens, shared by the inline and enlarged views. */
-.mini {min-height:235px}
-.mini-title {font-size:12px}
-.mini-body {padding:12px}
-.mini-foot {font-size:11px;min-height:48px}
+.mini {min-height:235px;display:flex;flex-direction:column;border:1px solid #91a9bf;border-radius:3px;background:#eef4fa;overflow:hidden;box-shadow:0 2px 3px #233f5c18}
+.mini-title {font-size:12px;font-weight:600;padding:8px 10px;background:linear-gradient(#f6faff,#cddff0);border-bottom:1px solid #a4bbcf}
+.mini-body {padding:12px;flex:1}
+.mini-foot {font-size:11px;min-height:48px;padding:8px 10px;border-top:1px solid #b9cbdb;background:#e5eef7;color:#415f78}
 .mini-tabs {padding:5px;background:#d5e4f3;margin:-10px -10px 8px;white-space:normal}
 .mini-tabs b {display:inline-block;padding:3px 7px;background:#fff3cb;border-bottom:2px solid #b78932}
 .chips {display:flex;flex-wrap:wrap;gap:5px;margin:7px 0}
 .chips span {padding:4px 6px;border:1px solid #b5c4d5;background:#eef4fa;border-radius:2px}
-.mini-canvas {height:105px}
+.mini-canvas {height:105px;position:relative;display:flex;align-items:center;justify-content:center;border:1px solid #a6b8c8;background:repeating-conic-gradient(#dbe3eb 0% 25%,white 0% 50%) 0/12px 12px;margin:8px 0;overflow:hidden}
 .mini-canvas img {object-fit:contain}
 .mini-row {display:flex;gap:7px;justify-content:space-between;border-bottom:1px solid #dbe1e8;padding:6px 0;flex-wrap:wrap}
 .mini-row strong {text-align:right;font-weight:600}
@@ -64,12 +64,13 @@
 .representation-strip span {border:1px solid #aebed0;padding:4px;flex:1;text-align:center;font-size:10px}
 .representation-strip .current {background:#ffe6a4;border-color:#a78234}
 .ribbon-groups .command-emphasis {color:#214c78;font-weight:600}
-.decision-example {padding:12px}
+.decision-example {padding:12px;background:#f0f5fa;border:1px solid #c3d1df;border-radius:4px}
 .decision-example figcaption {font-size:13px;margin:0 0 15px}
 .decision-example figcaption strong {display:block;color:#314f71;font-size:14px;margin-bottom:4px}
-.sample-row {grid-template-columns:repeat(3,1fr)}
+.sample-row {display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .sample {display:grid;grid-template-columns:110px 1fr;column-gap:12px;text-align:left;align-content:center}
-.sample-stage {grid-row:1/3}
+.sample-stage {grid-row:1/3;display:flex;align-items:center;justify-content:center;border:1px solid #a5b9cc;background:repeating-conic-gradient(#dbe3eb 0% 25%,white 0% 50%) 0/12px 12px;overflow:hidden}
+.example-note {font-size:11px;color:#60758a;margin:12px 0 0}
 .sample-stage.dark {background:#263748}
 .sample-stage.light {background:#fff}
 .sample-stage svg {width:78px;height:78px}
@@ -242,8 +243,12 @@ legend { font-size: 23px; line-height: 1.3; font-weight: 600; padding: 0; max-wi
 .placement { display: block; border-top: 1px solid #cbd7e3; padding: 10px 12px; font-size: 12px; background: #eef4f9; min-height: 60px; }
 .placement b { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #5d7489; margin-bottom: 2px; }
 .visual-consequence { padding: 12px; background: white; border-top: 1px solid #d1dce6; flex: 1; font-size: 14px; }
-.preview-actions { padding: 8px 12px; border-top: 1px solid #d1dce6; }
+.preview-actions { padding: 8px 12px; border-top: 1px solid #d1dce6; display: flex; gap: 8px; flex-wrap: wrap; }
 .preview-actions button { padding: 5px 9px; font-size: 12px; width: 100%; }
+.preview-actions .choose-preview { background: #315d88; color: white; border-color: #315d88; min-height: 36px; }
+.preview-actions .choose-preview:hover { background: #234a72; }
+.preview-actions .choose-preview[aria-pressed="true"] { background: #ffedbd; color: #664910; border-color: #9b701d; }
+.preview-actions .choose-preview:disabled { background: #e9edf1; color: #627386; border-color: #b8c8d8; }
 .options { display: grid; gap: 8px; }
 .option { display: grid; grid-template-columns: minmax(220px, .9fr) 1.5fr; border: 1px solid #b8c8d8; border-radius: 4px; cursor: pointer; overflow: hidden; }
 .option:has(input:checked) { background: #fff5da; border-color: #9b701d; box-shadow: 0 0 0 1px #cfab5a; }
@@ -297,6 +302,8 @@ textarea::placeholder { color: #6e8090; }
   #save-state { flex-basis: 100%; order: 5; }
 }
 @media (max-width: 700px) {
+  .sample-row { grid-template-columns: 1fr; }
+  .sample { grid-template-columns: 110px minmax(0, 1fr); }
   .masthead { padding: 23px 16px; }
   .eyebrow { font-size: 10px; }
   .givens span { font-size: 11px; }

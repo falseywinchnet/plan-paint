@@ -849,5 +849,8 @@
   "Variant exported.": "Toleo limehamishwa.",
   "Choose an ICO/CUR filename matching this export.": "Chagua jina la faili la ICO/CUR linalolingana na uhamishaji huu.",
   "Export to a separate file; the source cannot be replaced.": "Hamisha kwenye faili tofauti; chanzo hakiwezi kubadilishwa.",
-  "Choose a JSON filename for this report.": "Chagua jina la faili la JSON kwa ripoti hii."
+  "Choose a JSON filename for this report.": "Chagua jina la faili la JSON kwa ripoti hii.",
+  "Icon": "Aikoni",
+  "Color & alpha": "Rangi na alfa",
+  "Production": "Uzalishaji"
 }

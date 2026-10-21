@@ -849,5 +849,8 @@
   "Variant exported.": "قسم برآمد ہو گئی۔",
   "Choose an ICO/CUR filename matching this export.": "اس برآمد کے مطابق ICO/CUR فائل کا نام منتخب کریں۔",
   "Export to a separate file; the source cannot be replaced.": "الگ فائل میں برآمد کریں؛ ماخذ کو تبدیل نہیں کیا جا سکتا۔",
-  "Choose a JSON filename for this report.": "اس رپورٹ کے لیے JSON فائل کا نام منتخب کریں۔"
+  "Choose a JSON filename for this report.": "اس رپورٹ کے لیے JSON فائل کا نام منتخب کریں۔",
+  "Icon": "آئیکن",
+  "Color & alpha": "رنگ اور الفا",
+  "Production": "پیداوار"
 }

@@ -849,5 +849,8 @@
   "Variant exported.": "گونه صادر شد.",
   "Choose an ICO/CUR filename matching this export.": "نام فایل ICO/CUR متناسب با این خروجی را انتخاب کنید.",
   "Export to a separate file; the source cannot be replaced.": "در فایلی جداگانه صادر کنید؛ منبع قابل جایگزینی نیست.",
-  "Choose a JSON filename for this report.": "نام فایل JSON را برای این گزارش انتخاب کنید."
+  "Choose a JSON filename for this report.": "نام فایل JSON را برای این گزارش انتخاب کنید.",
+  "Icon": "آیکون",
+  "Color & alpha": "رنگ و آلفا",
+  "Production": "تولید"
 }

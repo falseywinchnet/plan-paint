@@ -849,5 +849,8 @@
   "Variant exported.": "Варіант експортовано.",
   "Choose an ICO/CUR filename matching this export.": "Виберіть ім’я файлу ICO/CUR, що відповідає цьому експорту.",
   "Export to a separate file; the source cannot be replaced.": "Експортуйте в окремий файл; початковий файл не можна замінити.",
-  "Choose a JSON filename for this report.": "Виберіть ім’я файлу JSON для цього звіту."
+  "Choose a JSON filename for this report.": "Виберіть ім’я файлу JSON для цього звіту.",
+  "Icon": "Піктограма",
+  "Color & alpha": "Колір і альфа",
+  "Production": "Підготовка"
 }

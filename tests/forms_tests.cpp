@@ -1102,7 +1102,7 @@ void icon_representation_identity() {
     editor.close_editor_dialog();
     window.perform_layout();
     const std::shared_ptr<gf::Label> status =
-        std::dynamic_pointer_cast<gf::Label>(window.find("atlas-status"));
+        std::dynamic_pointer_cast<gf::Label>(window.find("icon-status"));
     require(status && (*status).text().find("Source: 2 bpp PNG") != std::string::npos &&
                 (*status).text().find("Save: 2 bpp PNG") != std::string::npos,
             "indexed source and save formats must be distinguishable in the strip status");
@@ -1280,6 +1280,79 @@ void await_assets(gf::Window& window) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     window.perform_layout();
+}
+void icon_ribbon_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(),
+            "icon ribbon host attaches");
+    require(!(*window.find("icon-tab")).visible(), "ordinary bitmap has no contextual Icon tab");
+    paint::IconFrame first, second;
+    first.image.reset(32, 32, {255, 0, 0, 128});
+    first.hotspot_x = 7;
+    first.hotspot_y = 9;
+    second.image.reset(16, 16, {0, 255, 0, 255});
+    editor.open_container({paint::ContainerKind::Icon, {first, second}}, "");
+    window.perform_layout();
+    require((*window.find("icon-tab")).visible() && (*require_button(window, "icon-tab")).selected() &&
+                (*window.find("icon-panel")).visible() && !(*window.find("atlas-panel")).visible(),
+            "opening an icon selects its contextual command plane");
+    require(!(*window.find("icon-hotspot")).enabled(), "ICO does not offer cursor hotspot editing");
+    const gf::Rect panel = (*window.find("icon-panel")).absolute_bounds();
+    const char* commands[] = {"icon-sizes",       "icon-gallery", "icon-hotspot", "icon-palette",
+                              "icon-alpha-tools", "icon-states",  "icon-compare", "icon-export",
+                              "icon-previous",    "icon-next"};
+    for (const char* id : commands) {
+        const gf::Rect bounds = (*window.find(id)).absolute_bounds();
+        require(bounds.x >= panel.x && bounds.y >= panel.y && bounds.right() <= panel.right() &&
+                    bounds.bottom() <= panel.bottom() && bounds.width >= 76 && bounds.height >= 20,
+                "contextual icon commands fit the minimum window");
+    }
+    require((*window.find("icon-frames")).absolute_bounds().width >= 330,
+            "Icon ribbon retains room for multiple labeled representations");
+    const gf::Rect strip = (*window.find("icon-frames")).absolute_bounds();
+    const gf::Rect thumbnail = (*window.find("icon-frame-0")).absolute_bounds();
+    require(thumbnail.y >= strip.y && thumbnail.bottom() + 16 <= strip.bottom(),
+            "representation labels fit above the horizontal scrollbar");
+    const std::shared_ptr<gf::Label> status =
+        std::dynamic_pointer_cast<gf::Label>(window.find("icon-status"));
+    require((*status).text().find("32 × 32") != std::string::npos &&
+                (*status).text().find("Save: 32 bpp DIB") != std::string::npos,
+            "Icon status exposes dimensions and actual output encoding");
+    routed_button(window, "icon-next");
+    require(editor.document.atlas.active == 1, "Icon Next changes the actual editing representation");
+    const std::uint64_t revision = editor.document.revision;
+    open_tab(window, "home-tab");
+    require(editor.document.atlas.active == 1 && (*window.find("tool-9")).visible() &&
+                (*window.find("tool-10")).visible(),
+            "Home retains path and stamp without losing the current icon image");
+    open_tab(window, "icon-tab");
+    require(editor.document.revision == revision && editor.document.atlas.active == 1,
+            "switching ribbon tabs changes neither image nor document revision");
+    routed_button(window, "icon-palette");
+    require(window.find("palette-after") != nullptr, "Icon Palette routes to the existing conversion tool");
+    editor.close_editor_dialog();
+    routed_button(window, "icon-tab");
+    require(!(*window.find("icon-panel")).visible(), "selected Icon tab collapses its command plane");
+    open_tab(window, "icon-tab");
+    editor.open_container({paint::ContainerKind::Cursor, {first, second}}, "");
+    window.perform_layout();
+    require((*window.find("icon-hotspot")).enabled() &&
+                (*require_button(window, "icon-sizes")).text() == "Cursor sizes…",
+            "CUR uses cursor sizes and enables hotspot editing");
+    routed_button(window, "icon-hotspot");
+    require(window.find("hotspot-x") != nullptr, "Icon Hotspot routes to cursor properties");
+    editor.close_editor_dialog();
+    editor.document.new_image(24, 24);
+    editor.refresh();
+    require(!(*window.find("icon-tab")).visible() && !(*window.find("icon-panel")).visible() &&
+                (*require_button(window, "home-tab")).selected(),
+            "leaving an icon document dismisses the contextual page and selects Home");
+    open_tab(window, "atlas-tab");
+    require((*window.find("atlas-grid")).visible(), "sprite-grid tools remain available in Atlas");
 }
 void await_icon_states(gui_forms::Window& window) {
     const std::chrono::steady_clock::time_point deadline =
@@ -4781,6 +4854,7 @@ int main() {
         asset_browser_contracts();
         alpha_tools_contracts();
         icon_palette_contracts();
+        icon_ribbon_contracts();
         icon_states_contracts();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();

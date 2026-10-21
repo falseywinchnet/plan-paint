@@ -849,5 +849,8 @@
   "Variant exported.": "ਰੂਪ ਨਿਰਯਾਤ ਹੋਇਆ।",
   "Choose an ICO/CUR filename matching this export.": "ਇਸ ਨਿਰਯਾਤ ਨਾਲ ਮੇਲ ਖਾਂਦਾ ICO/CUR ਫਾਈਲ ਨਾਮ ਚੁਣੋ।",
   "Export to a separate file; the source cannot be replaced.": "ਵੱਖਰੀ ਫਾਈਲ ਵਿੱਚ ਨਿਰਯਾਤ ਕਰੋ; ਸਰੋਤ ਬਦਲਿਆ ਨਹੀਂ ਜਾ ਸਕਦਾ।",
-  "Choose a JSON filename for this report.": "ਇਸ ਰਿਪੋਰਟ ਲਈ JSON ਫਾਈਲ ਨਾਮ ਚੁਣੋ।"
+  "Choose a JSON filename for this report.": "ਇਸ ਰਿਪੋਰਟ ਲਈ JSON ਫਾਈਲ ਨਾਮ ਚੁਣੋ।",
+  "Icon": "ਆਈਕਨ",
+  "Color & alpha": "ਰੰਗ ਅਤੇ ਅਲਫ਼ਾ",
+  "Production": "ਉਤਪਾਦਨ"
 }

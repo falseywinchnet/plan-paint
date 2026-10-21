@@ -849,5 +849,8 @@
   "Variant exported.": "روپ برآمد ہو گیا۔",
   "Choose an ICO/CUR filename matching this export.": "ایس برآمد نال میل کھاندا ICO/CUR فائل ناں چنو۔",
   "Export to a separate file; the source cannot be replaced.": "وکھری فائل وچ برآمد کرو؛ ماخذ نوں بدلیا نہیں جا سکدا۔",
-  "Choose a JSON filename for this report.": "ایس رپورٹ لئی JSON فائل ناں چنو."
+  "Choose a JSON filename for this report.": "ایس رپورٹ لئی JSON فائل ناں چنو.",
+  "Icon": "آئیکن",
+  "Color & alpha": "رنگ تے الفا",
+  "Production": "پیداوار"
 }

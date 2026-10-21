@@ -10,6 +10,7 @@
 namespace paint::forms {
 class Editor;
 class AtlasPanel;
+class IconPanel;
 Color ribbon_color(int index);
 std::shared_ptr<const gui_forms::Theme> ribbon_theme();
 std::shared_ptr<const gui_forms::Theme> gallery_theme();
@@ -48,6 +49,7 @@ class Ribbon final : public gui_forms::Control {
   private:
     std::weak_ptr<Editor> editor_;
     std::shared_ptr<AtlasPanel> atlas_;
+    std::shared_ptr<IconPanel> icon_;
     std::shared_ptr<gui_forms::ImageList> tiny_icons_, small_icons_, medium_icons_, large_icons_,
         brush_previews_, dynamic_previews_, pattern_previews_, fill_previews_;
     std::shared_ptr<gui_forms::ToolTip> tooltips_;

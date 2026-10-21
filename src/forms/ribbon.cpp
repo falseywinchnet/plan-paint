@@ -1,12 +1,13 @@
-#include "localization.hpp"
 #include "forms/ribbon.hpp"
-#include "forms/interface_theme.hpp"
 #include "codecs.hpp"
 #include "forms/atlas.hpp"
 #include "forms/dropper_icon.hpp"
 #include "forms/editor.hpp"
+#include "forms/icon_ribbon.hpp"
+#include "forms/interface_theme.hpp"
 #include "forms/ribbon_icons.hpp"
 #include "forms/spirograph_view.hpp"
+#include "localization.hpp"
 #include "material.hpp"
 #include "platform.hpp"
 #include <algorithm>
@@ -473,9 +474,12 @@ void Ribbon::initialize_control_tree() {
     button("patterns-tab", tr("Materials"), -1, {184, 0, 100, 27});
     button("tool-tab", tr("Pencil"), -1, {286, 0, 142, 27});
     button("atlas-tab", tr("Atlas"), -1, {431, 0, 72, 27});
-    button("gradient-tab", tr("Gradients"), -1, {506, 0, 105, 27});
+    button("icon-tab", tr("Icon"), -1, {506, 0, 72, 27});
+    button("gradient-tab", tr("Gradients"), -1, {581, 0, 105, 27});
     atlas_ = gf::make_control<AtlasPanel>(gf::StableId("atlas-panel"), editor_);
     add_child(atlas_);
+    icon_ = gf::make_control<IconPanel>(gf::StableId("icon-panel"), editor_);
+    add_child(icon_);
     button("help", "?", -1, {1164, 0, 32, 27});
     // This escape hatch must remain recognizable in every non-English UI.
     if (current_language().tag != "en-us") {
@@ -867,7 +871,10 @@ double Ribbon::ribbon_height() const {
 }
 void Ribbon::show_atlas() {
     collapsed_ = false;
-    page_ = 64;
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    const bool icon = editor && ((*editor).document.atlas.kind == AtlasKind::Icon ||
+                                 (*editor).document.atlas.kind == AtlasKind::Cursor);
+    page_ = icon ? 512 : 64;
     synchronize();
     invalidate(gf::Dirty::paint);
 }
@@ -938,10 +945,19 @@ void Ribbon::show_page() {
     if (!editor) {
         return;
     }
+    const bool icon = (*editor).document.atlas.kind == AtlasKind::Icon ||
+                      (*editor).document.atlas.kind == AtlasKind::Cursor;
+    if (page_ == 512 && !icon) {
+        page_ = 1;
+    }
     (*atlas_).set_visible(page_ == 64 && !collapsed_);
-    (*editor).show_hotspot = page_ == 64;
+    (*icon_).set_visible(page_ == 512 && !collapsed_);
+    (*editor).show_hotspot = page_ == 64 || page_ == 512;
     if (page_ == 64) {
         (*atlas_).synchronize();
+    }
+    if (page_ == 512) {
+        (*icon_).synchronize();
     }
     Tool tool = (*editor).document.tool;
     if (page_ == 256 && !(*editor).gradient_fill) {
@@ -995,6 +1011,9 @@ void Ribbon::show_page() {
         }
         if (id == "gradient-tab") {
             visible = (*editor).gradient_fill;
+        }
+        if (id == "icon-tab") {
+            visible = icon;
         }
         if (id == "patterns-tab") {
             control.set_enabled(ink);
@@ -1352,8 +1371,12 @@ void Ribbon::bind_icon(gf::Button& button, int icon, bool large) {
 }
 void Ribbon::arrange(gf::Rect bounds) {
     arrange_self(bounds);
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    const bool icon = editor && ((*editor).document.atlas.kind == AtlasKind::Icon ||
+                                 (*editor).document.atlas.kind == AtlasKind::Cursor);
     const double horizontal_scale = bounds.width / 1200.0;
     set_child_layout(atlas_, {0, 27, bounds.width, 116});
+    set_child_layout(icon_, {0, 27, bounds.width, 116});
     for (std::size_t i = 0; i < buttons_.size(); ++i) {
         gf::Rect rectangle = (*buttons_[i]).requested_bounds();
         const double button_scale =
@@ -1365,6 +1388,9 @@ void Ribbon::arrange(gf::Rect bounds) {
         rectangle.width *= button_scale;
         gf::Button& control = *buttons_[i];
         const std::string id(control.stable_id().value());
+        if (id == "gradient-tab" && !icon) {
+            rectangle.x -= 75 * button_scale;
+        }
         if (id == "help-english") {
             rectangle.width = 116;
             rectangle.x = bounds.width - 150;
@@ -1491,7 +1517,7 @@ void Ribbon::on_paint(gf::Painter& painter, gf::Rect) {
     painter.draw_line({0, 28}, {width, 28}, interface_color(*this, gf::Color::rgba(255, 255, 255, 225)), 1);
     painter.draw_line({0, 141}, {width, 141}, interface_color(*this, gf::Color::rgba(245, 251, 255, 210)), 1);
     painter.draw_line({0, 142}, {width, 142}, interface_color(*this, gf::Color::rgba(145, 172, 202)), 1);
-    if (page_ == 64) {
+    if (page_ == 64 || page_ == 512) {
         return;
     }
     if (page_ == 4) {
@@ -1670,6 +1696,7 @@ void Ribbon::synchronize() {
                               : page_ == 2   ? "view-tab"
                               : page_ == 4   ? "patterns-tab"
                               : page_ == 64  ? "atlas-tab"
+                              : page_ == 512 ? "icon-tab"
                               : page_ == 256 ? "gradient-tab"
                                              : "tool-tab");
         }
@@ -1769,12 +1796,14 @@ void Ribbon::synchronize() {
     }
     if (ordered_tab_page_ != page_) {
         // Backmost first, foreground last: paint and hit testing share this order.
-        for (int index = 5; index >= 0; --index) {
-            (*buttons_[static_cast<std::size_t>(index)]).bring_to_front();
+        for (std::size_t index = buttons_.size(); index > 0; --index) {
+            if ((*buttons_[index - 1]).stable_id().value().ends_with("-tab")) {
+                (*buttons_[index - 1]).bring_to_front();
+            }
         }
-        for (std::size_t index = 0; index < 6; ++index) {
-            if ((*buttons_[index]).selected()) {
-                (*buttons_[index]).bring_to_front();
+        for (const std::shared_ptr<gf::Button>& button : buttons_) {
+            if ((*button).stable_id().value().ends_with("-tab") && (*button).selected()) {
+                (*button).bring_to_front();
             }
         }
         ordered_tab_page_ = page_;
@@ -2023,6 +2052,7 @@ void Ribbon::clicked(gf::ButtonBase& button) {
                    : id == "view-tab"     ? 2
                    : id == "patterns-tab" ? 4
                    : id == "atlas-tab"    ? 64
+                   : id == "icon-tab"     ? 512
                    : id == "gradient-tab" ? 256
                    : ((*editor).document.tool == Tool::Spirograph ||
                       ((*editor).spiro.active &&

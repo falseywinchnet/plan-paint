@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Plan Paint — custodial icon interview</title>
-<link rel="stylesheet" href="interview.css">
+<link rel="stylesheet" href="interview.css?v=20261020-2">
 </head>
 <body>
 <header class="masthead">
@@ -30,7 +30,7 @@
 </div>
 <main class="layout">
 <aside class="guide">
-<p><strong>Scroll, compare, choose, comment.</strong> Each visual option includes its own preview, command location and consequence. Nonvisual decisions have ordinary multiple-choice rows. All 28 questions stay on this page.</p>
+<p><strong>Scroll, compare, choose, comment.</strong> Choose directly above or below each visual preview. Each option shows its command location and consequence. Nonvisual decisions have multiple-choice rows followed by a comments field. All 28 questions stay on this page.</p>
 <p class="study-key"><b>Given:</b> broad icon production, batch tools, asset browsing and no layers. <b>Candidate:</b> every proposed design below. Previews are independent HTML mockups, not native screenshots. Recommendations are suggestions; nothing is preselected. Your answers save here automatically.</p>
 <nav class="jump-links" aria-label="Interview sections">
 <a href="#chapter-1">01 · Document and representation model</a>
@@ -2029,6 +2029,12 @@ function collectAnswers() {
 function refreshReview() {
   const answers = interviewQuestions.map(getAnswer);
   updateQuestionMap(answers);
+  document.querySelectorAll('[data-choose-preview]').forEach(function refreshPreviewChoice(button) {
+    const parts = button.dataset.choosePreview.split('-');
+    const radio = document.querySelector('input[name="' + parts[0] + '"][value="' + parts[1] + '"]');
+    button.setAttribute('aria-pressed', String(radio.checked));
+    button.textContent = radio.disabled ? 'Outside given scope' : radio.checked ? 'Selected ' + parts[1] : 'Choose option ' + parts[1];
+  });
   const answered = answers.filter(function hasChoice(answer) { return answer.choice !== null; }).length;
   document.getElementById('progress-text').textContent = answered + ' of 28 answered';
   document.getElementById('progress').value = answered;
@@ -2135,6 +2141,24 @@ document.querySelectorAll('[data-export-html]').forEach(function connectAnswerSh
 
 const previewInspector = document.getElementById('preview-inspector');
 let inspectedChoice = null;
+function chooseInlinePreview(event) {
+  applyPreviewChoice(event.currentTarget.dataset.choosePreview);
+}
+function addInlineChoice(button) {
+  const identity = button.dataset.inspectPreview.replace('preview-', '');
+  const parts = identity.split('-');
+  const radio = document.querySelector('input[name="' + parts[0] + '"][value="' + parts[1] + '"]');
+  const choose = document.createElement('button');
+  choose.type = 'button';
+  choose.className = 'choose-preview';
+  choose.dataset.choosePreview = identity;
+  choose.disabled = radio.disabled;
+  choose.setAttribute('aria-label', 'Choose ' + parts[0] + ' option ' + parts[1]);
+  choose.setAttribute('aria-describedby', 'choice-copy-' + identity);
+  choose.addEventListener('click', chooseInlinePreview);
+  button.before(choose);
+}
+document.querySelectorAll('[data-inspect-preview]').forEach(addInlineChoice);
 function applyPreviewChoice(identity) {
   const parts = identity.split('-');
   const radio = document.querySelector('input[name="' + parts[0] + '"][value="' + parts[1] + '"]');
