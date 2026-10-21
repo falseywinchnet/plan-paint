@@ -960,5 +960,6 @@
   "Revealing in file manager…": "ファイル管理で表示中…",
   "Could not reveal the selected asset.": "選択した素材を表示できませんでした。",
   "Requested containing folder; file selection is unavailable.": "親フォルダーの表示を要求しました。ファイルの選択は利用できません。",
-  "Requested file selection in the file manager.": "ファイル管理にファイルの選択を要求しました。"
+  "Requested file selection in the file manager.": "ファイル管理にファイルの選択を要求しました。",
+  "Position preview; Apply to paint. Escape cancels.": "プレビューを配置し、適用で描画。Escapeでキャンセル。"
 }

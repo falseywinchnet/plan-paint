@@ -757,6 +757,12 @@ void Ribbon::add_options() {
     button("stamp-shapes-menu", tr("Circle"), 100 + static_cast<int>(Shape::Circle), {12, 36, 204, 54}, false,
            true);
     check("stamp-transparent", tr("Transparent stamp"), {12, 94, 210, 25});
+    button("context-stamp-apply", tr("Apply"), -1, {242, 36, 135, 30});
+    button("context-stamp-cancel", tr("Cancel"), -1, {242, 79, 135, 30});
+    std::shared_ptr<gf::Label> placement_hint = gf::make_control<gf::Label>(
+        gf::StableId("stamp-placement-hint"), tr("Position preview; Apply to paint. Escape cancels."));
+    (*placement_hint).set_text_wrapping(gf::TextWrapping::word);
+    option(placement_hint, {12, 36, 204, 78});
     button("context-stamp-clear", tr("Clear stamp"), -1, {242, 36, 135, 30});
     button("context-zoom-in", tr("Zoom in"), 12, {12, 36, 95, 78}, true);
     button("context-zoom-out", tr("Zoom out"), 12, {117, 36, 99, 78}, true);
@@ -986,7 +992,7 @@ void Ribbon::show_page() {
                 visible = false;
             }
             if (id.starts_with("context-")) {
-                visible = (id == "context-stamp-clear" || id == "context-stamp-add") ? tool == Tool::Stamp
+                visible = id.starts_with("context-stamp-") ? tool == Tool::Stamp
                           : id.starts_with("context-zoom-")                          ? tool == Tool::Magnifier
                                                                                      : selection;
             }
@@ -1003,6 +1009,14 @@ void Ribbon::show_page() {
             if (id.starts_with("stamp-shape-") || id == "stamp-shapes-menu") {
                 visible = tool == Tool::Stamp;
             }
+        }
+        const bool placement = (*editor).stamp_placement_active();
+        if (id == "context-stamp-apply" || id == "context-stamp-cancel") {
+            visible = visible && placement;
+            control.set_enabled(id == "context-stamp-cancel" || (*editor).can_apply_stamp_placement());
+        }
+        if (id == "context-stamp-clear" || id == "context-stamp-add" || id == "stamp-shapes-menu") {
+            visible = visible && !placement;
         }
         if (button_pages_[i] == 40) {
             visible = page_ == 8 && selection && (*editor).document.selection.active;
@@ -1088,6 +1102,11 @@ void Ribbon::show_page() {
         }
         if (option_pages_[i] == 40) {
             visible = page_ == 8 && selection && (*editor).document.selection.active;
+        }
+        const bool placement = (*editor).stamp_placement_active();
+        if (id == "stamp-placement-hint") { visible = visible && placement; }
+        if (id == "stamp-transparent" || id.starts_with("stamp-width") || id.starts_with("stamp-height")) {
+            visible = visible && !placement;
         }
         control.set_visible(visible && !collapsed_);
     }

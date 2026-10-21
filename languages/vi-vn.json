@@ -960,5 +960,6 @@
   "Revealing in file manager…": "Đang hiện trong trình quản lý tệp…",
   "Could not reveal the selected asset.": "Không thể hiện tài nguyên đã chọn.",
   "Requested containing folder; file selection is unavailable.": "Đã yêu cầu thư mục chứa; không thể chọn tệp.",
-  "Requested file selection in the file manager.": "Đã yêu cầu chọn tệp trong trình quản lý tệp."
+  "Requested file selection in the file manager.": "Đã yêu cầu chọn tệp trong trình quản lý tệp.",
+  "Position preview; Apply to paint. Escape cancels.": "Đặt bản xem trước; Áp dụng để vẽ. Escape hủy."
 }

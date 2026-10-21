@@ -960,5 +960,6 @@
   "Revealing in file manager…": "فائل مینیجر میں دکھایا جا رہا ہے…",
   "Could not reveal the selected asset.": "منتخب اثاثہ نہیں دکھایا جا سکا۔",
   "Requested containing folder; file selection is unavailable.": "متعلقہ فولڈر کی درخواست کی گئی؛ فائل کا انتخاب دستیاب نہیں۔",
-  "Requested file selection in the file manager.": "فائل مینیجر میں فائل کے انتخاب کی درخواست کی گئی۔"
+  "Requested file selection in the file manager.": "فائل مینیجر میں فائل کے انتخاب کی درخواست کی گئی۔",
+  "Position preview; Apply to paint. Escape cancels.": "پیش منظر رکھیں؛ پینٹ کرنے کے لیے لاگو کریں۔ Escape منسوخ کرتا ہے۔"
 }

@@ -960,5 +960,6 @@
   "Revealing in file manager…": "ফাইল ম্যানেজারে দেখানো হচ্ছে…",
   "Could not reveal the selected asset.": "নির্বাচিত উপাদান দেখানো যায়নি।",
   "Requested containing folder; file selection is unavailable.": "ধারক ফোল্ডার খোলার অনুরোধ হয়েছে; ফাইল নির্বাচন উপলব্ধ নয়।",
-  "Requested file selection in the file manager.": "ফাইল ম্যানেজারে ফাইল নির্বাচনের অনুরোধ হয়েছে।"
+  "Requested file selection in the file manager.": "ফাইল ম্যানেজারে ফাইল নির্বাচনের অনুরোধ হয়েছে।",
+  "Position preview; Apply to paint. Escape cancels.": "প্রিভিউ বসান; আঁকতে প্রয়োগ করুন। Escape বাতিল করে।"
 }

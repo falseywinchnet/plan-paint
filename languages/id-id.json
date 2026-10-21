@@ -960,5 +960,6 @@
   "Revealing in file manager…": "Menampilkan di pengelola berkas…",
   "Could not reveal the selected asset.": "Tidak dapat menampilkan aset yang dipilih.",
   "Requested containing folder; file selection is unavailable.": "Folder induk diminta; pemilihan berkas tidak tersedia.",
-  "Requested file selection in the file manager.": "Pemilihan berkas diminta di pengelola berkas."
+  "Requested file selection in the file manager.": "Pemilihan berkas diminta di pengelola berkas.",
+  "Position preview; Apply to paint. Escape cancels.": "Posisikan pratinjau; Terapkan untuk melukis. Escape membatalkan."
 }

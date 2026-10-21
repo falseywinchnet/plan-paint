@@ -37,7 +37,7 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_svg_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
+         stamp_placement_review = false, advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
@@ -336,7 +336,7 @@ struct NativeExercise {
         control.invalidate_subtree(gf::Dirty::paint);
     }
     void inspect_frame(gf::Window& window) {
-        if (external_file_review) { repaint_tree(*window.root()); }
+        if (external_file_review || stamp_placement_review) { repaint_tree(*window.root()); }
         if (asset_browser_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
             repaint_tree(*window.root());
             repaint_tree(*window.find("editor-dialog"));
@@ -371,6 +371,30 @@ struct NativeExercise {
                                               static_cast<int>(sample.y * window.scale()));
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
+        if (stamp_placement_review) {
+            const gf::Control::Ptr apply = window.find("context-stamp-apply");
+            const gf::Control::Ptr cancel = window.find("context-stamp-cancel");
+            if (!painted || !apply || !cancel || !(*apply).visible() || !(*apply).enabled() ||
+                !(*cancel).visible() || (*apply).absolute_bounds().right() > size.width ||
+                !(*editor).stamp_placement_active()) {
+                throw std::runtime_error("Native imported stamp placement controls did not render");
+            }
+            const gf::Rect preview_pixel = (*editor).canvas().bitmap_to_client({54, 38, 1, 1});
+            const gf::Point preview_sample = (*editor).canvas().point_to_window(
+                {preview_pixel.x + preview_pixel.width / 2, preview_pixel.y + preview_pixel.height / 2});
+            const paint::Color preview_color = image.get(static_cast<int>(preview_sample.x * window.scale()),
+                                                         static_cast<int>(preview_sample.y * window.scale()));
+            paint::Image expected;
+            expected.reset(1, 1);
+            expected.blend(0, 0, {32, 100, 220, 128});
+            const paint::Color expected_color = expected.get(0, 0);
+            if (std::abs(int(preview_color.r) - int(expected_color.r)) > 2 ||
+                std::abs(int(preview_color.g) - int(expected_color.g)) > 2 ||
+                std::abs(int(preview_color.b) - int(expected_color.b)) > 2) {
+                throw std::runtime_error("Native stamp preview is not the actual alpha composite");
+            }
+            return;
+        }
         if (icon_index_paint_review) {
             const paint::IconFrame& frame = (*editor).document.atlas.icons[0];
             if (!painted || !paint::has_icon_palette(frame) || !(*editor).icon_index_paint ||
@@ -673,6 +697,32 @@ struct NativeExercise {
             if (!handle.request_close().accepted()) {
                 throw std::runtime_error("Native batch close failed");
             }
+            return;
+        }
+        if (stamp_placement_review) {
+            document.new_image(128, 96);
+            paint::Image stamp;
+            stamp.reset(32, 32, {0, 0, 0, 0});
+            for (int y = 0; y < 32; ++y) {
+                for (int x = 0; x < 32; ++x) {
+                    if ((x - 16) * (x - 16) + (y - 16) * (y - 16) < 225) {
+                        stamp.set(x, y, {32, 100, 220, 128});
+                    }
+                }
+            }
+            (*editor).use_asset_stamp(stamp);
+            (*editor).canvas().set_zoom(4);
+            window.perform_layout();
+            const gf::Rect destination = (*editor).canvas().bitmap_to_client({54, 38, 1, 1});
+            const gf::Point point = (*editor).canvas().point_to_window({destination.x, destination.y});
+            static_cast<void>(window.dispatch_pointer({gf::PointerAction::down, gf::PointerButton::primary, point}));
+            static_cast<void>(window.dispatch_pointer({gf::PointerAction::up, gf::PointerButton::primary, point}));
+            window.perform_layout();
+            inspect_frame(window);
+            (*editor).apply_stamp_placement();
+            document.saved_revision = document.revision;
+            entered = true;
+            if (!handle.request_close().accepted()) { throw std::runtime_error("Native placement close failed"); }
             return;
         }
         if (external_file_review) {
@@ -1205,6 +1255,7 @@ int main(int argc, char** argv) {
             (argc > 1 && std::string(argv[1]) == "--icon-palette");
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
+        exercise.stamp_placement_review = argc > 1 && std::string(argv[1]) == "--stamp-placement";
         exercise.external_file_review = argc > 1 && std::string(argv[1]) == "--external-file";
         exercise.icon_validation_review = argc > 1 && std::string(argv[1]) == "--icon-validation";
         exercise.toolbar_strip_review = argc > 1 && std::string(argv[1]) == "--toolbar-strip";
@@ -1217,7 +1268,7 @@ int main(int argc, char** argv) {
         exercise.icon_batch_review = exercise.icon_batch_review || exercise.icon_stamp_review || exercise.icon_shared_review;
         exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
-        if (exercise.external_file_review || exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
+        if (exercise.stamp_placement_review || exercise.external_file_review || exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
             exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
             exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {

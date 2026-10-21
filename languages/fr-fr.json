@@ -960,5 +960,6 @@
   "Revealing in file manager…": "Affichage dans les fichiers…",
   "Could not reveal the selected asset.": "Impossible d’afficher la ressource sélectionnée.",
   "Requested containing folder; file selection is unavailable.": "Dossier parent demandé ; sélection du fichier indisponible.",
-  "Requested file selection in the file manager.": "Sélection du fichier demandée au gestionnaire de fichiers."
+  "Requested file selection in the file manager.": "Sélection du fichier demandée au gestionnaire de fichiers.",
+  "Position preview; Apply to paint. Escape cancels.": "Placez l’aperçu ; Appliquer pour peindre. Échap annule."
 }

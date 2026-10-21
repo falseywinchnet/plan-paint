@@ -960,5 +960,6 @@
   "Revealing in file manager…": "فائل مینیجر وچ وکھایا جا رہیا اے…",
   "Could not reveal the selected asset.": "چُنی چیز نہیں وکھائی جا سکی۔",
   "Requested containing folder; file selection is unavailable.": "وڈے فولڈر دی درخواست کیتی؛ فائل چُننا دستیاب نہیں۔",
-  "Requested file selection in the file manager.": "فائل مینیجر وچ فائل چُنن دی درخواست کیتی۔"
+  "Requested file selection in the file manager.": "فائل مینیجر وچ فائل چُنن دی درخواست کیتی۔",
+  "Position preview; Apply to paint. Escape cancels.": "جھلک رکھو؛ چتر بناؤن لئی لاگو کرو۔ Escape رد کردا اے۔"
 }

@@ -393,6 +393,7 @@ void Editor::poll_warp() {
     }
 }
 void Editor::publish_stamp_preview() {
+    stamp_preview_generation_ = stamp_generation_;
     ++stamp_pixels_revision_;
     stamp_boundary_.clear();
     for (int y = 0; y < stamp_preview_.height; ++y) {
@@ -442,6 +443,7 @@ void Editor::publish_stamp_preview() {
     stamp_image_ = result.image;
 }
 void Editor::reset_stamp() {
+    stamp_placement_ = false;
     if (transform_preview_stamp_) {
         end_transform_preview();
     }
@@ -472,6 +474,7 @@ void Editor::use_asset_stamp(Image image) {
     if (image.pixels.empty()) {
         return;
     }
+    document.require_rgba_transform();
     Image original = image;
     finish_controls();
     choose_tool(Tool::Stamp);
@@ -479,11 +482,47 @@ void Editor::use_asset_stamp(Image image) {
     document.stamp = std::move(image);
     hard_stamp_ = std::move(original);
     stamp_hardness = 1;
+    const Point origin = canvas().visible_paste_origin(document.stamp.width, document.stamp.height);
+    stamp_placement_center_ = {origin.x + document.stamp.width * 0.5,
+                               origin.y + document.stamp.height * 0.5};
+    stamp_placement_revision_ = document.revision;
+    stamp_placement_epoch_ = document.atlas_epoch;
+    pick_hotspot = false;
+    stamp_placement_ = true;
     regenerate_stamp();
+    (*ribbon_).show_tool_context();
     refresh();
 }
+bool Editor::can_apply_stamp_placement() const {
+    return stamp_placement_ && document.revision == stamp_placement_revision_ &&
+           document.atlas_epoch == stamp_placement_epoch_ && stamp_preview_generation_ == stamp_generation_ &&
+           !stamp_pending_ && !stamp_preview_.pixels.empty();
+}
+Image Editor::stamp_placement_image() const {
+    Image result = document.image;
+    composite_stamp(result, document.image, stamp_placement_center_);
+    return result;
+}
+void Editor::apply_stamp_placement() {
+    if (!can_apply_stamp_placement()) {
+        return;
+    }
+    Image result = stamp_placement_image();
+    document.checkpoint();
+    document.image = std::move(result);
+    release_gesture();
+    reset_stamp();
+    refresh();
+}
+void Editor::cancel_stamp_placement() {
+    if (stamp_placement_) {
+        release_gesture();
+        reset_stamp();
+        refresh();
+    }
+}
 void Editor::add_stamp_material() {
-    if (document.stamp.pixels.empty()) {
+    if (stamp_placement_ || document.stamp.pixels.empty()) {
         return;
     }
     choose_tool(Tool::Stamp);
@@ -563,25 +602,29 @@ void Editor::stamp_at(Point point, bool checkpoint) {
         if (checkpoint) {
             document.checkpoint();
         }
-        const int left = static_cast<int>(point.x - stamp_preview_.width / 2.0),
-                  top = static_cast<int>(point.y - stamp_preview_.height / 2.0);
-        if (atlas_painting() && atlas_wrap) {
-            for (int y = 0; y < stamp_preview_.height; ++y) {
-                for (int x = 0; x < stamp_preview_.width; ++x) {
-                    const int px =
-                        ((left + x) % document.image.width + document.image.width) % document.image.width;
-                    const int py =
-                        ((top + y) % document.image.height + document.image.height) % document.image.height;
-                    document.image.blend(px, py, stamp_preview_.get(x, y));
-                }
-            }
-        } else {
-            composite(document.image, stamp_preview_, left, top);
-        }
-        constrain_paint(document.image, paint_base_, guide, atlas_painting() && atlas_preserve_alpha);
-        document.constrain_selection(document.image, paint_base_);
+        composite_stamp(document.image, paint_base_, point);
     }
 }
+void Editor::composite_stamp(Image& target, const Image& base, Point point) const {
+    const int left = static_cast<int>(point.x - stamp_preview_.width / 2.0),
+              top = static_cast<int>(point.y - stamp_preview_.height / 2.0);
+    if (atlas_painting() && atlas_wrap) {
+        for (int y = 0; y < stamp_preview_.height; ++y) {
+            for (int x = 0; x < stamp_preview_.width; ++x) {
+                const int px =
+                    ((left + x) % target.width + target.width) % target.width;
+                const int py =
+                    ((top + y) % target.height + target.height) % target.height;
+                target.blend(px, py, stamp_preview_.get(x, y));
+            }
+        }
+    } else {
+        composite(target, stamp_preview_, left, top);
+    }
+    constrain_paint(target, base, guide, atlas_painting() && atlas_preserve_alpha);
+    document.constrain_selection(target, base);
+}
+
 gf::Point Editor::rotation_handle() const {
     const FloatingSelection& selection =
         warp_mode_ == WarpMode::rotation ? warp_original_ : document.selection;
@@ -668,12 +711,12 @@ bool Editor::warp_pointer(const gf::PointerEvent& event, Point point) {
     return warp_active();
 }
 void Editor::prepare_stamp_view() {
-    if (document.tool == Tool::Stamp && cursor_client_ && std::abs(canvas().view_angle) > 1e-10) {
+    if (!stamp_placement_ && document.tool == Tool::Stamp && cursor_client_ && std::abs(canvas().view_angle) > 1e-10) {
         canvas().prepare_display();
     }
 }
 void Editor::render_stamp_view() {
-    if (document.tool != Tool::Stamp || !cursor_client_ || std::abs(canvas().view_angle) < 1e-10 ||
+    if (stamp_placement_ || document.tool != Tool::Stamp || !cursor_client_ || std::abs(canvas().view_angle) < 1e-10 ||
         stamp_preview_.pixels.empty() || !window()) {
         stamp_view_destination_ = {};
         return;
@@ -754,7 +797,7 @@ void Editor::render_stamp_view() {
 }
 void Editor::paint_warp_overlay(gf::Painter& painter) {
     const gf::Color blue = gf::Color::rgba(30, 100, 190), white = gf::Color::rgba(255, 255, 255);
-    if (document.tool == Tool::Stamp && cursor_client_) {
+    if (document.tool == Tool::Stamp && (stamp_placement_ || cursor_client_)) {
         double width = stamp_preview_.pixels.empty() ? stamp_width : stamp_preview_.width;
         double height = stamp_preview_.pixels.empty() ? (document.stamp_shape == StampShape::Circle ||
                                                                  document.stamp_shape == StampShape::Square
@@ -763,11 +806,15 @@ void Editor::paint_warp_overlay(gf::Painter& painter) {
                                                       : stamp_preview_.height;
         width *= (*canvas_).zoom();
         height *= (*canvas_).zoom();
-        gf::Rect bounds{(*cursor_client_).x - width / 2, (*cursor_client_).y - height / 2, width, height};
-        const gui_drawing::PointF center = canvas().client_to_bitmap(*cursor_client_);
-        const Point image_origin{std::round(center.x - width / (2 * canvas().zoom())),
-                                 std::round(center.y - height / (2 * canvas().zoom()))};
-        if (stamp_image_.value != 0) {
+        const gf::Point client = stamp_placement_ ? screen(stamp_placement_center_) : *cursor_client_;
+        gf::Rect bounds{client.x - width / 2, client.y - height / 2, width, height};
+        const gui_drawing::PointF center = canvas().client_to_bitmap(client);
+        const Point image_origin{
+            stamp_placement_ ? std::trunc(stamp_placement_center_.x - stamp_preview_.width * 0.5)
+                             : std::round(center.x - width / (2 * canvas().zoom())),
+            stamp_placement_ ? std::trunc(stamp_placement_center_.y - stamp_preview_.height * 0.5)
+                             : std::round(center.y - height / (2 * canvas().zoom()))};
+        if (!stamp_placement_ && stamp_image_.value != 0) {
             if (std::abs(canvas().view_angle) > 1e-10) {
                 if (stamp_view_image_.value && !stamp_view_destination_.empty()) {
                     painter.draw_image(stamp_view_image_, stamp_view_destination_,
