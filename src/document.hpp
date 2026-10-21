@@ -131,6 +131,8 @@ struct Document {
     void atlas_step(int direction);
     void make_icon_sizes(const std::vector<int>& sizes, bool cursor,
                          IconSizePolicy policy = IconSizePolicy::AddMissing);
+    void generate_icon_targets(const std::vector<IconGenerationTarget>& targets,
+                               const std::vector<int>& removals, bool cursor);
     void set_hotspot(int x, int y);
     Image output_image() const;
     ImageContainer output_container(bool cursor) const;

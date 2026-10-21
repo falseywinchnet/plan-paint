@@ -880,5 +880,17 @@
   "Export palette…": "पैलेट निर्यात करें…",
   "Shared palette": "साझा पैलेट",
   "Index paint": "इंडेक्स पेंट",
-  "Other painting tools return this image to RGBA output.": "अन्य पेंटिंग टूल इस छवि को RGBA आउटपुट में वापस लाते हैं।"
+  "Other painting tools return this image to RGBA output.": "अन्य पेंटिंग टूल इस छवि को RGBA आउटपुट में वापस लाते हैं।",
+  "Add custom dimensions or another depth variant": "कस्टम आयाम या दूसरी रंग गहराई जोड़ें",
+  "Add image": "चित्र जोड़ें",
+  "After": "बाद में",
+  "Before": "पहले",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "लक्ष्य, स्रोत और रंग गहराई चुनें। हर प्रतिस्थापन को अलग चिह्नित करें।",
+  "Choose replacements individually": "प्रतिस्थापन अलग-अलग चुनें",
+  "Discard custom target": "कस्टम लक्ष्य हटाएँ",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "इंडेक्स आउटपुट: अल्फा सीमा 128, सफेद पृष्ठभूमि, बिना डिथरिंग।",
+  "Replace this image": "यह चित्र बदलें",
+  "Source image": "स्रोत चित्र",
+  "Target images": "लक्ष्य चित्र",
+  "Upscaling": "आकार बढ़ाना"
 }

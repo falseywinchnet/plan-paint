@@ -2119,6 +2119,97 @@ void icon_generation_review_and_cancel() {
     require(editor.document.atlas.count() == 3 && editor.document.atlas.icons[1].image.width == 24,
             "Undo restores an image removed by exact-profile generation");
 }
+void explicit_icon_target_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    paint::ImageContainer source;
+    source.kind = paint::ContainerKind::Icon;
+    for (int index = 0; index < 3; ++index) {
+        paint::IconFrame frame;
+        frame.image.reset(16, 16, {static_cast<std::uint8_t>(20 + index * 90), 50, 100, 255});
+        source.frames.push_back(frame);
+    }
+    editor.document.replace_container(source, "targets.ico");
+    editor.refresh();
+    window.resize({800, 520});
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    const gf::Rect accept_bounds = (*window.find("dialog-ok")).committed_arranged_bounds();
+    const gf::Rect targets_bounds = (*window.find("icon-target-list")).committed_arranged_bounds();
+    require(accept_bounds.x >= 0 && accept_bounds.bottom() <= 520 && accept_bounds.right() <= 800 &&
+                targets_bounds.x >= 0 && targets_bounds.right() <= 800,
+            "target-generation controls fit the minimum application window");
+    const std::shared_ptr<gf::ListBox> list =
+        std::dynamic_pointer_cast<gf::ListBox>(window.find("icon-target-list"));
+    const std::shared_ptr<gf::ComboBox> input =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-target-source"));
+    const std::shared_ptr<gf::ComboBox> depth =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-target-depth"));
+    const std::shared_ptr<gf::CheckBox> replace =
+        std::dynamic_pointer_cast<gf::CheckBox>(window.find("icon-target-replace"));
+    const std::shared_ptr<gf::ComboBox> policy =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-size-policy"));
+    require(list && input && depth && replace && !(*replace).checked(),
+            "per-target controls start by retaining every existing representation");
+    (*policy).set_selected_index(1);
+    require(!(*replace).checked() && !(*input).enabled(),
+            "replacement policy alone cannot select existing artwork for replacement");
+    (*list).select_index(1);
+    routed_button(window, "icon-target-replace");
+    (*input).set_selected_index(0);
+    (*depth).set_selected_index(1);
+    for (int size : {16, 32, 48, 256}) {
+        routed_button(window, "icon-size-" + std::to_string(size));
+    }
+    (*std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("icon-custom-width"))).set_value(20);
+    (*std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("icon-custom-height"))).set_value(12);
+    routed_button(window, "icon-target-add");
+    (*input).set_selected_index(2);
+    (*depth).set_selected_index(2);
+    require(editor.document.undo_history.empty() && editor.document.atlas.count() == 3 &&
+                window.find("icon-target-before") && window.find("icon-target-after"),
+            "target selection and custom previews do not mutate the document");
+    routed_button(window, "dialog-ok");
+    require(!window.find("icon-target-list") && editor.document.atlas.count() == 4 &&
+                editor.document.undo_history.size() == 1 &&
+                paint::equal(editor.document.atlas.icons[0].image.get(0, 0), source.frames[0].image.get(0, 0)) &&
+                paint::equal(editor.document.atlas.icons[2].image.get(0, 0), source.frames[2].image.get(0, 0)),
+            "only the individually checked same-size image is replaced");
+    require(paint::icon_output_format(editor.document.atlas.icons[1], paint::ContainerKind::Icon).bits_per_pixel == 4 &&
+                paint::icon_output_format(editor.document.atlas.icons[3], paint::ContainerKind::Icon).bits_per_pixel == 8 &&
+                editor.document.atlas.icons[3].image.width == 20 && editor.document.atlas.icons[3].image.height == 12 &&
+                paint::equal(editor.document.atlas.icons[3].image.get(0, 0), source.frames[2].image.get(0, 0)),
+            "each target uses its independently selected source, dimensions and depth");
+    editor.execute("undo");
+    require(editor.document.atlas.count() == 3, "one Undo restores the reviewed target transaction");
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    editor.document.checkpoint();
+    const std::size_t changed_history = editor.document.undo_history.size();
+    routed_button(window, "dialog-ok");
+    require(window.find("icon-target-list") && editor.document.undo_history.size() == changed_history &&
+                (*std::dynamic_pointer_cast<gf::Label>(window.find("dialog-error"))).text().find("document changed") != std::string::npos,
+            "a stale target dialog cannot overwrite an intervening edit");
+    editor.close_editor_dialog();
+    const paint::IconFrame repeated = source.frames[0];
+    source.frames.assign(256, repeated);
+    editor.document.replace_container(source, "full.ico");
+    editor.refresh();
+    editor.execute("atlas-icons");
+    window.perform_layout();
+    routed_button(window, "dialog-ok");
+    require(window.find("icon-target-list") && editor.document.atlas.count() == 256 &&
+                editor.document.undo_history.empty(),
+            "an overflowing preset cannot silently apply an empty target list");
+    for (int size : {32, 48, 256}) {
+        routed_button(window, "icon-size-" + std::to_string(size));
+    }
+    routed_button(window, "dialog-ok");
+    require(!window.find("icon-target-list") && editor.document.undo_history.empty(),
+            "unchecking excess targets repairs an overflowing plan without creating a no-op Undo");
+    editor.close_editor_dialog();
+}
 void atlas_large_sheet_uses_visible_thumbnail_resources() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5061,6 +5152,7 @@ void canvas_controls_without_dragging() {
 }
 void icon_production_contracts() {
         icon_generation_review_and_cancel();
+        explicit_icon_target_controls();
         icon_representation_identity();
         icon_sheet_preview_and_export();
         icon_representation_export();

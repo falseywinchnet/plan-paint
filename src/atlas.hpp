@@ -46,6 +46,15 @@ struct IconSizePlan {
 // Replacement affects each matching representation; unrelated images stay intact.
 IconSizePlan plan_icon_sizes(const std::vector<IconFrame>& existing, const std::vector<int>& sizes,
                              IconSizePolicy policy);
+// Each generated image names its source independently. -1 appends a new image;
+// a nonnegative existing_index replaces only that exact representation.
+struct IconGenerationTarget {
+    int source_index = 0, existing_index = -1;
+    int width = 32, height = 32;
+    unsigned bits_per_pixel = 32;
+};
+IconFrame generate_icon_target(const ImageContainer& sources, const IconGenerationTarget& target,
+                               bool cursor_output);
 struct AtlasGrid {
     int columns = 1, rows = 1;
     int margin_x = 0, margin_y = 0, spacing_x = 0, spacing_y = 0;

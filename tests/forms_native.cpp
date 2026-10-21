@@ -385,7 +385,11 @@ struct NativeExercise {
             return;
         }
         if (icon_production_review) {
-            if (!painted || !window.find("icon-size-manifest")) {
+            const gf::Control::Ptr after = window.find("icon-target-after");
+            const gf::Control::Ptr accept = window.find("dialog-ok");
+            if (!painted || !window.find("icon-size-manifest") || !after || !accept ||
+                (*after).committed_arranged_bounds().width < 160 ||
+                (*accept).committed_arranged_bounds().bottom() > window.client_size().height) {
                 throw std::runtime_error("Native icon generation review did not render");
             }
             return;
@@ -840,6 +844,12 @@ struct NativeExercise {
                 std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-size-policy"));
             if (!policy) { throw std::runtime_error("Native icon generation policy is unavailable"); }
             (*policy).set_selected_index(2);
+            const std::shared_ptr<gf::ListBox> targets =
+                std::dynamic_pointer_cast<gf::ListBox>(window.find("icon-target-list"));
+            const std::shared_ptr<gf::ComboBox> depth =
+                std::dynamic_pointer_cast<gf::ComboBox>(window.find("icon-target-depth"));
+            (*targets).select_index(4);
+            (*depth).set_selected_index(1);
             window.perform_layout();
             inspect_frame(window);
             (*editor).close_editor_dialog();
@@ -1028,7 +1038,7 @@ int main(int argc, char** argv) {
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
         options.initial_size = exercise.icon_formats_review || exercise.icon_states_review ||
-                                       exercise.icon_ribbon_review || exercise.icon_batch_review
+                                       exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review
                                    ? gf::Size{800, 520}
                                : exercise.compact ? gf::Size{800, 600}
                                                   : gf::Size{1280, 820};

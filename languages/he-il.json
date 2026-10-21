@@ -880,5 +880,17 @@
   "Export palette…": "ייצוא לוח צבעים…",
   "Shared palette": "לוח צבעים משותף",
   "Index paint": "ציור לפי אינדקס",
-  "Other painting tools return this image to RGBA output.": "כלי ציור אחרים מחזירים תמונה זו לפלט RGBA."
+  "Other painting tools return this image to RGBA output.": "כלי ציור אחרים מחזירים תמונה זו לפלט RGBA.",
+  "Add custom dimensions or another depth variant": "הוספת מידות מותאמות או עומק צבע נוסף",
+  "Add image": "הוספת תמונה",
+  "After": "אחרי",
+  "Before": "לפני",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "בחרו יעד, מקור ועומק צבע. סמנו כל החלפה בנפרד.",
+  "Choose replacements individually": "בחירת החלפות בנפרד",
+  "Discard custom target": "הסרת יעד מותאם",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "פלט מאונדקס: סף אלפא 128, רקע לבן, ללא רישות.",
+  "Replace this image": "החלפת תמונה זו",
+  "Source image": "תמונת מקור",
+  "Target images": "תמונות יעד",
+  "Upscaling": "הגדלה"
 }

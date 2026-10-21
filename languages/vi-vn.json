@@ -880,5 +880,17 @@
   "Export palette…": "Xuất bảng màu…",
   "Shared palette": "Bảng màu dùng chung",
   "Index paint": "Vẽ theo chỉ số",
-  "Other painting tools return this image to RGBA output.": "Các công cụ vẽ khác đưa ảnh này trở lại đầu ra RGBA."
+  "Other painting tools return this image to RGBA output.": "Các công cụ vẽ khác đưa ảnh này trở lại đầu ra RGBA.",
+  "Add custom dimensions or another depth variant": "Thêm kích thước tùy chỉnh hoặc độ sâu khác",
+  "Add image": "Thêm ảnh",
+  "After": "Sau",
+  "Before": "Trước",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "Chọn đích, ảnh nguồn và độ sâu. Đánh dấu từng ảnh cần thay thế.",
+  "Choose replacements individually": "Chọn riêng từng ảnh thay thế",
+  "Discard custom target": "Bỏ đích tùy chỉnh",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "Đầu ra lập chỉ mục: ngưỡng alpha 128, nền trắng, không hòa sắc.",
+  "Replace this image": "Thay thế ảnh này",
+  "Source image": "Ảnh nguồn",
+  "Target images": "Ảnh đích",
+  "Upscaling": "Phóng lớn"
 }

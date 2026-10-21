@@ -124,6 +124,62 @@ void test_icon_size_production() {
     require(rejected && document.atlas.count() == 256 && document.undo_history.empty(),
             "generation beyond the container entry limit must fail before changing the document");
 }
+void test_explicit_icon_targets() {
+    paint::ImageContainer source;
+    source.kind = paint::ContainerKind::Cursor;
+    for (paint::Color color : {paint::Color{220, 20, 10, 255}, paint::Color{10, 30, 220, 255}}) {
+        paint::IconFrame frame;
+        frame.image.reset(16, 16, color);
+        frame.hotspot_x = 8;
+        frame.hotspot_y = 4;
+        source.frames.push_back(frame);
+    }
+    paint::Document document;
+    document.replace_container(source, "targets.cur");
+    document.atlas_select(0);
+    const std::vector<paint::IconGenerationTarget> targets = {
+        {1, 0, 16, 16, 32}, {0, 1, 16, 16, 32}, {0, -1, 20, 12, 4}, {1, -1, 20, 12, 8}};
+    document.generate_icon_targets(targets, {}, true);
+    require(document.atlas.count() == 4 && document.undo_history.size() == 1 && document.atlas.active == 0,
+            "explicit generation is one transaction and retains the current representation");
+    require(paint::equal(document.atlas.icons[0].image.get(3, 3), source.frames[1].image.get(3, 3)) &&
+                paint::equal(document.atlas.icons[1].image.get(3, 3), source.frames[0].image.get(3, 3)),
+            "cross-replacements must read original sources, never an earlier generated image");
+    const std::vector<std::uint8_t> bytes = paint::encode_icon_container(document.output_container(true));
+    const paint::ImageContainer decoded = paint::decode_icon_container(bytes.data(), bytes.size());
+    require(decoded.frames[2].image.width == 20 && decoded.frames[2].image.height == 12 &&
+                (*decoded.frames[2].source).format.bits_per_pixel == 4 &&
+                (*decoded.frames[3].source).format.bits_per_pixel == 8 &&
+                decoded.frames[2].hotspot_x == 10 && decoded.frames[2].hotspot_y == 3,
+            "custom rectangular legacy variants and scaled cursor hotspots survive file round trip");
+    document.undo();
+    require(document.atlas.count() == 2 && paint::equal(document.image.get(0, 0), source.frames[0].image.get(0, 0)),
+            "Undo restores all independent source images");
+    document.redo();
+    require(document.atlas.count() == 4, "Redo restores every target");
+    const std::size_t history = document.undo_history.size();
+    document.generate_icon_targets({}, {}, true);
+    require(document.undo_history.size() == history, "keeping every image is a no-op");
+    for (const std::vector<paint::IconGenerationTarget>& invalid : {
+             std::vector<paint::IconGenerationTarget>{{0, -1, 24, 24, 32}, {0, -1, 257, 16, 32}},
+             std::vector<paint::IconGenerationTarget>{{0, 0, 16, 16, 32}, {1, 0, 16, 16, 32}},
+             std::vector<paint::IconGenerationTarget>{{99, -1, 16, 16, 32}},
+             std::vector<paint::IconGenerationTarget>{{0, -1, 16, 16, 2}}}) {
+        bool rejected = false;
+        try { document.generate_icon_targets(invalid, {}, true); }
+        catch (const std::exception&) { rejected = true; }
+        require(rejected && document.atlas.count() == 4 && document.undo_history.size() == history,
+                "invalid target plans cannot partially publish or append history");
+    }
+    document.generate_icon_targets({{1, -1, 32, 16, 32}}, {1}, true);
+    require(document.atlas.count() == 4 &&
+                paint::equal(document.atlas.icons.back().image.get(3, 3), source.frames[0].image.get(3, 3)),
+            "a removed source remains available to all targets in the same transaction");
+    document.new_image(32, 24);
+    document.generate_icon_targets({{0, -1, 18, 12, 32}}, {}, false);
+    require(document.atlas.count() == 1 && document.image.width == 18 && document.image.height == 12,
+            "ordinary artwork can generate a custom-only profile");
+}
 void test_color() {
     for (int r = 0; r <= 255; r += 17) {
         for (int g = 0; g <= 255; g += 17) {
@@ -1512,6 +1568,7 @@ void test_file_security() {
 int main() {
     try {
         test_icon_size_production();
+        test_explicit_icon_targets();
         test_color();
         test_perceptual_tools();
         test_contour_relief();

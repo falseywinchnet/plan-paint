@@ -880,5 +880,17 @@
   "Export palette…": "صادر کردن پالت…",
   "Shared palette": "پالت مشترک",
   "Index paint": "نقاشی با نمایه",
-  "Other painting tools return this image to RGBA output.": "ابزارهای دیگر نقاشی این تصویر را به خروجی RGBA برمی‌گردانند."
+  "Other painting tools return this image to RGBA output.": "ابزارهای دیگر نقاشی این تصویر را به خروجی RGBA برمی‌گردانند.",
+  "Add custom dimensions or another depth variant": "افزودن ابعاد سفارشی یا عمق رنگ دیگر",
+  "Add image": "افزودن تصویر",
+  "After": "بعد",
+  "Before": "قبل",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "هدف، منبع و عمق رنگ را انتخاب کنید. هر جایگزینی را جداگانه علامت بزنید.",
+  "Choose replacements individually": "انتخاب جداگانهٔ جایگزینی‌ها",
+  "Discard custom target": "حذف هدف سفارشی",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "خروجی نمایه‌دار: آستانهٔ آلفا 128، زمینهٔ سفید، بدون دیتر.",
+  "Replace this image": "جایگزینی این تصویر",
+  "Source image": "تصویر منبع",
+  "Target images": "تصاویر هدف",
+  "Upscaling": "بزرگ‌نمایی"
 }

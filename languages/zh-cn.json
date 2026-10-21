@@ -880,5 +880,17 @@
   "Export palette…": "导出调色板…",
   "Shared palette": "共享调色板",
   "Index paint": "索引绘画",
-  "Other painting tools return this image to RGBA output.": "其他绘画工具会将此图像恢复为 RGBA 输出。"
+  "Other painting tools return this image to RGBA output.": "其他绘画工具会将此图像恢复为 RGBA 输出。",
+  "Add custom dimensions or another depth variant": "添加自定义尺寸或其他色深变体",
+  "Add image": "添加图像",
+  "After": "之后",
+  "Before": "之前",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "选择目标并设置源图像和色深。逐一勾选要替换的图像。",
+  "Choose replacements individually": "逐一选择替换项",
+  "Discard custom target": "移除自定义目标",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "索引输出：透明度阈值 128，白色底色，无抖动。",
+  "Replace this image": "替换此图像",
+  "Source image": "源图像",
+  "Target images": "目标图像",
+  "Upscaling": "放大"
 }

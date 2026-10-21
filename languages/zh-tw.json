@@ -880,5 +880,17 @@
   "Export palette…": "匯出調色盤…",
   "Shared palette": "共用調色盤",
   "Index paint": "索引繪圖",
-  "Other painting tools return this image to RGBA output.": "其他繪圖工具會將此影像恢復為 RGBA 輸出。"
+  "Other painting tools return this image to RGBA output.": "其他繪圖工具會將此影像恢復為 RGBA 輸出。",
+  "Add custom dimensions or another depth variant": "新增自訂尺寸或其他色深變體",
+  "Add image": "新增影像",
+  "After": "之後",
+  "Before": "之前",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "選擇目標並設定來源影像和色深。逐一勾選要取代的影像。",
+  "Choose replacements individually": "逐一選擇取代項目",
+  "Discard custom target": "移除自訂目標",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "索引輸出：透明度閾值 128，白色底色，無遞色。",
+  "Replace this image": "取代此影像",
+  "Source image": "來源影像",
+  "Target images": "目標影像",
+  "Upscaling": "放大"
 }

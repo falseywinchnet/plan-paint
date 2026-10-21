@@ -880,5 +880,17 @@
   "Export palette…": "Экспорт палитры…",
   "Shared palette": "Общая палитра",
   "Index paint": "Рисование индексами",
-  "Other painting tools return this image to RGBA output.": "Другие инструменты рисования возвращают этому изображению вывод RGBA."
+  "Other painting tools return this image to RGBA output.": "Другие инструменты рисования возвращают этому изображению вывод RGBA.",
+  "Add custom dimensions or another depth variant": "Добавить свой размер или другую глубину цвета",
+  "Add image": "Добавить изображение",
+  "After": "После",
+  "Before": "До",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "Выберите цель, её источник и глубину цвета. Отметьте каждую замену.",
+  "Choose replacements individually": "Выбирать замены по отдельности",
+  "Discard custom target": "Удалить свою цель",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "Индексированный вывод: порог альфа 128, белый фон, без дизеринга.",
+  "Replace this image": "Заменить это изображение",
+  "Source image": "Исходное изображение",
+  "Target images": "Целевые изображения",
+  "Upscaling": "Увеличение"
 }

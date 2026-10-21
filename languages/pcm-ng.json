@@ -880,5 +880,17 @@
   "Export palette…": "Export palette…",
   "Shared palette": "Palette wey all go use",
   "Index paint": "Paint with index",
-  "Other painting tools return this image to RGBA output.": "Other painting tools go return this image to RGBA output."
+  "Other painting tools return this image to RGBA output.": "Other painting tools go return this image to RGBA output.",
+  "Add custom dimensions or another depth variant": "Add your own size or another colour depth",
+  "Add image": "Add image",
+  "After": "After",
+  "Before": "Before",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "Choose target, source and colour depth. Tick each image wey you wan replace.",
+  "Choose replacements individually": "Choose replacement one by one",
+  "Discard custom target": "Remove custom target",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "Indexed output: alpha limit 128, white background, no dithering.",
+  "Replace this image": "Replace this image",
+  "Source image": "Source image",
+  "Target images": "Target images",
+  "Upscaling": "Make bigger"
 }

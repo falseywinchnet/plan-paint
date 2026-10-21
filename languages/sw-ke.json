@@ -880,5 +880,17 @@
   "Export palette…": "Hamisha paleti…",
   "Shared palette": "Paleti ya pamoja",
   "Index paint": "Chora kwa faharasa",
-  "Other painting tools return this image to RGBA output.": "Zana nyingine za kuchora hurudisha picha hii kwenye matokeo ya RGBA."
+  "Other painting tools return this image to RGBA output.": "Zana nyingine za kuchora hurudisha picha hii kwenye matokeo ya RGBA.",
+  "Add custom dimensions or another depth variant": "Ongeza vipimo maalumu au kina kingine",
+  "Add image": "Ongeza picha",
+  "After": "Baada",
+  "Before": "Kabla",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "Chagua lengo, chanzo na kina chake. Weka alama kwa kila ubadilishaji.",
+  "Choose replacements individually": "Chagua ubadilishaji mmoja mmoja",
+  "Discard custom target": "Ondoa lengo maalumu",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "Matokeo ya faharasa: kizingiti cha alfa 128, mandharinyuma meupe, bila dithering.",
+  "Replace this image": "Badilisha picha hii",
+  "Source image": "Picha chanzo",
+  "Target images": "Picha lengwa",
+  "Upscaling": "Kukuza"
 }

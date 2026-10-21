@@ -333,6 +333,27 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::ComboBox> icon_policy_;
     std::shared_ptr<gui_forms::Label> icon_plan_;
     std::shared_ptr<gui_forms::TextBox> icon_manifest_;
+    struct IconTargetRow {
+        IconGenerationTarget target;
+        bool generate = false, removed = false, custom = false;
+    };
+    ImageContainer icon_sources_;
+    bool icon_existing_ = false, icon_target_sync_ = false, icon_plan_valid_ = false;
+    int icon_source_current_ = 0;
+    std::uint64_t icon_revision_ = 0, icon_epoch_ = 0;
+    std::vector<IconTargetRow> icon_targets_;
+    std::shared_ptr<gui_forms::ListBox> icon_target_list_;
+    std::shared_ptr<gui_forms::ComboBox> icon_target_source_, icon_target_depth_;
+    std::shared_ptr<gui_forms::CheckBox> icon_target_replace_;
+    std::shared_ptr<gui_forms::Button> icon_target_discard_;
+    std::shared_ptr<gui_forms::NumericUpDown> icon_target_width_, icon_target_height_;
+    std::shared_ptr<gui_forms::RasterCanvas> icon_target_before_, icon_target_after_;
+    void initialize_icon_targets();
+    void render_icon_targets();
+    void icon_target_selected(const gui_forms::ListSelectionChange& change);
+    void icon_target_changed(std::optional<std::size_t> index);
+    void icon_target_clicked(gui_forms::ButtonBase& control);
+    void apply_icon_targets();
     std::vector<int> chosen_icon_sizes() const;
     void icon_size_clicked(gui_forms::ButtonBase& control);
     void icon_policy_changed(std::optional<std::size_t> index);

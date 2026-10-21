@@ -880,5 +880,17 @@
   "Export palette…": "パレットを書き出す…",
   "Shared palette": "共通パレット",
   "Index paint": "インデックス描画",
-  "Other painting tools return this image to RGBA output.": "他の描画ツールを使うと、この画像はRGBA出力に戻ります。"
+  "Other painting tools return this image to RGBA output.": "他の描画ツールを使うと、この画像はRGBA出力に戻ります。",
+  "Add custom dimensions or another depth variant": "カスタム寸法または別の色深度を追加",
+  "Add image": "画像を追加",
+  "After": "変更後",
+  "Before": "変更前",
+  "Choose a target to set its source and depth. Check each replacement explicitly.": "対象を選び、元画像と色深度を設定します。置換は個別に選択してください。",
+  "Choose replacements individually": "置換を個別に選択",
+  "Discard custom target": "カスタム対象を削除",
+  "Indexed output: alpha threshold 128, white matte, no dithering.": "インデックス出力：アルファしきい値128、白背景、ディザなし。",
+  "Replace this image": "この画像を置換",
+  "Source image": "元画像",
+  "Target images": "対象画像",
+  "Upscaling": "拡大"
 }
