@@ -914,5 +914,13 @@
   "Scale Y %": "Tỷ lệ Y %",
   "CONV* point": "CONV* điểm",
   "CONV* minification": "CONV* thu nhỏ",
-  "CONV* area": "CONV* diện tích"
+  "CONV* area": "CONV* diện tích",
+  "Toolbar strip": "Dải biểu tượng",
+  "Image order (comma-separated numbers)": "Thứ tự ảnh (số phân cách bằng dấu phẩy)",
+  "Output format": "Định dạng đầu ra",
+  "Cell width": "Chiều rộng ô",
+  "Cell height": "Chiều cao ô",
+  "Horizontal gap": "Khoảng ngang",
+  "Vertical gap": "Khoảng dọc",
+  "Opaque matte output": "Đầu ra có nền đục"
 }

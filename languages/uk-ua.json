@@ -914,5 +914,13 @@
   "Scale Y %": "Масштаб Y %",
   "CONV* point": "CONV* точка",
   "CONV* minification": "CONV* зменшення",
-  "CONV* area": "CONV* площа"
+  "CONV* area": "CONV* площа",
+  "Toolbar strip": "Смуга значків",
+  "Image order (comma-separated numbers)": "Порядок зображень (номери через кому)",
+  "Output format": "Формат виводу",
+  "Cell width": "Ширина комірки",
+  "Cell height": "Висота комірки",
+  "Horizontal gap": "Проміжок по X",
+  "Vertical gap": "Проміжок по Y",
+  "Opaque matte output": "Вивід із непрозорим тлом"
 }

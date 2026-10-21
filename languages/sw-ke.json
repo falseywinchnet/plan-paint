@@ -914,5 +914,13 @@
   "Scale Y %": "Kipimo Y %",
   "CONV* point": "CONV* nukta",
   "CONV* minification": "CONV* upunguzaji",
-  "CONV* area": "CONV* eneo"
+  "CONV* area": "CONV* eneo",
+  "Toolbar strip": "Ukanda wa aikoni",
+  "Image order (comma-separated numbers)": "Mpangilio wa picha (nambari zilizotenganishwa kwa koma)",
+  "Output format": "Umbizo la toleo",
+  "Cell width": "Upana wa seli",
+  "Cell height": "Urefu wa seli",
+  "Horizontal gap": "Pengo la mlalo",
+  "Vertical gap": "Pengo la wima",
+  "Opaque matte output": "Toleo lenye mandharinyuma yasiyopitisha mwanga"
 }

@@ -914,5 +914,13 @@
   "Scale Y %": "Y স্কেল %",
   "CONV* point": "CONV* বিন্দু",
   "CONV* minification": "CONV* ছোট করা",
-  "CONV* area": "CONV* ক্ষেত্র"
+  "CONV* area": "CONV* ক্ষেত্র",
+  "Toolbar strip": "টুলবার স্ট্রিপ",
+  "Image order (comma-separated numbers)": "ছবির ক্রম (কমা দিয়ে পৃথক সংখ্যা)",
+  "Output format": "আউটপুট ফরম্যাট",
+  "Cell width": "ঘরের প্রস্থ",
+  "Cell height": "ঘরের উচ্চতা",
+  "Horizontal gap": "অনুভূমিক ফাঁক",
+  "Vertical gap": "উল্লম্ব ফাঁক",
+  "Opaque matte output": "অস্বচ্ছ পটভূমি আউটপুট"
 }

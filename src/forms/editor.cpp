@@ -1856,6 +1856,26 @@ bool Editor::save_export_report(const std::string& report, const std::string& su
     save_encoded_bytes(bytes, path);
     return true;
 }
+bool Editor::export_toolbar_strip(const Image& image, bool bmp, const std::string& source_path) {
+    const std::string extension = bmp ? "bmp" : "png";
+    gf::HostSaveFileDialogRequest request;
+    request.title = tr("Toolbar strip"); request.suggested_name = "toolbar-strip."+extension;
+    request.default_extension = extension; request.filters = {{bmp ? "BMP" : "PNG", {extension}}};
+    const gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(dialog(request).payload);
+    if (result.outcome != gf::HostDialogOutcome::accepted || result.paths.empty()) { return false; }
+    std::string path = result.paths.front();
+    if (image_extension(path).empty()) { path += "."+extension; }
+    if (image_extension(path) != "."+extension) { throw std::runtime_error("Filename does not match the reviewed output format."); }
+    if (!source_path.empty()) {
+        std::error_code error;
+        const bool same_file = std::filesystem::equivalent(source_path,path,error);
+        if (same_file || std::filesystem::absolute(source_path).lexically_normal() == std::filesystem::absolute(path).lexically_normal()) {
+            throw std::runtime_error(tr("Export to a separate file; the source cannot be replaced."));
+        }
+    }
+    save_image(image,path);
+    return true;
+}
 bool Editor::export_png_image(const Image& image, const std::string& suggested_name) {
     gf::HostSaveFileDialogRequest request;
     request.title = tr("Export PNG");
@@ -2113,7 +2133,9 @@ void Editor::execute(const std::string& command) {
         if (command.starts_with("atlas-")) {
             unset_guide();
             finish_controls();
-            if (command == "atlas-gallery") {
+            if ((command == "atlas-strip" || (command == "atlas-export" && document.atlas.kind == AtlasKind::Sheet)) && document.atlas.count() > 0) {
+                open_editor_dialog(EditorDialogKind::toolbar_strip);
+            } else if (command == "atlas-gallery") {
                 open_editor_dialog(EditorDialogKind::atlas_gallery);
             } else if (command == "atlas-states" &&
                        (document.atlas.kind == AtlasKind::Icon || document.atlas.kind == AtlasKind::Cursor)) {

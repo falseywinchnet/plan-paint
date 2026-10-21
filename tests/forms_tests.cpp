@@ -1298,7 +1298,7 @@ void icon_representation_export() {
     require(window.find("export-manifest") && std::filesystem::is_empty(root),
             "Enter in settings ran or dismissed export");
     routed_button(window, "export-run");
-    require(!(*window.find("export-prefix")).enabled(), "running export settings are mutable");
+    require(!(*window.find("export-prefix")).enabled() && !(*window.find("export-strip")).enabled(), "running export settings and strip navigation are disabled");
     await_icon_export(window);
     require((*manifest).text().find("Completed") != std::string::npos &&
                 std::filesystem::exists(root / "icon-16x16-rgba-001.png") &&
@@ -1959,6 +1959,64 @@ void icon_palette_contracts() {
     std::filesystem::remove(palette_path);
 }
 
+void await_strip(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now()+std::chrono::seconds(30);
+    while (!(*window.find("strip-preview")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now()<deadline,"toolbar preview completes");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+void toolbar_strip_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor=*fixture.editor;
+    gf::Window& window=*fixture.window;
+    TestServices services;
+    gf::HostSession session(window,service_capabilities(),&services);
+    require(session.dispatch({1,0,gf::HostAttachEvent{{800,520},1}}).accepted(),"toolbar host attaches");
+    paint::Image sheet; sheet.reset(4,2,{210,40,60,128}); sheet.set(3,1,{20,90,210,255});
+    editor.document.replace(sheet,"");
+    paint::AtlasGrid grid; grid.columns=2; editor.document.configure_atlas(grid);
+    editor.document.atlas.sequence={1,0};
+    const std::size_t history=editor.document.undo_history.size();
+    editor.execute("atlas-export"); await_strip(window);
+    const std::shared_ptr<gf::TextBox> order=std::dynamic_pointer_cast<gf::TextBox>(window.find("strip-order"));
+    require(order && (*order).text()=="2, 1" && (*window.find("strip-export")).enabled(),"Atlas export opens strip with selected sequence");
+    (*order).set_text("1,");
+    require(!(*window.find("strip-export")).enabled(),"edited order invalidates preview");
+    routed_button(window,"strip-preview"); await_strip(window);
+    require(!(*window.find("strip-export")).enabled(),"invalid sequence cannot export");
+    (*order).set_text("2,1,2"); routed_button(window,"strip-preview"); await_strip(window);
+    const std::filesystem::path path=std::filesystem::temp_directory_path()/
+        ("paint-strip-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())+".png");
+    services.path=path.string(); routed_button(window,"strip-export");
+    paint::Image exported=paint::load_image(path.string());
+    require(exported.width==4 && exported.height==4 && paint::equal(exported.get(1,1),sheet.get(3,1)),"PNG exports explicit repeated sequence");
+    std::filesystem::remove(path);
+    const std::shared_ptr<gf::ComboBox> format=std::dynamic_pointer_cast<gf::ComboBox>(window.find("strip-format"));
+    (*format).set_selected_index(1);
+    require(!(*window.find("strip-background")).enabled() && !(*window.find("strip-export")).enabled(),"BMP forces matte and requires new preview");
+    const std::shared_ptr<gf::TextBox> matte=std::dynamic_pointer_cast<gf::TextBox>(window.find("strip-matte"));
+    (*matte).set_text("#123456"); routed_button(window,"strip-preview"); await_strip(window);
+    std::filesystem::path bmp=path; bmp.replace_extension(".bmp"); services.path=bmp.string(); routed_button(window,"strip-export");
+    exported=paint::load_image(bmp.string());
+    require(exported.get(0,0).a==255 && paint::equal(exported.get(3,3),{18,52,86,255}),"BMP keeps opaque matte in unused cells");
+    std::filesystem::remove(bmp);
+    require(editor.document.undo_history.size()==history && editor.document.atlas.sequence==std::vector<int>({1,0}),"strip export leaves atlas editing state untouched");
+    editor.close_editor_dialog();
+    paint::save_image(sheet,path.string());
+    services.path=path.string();
+    bool rejected=false;
+    try { static_cast<void>(editor.export_toolbar_strip(sheet,false,path.string())); } catch(const std::exception&) { rejected=true; }
+    require(rejected,"strip cannot replace its source file");
+    std::filesystem::remove(path);
+    paint::ImageContainer icons; icons.kind=paint::ContainerKind::Icon;
+    paint::IconFrame frame; frame.image=sheet; icons.frames.push_back(frame);
+    editor.open_container(icons,"");
+    editor.execute("atlas-export"); routed_button(window,"export-strip"); await_strip(window);
+    require((*window.find("strip-export")).enabled() && !window.find("export-run"),"icon representation export routes into toolbar strips");
+    editor.close_editor_dialog();
+}
 void await_transform(gf::Window& window) {
     const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
     while (!(*window.find("transform-preview")).enabled()) {
@@ -5354,6 +5412,7 @@ void icon_production_contracts() {
         icon_representation_export();
         asset_browser_contracts();
         alpha_tools_contracts();
+        toolbar_strip_controls();
         numeric_transform_controls();
         icon_effect_controls();
         icon_palette_contracts();

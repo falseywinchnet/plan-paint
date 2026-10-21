@@ -5,6 +5,7 @@
 #include "icon_batch.hpp"
 #include "icon_export.hpp"
 #include "icon_sheet.hpp"
+#include "toolbar_strip.hpp"
 #include "icon_states.hpp"
 #include "icon_effects.hpp"
 #include "numeric_transform.hpp"
@@ -25,6 +26,7 @@ class EditorDialog;
 struct CarpetRenderJob;
 struct DitherRenderJob;
 struct IconSheetJob;
+struct ToolbarStripJob;
 struct IconStateJob;
 struct IconExportJob;
 struct IconBatchJob;
@@ -45,6 +47,7 @@ enum class EditorDialogKind {
     hotspot,
     atlas_gallery,
     icon_sheet,
+    toolbar_strip,
     icon_export,
     icon_batch,
     asset_browser,
@@ -87,6 +90,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_carpet();
     void deliver_dither();
     void deliver_icon_sheet();
+    void deliver_toolbar_strip(const std::shared_ptr<ToolbarStripJob>& job);
     void deliver_icon_states(const std::shared_ptr<IconStateJob>& job);
     void deliver_icon_export();
     void deliver_icon_batch(const std::shared_ptr<IconBatchJob>& job);
@@ -273,6 +277,24 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::CheckBox> alpha_resize_;
     std::shared_ptr<gui_forms::TextBox> alpha_status_;
     std::shared_ptr<gui_forms::Button> alpha_apply_;
+    void initialize_toolbar_strip();
+    void start_toolbar_strip();
+    void stop_toolbar_strip();
+    void invalidate_toolbar_strip();
+    void strip_number(double);
+    void strip_choice(std::optional<std::size_t>);
+    void strip_text(const std::string&);
+    void strip_clicked(gui_forms::ButtonBase&);
+    std::shared_ptr<const ImageContainer> strip_source_;
+    std::string strip_source_path_;
+    std::shared_ptr<ToolbarStripJob> strip_job_;
+    std::thread strip_worker_;
+    std::shared_ptr<gui_forms::TextBox> strip_order_, strip_matte_, strip_report_;
+    std::vector<std::shared_ptr<gui_forms::NumericUpDown>> strip_values_;
+    std::shared_ptr<gui_forms::ComboBox> strip_format_, strip_background_;
+    std::shared_ptr<gui_forms::CheckBox> strip_fit_;
+    std::shared_ptr<gui_forms::RasterCanvas> strip_canvas_;
+    std::shared_ptr<gui_forms::Button> strip_preview_, strip_export_;
     void initialize_icon_sheet();
     void render_icon_sheet_preview();
     void stop_icon_sheet();

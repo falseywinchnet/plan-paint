@@ -914,5 +914,13 @@
   "Scale Y %": "Y 縮放 %",
   "CONV* point": "CONV* 點",
   "CONV* minification": "CONV* 縮小",
-  "CONV* area": "CONV* 面積"
+  "CONV* area": "CONV* 面積",
+  "Toolbar strip": "工具列圖帶",
+  "Image order (comma-separated numbers)": "影像順序（以逗號分隔的編號）",
+  "Output format": "輸出格式",
+  "Cell width": "儲存格寬度",
+  "Cell height": "儲存格高度",
+  "Horizontal gap": "水平間距",
+  "Vertical gap": "垂直間距",
+  "Opaque matte output": "不透明底色輸出"
 }

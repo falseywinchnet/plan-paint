@@ -50,6 +50,7 @@ EditorDialog::~EditorDialog() {
     stop_icon_states();
     stop_asset_browser();
     stop_icon_export();
+    stop_toolbar_strip();
     stop_icon_sheet();
     stop_carpet();
     stop_dither();
@@ -65,6 +66,7 @@ void EditorDialog::stop_carpet() {
 }
 void EditorDialog::on_attached_to_window() {
     Control::on_attached_to_window();
+    if (kind_ == EditorDialogKind::toolbar_strip) { start_toolbar_strip(); }
     if (kind_ == EditorDialogKind::numeric_transform) { start_numeric_transform(); }
     if (kind_ == EditorDialogKind::icon_states) {
         render_icon_states();
@@ -95,6 +97,7 @@ void EditorDialog::on_detaching_from_window(gf::Window& window) noexcept {
     stop_icon_states();
     stop_asset_browser();
     stop_icon_export();
+    stop_toolbar_strip();
     stop_icon_sheet();
     stop_carpet();
     stop_dither();

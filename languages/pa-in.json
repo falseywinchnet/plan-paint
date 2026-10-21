@@ -914,5 +914,13 @@
   "Scale Y %": "Y ਸਕੇਲ %",
   "CONV* point": "CONV* ਬਿੰਦੂ",
   "CONV* minification": "CONV* ਛੋਟਾ ਕਰਨਾ",
-  "CONV* area": "CONV* ਖੇਤਰ"
+  "CONV* area": "CONV* ਖੇਤਰ",
+  "Toolbar strip": "ਟੂਲਬਾਰ ਪੱਟੀ",
+  "Image order (comma-separated numbers)": "ਚਿੱਤਰ ਕ੍ਰਮ (ਕਾਮਿਆਂ ਨਾਲ ਵੱਖ ਕੀਤੇ ਨੰਬਰ)",
+  "Output format": "ਆਉਟਪੁੱਟ ਫਾਰਮੈਟ",
+  "Cell width": "ਸੈੱਲ ਚੌੜਾਈ",
+  "Cell height": "ਸੈੱਲ ਉਚਾਈ",
+  "Horizontal gap": "ਲੇਟਵਾਂ ਫ਼ਾਸਲਾ",
+  "Vertical gap": "ਲੰਬਕਾਰੀ ਫ਼ਾਸਲਾ",
+  "Opaque matte output": "ਅਪਾਰਦਰਸ਼ੀ ਪਿਛੋਕੜ ਆਉਟਪੁੱਟ"
 }

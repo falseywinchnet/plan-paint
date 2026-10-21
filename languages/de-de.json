@@ -914,5 +914,13 @@
   "Scale Y %": "Y-Skalierung %",
   "CONV* point": "CONV* Punkt",
   "CONV* minification": "CONV* Verkleinerung",
-  "CONV* area": "CONV* Fläche"
+  "CONV* area": "CONV* Fläche",
+  "Toolbar strip": "Symbolleiste",
+  "Image order (comma-separated numbers)": "Bildreihenfolge (kommagetrennte Zahlen)",
+  "Output format": "Ausgabeformat",
+  "Cell width": "Zellenbreite",
+  "Cell height": "Zellenhöhe",
+  "Horizontal gap": "Horizontaler Abstand",
+  "Vertical gap": "Vertikaler Abstand",
+  "Opaque matte output": "Deckende Hintergrundausgabe"
 }

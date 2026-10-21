@@ -914,5 +914,13 @@
   "Scale Y %": "Масштаб Y %",
   "CONV* point": "CONV* точка",
   "CONV* minification": "CONV* уменьшение",
-  "CONV* area": "CONV* площадь"
+  "CONV* area": "CONV* площадь",
+  "Toolbar strip": "Полоса значков",
+  "Image order (comma-separated numbers)": "Порядок изображений (номера через запятую)",
+  "Output format": "Формат вывода",
+  "Cell width": "Ширина ячейки",
+  "Cell height": "Высота ячейки",
+  "Horizontal gap": "Интервал по X",
+  "Vertical gap": "Интервал по Y",
+  "Opaque matte output": "Вывод с непрозрачным фоном"
 }

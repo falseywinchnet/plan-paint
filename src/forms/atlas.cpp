@@ -310,7 +310,8 @@ void AtlasPanel::synchronize() {
     (*clear_reference_).set_enabled(!(*editor).atlas_reference.pixels.empty());
     (*buttons_[8]).set_visible(!gallery_);
     (*buttons_[9]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
-    (*buttons_[10]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
+    (*buttons_[10]).set_enabled(count_ > 0);
+    (*buttons_[10]).set_text(atlas.kind == AtlasKind::Sheet ? tr("Toolbar strip") : tr("Export…"));
     (*buttons_[11]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
     (*buttons_[12]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
     (*buttons_[13]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);

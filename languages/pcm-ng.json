@@ -914,5 +914,13 @@
   "Scale Y %": "Y scale %",
   "CONV* point": "CONV* point",
   "CONV* minification": "CONV* make smaller",
-  "CONV* area": "CONV* area"
+  "CONV* area": "CONV* area",
+  "Toolbar strip": "Toolbar strip",
+  "Image order (comma-separated numbers)": "Image order (use comma separate numbers)",
+  "Output format": "Output format",
+  "Cell width": "Cell width",
+  "Cell height": "Cell height",
+  "Horizontal gap": "Horizontal gap",
+  "Vertical gap": "Vertical gap",
+  "Opaque matte output": "Output with solid background"
 }

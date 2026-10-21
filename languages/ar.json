@@ -914,5 +914,13 @@
   "Scale Y %": "مقياس Y %",
   "CONV* point": "CONV* نقطة",
   "CONV* minification": "CONV* تصغير",
-  "CONV* area": "CONV* مساحة"
+  "CONV* area": "CONV* مساحة",
+  "Toolbar strip": "شريط أدوات",
+  "Image order (comma-separated numbers)": "ترتيب الصور (أرقام مفصولة بفواصل)",
+  "Output format": "تنسيق الإخراج",
+  "Cell width": "عرض الخلية",
+  "Cell height": "ارتفاع الخلية",
+  "Horizontal gap": "الفجوة الأفقية",
+  "Vertical gap": "الفجوة الرأسية",
+  "Opaque matte output": "إخراج بخلفية معتمة"
 }

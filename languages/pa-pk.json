@@ -914,5 +914,13 @@
   "Scale Y %": "Y سکیل %",
   "CONV* point": "CONV* نقطہ",
   "CONV* minification": "CONV* چھوٹا کرنا",
-  "CONV* area": "CONV* رقبہ"
+  "CONV* area": "CONV* رقبہ",
+  "Toolbar strip": "ٹول بار پٹی",
+  "Image order (comma-separated numbers)": "تصویراں دی ترتیب (کامیاں نال وکھرے نمبر)",
+  "Output format": "آؤٹ پٹ فارمیٹ",
+  "Cell width": "خانے دی چوڑائی",
+  "Cell height": "خانے دی اونچائی",
+  "Horizontal gap": "افقی فاصلہ",
+  "Vertical gap": "عمودی فاصلہ",
+  "Opaque matte output": "غیر شفاف پس منظر آؤٹ پٹ"
 }
