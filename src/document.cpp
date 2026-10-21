@@ -120,6 +120,7 @@ void Document::redo() {
 }
 void Document::replace(Image replacement, const std::string& path_name) {
     image = std::move(replacement);
+    svg_source.reset();
     filename = path_name;
     atlas = {};
     ++atlas_epoch;

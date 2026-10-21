@@ -104,6 +104,41 @@ The current image remains selected if it survives; otherwise the final output
 image becomes current. Batch normalization uses the separate size policies described under batch
 production below.
 
+## SVG sources at each target size
+
+Opening an SVG through File or the asset browser retains a validated vector
+snapshot for that import session, alongside its initial raster. In **Atlas → Icon
+sizes…**, or the size review shown when saving as ICO/CUR, eligible source choices
+and target rows carry **SVG**. Every generated target is rendered directly from
+that captured vector source at its own width and height, then optionally converted
+to its chosen indexed depth. Targets never resize another generated representation.
+Vector targets do not receive a bitmap-upscaling warning.
+
+As with bitmap generation, explicit rectangular targets stretch to their requested
+dimensions. The generated results are ordinary independent pixel images. Editing
+the imported raster makes subsequent generation use those edited pixels; the SVG
+mark disappears and bitmap upscaling warnings apply. Undoing back to the exact
+imported pixels restores vector eligibility. This includes pixel dimensions, alpha
+and hidden RGB. The imported vector is never substituted for changed artwork.
+
+Interactive generation uses the captured source even if the original file is
+subsequently moved or edited. Reopen the SVG to import a newer version. The source
+snapshot is session-only: ICO, CUR and PNG contain their normal raster payloads,
+not embedded SVG, and recovery restores raster artwork without vector provenance.
+A new or newly opened document releases the previous import's source.
+
+**Batch → Convert to ICO** also rasterizes SVG separately for every requested
+size. It fits each rendering proportionally using the SVG's intrinsic dimensions,
+including fractional dimensions, rounds the rendered pixel dimensions, and centers
+it on transparent square padding. The manifest identifies independent SVG
+rasterization. Review and execution each load one consistent vector snapshot;
+the existing source size/time checks require a fresh review after ordinary file
+changes and prevent publishing results from a changed source.
+
+The existing SVG import restrictions remain in force, including rejection of
+unsupported filters and embedded raster image elements. Vector parsing limits,
+bundled font fallback, and the renderer are the same as ordinary SVG import.
+
 ## Comparison and contact sheets
 
 Open an ICO or CUR and choose **Atlas → Compare…**. The owned comparison window

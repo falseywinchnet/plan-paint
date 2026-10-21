@@ -1,6 +1,7 @@
 #include "icon_batch.hpp"
 #include "codecs.hpp"
 #include "conv.hpp"
+#include "import_codecs.hpp"
 #include "paths.hpp"
 #include "safe_file.hpp"
 #include <algorithm>
@@ -39,11 +40,16 @@ void require_rgba(const IconFrame& frame) {
 }
 IconFrame fit_image(const IconFrame& source, int size, bool cursor) {
     require_rgba(source);
-    const double scale = std::min(double(size) / source.image.width, double(size) / source.image.height);
-    const int width = std::clamp(static_cast<int>(std::lround(source.image.width * scale)), 1, size);
-    const int height = std::clamp(static_cast<int>(std::lround(source.image.height * scale)), 1, size);
+    const bool vector = svg_source_matches(source);
+    const double source_width = vector ? (*source.svg_source).width : source.image.width;
+    const double source_height = vector ? (*source.svg_source).height : source.image.height;
+    const double scale = std::min(double(size) / source_width, double(size) / source_height);
+    const int width = std::clamp(static_cast<int>(std::lround(source_width * scale)), 1, size);
+    const int height = std::clamp(static_cast<int>(std::lround(source_height * scale)), 1, size);
     Image resized;
-    if (width == source.image.width && height == source.image.height) {
+    if (vector) {
+        resized = rasterize_svg(*source.svg_source, width, height);
+    } else if (width == source.image.width && height == source.image.height) {
         resized = source.image;
     } else {
         conv_resize(source.image, width, height, resized);
@@ -152,7 +158,7 @@ ImageContainer transform(const AssetPreview& source, const IconBatchSettings& se
             throw std::runtime_error("Cancelled during size generation.");
         }
         if (step.generate) {
-            upscale = upscale || step.size > std::max(original.image.width, original.image.height);
+            upscale = upscale || (!svg_source_matches(original) && step.size > std::max(original.image.width, original.image.height));
             output.frames.push_back(fit_image(original, step.size, output.kind == ContainerKind::Cursor));
         } else {
             output.frames.push_back(source.images.frames[step.existing_index]);
@@ -162,10 +168,16 @@ ImageContainer transform(const AssetPreview& source, const IconBatchSettings& se
               std::to_string(original.image.width) + "x" + std::to_string(original.image.height) + "); " +
               std::to_string(sizes.kept) + " kept, " + std::to_string(sizes.added) + " added, " +
               std::to_string(sizes.replaced) + " replaced, " + std::to_string(sizes.removed) + " removed";
+    if (svg_source_matches(original)) {
+        summary += "; SVG rasterized independently at each target size";
+    }
     if (upscale) {
         summary += "; UPSCALING";
     }
-    if (original.image.width != original.image.height && sizes.added + sizes.replaced > 0) {
+    const bool rectangular = svg_source_matches(original)
+                                 ? (*original.svg_source).width != (*original.svg_source).height
+                                 : original.image.width != original.image.height;
+    if (rectangular && sizes.added + sizes.replaced > 0) {
         summary += "; centered transparent padding";
     }
     return output;

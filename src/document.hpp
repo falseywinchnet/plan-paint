@@ -96,6 +96,7 @@ struct Snapshot {
 };
 struct Document {
     Image image;
+    std::shared_ptr<const SvgSource> svg_source;
     AtlasState atlas;
     std::uint64_t atlas_epoch = 0;
     FloatingSelection selection;

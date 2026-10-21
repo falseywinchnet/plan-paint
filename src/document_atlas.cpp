@@ -1,5 +1,6 @@
 #include "conv.hpp"
 #include "document.hpp"
+#include "import_codecs.hpp"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -56,6 +57,7 @@ void Document::replace_container(ImageContainer replacement, const std::string& 
         }
     }
     replace(replacement.frames[best].image, path_name);
+    svg_source = replacement.frames[best].svg_source;
     if (replacement.kind != ContainerKind::Image) {
         atlas.kind = replacement.kind == ContainerKind::Cursor ? AtlasKind::Cursor : AtlasKind::Icon;
         atlas.icons = std::move(replacement.frames);
@@ -207,6 +209,10 @@ void Document::make_icon_sizes(const std::vector<int>& sizes, bool cursor, IconS
         require_rgba_transform();
     }
     const Image source = visible_image();
+    const bool vector = !existing_icon && svg_source && source.width == (*svg_source).original.width &&
+                        source.height == (*svg_source).original.height &&
+                        std::equal(source.pixels.begin(), source.pixels.end(),
+                                   (*svg_source).original.pixels.begin(), (*svg_source).original.pixels.end(), equal);
     int hotspot_x = 0, hotspot_y = 0;
     if (atlas.kind == AtlasKind::Cursor && atlas.active >= 0) {
         hotspot_x = atlas.icons[atlas.active].hotspot_x;
@@ -217,7 +223,9 @@ void Document::make_icon_sizes(const std::vector<int>& sizes, bool cursor, IconS
     for (const IconSizeStep& step : plan.steps) {
         IconFrame frame;
         if (step.generate) {
-            if (source.width == step.size && source.height == step.size) {
+            if (vector) {
+                frame.image = rasterize_svg(*svg_source, step.size, step.size);
+            } else if (source.width == step.size && source.height == step.size) {
                 frame.image = source;
             } else {
                 conv_resize(source, step.size, step.size, frame.image);
@@ -290,7 +298,9 @@ ImageContainer Document::output_container(bool cursor) const {
             result.frames[atlas.active].image = visible_image();
         }
     } else {
-        result.frames.push_back({visible_image(), 0, 0, {}});
+        IconFrame frame{visible_image(), 0, 0, {}};
+        frame.svg_source = svg_source;
+        result.frames.push_back(std::move(frame));
     }
     return result;
 }

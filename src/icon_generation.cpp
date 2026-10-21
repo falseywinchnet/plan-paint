@@ -1,6 +1,7 @@
 #include "conv.hpp"
 #include "document.hpp"
 #include "icon_palette.hpp"
+#include "import_codecs.hpp"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -26,7 +27,9 @@ IconFrame generate_icon_target(const ImageContainer& sources, const IconGenerati
         }
     }
     IconFrame result;
-    if (source.image.width == target.width && source.image.height == target.height) {
+    if (svg_source_matches(source)) {
+        result.image = rasterize_svg(*source.svg_source, target.width, target.height);
+    } else if (source.image.width == target.width && source.image.height == target.height) {
         result.image = source.image;
     } else {
         conv_resize(source.image, target.width, target.height, result.image);

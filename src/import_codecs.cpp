@@ -327,7 +327,7 @@ void prepare_svg_element(tinyxml2::XMLElement& element, int depth, std::size_t& 
     }
 }
 } // namespace
-Image rasterize_svg(const std::string& path, int width, int height) {
+std::shared_ptr<const SvgSource> load_svg_source(const std::string& path, bool retain_raster) {
     static std::once_flag fonts_ready;
     std::call_once(fonts_ready, register_svg_fallback_fonts);
     std::vector<std::uint8_t> bytes = read_image_bytes(path, 16000000);
@@ -349,21 +349,38 @@ Image rasterize_svg(const std::string& path, int width, int height) {
         intrinsic_height <= 0 || intrinsic_width > 16384 || intrinsic_height > 16384) {
         throw std::runtime_error("SVG dimensions are invalid or exceed the canvas limit.");
     }
-    if (width <= 0) {
-        width = static_cast<int>(std::ceil(intrinsic_width));
+    const std::shared_ptr<SvgSource> source = std::make_shared<SvgSource>();
+    (*source).xml_ = prepared.CStr();
+    (*source).width = intrinsic_width;
+    (*source).height = intrinsic_height;
+    if (retain_raster) {
+        (*source).original = rasterize_svg(*source);
     }
-    if (height <= 0) {
-        height = static_cast<int>(std::ceil(intrinsic_height));
+    return source;
+}
+bool svg_source_matches(const IconFrame& frame) {
+    if (!frame.svg_source) { return false; }
+    const Image& original = (*frame.svg_source).original;
+    return !original.pixels.empty() && frame.image.width == original.width && frame.image.height == original.height &&
+        std::equal(frame.image.pixels.begin(), frame.image.pixels.end(), original.pixels.begin(), original.pixels.end(), equal);
+}
+Image rasterize_svg(const SvgSource& source, int width, int height) {
+    std::unique_ptr<lunasvg::Document> tree = lunasvg::Document::loadFromData(source.xml_);
+    if (!tree || !std::isfinite(source.width) || !std::isfinite(source.height) || source.width <= 0 || source.height <= 0) {
+        throw std::runtime_error("SVG source is unavailable or invalid.");
     }
+    if (width <= 0) { width = static_cast<int>(std::ceil(source.width)); }
+    if (height <= 0) { height = static_cast<int>(std::ceil(source.height)); }
     Image image;
     image.reset(width, height, {0, 0, 0, 0});
     lunasvg::Bitmap bitmap(reinterpret_cast<std::uint8_t*>(image.pixels.data()), width, height, width * 4);
-    if (bitmap.isNull()) {
-        throw std::runtime_error("Could not allocate SVG rasterizer.");
-    }
-    (*tree).render(bitmap, lunasvg::Matrix(width / intrinsic_width, 0, 0, height / intrinsic_height, 0, 0));
+    if (bitmap.isNull()) { throw std::runtime_error("Could not allocate SVG rasterizer."); }
+    (*tree).render(bitmap, lunasvg::Matrix(width / source.width, 0, 0, height / source.height, 0, 0));
     bitmap.convertToRGBA();
     return image;
+}
+Image rasterize_svg(const std::string& path, int width, int height) {
+    return rasterize_svg(*load_svg_source(path, false), width, height);
 }
 Image decode_native_heif(const void* data, std::size_t size) {
 #ifdef __APPLE__

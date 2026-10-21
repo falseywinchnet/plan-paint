@@ -2,6 +2,7 @@
 #include "image.hpp"
 #include <memory>
 namespace paint {
+class SvgSource;
 enum class ContainerKind { Image, Icon, Cursor };
 enum class IconStorage { Unknown, Dib, Png };
 struct IconFormat {
@@ -25,6 +26,7 @@ struct IconFrame {
     std::vector<Color> xor_pixels;
     // Shared immutable encoded snapshot (import or explicit conversion). Undo shares its bytes.
     std::shared_ptr<const IconSource> source = {};
+    std::shared_ptr<const SvgSource> svg_source = {};
 };
 bool icon_source_matches(const IconFrame& frame);
 IconFormat icon_output_format(const IconFrame& frame, ContainerKind kind);

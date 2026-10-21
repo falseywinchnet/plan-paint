@@ -1,5 +1,6 @@
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
+#include "import_codecs.hpp"
 #include "localization.hpp"
 #include <algorithm>
 #include <sstream>
@@ -35,8 +36,9 @@ void EditorDialog::initialize_icon_targets() {
     std::vector<std::string> sources;
     for (std::size_t index = 0; index < icon_sources_.frames.size(); ++index) {
         const Image& image = icon_sources_.frames[index].image;
-        sources.push_back("#" + std::to_string(index + 1) + " · " + std::to_string(image.width) + " × " +
-                          std::to_string(image.height));
+        sources.push_back("#" + std::to_string(index + 1) + " · " +
+                          (svg_source_matches(icon_sources_.frames[index]) ? "SVG · " : "") +
+                          std::to_string(image.width) + " × " + std::to_string(image.height));
     }
     (*icon_target_source_).set_items(sources);
     put(icon_target_source_, {530, 198, 230, 28});
@@ -201,8 +203,11 @@ void EditorDialog::render_icon_targets() {
                 }
                 description += " · " + target_depth(target.bits_per_pixel) + " ← #" +
                                std::to_string(target.source_index + 1);
-                const Image& source = icon_sources_.frames[target.source_index].image;
-                if (target.width > source.width || target.height > source.height) {
+                const IconFrame& source_frame = icon_sources_.frames[target.source_index];
+                const Image& source = source_frame.image;
+                if (svg_source_matches(source_frame)) {
+                    description += " · SVG";
+                } else if (target.width > source.width || target.height > source.height) {
                     description += " · " + tr("Upscaling");
                 }
                 if (target.bits_per_pixel != 32) {
