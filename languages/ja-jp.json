@@ -908,5 +908,11 @@
   "Offset Y": "Y オフセット",
   "Pink border: image bounds. Pixels outside are clipped.": "ピンクの枠は画像の境界です。外側のピクセルは切り取られます。",
   "Image changed. Reopen Effects.": "画像が変更されました。効果を開き直してください。",
-  "Invalid color": "無効な色"
+  "Invalid color": "無効な色",
+  "Sampling": "サンプリング",
+  "Scale X %": "X 拡大率 %",
+  "Scale Y %": "Y 拡大率 %",
+  "CONV* point": "CONV* 点",
+  "CONV* minification": "CONV* 縮小",
+  "CONV* area": "CONV* 面積"
 }

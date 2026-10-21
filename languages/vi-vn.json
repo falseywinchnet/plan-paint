@@ -908,5 +908,11 @@
   "Offset Y": "Độ lệch Y",
   "Pink border: image bounds. Pixels outside are clipped.": "Viền hồng: ranh giới ảnh. Các điểm ảnh bên ngoài bị cắt.",
   "Image changed. Reopen Effects.": "Ảnh đã thay đổi. Mở lại Hiệu ứng.",
-  "Invalid color": "Màu không hợp lệ"
+  "Invalid color": "Màu không hợp lệ",
+  "Sampling": "Lấy mẫu",
+  "Scale X %": "Tỷ lệ X %",
+  "Scale Y %": "Tỷ lệ Y %",
+  "CONV* point": "CONV* điểm",
+  "CONV* minification": "CONV* thu nhỏ",
+  "CONV* area": "CONV* diện tích"
 }

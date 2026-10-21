@@ -908,5 +908,11 @@
   "Offset Y": "Y 偏移",
   "Pink border: image bounds. Pixels outside are clipped.": "粉色边框表示图像边界。外部像素将被裁剪。",
   "Image changed. Reopen Effects.": "图像已更改。请重新打开效果。",
-  "Invalid color": "无效颜色"
+  "Invalid color": "无效颜色",
+  "Sampling": "采样",
+  "Scale X %": "X 缩放 %",
+  "Scale Y %": "Y 缩放 %",
+  "CONV* point": "CONV* 点",
+  "CONV* minification": "CONV* 缩小",
+  "CONV* area": "CONV* 面积"
 }

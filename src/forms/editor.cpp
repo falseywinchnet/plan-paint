@@ -2099,6 +2099,17 @@ void Editor::execute(const std::string& command) {
             command == "reshape") {
             unset_guide();
         }
+        if (command == "numeric-transform") {
+            document.require_rgba_transform();
+            unset_guide();
+            finish_text(true);
+            finish_warp(false);
+            release_gesture();
+            document.commit_path();
+            document.commit_curve();
+            open_editor_dialog(EditorDialogKind::numeric_transform);
+            return;
+        }
         if (command.starts_with("atlas-")) {
             unset_guide();
             finish_controls();

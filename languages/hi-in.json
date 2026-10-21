@@ -908,5 +908,11 @@
   "Offset Y": "Y विस्थापन",
   "Pink border: image bounds. Pixels outside are clipped.": "गुलाबी सीमा: चित्र की सीमा। बाहर के पिक्सेल कटेंगे।",
   "Image changed. Reopen Effects.": "चित्र बदल गया। प्रभाव फिर खोलें।",
-  "Invalid color": "अमान्य रंग"
+  "Invalid color": "अमान्य रंग",
+  "Sampling": "सैंपलिंग",
+  "Scale X %": "X स्केल %",
+  "Scale Y %": "Y स्केल %",
+  "CONV* point": "CONV* बिंदु",
+  "CONV* minification": "CONV* लघुकरण",
+  "CONV* area": "CONV* क्षेत्र"
 }

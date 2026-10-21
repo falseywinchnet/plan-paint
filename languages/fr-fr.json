@@ -908,5 +908,11 @@
   "Offset Y": "Décalage Y",
   "Pink border: image bounds. Pixels outside are clipped.": "Cadre rose : limites de l’image. Les pixels extérieurs sont rognés.",
   "Image changed. Reopen Effects.": "L’image a changé. Rouvrez Effets.",
-  "Invalid color": "Couleur non valide"
+  "Invalid color": "Couleur non valide",
+  "Sampling": "Échantillonnage",
+  "Scale X %": "Échelle X %",
+  "Scale Y %": "Échelle Y %",
+  "CONV* point": "CONV* point",
+  "CONV* minification": "CONV* réduction",
+  "CONV* area": "CONV* surface"
 }

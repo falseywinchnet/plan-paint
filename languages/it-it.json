@@ -908,5 +908,11 @@
   "Offset Y": "Scostamento Y",
   "Pink border: image bounds. Pixels outside are clipped.": "Bordo rosa: limiti dell’immagine. I pixel esterni vengono tagliati.",
   "Image changed. Reopen Effects.": "L’immagine è cambiata. Riapri Effetti.",
-  "Invalid color": "Colore non valido"
+  "Invalid color": "Colore non valido",
+  "Sampling": "Campionamento",
+  "Scale X %": "Scala X %",
+  "Scale Y %": "Scala Y %",
+  "CONV* point": "CONV* punto",
+  "CONV* minification": "CONV* riduzione",
+  "CONV* area": "CONV* area"
 }

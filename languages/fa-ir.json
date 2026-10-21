@@ -908,5 +908,11 @@
   "Offset Y": "جابجایی Y",
   "Pink border: image bounds. Pixels outside are clipped.": "کادر صورتی: مرز تصویر. پیکسل‌های بیرون بریده می‌شوند.",
   "Image changed. Reopen Effects.": "تصویر تغییر کرده است. جلوه‌ها را دوباره باز کنید.",
-  "Invalid color": "رنگ نامعتبر"
+  "Invalid color": "رنگ نامعتبر",
+  "Sampling": "نمونه‌برداری",
+  "Scale X %": "مقیاس X %",
+  "Scale Y %": "مقیاس Y %",
+  "CONV* point": "CONV* نقطه",
+  "CONV* minification": "CONV* کوچک‌سازی",
+  "CONV* area": "CONV* مساحت"
 }

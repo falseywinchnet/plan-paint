@@ -59,7 +59,8 @@ enum class WarpSampling { Point, Minification, Area };
 // source footprint. Subtract returned x/y from map.tx/map.ty before rendering.
 [[nodiscard]] Rect affine_bounds(const ConvWarpField& field, const AffineMap& source_to_target);
 void render_affine(const ConvWarpField& field, const AffineMap& source_to_target, int width, int height,
-                   Image& destination, WarpSampling sampling = WarpSampling::Minification);
+                   Image& destination, WarpSampling sampling = WarpSampling::Minification,
+                   const std::atomic<bool>* cancelled = nullptr);
 
 struct MeshNode {
     Point source;

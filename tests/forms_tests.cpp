@@ -1959,6 +1959,51 @@ void icon_palette_contracts() {
     std::filesystem::remove(palette_path);
 }
 
+void await_transform(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while (!(*window.find("transform-preview")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now() < deadline, "transform worker completes");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    const std::shared_ptr<gf::Label> error = std::dynamic_pointer_cast<gf::Label>(window.find("dialog-error"));
+    require((*error).text().empty(), "transform preview succeeds");
+}
+void numeric_transform_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    paint::Image original;
+    original.reset(16,16,{0,0,0,0}); original.set(6,7,{210,40,70,180});
+    editor.document.replace(original, "");
+    editor.execute("numeric-transform"); await_transform(window);
+    require(!(*window.find("transform-apply")).enabled(), "neutral transform cannot add history");
+    const std::shared_ptr<gf::NumericUpDown> offset = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("transform-value-0"));
+    (*offset).set_value(2);
+    require(!(*window.find("transform-apply")).enabled(), "edited settings invalidate previous proof");
+    routed_button(window,"transform-preview"); await_transform(window);
+    require((*window.find("transform-apply")).enabled() && editor.document.undo_history.empty() &&
+        paint::equal(editor.document.image.get(6,7), original.get(6,7)), "preview never edits live pixels");
+    routed_button(window,"transform-apply");
+    require(!window.find("transform-apply") && editor.document.undo_history.size() == 1 &&
+        paint::equal(editor.document.image.get(8,7),original.get(6,7)), "Apply publishes exact move and one Undo");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(6,7),original.get(6,7)), "transform Undo restores pixels");
+    editor.document.select({5,6,4,4});
+    const int origin = editor.document.selection.x;
+    editor.execute("numeric-transform"); await_transform(window);
+    const std::shared_ptr<gf::NumericUpDown> selection_offset = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("transform-value-0"));
+    (*selection_offset).set_value(3);
+    routed_button(window,"transform-preview"); await_transform(window);
+    routed_button(window,"transform-apply");
+    require(editor.document.selection.active && editor.document.selection.x == origin+3, "selection stays editable after transform");
+    editor.execute("undo");
+    require(editor.document.selection.x == origin, "Undo restores selection position");
+    editor.execute("numeric-transform");
+    editor.close_editor_dialog();
+    static_cast<void>(window.drain_posted_work());
+    require(editor.document.selection.x == origin, "closing pending work preserves selection");
+}
 void icon_effect_controls() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5309,6 +5354,7 @@ void icon_production_contracts() {
         icon_representation_export();
         asset_browser_contracts();
         alpha_tools_contracts();
+        numeric_transform_controls();
         icon_effect_controls();
         icon_palette_contracts();
         indexed_canvas_contracts();

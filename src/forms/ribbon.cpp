@@ -2307,9 +2307,9 @@ void Ribbon::dropdown(gf::DropDownButton& button) {
             texts = {tr("Paste"), tr("Open image…")};
         }
         if (id == "rotate-menu") {
-            ids = {"rotate-right", "rotate-left", "rotate-180", "flip-horizontal", "flip-vertical"};
+            ids = {"rotate-right", "rotate-left", "rotate-180", "flip-horizontal", "flip-vertical", "numeric-transform"};
             texts = {tr("Rotate right 90°"), tr("Rotate left 90°"), tr("Rotate 180°"), tr("Flip horizontal"),
-                     tr("Flip vertical")};
+                     tr("Flip vertical"), tr("Transform") + "…"};
         }
         if (id == "outline-menu") {
             ids = {"outline-on", "outline-off"};

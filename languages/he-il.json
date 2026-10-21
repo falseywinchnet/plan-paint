@@ -908,5 +908,11 @@
   "Offset Y": "היסט Y",
   "Pink border: image bounds. Pixels outside are clipped.": "מסגרת ורודה: גבולות התמונה. פיקסלים מחוץ לה ייחתכו.",
   "Image changed. Reopen Effects.": "התמונה השתנתה. פתחו מחדש את האפקטים.",
-  "Invalid color": "צבע לא תקין"
+  "Invalid color": "צבע לא תקין",
+  "Sampling": "דגימה",
+  "Scale X %": "קנה מידה X %",
+  "Scale Y %": "קנה מידה Y %",
+  "CONV* point": "CONV* נקודה",
+  "CONV* minification": "CONV* הקטנה",
+  "CONV* area": "CONV* שטח"
 }

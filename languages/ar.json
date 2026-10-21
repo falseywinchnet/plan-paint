@@ -908,5 +908,11 @@
   "Offset Y": "الإزاحة Y",
   "Pink border: image bounds. Pixels outside are clipped.": "الإطار الوردي: حدود الصورة. تُقتطع البكسلات خارجها.",
   "Image changed. Reopen Effects.": "تغيرت الصورة. أعد فتح التأثيرات.",
-  "Invalid color": "لون غير صالح"
+  "Invalid color": "لون غير صالح",
+  "Sampling": "أخذ العينات",
+  "Scale X %": "مقياس X %",
+  "Scale Y %": "مقياس Y %",
+  "CONV* point": "CONV* نقطة",
+  "CONV* minification": "CONV* تصغير",
+  "CONV* area": "CONV* مساحة"
 }
