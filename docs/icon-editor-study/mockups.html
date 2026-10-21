@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Plan Paint — custodial icon interview</title>
-<link rel="stylesheet" href="interview.css?v=20261020-3">
+<link rel="stylesheet" href="interview.css?v=20261020-4">
 </head>
 <body>
 <header class="masthead">
 <p class="eyebrow">PLAN PAINT / CAPABILITY STUDY / OWNER INTERVIEW</p>
 <h1>Plan Paint icon editor interview</h1>
-<p class="intro">Scroll through 28 decisions. Compare the visible alternatives, select a direction, and add the details you want preserved.</p>
+<p class="intro">Scroll through 28 decisions. Visual questions show the alternatives before you choose. Each question has a comments field for your exact requirements.</p>
 <div class="givens">
 <span>GIVEN · Broad production + batches + browsing</span>
 <span>GIVEN · No layers</span>
@@ -30,7 +30,7 @@
 </div>
 <main class="layout">
 <aside class="guide">
-<p><strong>Compare → choose → comment.</strong> All questions are on this page. Blue preview windows illustrate proposed Plan Paint behavior; the round answer controls record your decisions.</p>
+<p><strong>Compare → choose → comment.</strong> All questions are on this page. Preview artwork illustrates proposed behavior, not measured filter or codec output. The round controls record your decisions.</p>
 <details class="interview-navigation"><summary>Sections, question map &amp; study notes</summary>
 <nav class="jump-links" aria-label="Interview sections">
 <a href="#chapter-1">01 · Document and representation model</a>
@@ -60,7 +60,7 @@
 <fieldset>
 <legend>Where should icon commands live?</legend>
 <p class="question-hint">Compare which commands stay visible while you paint an ICO, and which require a menu or a tab change.</p>
-<h3 class="answer-heading" id="answer-heading-Q01">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q01-A"><figcaption><label class="visual-choice"><input type="radio" name="Q01" value="A" aria-label="Q01 option A: Contextual Icon ribbon" aria-describedby="choice-copy-Q01-A" ><b>A</b><span>Contextual Icon ribbon</span><small>Recommended</small></label></figcaption><div class="visual"><div class="paint-specimen"><div class="paint-title">Plan Paint · sample.ico <span>− □ ×</span></div><div class="paint-tabs"><span>File</span><span>Home</span><span>View</span><b>Icon</b></div><div class="paint-ribbon"><div class="ribbon-group"><div><span class="ribbon-command tall"><i aria-hidden="true">▧</i><span>Generate<br>sizes…</span></span><span class="ribbon-command"><i aria-hidden="true">↔</i><span>Properties…</span></span></div><small>Images</small></div><div class="ribbon-group"><div><span class="ribbon-command"><i aria-hidden="true">▦</i><span>Palette…</span></span><span class="ribbon-command"><i aria-hidden="true">◐</i><span>Alpha view</span></span></div><small>Color & alpha</small></div><div class="ribbon-group"><div><span class="ribbon-command"><i aria-hidden="true">◫</i><span>Compare…</span></span><span class="ribbon-command"><i aria-hidden="true">▤</i><span>Batch…</span></span></div><small>Production</small></div></div><div class="paint-workspace"><div class="paint-images"><span>16 px</span><b>32 px</b><span>48 px</span><span>256 px</span></div><div class="paint-canvas"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><span>32 × 32 · current image</span></div></div><div class="paint-status">32 × 32 px <span>100%　− ━ +</span></div></div><p class="specimen-caption">Icon tools have their own tab; the Home ribbon stays intact.</p></div>
+<h3 class="answer-heading" id="answer-heading-Q01">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q01 preview overview"><a href="#preview-Q01-A"><b>A</b> Contextual Icon ribbon</a><a href="#preview-Q01-B"><b>B</b> Extend the Atlas ribbon</a><a href="#preview-Q01-C"><b>C</b> Menus with a small Icon ribbon</a><a class="comments-jump" href="#comment-Q01">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q01-A"><figcaption><label class="visual-choice"><input type="radio" name="Q01" value="A" aria-label="Q01 option A: Contextual Icon ribbon" aria-describedby="choice-copy-Q01-A" ><b>A</b><span>Contextual Icon ribbon</span><small>Recommended</small></label></figcaption><div class="visual"><div class="paint-specimen"><div class="paint-title">Plan Paint · sample.ico <span>− □ ×</span></div><div class="paint-tabs"><span>File</span><span>Home</span><span>View</span><b>Icon</b></div><div class="paint-ribbon"><div class="ribbon-group"><div><span class="ribbon-command tall"><i aria-hidden="true">▧</i><span>Generate<br>sizes…</span></span><span class="ribbon-command"><i aria-hidden="true">↔</i><span>Properties…</span></span></div><small>Images</small></div><div class="ribbon-group"><div><span class="ribbon-command"><i aria-hidden="true">▦</i><span>Palette…</span></span><span class="ribbon-command"><i aria-hidden="true">◐</i><span>Alpha view</span></span></div><small>Color & alpha</small></div><div class="ribbon-group"><div><span class="ribbon-command"><i aria-hidden="true">◫</i><span>Compare…</span></span><span class="ribbon-command"><i aria-hidden="true">▤</i><span>Batch…</span></span></div><small>Production</small></div></div><div class="paint-workspace"><div class="paint-images"><span>16 px</span><b>32 px</b><span>48 px</span><span>256 px</span></div><div class="paint-canvas"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><span>32 × 32 · current image</span></div></div><div class="paint-status">32 × 32 px <span>100%　− ━ +</span></div></div><p class="specimen-caption">Icon tools have their own tab; the Home ribbon stays intact.</p></div>
 <span class="placement"><b>Proposed location</b>Icon → production groups</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q01-A">Keep icon production commands on a contextual Icon tab when an ICO is open. Painting, paths, stamps, patterns and reshape stay on Home.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q01-A" aria-label="Enlarge Q01 preview A">Enlarge preview</button></div></figure>
 <figure class="preview-card" id="preview-Q01-B"><figcaption><label class="visual-choice"><input type="radio" name="Q01" value="B" aria-label="Q01 option B: Extend the Atlas ribbon" aria-describedby="choice-copy-Q01-B" ><b>B</b><span>Extend the Atlas ribbon</span><small>Alternative</small></label></figcaption><div class="visual"><div class="paint-specimen"><div class="paint-title">Plan Paint · sample.ico <span>− □ ×</span></div><div class="paint-tabs"><span>File</span><span>Home</span><span>View</span><b>Atlas</b></div><div class="paint-ribbon"><div class="ribbon-group"><div><span class="ribbon-command"><i aria-hidden="true">▦</i><span>Cell size…</span></span><span class="ribbon-command"><i aria-hidden="true">↔</i><span>Arrange…</span></span></div><small>Atlas cells</small></div><div class="ribbon-group"><div><span class="ribbon-command"><i aria-hidden="true">▧</i><span>Sizes…</span></span><span class="ribbon-command"><i aria-hidden="true">◐</i><span>Palette…</span></span></div><small>Icon images</small></div><div class="ribbon-group"><div><span class="ribbon-command"><i aria-hidden="true">↗</i><span>Export…</span></span><span class="ribbon-command"><i aria-hidden="true">◫</i><span>Compare…</span></span></div><small>Output</small></div></div><div class="paint-workspace"><div class="paint-images"><span>16 px</span><b>32 px</b><span>48 px</span><span>256 px</span></div><div class="paint-canvas"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><span>32 × 32 · current image</span></div></div><div class="paint-status">32 × 32 px <span>100%　− ━ +</span></div></div><p class="specimen-caption">Icon and strip commands share the Atlas command plane.</p></div>
 <span class="placement"><b>Proposed location</b>Atlas → icon groups</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q01-B">Extend Atlas with icon groups; no additional tab.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q01-B" aria-label="Enlarge Q01 preview B">Enlarge preview</button></div></figure>
@@ -91,7 +91,7 @@
 <fieldset>
 <legend>How should multiple sizes relate?</legend>
 <p class="question-hint">You retouch the 256 px image after hand-tuning the 16 px version. What should happen to the smaller image?</p>
-<h3 class="answer-heading" id="answer-heading-Q02">Choose a direction <span>Select one, or describe a combination in the comments.</span></h3><div class="options">
+<h3 class="answer-heading" id="answer-heading-Q02">Your choice <span>Select one, or describe a combination below.</span></h3><div class="options">
 <label class="option answer-option">
 <span class="option-heading">
 <input type="radio" name="Q02" value="A" aria-label="Q02 option A: Independent images" aria-describedby="choice-copy-Q02-A" >
@@ -141,89 +141,11 @@
 <fieldset>
 <legend>What does indexed-color editing mean?</legend>
 <p class="question-hint">Compare changing ordinary pixel colors with changing a palette entry that recolors every matching pixel.</p>
-<h3 class="answer-heading" id="answer-heading-Q03">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q03-A"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="A" aria-label="Q03 option A: RGBA with palette export" aria-describedby="choice-copy-Q03-A" ><b>A</b><span>RGBA with palette export</span><small>Recommended</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">RGBA editing → export preview</div>
-<div class="mini-body">
-<div class="mini-canvas ">
-<img src="../../assets/app-icon.png" alt="" width="64" height="64" style="">
-</div>
-<div class="chips">
-<span>32-bit working pixels</span>
-<span>16-color target</span>
-</div>
-<div class="mini-row">
-<span>Palette changes</span>
-<strong>Preview output</strong>
-</div>
-</div>
-<div class="mini-foot">Edits operate on colors; quantize on export</div>
-</div>
-</div>
+<h3 class="answer-heading" id="answer-heading-Q03">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q03 preview overview"><a href="#preview-Q03-A"><b>A</b> RGBA with palette export</a><a href="#preview-Q03-B"><b>B</b> Edit palette indices directly</a><a href="#preview-Q03-C"><b>C</b> RGBA output only</a><a class="comments-jump" href="#comment-Q03">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q03-A"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="A" aria-label="Q03 option A: RGBA with palette export" aria-describedby="choice-copy-Q03-A" ><b>A</b><span>RGBA with palette export</span><small>Recommended</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Working pixels → export preview</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#d5ba74"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>RGBA working image</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Folder using a reduced blue and gold palette"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#335f92"/><path d="M8 25h48l-5 27H13z" fill="#d5ba74"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Indexed output preview</b></div></div><div class="specimen-settings">Target: 16 colors · preview before export</div></div><p class="result-outcome">Changing the export palette leaves the working image unchanged.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Palette → Export preview</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q03-A">edit RGBA pixels; show target palette/depth as export settings with a preview. Preserve imported originals until explicitly converted or edited.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q03-A" aria-label="Enlarge Q03 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q03-B"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="B" aria-label="Q03 option B: Edit palette indices directly" aria-describedby="choice-copy-Q03-B" ><b>B</b><span>Edit palette indices directly</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Indexed image · 16 entries</div>
-<div class="mini-body">
-<div class="swatches">
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-</div>
-<div class="mini-row">
-<span>Selected index</span>
-<strong>03 · blue</strong>
-</div>
-<div class="mini-row">
-<span>Replace entry</span>
-<strong>03 · gold</strong>
-</div>
-<div class="recolor">
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<span>→</span>
-<b>
-</b>
-<b>
-</b>
-<b>
-</b>
-</div>
-</div>
-<div class="mini-foot">All pixels using entry 03 change together</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q03-B"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="B" aria-label="Q03 option B: Edit palette indices directly" aria-describedby="choice-copy-Q03-B" ><b>B</b><span>Edit palette indices directly</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Edit palette entry 03</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Before</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Folder with its blue pixels changed to ochre"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#a77c2a"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>After</b></div></div><div class="specimen-settings">Entry 03: <i style="--swatch:#367fac"></i> blue → <i style="--swatch:#a77c2a"></i> ochre</div></div><p class="result-outcome">Every pixel using entry 03 changes in the document.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Palette → Edit entries</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q03-B">True palette/index editing, including changing a palette entry to recolor every pixel using it.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q03-B" aria-label="Enlarge Q03 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q03-C"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="C" aria-label="Q03 option C: RGBA output only" aria-describedby="choice-copy-Q03-C" ><b>C</b><span>RGBA output only</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">RGBA authoring only</div>
-<div class="mini-body">
-<div class="mini-canvas ">
-<img src="../../assets/app-icon.png" alt="" width="64" height="64" style="">
-</div>
-<div class="mini-row">
-<span>Import 4-bit ICO</span>
-<strong>Convert to RGBA</strong>
-</div>
-<div class="mini-row">
-<span>Save representations</span>
-<strong>32-bit only</strong>
-</div>
-</div>
-<div class="mini-foot">Legacy depth is readable, not an output target</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q03-C"><figcaption><label class="visual-choice"><input type="radio" name="Q03" value="C" aria-label="Q03 option C: RGBA output only" aria-describedby="choice-copy-Q03-C" ><b>C</b><span>RGBA output only</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">RGBA working image → RGBA output</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Working image</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>32-bit output</b></div></div><div class="specimen-settings">RGBA only · no indexed output settings</div></div><p class="result-outcome">The output keeps full color and alpha; legacy depth is unavailable.</p></div></div>
 <span class="placement"><b>Proposed location</b>File → Save / Export</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q03-C">RGBA-only authoring; legacy palette images are importable but cannot be emitted.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q03-C" aria-label="Enlarge Q03 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q03" value="discuss"> Discuss / combine / propose another direction</label>
@@ -249,76 +171,11 @@
 <fieldset>
 <legend>How much palette control?</legend>
 <p class="question-hint">Compare per-image conversion, one palette shared by an asset family, and automatic conversion with no controls.</p>
-<h3 class="answer-heading" id="answer-heading-Q04">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q04-A"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="A" aria-label="Q04 option A: Per-image palette controls" aria-describedby="choice-copy-Q04-A" ><b>A</b><span>Per-image palette controls</span><small>Recommended</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Palette conversion</div>
-<div class="mini-body">
-<div class="chips">
-<span>Adaptive · 16 colors</span>
-<span>Dither: ordered ▾</span>
-</div>
-<div class="two">
-<div class="gradient">Source</div>
-<div class="gradient quantized">Preview</div>
-</div>
-</div>
-<div class="mini-foot">Each image gets its own palette</div>
-</div>
-</div>
+<h3 class="answer-heading" id="answer-heading-Q04">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q04 preview overview"><a href="#preview-Q04-A"><b>A</b> Per-image palette controls</a><a href="#preview-Q04-B"><b>B</b> Shared batch palettes</a><a href="#preview-Q04-C"><b>C</b> Automatic conversion</a><a class="comments-jump" href="#comment-Q04">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q04-A"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="A" aria-label="Q04 option A: Per-image palette controls" aria-describedby="choice-copy-Q04-A" ><b>A</b><span>Per-image palette controls</span><small>Recommended</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Per-image conversion preview</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Source colors</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Folder using a reduced palette"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#335f92"/><path d="M8 25h48l-5 27H13z" fill="#d5ba74"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Chosen palette</b></div></div><div class="specimen-settings">Colors: 16 ▾ · Dither: ordered ▾<br>Transparent index: reserve one</div></div><p class="result-outcome">Choose and inspect conversion separately for each image.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Palette…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q04-A">adaptive per-image palette, named dithering choice, transparent-index policy and side-by-side preview.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q04-A" aria-label="Enlarge Q04 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q04-B"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="B" aria-label="Q04 option B: Shared batch palettes" aria-describedby="choice-copy-Q04-B" ><b>B</b><span>Shared batch palettes</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Shared family palette</div>
-<div class="mini-body">
-<div class="swatches">
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-</div>
-<div class="chips">
-<span>open.ico</span>
-<span>save.ico</span>
-<span>print.ico</span>
-</div>
-<div class="mini-row">
-<span>Palette</span>
-<strong>toolbar.palette</strong>
-</div>
-<div class="mini-row">
-<span>Import / export</span>
-<strong>Available</strong>
-</div>
-</div>
-<div class="mini-foot">One chosen palette across the entire batch</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q04-B"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="B" aria-label="Q04 option B: Shared batch palettes" aria-describedby="choice-copy-Q04-B" ><b>B</b><span>Shared batch palettes</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">One palette across a family</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="First folder in the shared colors"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#335f92"/><path d="M8 25h48l-5 27H13z" fill="#d5ba74"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>open.ico</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Second folder in the same shared colors"><g opacity="1" transform="translate(6 6) scale(.8)"><path d="M8 12h14l5 5h29v35H8z" fill="#335f92"/><path d="M8 25h48l-5 27H13z" fill="#d5ba74"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>small-folder.ico</b></div></div><div class="specimen-settings">Shared palette: toolbar.palette<br><i style="--swatch:#335f92"></i><i style="--swatch:#d5ba74"></i><i style="--swatch:#ffffff"></i> · Import / Export</div></div><p class="result-outcome">Family members use the same entries; inspect each for lost colors.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Batch → Shared palette…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q04-B">A plus a shared palette across a batch and palette file import/export.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q04-B" aria-label="Enlarge Q04 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q04-C"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="C" aria-label="Q04 option C: Automatic conversion" aria-describedby="choice-copy-Q04-C" ><b>C</b><span>Automatic conversion</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Automatic palette</div>
-<div class="mini-body">
-<div class="mini-canvas ">
-<img src="../../assets/app-icon.png" alt="" width="64" height="64" style="">
-</div>
-<div class="mini-row">
-<span>Colors</span>
-<strong>Chosen automatically</strong>
-</div>
-<div class="mini-row">
-<span>Dither / mask</span>
-<strong>No exposed settings</strong>
-</div>
-</div>
-<div class="mini-foot">Single conversion command</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q04-C"><figcaption><label class="visual-choice"><input type="radio" name="Q04" value="C" aria-label="Q04 option C: Automatic conversion" aria-describedby="choice-copy-Q04-C" ><b>C</b><span>Automatic conversion</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Automatic conversion</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Source colors</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Automatically quantized folder"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#406f8c"/><path d="M8 25h48l-5 27H13z" fill="#c0b080"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Automatic output</b></div></div><div class="specimen-settings">Convert to 16 colors</div></div><p class="result-outcome">No palette or dithering controls. The chosen colors cannot be adjusted here.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Convert color depth</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q04-C">Automatic conversion only.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q04-C" aria-label="Enlarge Q04 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q04" value="discuss"> Discuss / combine / propose another direction</label>
@@ -344,7 +201,7 @@
 <fieldset>
 <legend>Which ICO delivery profiles?</legend>
 <p class="question-hint">Compare the sizes exposed by default, the optional legacy depths and the separation of experimental sizes.</p>
-<h3 class="answer-heading" id="answer-heading-Q05">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q05-A"><figcaption><label class="visual-choice"><input type="radio" name="Q05" value="A" aria-label="Q05 option A: Full production profiles" aria-describedby="choice-copy-Q05-A" ><b>A</b><span>Full production profiles</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q05">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q05 preview overview"><a href="#preview-Q05-A"><b>A</b> Full production profiles</a><a href="#preview-Q05-B"><b>B</b> Four-size starter profile</a><a href="#preview-Q05-C"><b>C</b> Experimental large sizes</a><a class="comments-jump" href="#comment-Q05">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q05-A"><figcaption><label class="visual-choice"><input type="radio" name="Q05" value="A" aria-label="Q05 option A: Full production profiles" aria-describedby="choice-copy-Q05-A" ><b>A</b><span>Full production profiles</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Modern profile</div>
 <div class="mini-body">
@@ -431,7 +288,7 @@
 <fieldset>
 <legend>How should generation choose a source?</legend>
 <p class="question-hint">A file has a hand-tuned 16 px image and a large source. Which source should produce a missing 32 px image?</p>
-<h3 class="answer-heading" id="answer-heading-Q06">Choose a direction <span>Select one, or describe a combination in the comments.</span></h3><div class="options">
+<h3 class="answer-heading" id="answer-heading-Q06">Your choice <span>Select one, or describe a combination below.</span></h3><div class="options">
 <label class="option answer-option">
 <span class="option-heading">
 <input type="radio" name="Q06" value="A" aria-label="Q06 option A: Choose the source explicitly" aria-describedby="choice-copy-Q06-A" >
@@ -481,7 +338,7 @@
 <fieldset>
 <legend>What protects manually edited sizes?</legend>
 <p class="question-hint">You generate new sizes in an icon that already contains hand-tuned artwork. Compare what prevents replacement.</p>
-<h3 class="answer-heading" id="answer-heading-Q07">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q07-A"><figcaption><label class="visual-choice"><input type="radio" name="Q07" value="A" aria-label="Q07 option A: Review each replacement" aria-describedby="choice-copy-Q07-A" ><b>A</b><span>Review each replacement</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q07">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q07 preview overview"><a href="#preview-Q07-A"><b>A</b> Review each replacement</a><a href="#preview-Q07-B"><b>B</b> Protect hand-tuned images</a><a href="#preview-Q07-C"><b>C</b> Replace and rely on Undo</a><a class="comments-jump" href="#comment-Q07">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q07-A"><figcaption><label class="visual-choice"><input type="radio" name="Q07" value="A" aria-label="Q07 option A: Review each replacement" aria-describedby="choice-copy-Q07-A" ><b>A</b><span>Review each replacement</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Replace representations</div>
 <div class="mini-body">
@@ -572,75 +429,11 @@
 <legend>Which alpha tools belong in the first release?</legend>
 <p class="question-hint">Compare seeing opacity, preserving it while painting, and editing it directly. The specimen shows why those differ.</p>
 
-<h3 class="answer-heading" id="answer-heading-Q08">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q08-A"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="A" aria-label="Q08 option A: Essential alpha tools" aria-describedby="choice-copy-Q08-A" ><b>A</b><span>Essential alpha tools</span><small>Recommended</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Transparency tools</div>
-<div class="mini-body">
-<div class="chips">
-<span>Color / Alpha</span>
-<span>Preserve alpha</span>
-<span>Opacity</span>
-</div>
-<div class="two">
-<div class="mini-canvas ">
-<img src="../../assets/app-icon.png" alt="" width="64" height="64" style="">
-</div>
-<div class="alpha-map">Alpha<br>0 → 255</div>
-</div>
-</div>
-<div class="mini-foot">Preview threshold and matte before export</div>
-</div>
-</div>
+<h3 class="answer-heading" id="answer-heading-Q08">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q08 preview overview"><a href="#preview-Q08-A"><b>A</b> Essential alpha tools</a><a href="#preview-Q08-B"><b>B</b> Alpha inspection and painting</a><a href="#preview-Q08-C"><b>C</b> Existing transparency tools</a><a class="comments-jump" href="#comment-Q08">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q08-A"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="A" aria-label="Q08 option A: Essential alpha tools" aria-describedby="choice-copy-Q08-A" ><b>A</b><span>Essential alpha tools</span><small>Recommended</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Color / Alpha inspection</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Folder shown at fifty-five percent opacity"><g opacity="0.55" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Color view</b></div><div><div class="result-image dark"><svg viewBox="0 0 64 64" role="img" aria-label="Gray opacity mask"><g opacity="0.55" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#ffffff"/><path d="M8 25h48l-5 27H13z" fill="#ffffff"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Alpha view</b></div></div><div class="specimen-settings">Preserve alpha ☑ · Opacity: 55%<br>Copy alpha · Paste alpha · Export threshold…</div></div><p class="result-outcome">Inspect opacity and preserve it while painting color.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Alpha</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q08-A">alpha view, alpha-preserving paint, opacity, copy/paste alpha, threshold/matte export preview.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q08-A" aria-label="Enlarge Q08 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q08-B"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="B" aria-label="Q08 option B: Alpha inspection and painting" aria-describedby="choice-copy-Q08-B" ><b>B</b><span>Alpha inspection and painting</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Alpha editing</div>
-<div class="mini-body">
-<div class="chips">
-<span>Color / Mask</span>
-<span>Copy alpha</span>
-<span>Paste alpha</span>
-</div>
-<div class="histogram">
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-<i>
-</i>
-</div>
-<div class="mini-row">
-<span>Mask brush opacity</span>
-<strong>128 / 255</strong>
-</div>
-</div>
-<div class="mini-foot">Explicit mask mode + numeric histogram</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q08-B"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="B" aria-label="Q08 option B: Alpha inspection and painting" aria-describedby="choice-copy-Q08-B" ><b>B</b><span>Alpha inspection and painting</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Paint opacity directly</div><div class="result-content"><div class="result-pair"><div><div class="result-image dark"><svg viewBox="0 0 64 64" role="img" aria-label="Gray opacity mask"><g opacity="0.55" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#ffffff"/><path d="M8 25h48l-5 27H13z" fill="#ffffff"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Before mask stroke</b></div><div><div class="result-image dark"><svg viewBox="0 0 64 64" role="img" aria-label="Opacity mask with a white painted region"><g opacity="0.55" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#ffffff"/><path d="M8 25h48l-5 27H13z" fill="#ffffff"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g><circle cx="44" cy="38" r="13" fill="white"/></svg></div><b>After mask stroke</b></div></div><div class="specimen-settings">Mode: Paint alpha · Brush: 255<br><span class="alpha-bars" aria-label="Illustrative alpha histogram">▁▂▆▃▂▁▁▃▇</span> 0 → 255</div></div><p class="result-outcome">A white mask stroke makes that region opaque; RGB is preserved.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Alpha → Inspect / Paint</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q08-B">A plus numeric alpha histogram and editable mask painting mode.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q08-B" aria-label="Enlarge Q08 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q08-C"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="C" aria-label="Q08 option C: Existing transparency tools" aria-describedby="choice-copy-Q08-C" ><b>C</b><span>Existing transparency tools</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Existing transparency</div>
-<div class="mini-body">
-<div class="mini-canvas ">
-<img src="../../assets/app-icon.png" alt="" width="64" height="64" style="">
-</div>
-<div class="mini-row">
-<span>Additional alpha tools</span>
-<strong>None</strong>
-</div>
-</div>
-<div class="mini-foot">Retain the current tool set</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q08-C"><figcaption><label class="visual-choice"><input type="radio" name="Q08" value="C" aria-label="Q08 option C: Existing transparency tools" aria-describedby="choice-copy-Q08-C" ><b>C</b><span>Existing transparency tools</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Existing color workspace</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Current canvas</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Current tools</b></div></div><div class="specimen-settings">Home → existing transparency controls</div></div><p class="result-outcome">Keep the current workflow; no new alpha inspection or mask mode.</p></div></div>
 <span class="placement"><b>Proposed location</b>Home → existing transparency tools</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q08-C">Preserve existing transparency tools only.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q08-C" aria-label="Enlarge Q08 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q08" value="discuss"> Discuss / combine / propose another direction</label>
@@ -650,7 +443,7 @@
 </label>
 <textarea id="comment-Q08" name="comment-Q08" rows="2" placeholder="Which alpha operations do you need? How should an alpha-editing mode announce itself?">
 </textarea></div>
-<figure class="decision-example"><figcaption><strong>See what an alpha view reveals</strong>The same independent specimen is shown as color and opacity. White in the alpha view means opaque; gray means partially transparent.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Color image</b><small>The small circle has partial opacity.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="96" height="96" fill="#111"/><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#ffffff"/><path d="M29 59 L47 30 L66 59 Z" fill="#ffffff"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Alpha inspection</b><small>RGB is hidden; opacity is visible.</small></div><div class="sample"><div class="sample-stage dark"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Dark proof</b><small>Partial opacity blends with the backdrop.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
+
 
 <div class="chosen-direction" id="chosen-Q08" role="status"></div>
 
@@ -667,7 +460,7 @@
 <fieldset>
 <legend>How should reusable objects work without layers?</legend>
 <p class="question-hint">Compare a temporary placement with an immediately committed stamp. The retained-object alternative conflicts with the no-layers requirement.</p>
-<h3 class="answer-heading" id="answer-heading-Q09">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q09-A"><figcaption><label class="visual-choice"><input type="radio" name="Q09" value="A" aria-label="Q09 option A: Preview, position, flatten" aria-describedby="choice-copy-Q09-A" ><b>A</b><span>Preview, position, flatten</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q09">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q09 preview overview"><a href="#preview-Q09-A"><b>A</b> Preview, position, flatten</a><a href="#preview-Q09-B"><b>B</b> Stamp immediately</a><a href="#preview-Q09-C"><b>C</b> Retain editable objects</a><a class="comments-jump" href="#comment-Q09">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q09-A"><figcaption><label class="visual-choice"><input type="radio" name="Q09" value="A" aria-label="Q09 option A: Preview, position, flatten" aria-describedby="choice-copy-Q09-A" ><b>A</b><span>Preview, position, flatten</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Temporary stamp placement</div>
 <div class="mini-body">
@@ -743,7 +536,7 @@
 <fieldset>
 <legend>Which effects should be promoted?</legend>
 <p class="question-hint">Compare a short effects menu, equal prominence for every filter, and keeping effects out of icon production.</p>
-<h3 class="answer-heading" id="answer-heading-Q10">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q10-A"><figcaption><label class="visual-choice"><input type="radio" name="Q10" value="A" aria-label="Q10 option A: Common effects first" aria-describedby="choice-copy-Q10-A" ><b>A</b><span>Common effects first</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q10">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q10 preview overview"><a href="#preview-Q10-A"><b>A</b> Common effects first</a><a href="#preview-Q10-B"><b>B</b> All filters at equal prominence</a><a href="#preview-Q10-C"><b>C</b> Keep effects separate</a><a class="comments-jump" href="#comment-Q10">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q10-A"><figcaption><label class="visual-choice"><input type="radio" name="Q10" value="A" aria-label="Q10 option A: Common effects first" aria-describedby="choice-copy-Q10-A" ><b>A</b><span>Common effects first</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Effects menu</div>
 <div class="mini-body">
@@ -819,7 +612,7 @@
 <legend>How should shadows handle clipping?</legend>
 <p class="question-hint">The shadow reaches beyond the bitmap. Compare clipping it, shrinking the artwork and changing the image dimensions.</p>
 
-<h3 class="answer-heading" id="answer-heading-Q11">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q11-A"><figcaption><label class="visual-choice"><input type="radio" name="Q11" value="A" aria-label="Q11 option A: Preserve dimensions; show clipping" aria-describedby="choice-copy-Q11-A" ><b>A</b><span>Preserve dimensions; show clipping</span><small>Recommended</small></label></figcaption><div class="visual"><div class="output-preview"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div></div>
+<h3 class="answer-heading" id="answer-heading-Q11">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q11 preview overview"><a href="#preview-Q11-A"><b>A</b> Preserve dimensions; show clipping</a><a href="#preview-Q11-B"><b>B</b> Shrink artwork automatically</a><a href="#preview-Q11-C"><b>C</b> Enlarge dimensions automatically</a><a class="comments-jump" href="#comment-Q11">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q11-A"><figcaption><label class="visual-choice"><input type="radio" name="Q11" value="A" aria-label="Q11 option A: Preserve dimensions; show clipping" aria-describedby="choice-copy-Q11-A" ><b>A</b><span>Preserve dimensions; show clipping</span><small>Recommended</small></label></figcaption><div class="visual"><div class="output-preview"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div></div>
 <span class="placement"><b>Proposed location</b>Effects → Shadow → Clipping preview</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q11-A">keep icon dimensions; preview clipped pixels and offer “Fit artwork within image” as a separate explicit operation.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q11-A" aria-label="Enlarge Q11 preview A">Enlarge preview</button></div></figure>
 <figure class="preview-card" id="preview-Q11-B"><figcaption><label class="visual-choice"><input type="radio" name="Q11" value="B" aria-label="Q11 option B: Shrink artwork automatically" aria-describedby="choice-copy-Q11-B" ><b>B</b><span>Shrink artwork automatically</span><small>Alternative</small></label></figcaption><div class="visual"><div class="output-preview"><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="translate(13 13) scale(.72)" opacity="1"><rect x="36" y="39" width="66" height="66" rx="13" fill="#18384f" opacity=".28"/><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div></div>
 <span class="placement"><b>Proposed location</b>Effects → Shadow → Auto-fit</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q11-B">Automatically shrink artwork to make room for the shadow.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q11-B" aria-label="Enlarge Q11 preview B">Enlarge preview</button></div></figure>
@@ -851,62 +644,11 @@
 <legend>What should “disabled” and “hot” mean?</legend>
 <p class="question-hint">Compare adjustable state recipes, one-click defaults and separate hand-painted files. Judge the whole size/depth family.</p>
 
-<h3 class="answer-heading" id="answer-heading-Q12">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q12-A"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="A" aria-label="Q12 option A: Adjustable state presets" aria-describedby="choice-copy-Q12-A" ><b>A</b><span>Adjustable state presets</span><small>Recommended</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">State recipe · adjustable</div>
-<div class="mini-body">
-<div class="states">
-<img src="../../assets/app-icon.png" alt="" width="40" height="40" style="">
-<img src="../../assets/app-icon.png" alt="" width="40" height="40" style="filter:grayscale(1);opacity:.55">
-<img src="../../assets/app-icon.png" alt="" width="40" height="40" style="filter:saturate(1.6)">
-</div>
-<div class="mini-row">
-<span>Disabled opacity</span>
-<strong>55%</strong>
-</div>
-<div class="mini-row">
-<span>Apply to</span>
-<strong>Every selected depth</strong>
-</div>
-</div>
-<div class="mini-foot">Illustrative states, not reference formulas</div>
-</div>
-</div>
+<h3 class="answer-heading" id="answer-heading-Q12">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q12 preview overview"><a href="#preview-Q12-A"><b>A</b> Adjustable state presets</a><a href="#preview-Q12-B"><b>B</b> Fixed one-click variants</a><a href="#preview-Q12-C"><b>C</b> Hand-authored states</a><a class="comments-jump" href="#comment-Q12">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q12-A"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="A" aria-label="Q12 option A: Adjustable state presets" aria-describedby="choice-copy-Q12-A" ><b>A</b><span>Adjustable state presets</span><small>Recommended</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Preview an adjustable family</div><div class="result-content"><div class="result-family"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Normal</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Reduced color and opacity disabled folder"><g opacity="0.55" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#727b85"/><path d="M8 25h48l-5 27H13z" fill="#a7adb3"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Disabled</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Saturated blue and yellow hot folder"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#125fbd"/><path d="M8 25h48l-5 27H13z" fill="#ffd33c"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Hot</b></div></div><div class="specimen-settings">Disabled: saturation 0% · opacity 55%<br>Hot: saturation 125% · brightness +10%</div></div><p class="result-outcome">Review all selected sizes, adjust the recipe, then export separate files.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → States…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q12-A">named adjustable presets, previewed across all selected sizes/depths, exported to separate files.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q12-A" aria-label="Enlarge Q12 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q12-B"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="B" aria-label="Q12 option B: Fixed one-click variants" aria-describedby="choice-copy-Q12-B" ><b>B</b><span>Fixed one-click variants</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">One-click states</div>
-<div class="mini-body">
-<div class="states">
-<img src="../../assets/app-icon.png" alt="" width="40" height="40" style="">
-<img src="../../assets/app-icon.png" alt="" width="40" height="40" style="filter:grayscale(1);opacity:.55">
-<img src="../../assets/app-icon.png" alt="" width="40" height="40" style="filter:saturate(1.6)">
-</div>
-<div class="chips">
-<span>Create disabled</span>
-<span>Create hot</span>
-</div>
-</div>
-<div class="mini-foot">Fixed defaults; no recipe controls</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q12-B"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="B" aria-label="Q12 option B: Fixed one-click variants" aria-describedby="choice-copy-Q12-B" ><b>B</b><span>Fixed one-click variants</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Generate with fixed defaults</div><div class="result-content"><div class="result-family"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Normal</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Reduced color and opacity disabled folder"><g opacity="0.55" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#727b85"/><path d="M8 25h48l-5 27H13z" fill="#a7adb3"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Disabled</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Saturated blue and yellow hot folder"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#125fbd"/><path d="M8 25h48l-5 27H13z" fill="#ffd33c"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Hot</b></div></div><div class="specimen-settings">Create disabled · Create hot</div></div><p class="result-outcome">One command per state. The recipe cannot be tuned in this workflow.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Hot / Disabled</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q12-B">Fixed one-click defaults modeled on the visual intent of the reference.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q12-B" aria-label="Enlarge Q12 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q12-C"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="C" aria-label="Q12 option C: Hand-authored states" aria-describedby="choice-copy-Q12-C" ><b>C</b><span>Hand-authored states</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Hand-authored states</div>
-<div class="mini-body">
-<div class="mini-canvas ">
-<img src="../../assets/app-icon.png" alt="" width="64" height="64" style="">
-</div>
-<div class="chips">
-<span>normal.ico</span>
-<span>disabled.ico</span>
-<span>hot.ico</span>
-</div>
-</div>
-<div class="mini-foot">Each state is painted as a separate document</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q12-C"><figcaption><label class="visual-choice"><input type="radio" name="Q12" value="C" aria-label="Q12 option C: Hand-authored states" aria-describedby="choice-copy-Q12-C" ><b>C</b><span>Hand-authored states</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Paint separate state files</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>normal.ico</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Hand-painted disabled variant with a crossed mark"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#476076"/><path d="M8 25h48l-5 27H13z" fill="#bbc7d4"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g><path d="M38 30l12 12m0-12L38 42" stroke="#6c4251" stroke-width="4"/></svg></div><b>disabled.ico</b></div></div><div class="specimen-settings">File → Save as… · retouch pixels by hand</div></div><p class="result-outcome">Each state can have different shapes. There is no automatic family generator.</p></div></div>
 <span class="placement"><b>Proposed location</b>File → Save as…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q12-C">Only hand-authored state artwork; no generated states.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q12-C" aria-label="Enlarge Q12 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q12" value="discuss"> Discuss / combine / propose another direction</label>
@@ -916,7 +658,7 @@
 </label>
 <textarea id="comment-Q12" name="comment-Q12" rows="2" placeholder="Describe disabled and hot appearances, preset controls and output naming.">
 </textarea></div>
-<figure class="decision-example"><figcaption><strong>Judge the state family together</strong>Illustrative appearance only. The choice is whether these transformations are adjustable, fixed, or authored by hand.</figcaption><div class="sample-row"><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#3984ae"/><path d="M29 59 L47 30 L66 59 Z" fill="#f7cd66"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Normal</b><small>Original colors.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity=".55"><rect x="13" y="13" width="66" height="66" rx="13" fill="#929da6"/><path d="M29 59 L47 30 L66 59 Z" fill="#c2c8cd"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Disabled</b><small>Reduced color and opacity.</small></div><div class="sample"><div class="sample-stage "><svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g transform="" opacity="1"><rect x="13" y="13" width="66" height="66" rx="13" fill="#1676b9"/><path d="M29 59 L47 30 L66 59 Z" fill="#ffb929"/><circle cx="84" cy="24" r="9" fill="white" opacity=".55"/></g></svg></div><b>Hot</b><small>Stronger blue and gold.</small></div></div><p class="example-note">Independent HTML/SVG specimen · proposed behavior, not an Axialis rendering.</p></figure>
+
 
 <div class="chosen-direction" id="chosen-Q12" role="status"></div>
 
@@ -933,68 +675,11 @@
 <fieldset>
 <legend>Should generic transforms gain precise controls?</legend>
 <p class="question-hint">Compare exact numeric transforms with simpler alignment controls and the existing Paint commands.</p>
-<h3 class="answer-heading" id="answer-heading-Q13">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q13-A"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="A" aria-label="Q13 option A: Precise transform controls" aria-describedby="choice-copy-Q13-A" ><b>A</b><span>Precise transform controls</span><small>Recommended</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Transform current image</div>
-<div class="mini-body">
-<div class="mini-row">
-<span>Offset X / Y</span>
-<strong>2 px / −1 px</strong>
-</div>
-<div class="mini-row">
-<span>Scale / angle</span>
-<strong>90% / 15°</strong>
-</div>
-<div class="mini-row">
-<span>Sampling</span>
-<strong>Nearest ▾</strong>
-</div>
-</div>
-<div class="mini-foot">Numeric controls reuse Paint transforms</div>
-</div>
-</div>
+<h3 class="answer-heading" id="answer-heading-Q13">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q13 preview overview"><a href="#preview-Q13-A"><b>A</b> Precise transform controls</a><a href="#preview-Q13-B"><b>B</b> Alignment and padding only</a><a href="#preview-Q13-C"><b>C</b> Keep current transforms</a><a class="comments-jump" href="#comment-Q13">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q13-A"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="A" aria-label="Q13 option A: Precise transform controls" aria-describedby="choice-copy-Q13-A" ><b>A</b><span>Precise transform controls</span><small>Recommended</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Numerical transform preview</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Before</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Folder rotated fifteen degrees and reduced to ninety percent"><g opacity="1" transform="translate(32 32) rotate(15) scale(.9) translate(-30 -33)"><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>After</b></div></div><div class="specimen-settings">X: +2 px · Y: −1 px<br>Scale: 90% · Angle: 15° · Sampling: nearest</div></div><p class="result-outcome">Fine adjustment of position, size and angle with explicit sampling.</p></div></div>
 <span class="placement"><b>Proposed location</b>Home → Transform…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q13-A">numeric offset, scale, angle and sampling, using existing Paint transform commands.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q13-A" aria-label="Enlarge Q13 preview A">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q13-B"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="B" aria-label="Q13 option B: Alignment and padding only" aria-describedby="choice-copy-Q13-B" ><b>B</b><span>Alignment and padding only</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Align artwork</div>
-<div class="mini-body">
-<div class="chips">
-<span>Left</span>
-<span>Center</span>
-<span>Right</span>
-<span>Top</span>
-<span>Middle</span>
-<span>Bottom</span>
-</div>
-<div class="mini-row">
-<span>Padding</span>
-<strong>2 px</strong>
-</div>
-<div class="mini-row">
-<span>Center relative to</span>
-<strong>Visible alpha ▾</strong>
-</div>
-</div>
-<div class="mini-foot">Alignment and padding only</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q13-B"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="B" aria-label="Q13 option B: Alignment and padding only" aria-describedby="choice-copy-Q13-B" ><b>B</b><span>Alignment and padding only</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Center visible artwork</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Folder placed off center"><g opacity="1" transform="translate(-7 -5)"><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Before</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>After</b></div></div><div class="specimen-settings">Align: center / middle · Padding: 2 px<br>Reference: visible alpha bounds</div></div><p class="result-outcome">Reposition and pad the artwork; no arbitrary-angle controls here.</p></div></div>
 <span class="placement"><b>Proposed location</b>Icon → Align / Padding…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q13-B">Add only icon-specific alignment/centering and padding.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q13-B" aria-label="Enlarge Q13 preview B">Enlarge preview</button></div></figure>
-<figure class="preview-card" id="preview-Q13-C"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="C" aria-label="Q13 option C: Keep current transforms" aria-describedby="choice-copy-Q13-C" ><b>C</b><span>Keep current transforms</span><small>Alternative</small></label></figcaption><div class="visual">
-<div class="mini">
-<div class="mini-title">Existing transform controls</div>
-<div class="mini-body">
-<div class="chips">
-<span>Rotate ▾</span>
-<span>Resize…</span>
-<span>Flip ▾</span>
-</div>
-<div class="mini-canvas ">
-<img src="../../assets/app-icon.png" alt="" width="64" height="64" style="">
-</div>
-</div>
-<div class="mini-foot">No additional precision controls</div>
-</div>
-</div>
+<figure class="preview-card" id="preview-Q13-C"><figcaption><label class="visual-choice"><input type="radio" name="Q13" value="C" aria-label="Q13 option C: Keep current transforms" aria-describedby="choice-copy-Q13-C" ><b>C</b><span>Keep current transforms</span><small>Alternative</small></label></figcaption><div class="visual"><div class="result-specimen"><div class="mini-title">Keep the current transform surface</div><div class="result-content"><div class="result-pair"><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Blue folder with gold face"><g opacity="1" transform=""><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>Before</b></div><div><div class="result-image"><svg viewBox="0 0 64 64" role="img" aria-label="Folder turned ninety degrees"><g opacity="1" transform="translate(64 0) rotate(90)"><path d="M8 12h14l5 5h29v35H8z" fill="#367fac"/><path d="M8 25h48l-5 27H13z" fill="#efc65e"/><path d="M19 34h24M19 41h17" stroke="white" stroke-width="3" stroke-linecap="round"/></g></svg></div><b>After</b></div></div><div class="specimen-settings">Home → Rotate 90° · Resize… · Flip</div></div><p class="result-outcome">Use the existing Paint commands with no added precision panel.</p></div></div>
 <span class="placement"><b>Proposed location</b>Home → current transforms</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q13-C">Keep current transform UI unchanged.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q13-C" aria-label="Enlarge Q13 preview C">Enlarge preview</button></div></figure></div>
 <label class="undecided">
 <input type="radio" name="Q13" value="discuss"> Discuss / combine / propose another direction</label>
@@ -1030,7 +715,7 @@
 <legend>Which comparison view?</legend>
 <p class="question-hint">Compare a separate proofing window, a permanent canvas-side preview and an exported sheet. Notice the canvas space each uses.</p>
 
-<h3 class="answer-heading" id="answer-heading-Q14">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q14-A"><figcaption><label class="visual-choice"><input type="radio" name="Q14" value="A" aria-label="Q14 option A: Separate comparison window" aria-describedby="choice-copy-Q14-A" ><b>A</b><span>Separate comparison window</span><small>Recommended</small></label></figcaption><div class="visual"><div class="paint-specimen"><div class="paint-title">Plan Paint · sample.ico</div><div class="paint-tabs"><span>File</span><span>Home</span><span>View</span><b>Icon</b></div><div class="proof-layout"><div class="proof-owner"><div class="paint-canvas"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><span>32 × 32 · current image</span></div></div><div class="proof-popup"><b>Compare · sample.ico <span>×</span></b><div><div class="proof light"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><small>Light</small></div><div class="proof dark"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><small>Dark</small></div></div></div></div><div class="paint-status">Editing canvas <span>100%</span></div></div><p class="specimen-caption">An auxiliary window floats over the full-width canvas and can be moved.</p></div>
+<h3 class="answer-heading" id="answer-heading-Q14">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q14 preview overview"><a href="#preview-Q14-A"><b>A</b> Separate comparison window</a><a href="#preview-Q14-B"><b>B</b> Persistent canvas-side preview</a><a href="#preview-Q14-C"><b>C</b> Export a contact sheet</a><a class="comments-jump" href="#comment-Q14">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q14-A"><figcaption><label class="visual-choice"><input type="radio" name="Q14" value="A" aria-label="Q14 option A: Separate comparison window" aria-describedby="choice-copy-Q14-A" ><b>A</b><span>Separate comparison window</span><small>Recommended</small></label></figcaption><div class="visual"><div class="paint-specimen"><div class="paint-title">Plan Paint · sample.ico</div><div class="paint-tabs"><span>File</span><span>Home</span><span>View</span><b>Icon</b></div><div class="proof-layout"><div class="proof-owner"><div class="paint-canvas"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><span>32 × 32 · current image</span></div></div><div class="proof-popup"><b>Compare · sample.ico <span>×</span></b><div><div class="proof light"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><small>Light</small></div><div class="proof dark"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><small>Dark</small></div></div></div></div><div class="paint-status">Editing canvas <span>100%</span></div></div><p class="specimen-caption">An auxiliary window floats over the full-width canvas and can be moved.</p></div>
 <span class="placement"><b>Proposed location</b>Icon → Compare…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q14-A">owned popup with actual-size rows on light, dark, checker and chosen color; optional enlarged pixel inspection.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q14-A" aria-label="Enlarge Q14 preview A">Enlarge preview</button></div></figure>
 <figure class="preview-card" id="preview-Q14-B"><figcaption><label class="visual-choice"><input type="radio" name="Q14" value="B" aria-label="Q14 option B: Persistent canvas-side preview" aria-describedby="choice-copy-Q14-B" ><b>B</b><span>Persistent canvas-side preview</span><small>Alternative</small></label></figcaption><div class="visual"><div class="paint-specimen"><div class="paint-title">Plan Paint · sample.ico</div><div class="paint-tabs"><span>File</span><span>Home</span><span>View</span><b>Icon</b></div><div class="proof-layout"><div class="proof-docked"><div class="proof-owner"><div class="paint-canvas"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><span>32 × 32 · current image</span></div></div><aside><b>Preview</b><div class="proof light"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><small>Light</small></div><div class="proof dark"><img src="../../assets/app-icon.png" width="56" height="56" alt=""><small>Dark</small></div></aside></div></div><div class="paint-status">Editing canvas <span>100%</span></div></div><p class="specimen-caption">A persistent preview column reduces the editable canvas width.</p></div>
 <span class="placement"><b>Proposed location</b>View → Icon preview</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q14-B">Persistent preview region beside the canvas.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q14-B" aria-label="Enlarge Q14 preview B">Enlarge preview</button></div></figure>
@@ -1062,7 +747,7 @@
 <fieldset>
 <legend>How should contact sheets be delivered?</legend>
 <p class="question-hint">Compare an editable bitmap, a browsable HTML/PNG bundle and a printable page. The delivered artifact is different in each case.</p>
-<h3 class="answer-heading" id="answer-heading-Q15">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q15-A"><figcaption><label class="visual-choice"><input type="radio" name="Q15" value="A" aria-label="Q15 option A: Editable image or PNG" aria-describedby="choice-copy-Q15-A" ><b>A</b><span>Editable image or PNG</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q15">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q15 preview overview"><a href="#preview-Q15-A"><b>A</b> Editable image or PNG</a><a href="#preview-Q15-B"><b>B</b> PNG with an HTML index</a><a href="#preview-Q15-C"><b>C</b> Print-oriented pages</a><a class="comments-jump" href="#comment-Q15">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q15-A"><figcaption><label class="visual-choice"><input type="radio" name="Q15" value="A" aria-label="Q15 option A: Editable image or PNG" aria-describedby="choice-copy-Q15-A" ><b>A</b><span>Editable image or PNG</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">New image · contact sheet</div>
 <div class="mini-body">
@@ -1138,7 +823,7 @@
 <fieldset>
 <legend>Which validation feedback is useful?</legend>
 <p class="question-hint">Compare actionable production findings, optional visual advice and a file-validity check alone.</p>
-<h3 class="answer-heading" id="answer-heading-Q16">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q16-A"><figcaption><label class="visual-choice"><input type="radio" name="Q16" value="A" aria-label="Q16 option A: Production checks" aria-describedby="choice-copy-Q16-A" ><b>A</b><span>Production checks</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q16">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q16 preview overview"><a href="#preview-Q16-A"><b>A</b> Production checks</a><a href="#preview-Q16-B"><b>B</b> Checks plus visual heuristics</a><a href="#preview-Q16-C"><b>C</b> File validity only</a><a class="comments-jump" href="#comment-Q16">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q16-A"><figcaption><label class="visual-choice"><input type="radio" name="Q16" value="A" aria-label="Q16 option A: Production checks" aria-describedby="choice-copy-Q16-A" ><b>A</b><span>Production checks</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Validation report</div>
 <div class="mini-body">
@@ -1221,7 +906,7 @@
 <fieldset>
 <legend>What is the asset library?</legend>
 <p class="question-hint">Compare browsing files where they already live with copying them into a managed collection. Packaged proprietary libraries stay outside scope.</p>
-<h3 class="answer-heading" id="answer-heading-Q17">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q17-A"><figcaption><label class="visual-choice"><input type="radio" name="Q17" value="A" aria-label="Q17 option A: Browse ordinary folders" aria-describedby="choice-copy-Q17-A" ><b>A</b><span>Browse ordinary folders</span><small>Recommended</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Browse assets · ordinary folders</div><div class="mini-body"><div class="address-example">Artwork / Toolbar /</div><div class="browser-specimen"><aside><b>Bookmarks</b><span>Toolbar</span><span>Stamps</span><span>Recent</span></aside><div><div class="search-example">Search name…　 ICO ▾</div><div class="asset-grid"><div class="asset-tile current"><img src="../../assets/app-icon.png" alt="" width="32" height="32"><b>open.ico</b><small>32 × 32 · RGBA</small></div><div class="asset-tile"><img src="../../assets/app-icon.png" alt="" width="32" height="32"><b>save.ico</b><small>32 × 32 · RGBA</small></div><div class="asset-tile"><img src="../../assets/app-icon.png" alt="" width="32" height="32"><b>print.ico</b><small>32 × 32 · RGBA</small></div><div class="asset-tile"><img src="../../assets/app-icon.png" alt="" width="32" height="32"><b>help.ico</b><small>32 × 32 · RGBA</small></div></div></div></div><div class="sample-actions"><span>Open</span><span>Use as stamp</span><span>Add to batch</span></div></div><div class="mini-foot">Selected artwork stays at Artwork/Toolbar/open.ico.</div></div></div>
+<h3 class="answer-heading" id="answer-heading-Q17">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q17 preview overview"><a href="#preview-Q17-A"><b>A</b> Browse ordinary folders</a><a href="#preview-Q17-B"><b>B</b> Copy into a managed collection</a><a href="#preview-Q17-C"><b>C</b> Packaged proprietary library</a><a class="comments-jump" href="#comment-Q17">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q17-A"><figcaption><label class="visual-choice"><input type="radio" name="Q17" value="A" aria-label="Q17 option A: Browse ordinary folders" aria-describedby="choice-copy-Q17-A" ><b>A</b><span>Browse ordinary folders</span><small>Recommended</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Browse assets · ordinary folders</div><div class="mini-body"><div class="address-example">Artwork / Toolbar /</div><div class="browser-specimen"><aside><b>Bookmarks</b><span>Toolbar</span><span>Stamps</span><span>Recent</span></aside><div><div class="search-example">Search name…　 ICO ▾</div><div class="asset-grid"><div class="asset-tile current"><img src="../../assets/app-icon.png" alt="" width="32" height="32"><b>open.ico</b><small>32 × 32 · RGBA</small></div><div class="asset-tile"><img src="../../assets/app-icon.png" alt="" width="32" height="32"><b>save.ico</b><small>32 × 32 · RGBA</small></div><div class="asset-tile"><img src="../../assets/app-icon.png" alt="" width="32" height="32"><b>print.ico</b><small>32 × 32 · RGBA</small></div><div class="asset-tile"><img src="../../assets/app-icon.png" alt="" width="32" height="32"><b>help.ico</b><small>32 × 32 · RGBA</small></div></div></div></div><div class="sample-actions"><span>Open</span><span>Use as stamp</span><span>Add to batch</span></div></div><div class="mini-foot">Selected artwork stays at Artwork/Toolbar/open.ico.</div></div></div>
 
 <span class="placement"><b>Proposed location</b>File → Browse assets…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q17-A">ordinary folders, bookmarks and an optional open metadata index; owned browser popup.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q17-A" aria-label="Enlarge Q17 preview A">Enlarge preview</button></div></figure>
 <figure class="preview-card" id="preview-Q17-B"><figcaption><label class="visual-choice"><input type="radio" name="Q17" value="B" aria-label="Q17 option B: Copy into a managed collection" aria-describedby="choice-copy-Q17-B" ><b>B</b><span>Copy into a managed collection</span><small>Alternative</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Import into collection</div><div class="mini-body"><div class="collection-flow"><div><small>Source</small><b>Downloads/open.ico</b><img src="../../assets/app-icon.png" alt="" width="32" height="32"></div><strong>↓ copy</strong><div><small>Collection root</small><b>Artwork/Library/open.ico</b><img src="../../assets/app-icon.png" alt="" width="32" height="32"></div></div><div class="sample-actions"><span>Import copy</span><span>Cancel</span></div></div><div class="mini-foot">Two files now exist. Editing the collection copy leaves the downloaded original unchanged.</div></div></div>
@@ -1269,7 +954,7 @@
 <fieldset>
 <legend>How much file management belongs here?</legend>
 <p class="question-hint">You find an asset in the browser. Should the next actions focus on artwork, or also change files and folders?</p>
-<h3 class="answer-heading" id="answer-heading-Q18">Choose a direction <span>Select one, or describe a combination in the comments.</span></h3><div class="options">
+<h3 class="answer-heading" id="answer-heading-Q18">Your choice <span>Select one, or describe a combination below.</span></h3><div class="options">
 <label class="option answer-option">
 <span class="option-heading">
 <input type="radio" name="Q18" value="A" aria-label="Q18 option A: Artwork-focused browsing" aria-describedby="choice-copy-Q18-A" >
@@ -1319,7 +1004,7 @@
 <fieldset>
 <legend>What should a batch window expose?</legend>
 <p class="question-hint">Compare seeing the entire output manifest, stepping through a wizard and starting immediately from settings.</p>
-<h3 class="answer-heading" id="answer-heading-Q19">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q19-A"><figcaption><label class="visual-choice"><input type="radio" name="Q19" value="A" aria-label="Q19 option A: One reviewable production window" aria-describedby="choice-copy-Q19-A" ><b>A</b><span>One reviewable production window</span><small>Recommended</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Batch production · review before writing</div><div class="mini-body"><div class="job-fields"><span>3 inputs</span><span>ICO · 16 / 32 / 48</span><span>Output: out/</span></div><div class="manifest-table"><div><b>Input</b><b>Planned output</b></div><div><span>open.png</span><span>out/open.ico ✓</span></div><div class="collision"><span>save.png</span><span>out/save.ico · exists</span></div><div><span>print.png</span><span>out/print.ico ✓</span></div></div><div class="mini-warning">save.ico already exists. Choose Skip, Rename or Replace.</div><div class="sample-actions"><span>Resolve collision…</span><span class="unavailable">Run · unavailable</span></div></div><div class="mini-foot">Each file and collision is visible before the job starts.</div></div></div>
+<h3 class="answer-heading" id="answer-heading-Q19">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q19 preview overview"><a href="#preview-Q19-A"><b>A</b> One reviewable production window</a><a href="#preview-Q19-B"><b>B</b> A guided production wizard</a><a href="#preview-Q19-C"><b>C</b> Settings, then run immediately</a><a class="comments-jump" href="#comment-Q19">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q19-A"><figcaption><label class="visual-choice"><input type="radio" name="Q19" value="A" aria-label="Q19 option A: One reviewable production window" aria-describedby="choice-copy-Q19-A" ><b>A</b><span>One reviewable production window</span><small>Recommended</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Batch production · review before writing</div><div class="mini-body"><div class="job-fields"><span>3 inputs</span><span>ICO · 16 / 32 / 48</span><span>Output: out/</span></div><div class="manifest-table"><div><b>Input</b><b>Planned output</b></div><div><span>open.png</span><span>out/open.ico ✓</span></div><div class="collision"><span>save.png</span><span>out/save.ico · exists</span></div><div><span>print.png</span><span>out/print.ico ✓</span></div></div><div class="mini-warning">save.ico already exists. Choose Skip, Rename or Replace.</div><div class="sample-actions"><span>Resolve collision…</span><span class="unavailable">Run · unavailable</span></div></div><div class="mini-foot">Each file and collision is visible before the job starts.</div></div></div>
 
 <span class="placement"><b>Proposed location</b>Icon → Batch production…</span><div class="visual-consequence"><span class="option-copy" id="choice-copy-Q19-A">source list, operation, profile, per-target manifest, warnings, destination, collision policy, progress and report.</span></div><div class="preview-actions"><button type="button" data-inspect-preview="preview-Q19-A" aria-label="Enlarge Q19 preview A">Enlarge preview</button></div></figure>
 <figure class="preview-card" id="preview-Q19-B"><figcaption><label class="visual-choice"><input type="radio" name="Q19" value="B" aria-label="Q19 option B: A guided production wizard" aria-describedby="choice-copy-Q19-B" ><b>B</b><span>A guided production wizard</span><small>Alternative</small></label></figcaption><div class="visual"><div class="mini"><div class="mini-title">Batch wizard · step 3 of 3</div><div class="mini-body"><div class="wizard-steps"><span>1 Sources</span><span>2 Profile</span><b>3 Review</b></div><div class="manifest-table"><div><b>Input</b><b>Planned output</b></div><div><span>open.png</span><span>out/open.ico ✓</span></div><div class="collision"><span>save.png</span><span>out/save.ico · exists</span></div><div><span>print.png</span><span>out/print.ico ✓</span></div></div><div class="mini-warning">1 collision needs a decision.</div><div class="sample-actions"><span>Back</span><span>Review collision…</span><span class="unavailable">Finish</span></div></div><div class="mini-foot">The same checks appear in separate steps; Back preserves previous settings.</div></div></div>
@@ -1375,7 +1060,7 @@
 <fieldset>
 <legend>Default destination and collisions?</legend>
 <p class="question-hint">Compare the actual destination paths and the fate of an existing file with the same name.</p>
-<h3 class="answer-heading" id="answer-heading-Q20">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q20-A"><figcaption><label class="visual-choice"><input type="radio" name="Q20" value="A" aria-label="Q20 option A: Separate output folder" aria-describedby="choice-copy-Q20-A" ><b>A</b><span>Separate output folder</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q20">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q20 preview overview"><a href="#preview-Q20-A"><b>A</b> Separate output folder</a><a href="#preview-Q20-B"><b>B</b> Beside sources with suffixes</a><a href="#preview-Q20-C"><b>C</b> Replace the source files</a><a class="comments-jump" href="#comment-Q20">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q20-A"><figcaption><label class="visual-choice"><input type="radio" name="Q20" value="A" aria-label="Q20 option A: Separate output folder" aria-describedby="choice-copy-Q20-A" ><b>A</b><span>Separate output folder</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">New output folder</div>
 <div class="mini-body">
@@ -1438,7 +1123,7 @@
 <fieldset>
 <legend>How should normalization behave?</legend>
 <p class="question-hint">Input contains 16/24/32 px images; the target is 16/32/48. Compare whether the 24 px image survives.</p>
-<h3 class="answer-heading" id="answer-heading-Q21">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q21-A"><figcaption><label class="visual-choice"><input type="radio" name="Q21" value="A" aria-label="Q21 option A: Separate add and exact modes" aria-describedby="choice-copy-Q21-A" ><b>A</b><span>Separate add and exact modes</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q21">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q21 preview overview"><a href="#preview-Q21-A"><b>A</b> Separate add and exact modes</a><a href="#preview-Q21-B"><b>B</b> Always enforce the exact profile</a><a href="#preview-Q21-C"><b>C</b> Only add missing sizes</a><a class="comments-jump" href="#comment-Q21">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q21-A"><figcaption><label class="visual-choice"><input type="radio" name="Q21" value="A" aria-label="Q21 option A: Separate add and exact modes" aria-describedby="choice-copy-Q21-A" ><b>A</b><span>Separate add and exact modes</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Choose normalization mode</div>
 <div class="mini-body">
@@ -1518,7 +1203,7 @@
 <fieldset>
 <legend>Which batch operations are first-class?</legend>
 <p class="question-hint">Broad production is already in scope. Choose which operations deserve complete batch workflows first.</p>
-<h3 class="answer-heading" id="answer-heading-Q22">Choose a direction <span>Select one, or describe a combination in the comments.</span></h3><div class="options">
+<h3 class="answer-heading" id="answer-heading-Q22">Your choice <span>Select one, or describe a combination below.</span></h3><div class="options">
 <label class="option answer-option">
 <span class="option-heading">
 <input type="radio" name="Q22" value="A" aria-label="Q22 option A: Conversion, states and stamping" aria-describedby="choice-copy-Q22-A" >
@@ -1568,7 +1253,7 @@
 <fieldset>
 <legend>How should toolbar strips integrate?</legend>
 <p class="question-hint">Compare reusing Atlas cell editing with introducing another document mode. Different resolutions are not automatically successive strip cells.</p>
-<h3 class="answer-heading" id="answer-heading-Q23">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q23-A"><figcaption><label class="visual-choice"><input type="radio" name="Q23" value="A" aria-label="Q23 option A: Reuse Atlas for strips" aria-describedby="choice-copy-Q23-A" ><b>A</b><span>Reuse Atlas for strips</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q23">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q23 preview overview"><a href="#preview-Q23-A"><b>A</b> Reuse Atlas for strips</a><a href="#preview-Q23-B"><b>B</b> Separate strip document mode</a><a href="#preview-Q23-C"><b>C</b> Defer toolbar strips</a><a class="comments-jump" href="#comment-Q23">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q23-A"><figcaption><label class="visual-choice"><input type="radio" name="Q23" value="A" aria-label="Q23 option A: Reuse Atlas for strips" aria-describedby="choice-copy-Q23-A" ><b>A</b><span>Reuse Atlas for strips</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Atlas · toolbar strip</div>
 <div class="mini-body">
@@ -1661,7 +1346,7 @@
 <fieldset>
 <legend>Platform coverage?</legend>
 <p class="question-hint">Which output platforms need independently tested delivery in the first icon release?</p>
-<h3 class="answer-heading" id="answer-heading-Q24">Choose a direction <span>Select one, or describe a combination in the comments.</span></h3><div class="options">
+<h3 class="answer-heading" id="answer-heading-Q24">Your choice <span>Select one, or describe a combination below.</span></h3><div class="options">
 <label class="option answer-option">
 <span class="option-heading">
 <input type="radio" name="Q24" value="A" aria-label="Q24 option A: ICO and PNG first" aria-describedby="choice-copy-Q24-A" >
@@ -1711,7 +1396,7 @@
 <fieldset>
 <legend>SVG input?</legend>
 <p class="question-hint">An SVG must produce several bitmap sizes. Choose whether each size is rasterized from the source or resampled from one bitmap.</p>
-<h3 class="answer-heading" id="answer-heading-Q25">Choose a direction <span>Select one, or describe a combination in the comments.</span></h3><div class="options">
+<h3 class="answer-heading" id="answer-heading-Q25">Your choice <span>Select one, or describe a combination below.</span></h3><div class="options">
 <label class="option answer-option">
 <span class="option-heading">
 <input type="radio" name="Q25" value="A" aria-label="Q25 option A: Rasterize at every target size" aria-describedby="choice-copy-Q25-A" >
@@ -1761,7 +1446,7 @@
 <fieldset>
 <legend>External-app integration?</legend>
 <p class="question-hint">An image changes in another application while Plan Paint has it open. Choose the integration scope.</p>
-<h3 class="answer-heading" id="answer-heading-Q26">Choose a direction <span>Select one, or describe a combination in the comments.</span></h3><div class="options">
+<h3 class="answer-heading" id="answer-heading-Q26">Your choice <span>Select one, or describe a combination below.</span></h3><div class="options">
 <label class="option answer-option">
 <span class="option-heading">
 <input type="radio" name="Q26" value="A" aria-label="Q26 option A: Files and explicit reload" aria-describedby="choice-copy-Q26-A" >
@@ -1811,7 +1496,7 @@
 <fieldset>
 <legend>Resource extraction and application patching?</legend>
 <p class="question-hint">Choose whether resource extraction or executable patching belongs in a later, separately specified workflow.</p>
-<h3 class="answer-heading" id="answer-heading-Q27">Choose a direction <span>Select one, or describe a combination in the comments.</span></h3><div class="options">
+<h3 class="answer-heading" id="answer-heading-Q27">Your choice <span>Select one, or describe a combination below.</span></h3><div class="options">
 <label class="option answer-option">
 <span class="option-heading">
 <input type="radio" name="Q27" value="A" aria-label="Q27 option A: Defer extraction and patching" aria-describedby="choice-copy-Q27-A" >
@@ -1861,7 +1546,7 @@
 <fieldset>
 <legend>Which ribbon rendering variant should the study show?</legend>
 <p class="question-hint">Compare command-face construction while keeping selection, keyboard focus and the Paint ribbon structure distinct.</p>
-<h3 class="answer-heading" id="answer-heading-Q28">Choose a direction <span>Select the round control on a preview. Use comments to combine directions.</span></h3><div class="preview-gallery"><figure class="preview-card" id="preview-Q28-A"><figcaption><label class="visual-choice"><input type="radio" name="Q28" value="A" aria-label="Q28 option A: Follow the selected theme" aria-describedby="choice-copy-Q28-A" ><b>A</b><span>Follow the selected theme</span><small>Recommended</small></label></figcaption><div class="visual">
+<h3 class="answer-heading" id="answer-heading-Q28">Compare the alternatives <span>Each preview has its own answer control.</span></h3><nav class="choice-overview" aria-label="Q28 preview overview"><a href="#preview-Q28-A"><b>A</b> Follow the selected theme</a><a href="#preview-Q28-B"><b>B</b> Smooth raised commands</a><a href="#preview-Q28-C"><b>C</b> Dithered raised commands</a><a class="comments-jump" href="#comment-Q28">↓ Your comments</a></nav><div class="preview-gallery"><figure class="preview-card" id="preview-Q28-A"><figcaption><label class="visual-choice"><input type="radio" name="Q28" value="A" aria-label="Q28 option A: Follow the selected theme" aria-describedby="choice-copy-Q28-A" ><b>A</b><span>Follow the selected theme</span><small>Recommended</small></label></figcaption><div class="visual">
 <div class="mini">
 <div class="mini-title">Theme-selected rendering</div>
 <div class="mini-body">
