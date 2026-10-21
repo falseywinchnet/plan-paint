@@ -894,5 +894,19 @@
   "Target images": "ہدف تصاویر",
   "Upscaling": "بڑا کرنا",
   "Open as new image": "نئی تصویر کے طور پر کھولیں",
-  "New output folder": "نیا آؤٹ پٹ فولڈر"
+  "New output folder": "نیا آؤٹ پٹ فولڈر",
+  "Effects": "اثرات",
+  "Brightness / contrast": "چمک / کنٹراسٹ",
+  "Hue / saturation": "رنگت / سیچوریشن",
+  "Grayscale": "سرمئی رنگ",
+  "Contrast %": "کنٹراسٹ %",
+  "Shadow": "سایہ",
+  "Fit artwork within image": "تصویر کے اندر فن پارہ فٹ کریں",
+  "Radius (px)": "رداس (px)",
+  "Strength %": "شدت %",
+  "Offset X": "X منتقلی",
+  "Offset Y": "Y منتقلی",
+  "Pink border: image bounds. Pixels outside are clipped.": "گلابی سرحد: تصویر کی حدود۔ باہر کے پکسل کٹ جائیں گے۔",
+  "Image changed. Reopen Effects.": "تصویر بدل گئی۔ اثرات دوبارہ کھولیں۔",
+  "Invalid color": "غلط رنگ"
 }

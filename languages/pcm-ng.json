@@ -894,5 +894,19 @@
   "Target images": "Target images",
   "Upscaling": "Make bigger",
   "Open as new image": "Open as new image",
-  "New output folder": "New output folder"
+  "New output folder": "New output folder",
+  "Effects": "Effects",
+  "Brightness / contrast": "Brightness / contrast",
+  "Hue / saturation": "Hue / saturation",
+  "Grayscale": "Gray shades",
+  "Contrast %": "Contrast %",
+  "Shadow": "Shadow",
+  "Fit artwork within image": "Fit artwork inside image",
+  "Radius (px)": "Radius (px)",
+  "Strength %": "Strength %",
+  "Offset X": "X shift",
+  "Offset Y": "Y shift",
+  "Pink border: image bounds. Pixels outside are clipped.": "Pink border na image boundary. Pixels outside go cut off.",
+  "Image changed. Reopen Effects.": "Image don change. Open Effects again.",
+  "Invalid color": "Color no valid"
 }

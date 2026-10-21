@@ -1376,7 +1376,7 @@ void icon_ribbon_contracts() {
     const gf::Rect panel = (*window.find("icon-panel")).absolute_bounds();
     const char* commands[] = {"icon-sizes",       "icon-gallery", "icon-hotspot", "icon-palette",
                               "icon-alpha-tools", "icon-states",  "icon-compare", "icon-export",
-                              "icon-previous",    "icon-next",    "icon-batch"};
+                              "icon-previous",    "icon-next",    "icon-batch", "icon-effects"};
     for (const char* id : commands) {
         const gf::Rect bounds = (*window.find(id)).absolute_bounds();
         require(bounds.x >= panel.x && bounds.y >= panel.y && bounds.right() <= panel.right() &&
@@ -1959,6 +1959,53 @@ void icon_palette_contracts() {
     std::filesystem::remove(palette_path);
 }
 
+void icon_effect_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    paint::ImageContainer source;
+    source.kind = paint::ContainerKind::Cursor;
+    paint::IconFrame first, second;
+    first.image.reset(16, 16, {0,0,0,0}); first.image.set(14,8,{240,100,40,255});
+    first.hotspot_x = 3; first.hotspot_y = 4;
+    second.image.reset(32,32,{20,90,170,255});
+    source.frames = {first, second};
+    editor.open_container(source, ""); editor.select_frame(0, false);
+    const std::size_t history = editor.document.undo_history.size();
+    editor.execute("atlas-effects");
+    const std::shared_ptr<gf::ComboBox> choice = std::dynamic_pointer_cast<gf::ComboBox>(window.find("effect-choice"));
+    require(bool(choice) && !(*window.find("effect-apply")).enabled(), "neutral effect opens without an edit");
+    (*choice).set_selected_index(6);
+    const std::shared_ptr<gf::TextBox> color = std::dynamic_pointer_cast<gf::TextBox>(window.find("effect-color"));
+    const std::shared_ptr<gf::TextBox> status = std::dynamic_pointer_cast<gf::TextBox>(window.find("effect-status"));
+    require((*window.find("effect-apply")).enabled() && (*status).text().find("clipped") != std::string::npos &&
+                editor.document.undo_history.size() == history, "shadow proof warns about clipping without changing history");
+    (*color).set_text("invalid");
+    require(!(*window.find("effect-apply")).enabled(), "invalid shadow color disables Apply");
+    (*color).set_text("#183050");
+    editor.close_editor_dialog();
+    require(editor.document.undo_history.size() == history && paint::equal(editor.document.image.get(14,8),first.image.get(14,8)),
+            "closing preview cancels without modifying pixels");
+    editor.execute("atlas-effects");
+    const std::shared_ptr<gf::ComboBox> grayscale = std::dynamic_pointer_cast<gf::ComboBox>(window.find("effect-choice"));
+    (*grayscale).set_selected_index(2);
+    routed_button(window,"effect-apply");
+    require(editor.document.undo_history.size() == history + 1 && !window.find("effect-choice"), "Apply closes and adds one Undo step");
+    const paint::Color pixel = editor.document.image.get(14,8);
+    const paint::ImageContainer output = editor.document.output_container(true);
+    require(pixel.r == pixel.g && pixel.g == pixel.b && output.frames[0].hotspot_x == 3 && output.frames[0].hotspot_y == 4 &&
+                paint::equal(output.frames[1].image.get(0,0), second.image.get(0,0)), "effect preserves hotspot and other representations");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(14,8),first.image.get(14,8)), "Undo restores source artwork");
+    editor.execute("atlas-effects");
+    const std::shared_ptr<gf::ComboBox> stale = std::dynamic_pointer_cast<gf::ComboBox>(window.find("effect-choice"));
+    (*stale).set_selected_index(2);
+    editor.document.checkpoint(); editor.document.image.set(0,0,{100,20,30,255});
+    routed_button(window,"effect-apply");
+    require(bool(window.find("effect-choice")) && paint::equal(editor.document.image.get(0,0), {100,20,30,255}),
+            "a stale preview cannot overwrite a newer image");
+    editor.close_editor_dialog();
+}
 void alpha_tools_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5262,6 +5309,7 @@ void icon_production_contracts() {
         icon_representation_export();
         asset_browser_contracts();
         alpha_tools_contracts();
+        icon_effect_controls();
         icon_palette_contracts();
         indexed_canvas_contracts();
         icon_ribbon_contracts();

@@ -894,5 +894,19 @@
   "Target images": "Цільові зображення",
   "Upscaling": "Збільшення",
   "Open as new image": "Відкрити як нове зображення",
-  "New output folder": "Нова папка виводу"
+  "New output folder": "Нова папка виводу",
+  "Effects": "Ефекти",
+  "Brightness / contrast": "Яскравість / контраст",
+  "Hue / saturation": "Тон / насиченість",
+  "Grayscale": "Відтінки сірого",
+  "Contrast %": "Контраст %",
+  "Shadow": "Тінь",
+  "Fit artwork within image": "Вписати малюнок у зображення",
+  "Radius (px)": "Радіус (пкс)",
+  "Strength %": "Сила %",
+  "Offset X": "Зсув X",
+  "Offset Y": "Зсув Y",
+  "Pink border: image bounds. Pixels outside are clipped.": "Рожева рамка: межі зображення. Пікселі зовні обрізаються.",
+  "Image changed. Reopen Effects.": "Зображення змінилося. Відкрийте Ефекти знову.",
+  "Invalid color": "Неприпустимий колір"
 }

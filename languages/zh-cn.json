@@ -894,5 +894,19 @@
   "Target images": "目标图像",
   "Upscaling": "放大",
   "Open as new image": "作为新图像打开",
-  "New output folder": "新建输出文件夹"
+  "New output folder": "新建输出文件夹",
+  "Effects": "效果",
+  "Brightness / contrast": "亮度 / 对比度",
+  "Hue / saturation": "色相 / 饱和度",
+  "Grayscale": "灰度",
+  "Contrast %": "对比度 %",
+  "Shadow": "阴影",
+  "Fit artwork within image": "将图案适配到图像内",
+  "Radius (px)": "半径 (px)",
+  "Strength %": "强度 %",
+  "Offset X": "X 偏移",
+  "Offset Y": "Y 偏移",
+  "Pink border: image bounds. Pixels outside are clipped.": "粉色边框表示图像边界。外部像素将被裁剪。",
+  "Image changed. Reopen Effects.": "图像已更改。请重新打开效果。",
+  "Invalid color": "无效颜色"
 }

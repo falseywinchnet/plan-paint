@@ -246,6 +246,10 @@ void EditorDialog::initialize_control_tree() {
         initialize_icon_states();
         return;
     }
+    if (kind_ == EditorDialogKind::icon_effects) {
+        initialize_icon_effects();
+        return;
+    }
     if (kind_ == EditorDialogKind::alpha_tools) {
         initialize_alpha_tools();
         return;
@@ -751,7 +755,7 @@ void EditorDialog::on_key_preview(gf::KeyEvent& event) {
     } else if (event.physical_key == gf::PhysicalKey::enter) {
         if (kind_ == EditorDialogKind::icon_batch || kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_sheet ||
             kind_ == EditorDialogKind::asset_browser || kind_ == EditorDialogKind::alpha_tools ||
-            kind_ == EditorDialogKind::icon_palette || kind_ == EditorDialogKind::icon_states) {
+            kind_ == EditorDialogKind::icon_palette || kind_ == EditorDialogKind::icon_states || kind_ == EditorDialogKind::icon_effects) {
             return; // The focused command owns Enter; never run a disk job implicitly.
         }
         accept();
@@ -802,6 +806,8 @@ std::string EditorDialog::title() const {
         return tr("Palette conversion");
     case EditorDialogKind::icon_states:
         return tr("Icon state variants");
+    case EditorDialogKind::icon_effects:
+        return tr("Effects");
     case EditorDialogKind::alpha_tools:
         return tr("Alpha tools");
     case EditorDialogKind::asset_browser:

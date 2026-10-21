@@ -37,7 +37,7 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_svg_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
+         icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
@@ -332,7 +332,15 @@ struct NativeExercise {
             paint::save_image(document.image, result);
         }
     }
+    void repaint_tree(gf::Control& control) {
+        control.invalidate(gf::Dirty::paint);
+        for (const gf::Control::Ptr& child : control.children()) { repaint_tree(*child); }
+    }
     void inspect_frame(gf::Window& window) {
+        if (icon_effects_review) {
+            repaint_tree(*window.root());
+            repaint_tree(*window.find("editor-dialog"));
+        }
         const gf::Size size{1280, 820};
         std::unique_ptr<gf::PaintFramebuffer> framebuffer = window.create_framebuffer(size, window.scale());
         if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
@@ -398,6 +406,13 @@ struct NativeExercise {
                     throw std::runtime_error("Native SVG generation preview lost vector provenance");
                 }
             }
+            return;
+        }
+        if (icon_effects_review) {
+            const gf::Control::Ptr apply = window.find("effect-apply");
+            const std::shared_ptr<gf::TextBox> status = std::dynamic_pointer_cast<gf::TextBox>(window.find("effect-status"));
+            if (!painted || !apply || !status || (*status).text().find("clipped") == std::string::npos ||
+                (*apply).absolute_bounds().bottom() > window.client_size().height) { throw std::runtime_error("Native effect preview did not fit or render"); }
             return;
         }
         if (icon_ribbon_review) {
@@ -614,6 +629,32 @@ struct NativeExercise {
             if (!handle.request_close().accepted()) {
                 throw std::runtime_error("Native batch close failed");
             }
+            return;
+        }
+        if (icon_effects_review) {
+            paint::ImageContainer source;
+            source.kind = paint::ContainerKind::Icon;
+            paint::IconFrame frame;
+            frame.image.reset(32, 32, {0,0,0,0});
+            for (int y = 6; y < 30; ++y) {
+                for (int x = 8; x < 30; ++x) { frame.image.set(x,y,{40,130,220,255}); }
+            }
+            source.frames.push_back(frame);
+            (*editor).open_container(source, "");
+            (*editor).execute("atlas-effects");
+            const std::shared_ptr<gf::ComboBox> choice = std::dynamic_pointer_cast<gf::ComboBox>(window.find("effect-choice"));
+            (*choice).set_selected_index(6);
+            window.perform_layout();
+            (*editor).invalidate(gf::Dirty::paint);
+            inspect_frame(window);
+            if (!(*window.find("effect-apply")).enabled()) { throw std::runtime_error("Native shadow preview cannot apply"); }
+            const std::shared_ptr<gf::Button> apply = std::dynamic_pointer_cast<gf::Button>(window.find("effect-apply"));
+            (*apply).perform_click();
+            if (document.image.width != 32 || document.undo_history.size() != 1) { throw std::runtime_error("Native effect changed dimensions or history incorrectly"); }
+            document.undo();
+            if (!paint::equal(document.image.get(29,29), frame.image.get(29,29))) { throw std::runtime_error("Native effect Undo failed"); }
+            entered = true;
+            if (!handle.request_close().accepted()) { throw std::runtime_error("Native effect close failed"); }
             return;
         }
         if (icon_ribbon_review) {
@@ -1021,6 +1062,7 @@ int main(int argc, char** argv) {
             (argc > 1 && std::string(argv[1]) == "--icon-palette");
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
+        exercise.icon_effects_review = argc > 1 && std::string(argv[1]) == "--icon-effects";
         exercise.icon_batch_review = argc > 1 && std::string(argv[1]) == "--icon-batch";
         exercise.icon_stamp_review = argc > 1 && std::string(argv[1]) == "--icon-stamp";
         exercise.icon_shared_review = argc > 1 && std::string(argv[1]) == "--icon-shared-palette";
@@ -1030,7 +1072,7 @@ int main(int argc, char** argv) {
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
             exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
-            exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {
+            exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
@@ -1053,7 +1095,7 @@ int main(int argc, char** argv) {
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
         options.initial_size = exercise.icon_formats_review || exercise.icon_states_review ||
-                                       exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review || exercise.icon_sheet_review
+                                       exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review || exercise.icon_sheet_review
                                    ? gf::Size{800, 520}
                                : exercise.compact ? gf::Size{800, 600}
                                                   : gf::Size{1280, 820};

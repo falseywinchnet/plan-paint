@@ -894,5 +894,19 @@
   "Target images": "Gambar target",
   "Upscaling": "Pembesaran",
   "Open as new image": "Buka sebagai gambar baru",
-  "New output folder": "Folder keluaran baru"
+  "New output folder": "Folder keluaran baru",
+  "Effects": "Efek",
+  "Brightness / contrast": "Kecerahan / kontras",
+  "Hue / saturation": "Rona / saturasi",
+  "Grayscale": "Skala abu-abu",
+  "Contrast %": "Kontras %",
+  "Shadow": "Bayangan",
+  "Fit artwork within image": "Sesuaikan karya di dalam gambar",
+  "Radius (px)": "Radius (px)",
+  "Strength %": "Kekuatan %",
+  "Offset X": "Offset X",
+  "Offset Y": "Offset Y",
+  "Pink border: image bounds. Pixels outside are clipped.": "Bingkai merah muda: batas gambar. Piksel di luar dipotong.",
+  "Image changed. Reopen Effects.": "Gambar berubah. Buka kembali Efek.",
+  "Invalid color": "Warna tidak valid"
 }

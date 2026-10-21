@@ -894,5 +894,19 @@
   "Target images": "লক্ষ্য ছবি",
   "Upscaling": "বড় করা",
   "Open as new image": "নতুন ছবি হিসেবে খুলুন",
-  "New output folder": "নতুন আউটপুট ফোল্ডার"
+  "New output folder": "নতুন আউটপুট ফোল্ডার",
+  "Effects": "প্রভাব",
+  "Brightness / contrast": "উজ্জ্বলতা / বৈপরীত্য",
+  "Hue / saturation": "বর্ণ / সম্পৃক্ততা",
+  "Grayscale": "ধূসর রং",
+  "Contrast %": "বৈপরীত্য %",
+  "Shadow": "ছায়া",
+  "Fit artwork within image": "ছবির মধ্যে আঁকা মানানসই করুন",
+  "Radius (px)": "ব্যাসার্ধ (পিক্সেল)",
+  "Strength %": "তীব্রতা %",
+  "Offset X": "X সরণ",
+  "Offset Y": "Y সরণ",
+  "Pink border: image bounds. Pixels outside are clipped.": "গোলাপি সীমানা: ছবির সীমা। বাইরের পিক্সেল কাটা যাবে।",
+  "Image changed. Reopen Effects.": "ছবি বদলেছে। প্রভাব আবার খুলুন।",
+  "Invalid color": "অবৈধ রং"
 }
