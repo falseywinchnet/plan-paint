@@ -1175,8 +1175,8 @@ void icon_sheet_preview_and_export() {
         std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-scope"));
     (*scope).set_selected_index(2);
     await_icon_sheet(window);
-    require(!(*window.find("sheet-export")).enabled(),
-            "empty selected sequence must not export stale preview");
+    require(!(*window.find("sheet-export")).enabled() && !(*window.find("sheet-open")).enabled(),
+            "empty selected sequence must not export or open a stale preview");
     (*scope).set_selected_index(0);
     routed_button(window, "dialog-cancel");
     static_cast<void>(window.drain_posted_work());
@@ -1184,6 +1184,73 @@ void icon_sheet_preview_and_export() {
                 editor.document.undo_history.size() == history &&
                 paint::encode_icon_container(editor.document.output_container(false)) == original,
             "proof settings, export and close must preserve source document, history and pixels");
+}
+void icon_sheet_new_document() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(),
+            "contact sheet host attaches at minimum size");
+    editor.document.make_icon_sizes({16, 32}, false);
+    const std::vector<std::uint8_t> original = paint::encode_icon_container(editor.document.output_container(false));
+    const std::size_t history = editor.document.undo_history.size();
+    editor.execute("atlas-compare");
+    await_icon_sheet(window);
+    const gf::Rect open_bounds = (*window.find("sheet-open")).committed_arranged_bounds();
+    const gf::Rect close_bounds = (*window.find("dialog-cancel")).committed_arranged_bounds();
+    require(open_bounds.x >= 0 && open_bounds.bottom() <= 520 && close_bounds.right() <= 800 &&
+                close_bounds.bottom() <= 520, "contact sheet commands fit the minimum window");
+    services.choice = gf::HostDialogChoice::cancel;
+    routed_button(window, "sheet-open");
+    require(editor.document.undo_history.size() == history &&
+                paint::encode_icon_container(editor.document.output_container(false)) == original,
+            "cancelling source replacement must preserve the icon document");
+    editor.execute("atlas-compare");
+    await_icon_sheet(window);
+    const std::shared_ptr<gf::ComboBox> background =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("sheet-background"));
+    (*background).set_selected_index(3);
+    await_icon_sheet(window);
+    services.path = (std::filesystem::temp_directory_path() / "paint-contact-new-document.png").string();
+    routed_button(window, "sheet-export");
+    const paint::Image expected = paint::load_image(services.path);
+    std::filesystem::remove(services.path);
+    services.path = (std::filesystem::temp_directory_path() / "paint-contact-source.ico").string();
+    services.choice = gf::HostDialogChoice::yes;
+    routed_button(window, "sheet-open");
+    require(paint::read_image_bytes(services.path) == original,
+            "Save source writes the original container before opening its contact sheet");
+    std::filesystem::remove(services.path);
+    require(editor.document.atlas.kind == paint::AtlasKind::None && editor.document.filename.empty() &&
+                editor.document.dirty() && editor.document.undo_history.empty() &&
+                editor.document.image.width == expected.width && editor.document.image.height == expected.height &&
+                std::equal(editor.document.image.pixels.begin(), editor.document.image.pixels.end(), expected.pixels.begin(), expected.pixels.end(), paint::equal),
+            "new ordinary image contains exactly the prepared sheet and starts unsaved with fresh history");
+    editor.choose_tool(paint::Tool::Pencil);
+    fixture.click(3, 3);
+    require(editor.document.undo_history.size() == 1, "the generated ordinary image supports normal painting");
+    editor.execute("undo");
+    require(editor.document.dirty() && paint::equal(editor.document.image.get(3, 3), expected.get(3, 3)),
+            "Undo restores generated pixels without marking an unsaved contact sheet as saved");
+    // Saving an ordinary source as ICO can defer replacement until size approval.
+    services.path = (std::filesystem::temp_directory_path() / "paint-contact-deferred.ico").string();
+    paint::Image generated;
+    generated.reset(27, 19, {50, 100, 200, 91});
+    editor.open_generated_image(generated);
+    require(window.find("icon-size-16") && !editor.deferred_generated_image.pixels.empty(),
+            "deferred icon save retains the prepared new image");
+    routed_button(window, "dialog-cancel");
+    require(editor.deferred_generated_image.pixels.empty() && editor.document.image.width == expected.width &&
+                !std::filesystem::exists(services.path), "cancelling deferred save discards its pending replacement");
+    editor.open_generated_image(generated);
+    routed_button(window, "dialog-ok");
+    require(std::filesystem::exists(services.path) && editor.document.atlas.kind == paint::AtlasKind::None &&
+                editor.document.image.width == 27 && editor.document.image.height == 19 &&
+                editor.document.dirty() && paint::equal(editor.document.image.get(0, 0), generated.get(0, 0)),
+            "completed deferred save opens the retained generated image as unsaved ordinary artwork");
+    std::filesystem::remove(services.path);
 }
 void await_icon_export(gf::Window& window) {
     const std::chrono::steady_clock::time_point deadline =
@@ -5155,6 +5222,7 @@ void icon_production_contracts() {
         explicit_icon_target_controls();
         icon_representation_identity();
         icon_sheet_preview_and_export();
+        icon_sheet_new_document();
         icon_representation_export();
         asset_browser_contracts();
         alpha_tools_contracts();

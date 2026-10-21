@@ -249,9 +249,11 @@ class Editor final : public gui_forms::Control {
     void refresh();
     void open_file(const std::string& path);
     void open_container(ImageContainer image, const std::string& path);
+    void open_generated_image(Image image);
     bool save(bool save_as);
     void save_path(const std::string& path);
     std::string pending_save_path, deferred_command, deferred_open_path;
+    Image deferred_generated_image;
     void complete_deferred_save();
     PaintCanvas& canvas();
     Spirograph spiro;
@@ -268,6 +270,7 @@ class Editor final : public gui_forms::Control {
 
   private:
     void initialize_canvas_controls();
+    void install_generated_image(Image image);
     void arrange_canvas_controls(gui_forms::Rect area);
     void canvas_control_pointer(gui_forms::PointerAction action, gui_forms::PointerButton button);
     void canvas_control_clicked(gui_forms::ButtonBase& button);

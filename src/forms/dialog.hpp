@@ -255,7 +255,7 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::RasterCanvas> sheet_preview_;
     std::shared_ptr<gui_forms::Control> sheet_viewport_;
     std::shared_ptr<gui_forms::Label> sheet_status_;
-    std::shared_ptr<gui_forms::Button> sheet_export_;
+    std::shared_ptr<gui_forms::Button> sheet_export_, sheet_open_;
     void theme_changed(double hue);
     std::shared_ptr<gui_forms::TrackBar> theme_hue_;
     std::shared_ptr<gui_forms::CheckBox> recovery_enabled_;

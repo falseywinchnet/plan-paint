@@ -443,7 +443,10 @@ struct NativeExercise {
             return;
         }
         if (icon_sheet_review) {
-            if (!painted || !window.find("sheet-export") || !(*window.find("sheet-export")).enabled()) {
+            const gf::Control::Ptr open = window.find("sheet-open");
+            if (!painted || !window.find("sheet-export") || !(*window.find("sheet-export")).enabled() ||
+                !open || !(*open).enabled() || (*open).committed_arranged_bounds().x < 0 ||
+                (*open).committed_arranged_bounds().bottom() > window.client_size().height) {
                 throw std::runtime_error("Native contact sheet preview did not render");
             }
             return;
@@ -1038,7 +1041,7 @@ int main(int argc, char** argv) {
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
         options.initial_size = exercise.icon_formats_review || exercise.icon_states_review ||
-                                       exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review
+                                       exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review || exercise.icon_sheet_review
                                    ? gf::Size{800, 520}
                                : exercise.compact ? gf::Size{800, 600}
                                                   : gf::Size{1280, 820};

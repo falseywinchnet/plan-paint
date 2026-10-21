@@ -126,6 +126,19 @@ scale. **4× pixels** maps each image pixel to four display pixels. Enlarged
 previews use nearest-pixel sampling; scroll when the sheet exceeds the viewport.
 The status reports both output dimensions and the display-to-image pixel ratio.
 
+**Open as new image** turns the completed preview into an untitled ordinary
+bitmap in the editor. The pixels match direct PNG export, including the labels,
+background and transparency. Normal painting tools work on it; it has fresh Undo
+history and is marked unsaved immediately. Undoing its first paint stroke still
+leaves the generated document unsaved.
+
+Opening the sheet follows Paint's normal Save / Don't Save / Cancel choice for
+a modified source document. Save completes before replacement, including any
+required icon-size review. Cancel preserves the source document and discards the
+pending replacement. The new image has no source filename or icon representations,
+so saving it requests a destination. Open and Export are unavailable while the
+preview is being prepared or when the requested sheet cannot be rendered.
+
 **Export PNG…** saves the prepared sheet through the normal save dialog. Background
 and labels become part of that PNG; Transparent preserves alpha outside the
 artwork and labels. Legacy background-dependent XOR pixels are evaluated against
