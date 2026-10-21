@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "Wählen Sie einen JSON-Dateinamen für diesen Bericht.",
   "Icon": "Symbol",
   "Color & alpha": "Farbe und Alpha",
-  "Production": "Produktion"
+  "Production": "Produktion",
+  "Batch production": "Stapelverarbeitung",
+  "Add files…": "Dateien hinzufügen…",
+  "Add to batch": "Zum Stapel hinzufügen",
+  "Convert to ICO": "In ICO umwandeln",
+  "Normalize sizes": "Größen vereinheitlichen",
+  "Operation": "Vorgang",
+  "Run": "Starten",
+  "Source files": "Quelldateien",
+  "Batch…": "Stapel…",
+  "Batch production…": "Stapelverarbeitung…"
 }

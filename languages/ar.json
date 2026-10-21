@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "اختر اسم ملف JSON لهذا التقرير.",
   "Icon": "أيقونة",
   "Color & alpha": "اللون وألفا",
-  "Production": "الإنتاج"
+  "Production": "الإنتاج",
+  "Batch production": "معالجة دفعية",
+  "Add files…": "إضافة ملفات…",
+  "Add to batch": "إضافة إلى الدفعة",
+  "Convert to ICO": "تحويل إلى ICO",
+  "Normalize sizes": "توحيد الأحجام",
+  "Operation": "العملية",
+  "Run": "تشغيل",
+  "Source files": "ملفات المصدر",
+  "Batch…": "دفعة…",
+  "Batch production…": "معالجة دفعية…"
 }

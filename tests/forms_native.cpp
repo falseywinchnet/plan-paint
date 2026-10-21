@@ -35,11 +35,27 @@ struct NativeExercise {
          healing_review = false, icon_production_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
          alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
-         icon_ribbon_review = false;
+         icon_ribbon_review = false, icon_batch_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
     gf::SubscriptionToken resize_tick;
+    void await_batch(gf::Window& window) {
+        const std::chrono::steady_clock::time_point deadline =
+            std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        while ((*window.find("batch-cancel")).enabled()) {
+            static_cast<void>(window.drain_posted_work());
+            if (std::chrono::steady_clock::now() > deadline) {
+                throw std::runtime_error("Native batch worker timed out");
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        const std::shared_ptr<gf::Label> error =
+            std::dynamic_pointer_cast<gf::Label>(window.find("dialog-error"));
+        if (!(*error).text().empty()) {
+            throw std::runtime_error(std::string((*error).text()));
+        }
+    }
     void show_resize_preview() {
         (*resize_timer).stop();
         gf::RasterCanvas& canvas = (*editor).canvas();
@@ -344,6 +360,18 @@ struct NativeExercise {
                                               static_cast<int>(sample.y * window.scale()));
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
+        if (icon_batch_review) {
+            const std::shared_ptr<gf::TextBox> manifest =
+                std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-manifest"));
+            const gf::Rect close = (*window.find("dialog-cancel")).absolute_bounds();
+            if (!painted || !manifest ||
+                (*manifest).text().find("app-icon-2-icon.ico") == std::string::npos ||
+                !(*window.find("batch-run")).enabled() || close.x < 0 || close.y < 0 ||
+                close.right() > size.width || close.bottom() > size.height) {
+                throw std::runtime_error("Native batch manifest or minimum-window controls did not render");
+            }
+            return;
+        }
         if (icon_production_review) {
             if (!painted || !window.find("icon-size-manifest")) {
                 throw std::runtime_error("Native icon generation review did not render");
@@ -440,6 +468,49 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (icon_batch_review) {
+            NativeRecoveryDirectory outputs;
+            const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
+            const std::string source = (root / "assets/app-icon.png").string();
+            (*editor).batch_sources = {source, source};
+            const std::uint64_t revision = document.revision;
+            const std::size_t history = document.undo_history.size();
+            (*editor).execute("icon-batch");
+            const std::shared_ptr<gf::TextBox> destination =
+                std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-destination"));
+            (*destination).set_text(outputs.path.string());
+            const std::shared_ptr<gf::Button> review =
+                std::dynamic_pointer_cast<gf::Button>(window.find("batch-review"));
+            (*review).perform_click();
+            await_batch(window);
+            window.perform_layout();
+            inspect_frame(window);
+            if (!std::filesystem::is_empty(outputs.path) || (*window.find("batch-preset")).enabled()) {
+                throw std::runtime_error("Batch review wrote files or enabled an irrelevant recipe");
+            }
+            const std::shared_ptr<gf::Button> run =
+                std::dynamic_pointer_cast<gf::Button>(window.find("batch-run"));
+            (*run).perform_click();
+            await_batch(window);
+            for (int index = 1; index <= 2; ++index) {
+                const paint::ImageContainer result = paint::load_container(
+                    (outputs.path / ("app-icon-" + std::to_string(index) + "-icon.ico")).string());
+                if (result.frames.size() != 7) {
+                    throw std::runtime_error("Native batch did not produce the reviewed profile");
+                }
+            }
+            if (document.revision != revision || document.undo_history.size() != history ||
+                (*run).enabled() || !(*window.find("batch-report")).enabled()) {
+                throw std::runtime_error(
+                    "Batch execution changed document history or left stale Run enabled");
+            }
+            (*editor).close_editor_dialog();
+            entered = true;
+            if (!handle.request_close().accepted()) {
+                throw std::runtime_error("Native batch close failed");
+            }
+            return;
+        }
         if (icon_ribbon_review) {
             const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
             document.replace(paint::load_image((root / "assets/app-icon.png").string()), "");
@@ -811,12 +882,13 @@ int main(int argc, char** argv) {
         exercise.icon_palette_review = argc > 1 && std::string(argv[1]) == "--icon-palette";
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
+        exercise.icon_batch_review = argc > 1 && std::string(argv[1]) == "--icon-batch";
         exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
             exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
-            exercise.icon_ribbon_review) {
+            exercise.icon_ribbon_review || exercise.icon_batch_review) {
             exercise.keep_open = false;
         }
         exercise.features = argc > 1 && (std::string(argv[1]) == "--features" ||
@@ -838,11 +910,11 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size =
-            exercise.icon_formats_review || exercise.icon_states_review || exercise.icon_ribbon_review
-                ? gf::Size{800, 520}
-            : exercise.compact ? gf::Size{800, 600}
-                               : gf::Size{1280, 820};
+        options.initial_size = exercise.icon_formats_review || exercise.icon_states_review ||
+                                       exercise.icon_ribbon_review || exercise.icon_batch_review
+                                   ? gf::Size{800, 520}
+                               : exercise.compact ? gf::Size{800, 600}
+                                                  : gf::Size{1280, 820};
         options.minimum_size = {800, 520};
         options.print_metrics_on_close = false;
         options.ready = std::bind(&NativeExercise::ready, std::ref(exercise), std::placeholders::_1,

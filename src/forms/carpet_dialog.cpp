@@ -45,6 +45,7 @@ struct CarpetWork {
 };
 } // namespace
 EditorDialog::~EditorDialog() {
+    stop_icon_batch();
     stop_icon_states();
     stop_asset_browser();
     stop_icon_export();
@@ -84,6 +85,7 @@ void EditorDialog::on_attached_to_window() {
     }
 }
 void EditorDialog::on_detaching_from_window(gf::Window& window) noexcept {
+    stop_icon_batch();
     stop_icon_states();
     stop_asset_browser();
     stop_icon_export();

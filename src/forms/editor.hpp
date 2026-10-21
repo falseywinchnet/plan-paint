@@ -217,6 +217,8 @@ class Editor final : public gui_forms::Control {
     void open_browser_asset(const AssetPreview& preview);
     void use_asset_stamp(Image image);
     std::string asset_directory, asset_bookmark_path;
+    std::vector<std::string> batch_sources;
+    std::vector<std::string> choose_batch_sources();
     bool save_export_report(const std::string& report,
                             const std::string& suggested_name = "icon-export-report.json");
     bool export_icon_variant(const std::vector<std::uint8_t>& bytes, bool cursor,

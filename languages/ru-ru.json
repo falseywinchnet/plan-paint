@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "Выберите имя файла JSON для этого отчёта.",
   "Icon": "Значок",
   "Color & alpha": "Цвет и альфа",
-  "Production": "Подготовка"
+  "Production": "Подготовка",
+  "Batch production": "Пакетная обработка",
+  "Add files…": "Добавить файлы…",
+  "Add to batch": "Добавить в пакет",
+  "Convert to ICO": "Преобразовать в ICO",
+  "Normalize sizes": "Нормализовать размеры",
+  "Operation": "Операция",
+  "Run": "Выполнить",
+  "Source files": "Исходные файлы",
+  "Batch…": "Пакет…",
+  "Batch production…": "Пакетная обработка…"
 }

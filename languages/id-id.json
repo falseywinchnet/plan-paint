@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "Pilih nama berkas JSON untuk laporan ini.",
   "Icon": "Ikon",
   "Color & alpha": "Warna dan alfa",
-  "Production": "Produksi"
+  "Production": "Produksi",
+  "Batch production": "Produksi kelompok",
+  "Add files…": "Tambah berkas…",
+  "Add to batch": "Tambahkan ke kelompok",
+  "Convert to ICO": "Konversi ke ICO",
+  "Normalize sizes": "Seragamkan ukuran",
+  "Operation": "Operasi",
+  "Run": "Jalankan",
+  "Source files": "Berkas sumber",
+  "Batch…": "Kelompok…",
+  "Batch production…": "Produksi kelompok…"
 }

@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "請為此報告選擇 JSON 檔名。",
   "Icon": "圖示",
   "Color & alpha": "色彩與透明度",
-  "Production": "製作"
+  "Production": "製作",
+  "Batch production": "批次製作",
+  "Add files…": "新增檔案…",
+  "Add to batch": "加入批次",
+  "Convert to ICO": "轉換為 ICO",
+  "Normalize sizes": "統一尺寸",
+  "Operation": "操作",
+  "Run": "執行",
+  "Source files": "來源檔案",
+  "Batch…": "批次…",
+  "Batch production…": "批次製作…"
 }

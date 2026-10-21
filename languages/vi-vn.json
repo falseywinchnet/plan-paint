@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "Chọn tên tệp JSON cho báo cáo này.",
   "Icon": "Biểu tượng",
   "Color & alpha": "Màu và alpha",
-  "Production": "Sản xuất"
+  "Production": "Sản xuất",
+  "Batch production": "Xử lý hàng loạt",
+  "Add files…": "Thêm tệp…",
+  "Add to batch": "Thêm vào lô",
+  "Convert to ICO": "Chuyển sang ICO",
+  "Normalize sizes": "Chuẩn hóa kích thước",
+  "Operation": "Thao tác",
+  "Run": "Chạy",
+  "Source files": "Tệp nguồn",
+  "Batch…": "Hàng loạt…",
+  "Batch production…": "Xử lý hàng loạt…"
 }

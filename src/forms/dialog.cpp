@@ -234,6 +234,10 @@ void EditorDialog::initialize_control_tree() {
     if (!editor) {
         return;
     }
+    if (kind_ == EditorDialogKind::icon_batch) {
+        initialize_icon_batch();
+        return;
+    }
     if (kind_ == EditorDialogKind::icon_palette) {
         initialize_icon_palette();
         return;
@@ -745,7 +749,7 @@ void EditorDialog::on_key_preview(gf::KeyEvent& event) {
         }
         event.handled = true;
     } else if (event.physical_key == gf::PhysicalKey::enter) {
-        if (kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_sheet ||
+        if (kind_ == EditorDialogKind::icon_batch || kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_sheet ||
             kind_ == EditorDialogKind::asset_browser || kind_ == EditorDialogKind::alpha_tools ||
             kind_ == EditorDialogKind::icon_palette || kind_ == EditorDialogKind::icon_states) {
             return; // The focused command owns Enter; never run a disk job implicitly.
@@ -792,6 +796,8 @@ std::string EditorDialog::title() const {
         return tr("Compare / contact sheet");
     case EditorDialogKind::icon_export:
         return tr("Export representations");
+    case EditorDialogKind::icon_batch:
+        return tr("Batch production");
     case EditorDialogKind::icon_palette:
         return tr("Palette conversion");
     case EditorDialogKind::icon_states:
