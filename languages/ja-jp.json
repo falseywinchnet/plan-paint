@@ -875,5 +875,8 @@
   "Bottom right": "右下",
   "Foreground": "前景",
   "Original size": "元のサイズ",
-  "Fit image": "画像に合わせる"
+  "Fit image": "画像に合わせる",
+  "Import palette…": "パレットを読み込む…",
+  "Export palette…": "パレットを書き出す…",
+  "Shared palette": "共通パレット"
 }

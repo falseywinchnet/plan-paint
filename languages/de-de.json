@@ -875,5 +875,8 @@
   "Bottom right": "Unten rechts",
   "Foreground": "Vordergrund",
   "Original size": "Originalgröße",
-  "Fit image": "Bild einpassen"
+  "Fit image": "Bild einpassen",
+  "Import palette…": "Palette importieren…",
+  "Export palette…": "Palette exportieren…",
+  "Shared palette": "Gemeinsame Palette"
 }

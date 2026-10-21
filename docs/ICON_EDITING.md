@@ -120,7 +120,7 @@ Changing settings prepares a new preview and disables export until it is ready.
 Closing cancels pending work. Preview settings and exported sheets do not change
 the source document, its filename or Undo history. This command exports one
 assembled sheet. Separate-file representation export is described below;
-multi-file batch jobs remain future work.
+multi-file jobs are available through Batch production.
 
 ## Exporting separate PNG files
 
@@ -330,8 +330,8 @@ The public Windows bitmap layout is described by Microsoft's
 [BITMAPINFOHEADER documentation](https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapinfoheader)
 and [bitmap header types](https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types).
 Palette construction and dithering above are Plan Paint behavior, not a claim
-to reproduce another editor's numerical output. Shared batch palettes, palette
-file interchange, and index-aware canvas painting remain separate capabilities.
+to reproduce another editor's numerical output. Shared batch palettes and file
+interchange are described below. Index-aware canvas painting remains separate work.
 
 ## Editing indexed palette entries
 
@@ -357,6 +357,50 @@ representations and images changed through ordinary RGBA painting require
 explicit palette conversion before using this mode; indices are never guessed
 from equal pixel colors. Changing a preview leaves the document untouched, and
 an intervening document edit prevents a stale Apply.
+
+## Palette files and shared batch colors
+
+**Icon → Palette → Import palette…** reads standard GIMP RGB palette (`.gpl`)
+files and selects **Shared palette** conversion. The smallest supported depth
+that fits the imported entries is selected initially. You can change depth,
+dithering, alpha threshold and matte before applying the preview. Switching back
+to Palette conversion builds an image-specific palette again; Palette entries
+edits the original retained indices. Importing or switching modes never changes
+the document until Apply.
+
+The file preserves ordered RGB colors, including duplicate entries. Names and
+display-column metadata are not retained. Inputs are limited to 64 KiB and
+1–256 colors. Both the original and named-header forms are accepted, with LF or
+CRLF line endings. **Export palette…** saves the current preview's full encoded
+palette, including unused padding entries, without applying its pixels. It also
+works when a preview would make no change. The format follows the public
+[GIMP RGB palette specification](https://developer.gimp.org/core/standards/gpl/).
+
+Shared conversion never sorts, reduces or adds colors to the supplied list.
+Nearest-color mapping uses squared distance in encoded RGB, choosing the first
+entry on a tie. Dithering uses the existing Floyd–Steinberg option. A palette
+larger than the selected depth is rejected. The file colors are opaque RGB;
+transparency still uses the separate ICO/CUR mask. If any pixels fall below the
+alpha threshold, the palette must already contain black. The first black entry
+is used for those pixels, wherever it appears in the list. This prevents creating
+legacy XOR pixels or shifting the owner's palette indices. Entries unused by
+mapping remain in their original positions. The encoded table is padded with
+black to the selected depth's capacity.
+
+**File → Batch production → Shared palette** applies one palette to every
+representation of every selected file. Choose the palette file, depth, dithering,
+threshold and matte, then review the output manifest. ICO/CUR retain image order,
+dimensions and hotspots. An ordinary image becomes a one-image ICO at its existing
+size. Dimensions outside 1–256 pixels are rejected; use size conversion first.
+No representation is silently omitted.
+
+Review captures the exact palette colors. Run uses that captured list even if
+the palette file subsequently changes; review again to import a newer version.
+The manifest reports per-image partial-alpha conversion and transparent pixel
+counts. The JSON report contains the palette path, exact ordered colors, depth,
+threshold, matte and dither setting. Names end in `-palette.ico` or `-palette.cur`.
+The existing batch collision rules, source-change checks, cancellation and
+per-file atomic publication apply.
 
 ## Normal, hot and disabled icon families
 
@@ -423,7 +467,7 @@ file for this same window. The source list stays available while Plan Paint is
 open. It identifies duplicate selections by ordinal; selecting a file twice
 deliberately produces two separately named outputs.
 
-Choose one of five operations:
+Choose one of six operations:
 
 - **Convert to ICO** creates one ICO per source, with the checked sizes. It uses
   the largest-area source image, choosing the first representation on an area tie.
@@ -441,6 +485,8 @@ Choose one of five operations:
 - **Export representations** writes each decoded image to its own PNG. Source
   and representation ordinals keep duplicate dimensions and repeated inputs
   distinct. Background-dependent legacy XOR cannot be converted to PNG.
+- **Shared palette** converts every representation to the same ordered RGB palette,
+  with the controls and review behavior described above.
 - **Stamp** composites one fixed image onto every source. Ordinary images produce
   PNG; ICO and CUR retain their container kind, representation order, dimensions
   and cursor hotspots. Its placement and transparency controls are described below.
@@ -535,6 +581,5 @@ offsets, foreground/background order and matte settings. `anchor` is zero-based
 in a row-major 3 × 3 grid, from top-left (0) to bottom-right (8), with center (4).
 
 The broader [icon production interview](icon-editor-study/mockups.html) covers
-additional palette, alpha, batch and asset-browsing capabilities. Its recommendations
-remain candidate designs; implemented features do not establish owner answers
-to the remaining interview questions.
+additional palette, alpha, batch and asset-browsing capabilities. It documents the broader design scope; this page describes the currently
+implemented behavior.

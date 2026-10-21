@@ -1,5 +1,6 @@
 #include "codecs.hpp"
 #include "icon_palette.hpp"
+#include "safe_file.hpp"
 #include "fixtures/icon_reference.hpp"
 #include "forms/editor.hpp"
 #include <algorithm>
@@ -37,7 +38,7 @@ struct NativeExercise {
          healing_review = false, icon_production_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
          alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
-         icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false;
+         icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -367,7 +368,7 @@ struct NativeExercise {
                 std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-manifest"));
             const gf::Rect close = (*window.find("dialog-cancel")).absolute_bounds();
             if (!painted || !manifest ||
-                (*manifest).text().find(icon_stamp_review ? "app-icon-2-stamped.png"
+                (*manifest).text().find(icon_shared_review ? "app-icon-2-palette.ico" : icon_stamp_review ? "app-icon-2-stamped.png"
                                                           : "app-icon-2-icon.ico") == std::string::npos ||
                 !(*window.find("batch-run")).enabled() || close.x < 0 || close.y < 0 ||
                 close.right() > size.width || close.bottom() > size.height) {
@@ -475,7 +476,14 @@ struct NativeExercise {
             NativeRecoveryDirectory outputs("batch-output");
             NativeRecoveryDirectory inputs("batch-input");
             const std::filesystem::path root = std::filesystem::path(__FILE__).parent_path().parent_path();
-            const std::string source = (root / "assets/app-icon.png").string();
+            std::string source = (root / "assets/app-icon.png").string();
+            if (icon_shared_review) {
+                paint::Image icon;
+                icon.reset(64, 64, {60, 100, 170, 255});
+                icon.set(0, 0, {0, 0, 0, 0});
+                source = (inputs.path / "app-icon.png").string();
+                paint::save_image(icon, source);
+            }
             (*editor).batch_sources = {source, source};
             const std::uint64_t revision = document.revision;
             const std::size_t history = document.undo_history.size();
@@ -483,6 +491,15 @@ struct NativeExercise {
             const std::shared_ptr<gf::TextBox> destination =
                 std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-destination"));
             (*destination).set_text(outputs.path.string());
+            if (icon_shared_review) {
+                const std::string text = paint::encode_icon_palette({{0, 0, 0, 255}, {245, 180, 40, 255}, {30, 80, 160, 255}, {255, 255, 255, 255}});
+                const std::string path = (inputs.path / "shared.gpl").string();
+                paint::write_file_atomic(std::vector<std::uint8_t>(text.begin(), text.end()), path, "shared palette fixture");
+                const std::shared_ptr<gf::ComboBox> operation = std::dynamic_pointer_cast<gf::ComboBox>(window.find("batch-operation"));
+                (*operation).set_selected_index(5);
+                const std::shared_ptr<gf::TextBox> file = std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-palette-path"));
+                (*file).set_text(path);
+            }
             if (icon_stamp_review) {
                 paint::Image badge;
                 badge.reset(12, 8, {245, 60, 25, 190});
@@ -520,10 +537,13 @@ struct NativeExercise {
             for (int index = 1; index <= 2; ++index) {
                 const paint::ImageContainer result = paint::load_container(
                     (outputs.path / ("app-icon-" + std::to_string(index) +
-                                     (icon_stamp_review ? "-stamped.png" : "-icon.ico")))
+                                     (icon_shared_review ? "-palette.ico" : icon_stamp_review ? "-stamped.png" : "-icon.ico")))
                         .string());
-                if (result.frames.size() != (icon_stamp_review ? 1u : 7u)) {
+                if (result.frames.size() != (icon_stamp_review || icon_shared_review ? 1u : 7u)) {
                     throw std::runtime_error("Native batch did not produce the reviewed profile");
+                }
+                if (icon_shared_review && !paint::has_icon_palette(result.frames[0])) {
+                    throw std::runtime_error("Native shared batch did not retain indexed output");
                 }
                 if (icon_stamp_review) {
                     const paint::Image original = paint::load_image(source);
@@ -942,7 +962,8 @@ int main(int argc, char** argv) {
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
         exercise.icon_batch_review = argc > 1 && std::string(argv[1]) == "--icon-batch";
         exercise.icon_stamp_review = argc > 1 && std::string(argv[1]) == "--icon-stamp";
-        exercise.icon_batch_review = exercise.icon_batch_review || exercise.icon_stamp_review;
+        exercise.icon_shared_review = argc > 1 && std::string(argv[1]) == "--icon-shared-palette";
+        exercise.icon_batch_review = exercise.icon_batch_review || exercise.icon_stamp_review || exercise.icon_shared_review;
         exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
         if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||

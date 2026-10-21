@@ -875,5 +875,8 @@
   "Bottom right": "پایین راست",
   "Foreground": "پیش‌زمینه",
   "Original size": "اندازهٔ اصلی",
-  "Fit image": "برازش در تصویر"
+  "Fit image": "برازش در تصویر",
+  "Import palette…": "وارد کردن پالت…",
+  "Export palette…": "صادر کردن پالت…",
+  "Shared palette": "پالت مشترک"
 }

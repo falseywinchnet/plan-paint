@@ -1,10 +1,11 @@
 #pragma once
 #include "asset_browser.hpp"
 #include "icon_export.hpp"
+#include "icon_palette.hpp"
 #include "icon_stamp.hpp"
 #include "icon_states.hpp"
 namespace paint {
-enum class IconBatchOperation { Convert, Normalize, States, Representations, Stamp };
+enum class IconBatchOperation { Convert, Normalize, States, Representations, Stamp, Palette };
 struct IconBatchSettings {
     IconBatchOperation operation = IconBatchOperation::Convert;
     IconSizePolicy sizes_policy = IconSizePolicy::AddMissing;
@@ -13,6 +14,8 @@ struct IconBatchSettings {
     IconExportCollision collision = IconExportCollision::Skip;
     std::string stamp_path;
     IconStampSettings stamp;
+    std::string palette_path;
+    IconPaletteOptions palette;
 };
 struct IconBatchSource {
     std::string path;

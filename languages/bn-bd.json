@@ -875,5 +875,8 @@
   "Bottom right": "নিচে ডানে",
   "Foreground": "অগ্রভাগ",
   "Original size": "মূল আকার",
-  "Fit image": "ছবিতে মানানসই করুন"
+  "Fit image": "ছবিতে মানানসই করুন",
+  "Import palette…": "প্যালেট আমদানি…",
+  "Export palette…": "প্যালেট রপ্তানি…",
+  "Shared palette": "যৌথ প্যালেট"
 }

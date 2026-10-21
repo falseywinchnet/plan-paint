@@ -27,6 +27,61 @@ void check_roundtrip(const paint::IconFrame& frame, unsigned depth, paint::Conta
                 "cursor hotspot survives indexed conversion");
     }
 }
+void shared_palette_contracts() {
+    const std::vector<paint::Color> colors =
+        paint::decode_icon_palette("GIMP Palette\r\nName: Shared\r\nColumns: 4\r\n# RGB\r\n255 0 0 Red\r\n0 "
+                                   "0 0 Black\r\n255 0 0 Duplicate\r\n0 0 255 Blue\r\n");
+    require(colors.size() == 4 && paint::equal(colors[0], colors[2]), "GPL retains order and duplicates");
+    const std::vector<paint::Color> roundtrip =
+        paint::decode_icon_palette(paint::encode_icon_palette(colors));
+    require(std::equal(colors.begin(), colors.end(), roundtrip.begin(), roundtrip.end(), paint::equal),
+            "GPL roundtrip preserves ordered RGB entries");
+    require(paint::decode_icon_palette("GIMP Palette\n1 2 3\n").size() == 1, "old GPL headers supported");
+    for (const std::string& invalid :
+         {"Wrong\n0 0 0\n", "GIMP Palette\n", "GIMP Palette\n256 0 0\n", "GIMP Palette\n-1 0 0\n",
+          "GIMP Palette\n1 2 3.5\n", "GIMP Palette\nName: x\nColumns: 256\n1 2 3\n"}) {
+        bool rejected = false;
+        try {
+            static_cast<void>(paint::decode_icon_palette(invalid));
+        } catch (const std::runtime_error&) {
+            rejected = true;
+        }
+        require(rejected, "invalid GPL rejected before conversion");
+    }
+    paint::IconFrame source;
+    source.image.reset(3, 1, {250, 0, 0, 255});
+    source.image.set(1, 0, {20, 30, 40, 0});
+    source.image.set(2, 0, {0, 0, 250, 255});
+    source.hotspot_x = 2;
+    paint::IconPaletteOptions options;
+    options.bits_per_pixel = 4;
+    options.fixed_palette = colors;
+    const paint::IconFrame converted = paint::convert_icon_palette(source, options).frame;
+    require((*converted.source).indices == std::vector<unsigned>({0, 1, 3}),
+            "fixed mapping uses first equal RGB and explicit black mask index");
+    require(std::equal(colors.begin(), colors.end(), (*converted.source).palette.begin(), paint::equal),
+            "conversion does not reorder shared palette entries");
+    check_roundtrip(converted, 4, paint::ContainerKind::Cursor);
+    options.dither = paint::IconPaletteDither::FloydSteinberg;
+    check_roundtrip(paint::convert_icon_palette(source, options).frame, 4, paint::ContainerKind::Cursor);
+    options.fixed_palette = {{255, 0, 0, 255}, {255, 255, 255, 255}};
+    bool rejected = false;
+    try {
+        static_cast<void>(paint::convert_icon_palette(source, options));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    require(rejected, "transparent shared conversion requires black instead of inventing a color or XOR");
+    options.fixed_palette = colors;
+    options.bits_per_pixel = 1;
+    rejected = false;
+    try {
+        static_cast<void>(paint::convert_icon_palette(source, options));
+    } catch (const std::runtime_error&) {
+        rejected = true;
+    }
+    require(rejected, "over-capacity shared palette is rejected without reducing colors");
+}
 void indexed_edit_contracts() {
     paint::IconFrame source;
     source.image.reset(2, 2, {20, 40, 60, 255});
@@ -192,6 +247,7 @@ int main() {
     try {
         conversion_contracts();
         indexed_edit_contracts();
+        shared_palette_contracts();
         std::cout << "Icon palette contracts passed\n";
         return 0;
     } catch (const std::exception& error) {

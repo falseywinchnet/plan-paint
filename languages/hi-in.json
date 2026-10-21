@@ -875,5 +875,8 @@
   "Bottom right": "नीचे दाएँ",
   "Foreground": "अग्रभूमि",
   "Original size": "मूल आकार",
-  "Fit image": "छवि में फ़िट करें"
+  "Fit image": "छवि में फ़िट करें",
+  "Import palette…": "पैलेट आयात करें…",
+  "Export palette…": "पैलेट निर्यात करें…",
+  "Shared palette": "साझा पैलेट"
 }
