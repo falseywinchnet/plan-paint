@@ -893,5 +893,6 @@
   "Source image": "Image source",
   "Target images": "Images cibles",
   "Upscaling": "Agrandissement",
-  "Open as new image": "Ouvrir comme nouvelle image"
+  "Open as new image": "Ouvrir comme nouvelle image",
+  "New output folder": "Nouveau dossier de sortie"
 }

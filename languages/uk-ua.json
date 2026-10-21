@@ -893,5 +893,6 @@
   "Source image": "Початкове зображення",
   "Target images": "Цільові зображення",
   "Upscaling": "Збільшення",
-  "Open as new image": "Відкрити як нове зображення"
+  "Open as new image": "Відкрити як нове зображення",
+  "New output folder": "Нова папка виводу"
 }

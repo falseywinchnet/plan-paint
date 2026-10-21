@@ -584,7 +584,7 @@ struct NativeExercise {
             await_batch(window);
             for (int index = 1; index <= 2; ++index) {
                 const paint::ImageContainer result = paint::load_container(
-                    (outputs.path / ("app-icon-" + std::to_string(index) +
+                    (outputs.path / "Plan Paint output" / ("app-icon-" + std::to_string(index) +
                                      (icon_shared_review ? "-palette.ico" : icon_stamp_review ? "-stamped.png" : "-icon.ico")))
                         .string());
                 if (result.frames.size() != (icon_stamp_review || icon_shared_review ? 1u : 7u)) {
