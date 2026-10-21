@@ -914,5 +914,13 @@
   "Scale Y %": "Skala Y %",
   "CONV* point": "CONV* titik",
   "CONV* minification": "CONV* pengecilan",
-  "CONV* area": "CONV* area"
+  "CONV* area": "CONV* area",
+  "Toolbar strip": "Strip bilah alat",
+  "Image order (comma-separated numbers)": "Urutan gambar (angka dipisahkan koma)",
+  "Output format": "Format keluaran",
+  "Cell width": "Lebar sel",
+  "Cell height": "Tinggi sel",
+  "Horizontal gap": "Celah horizontal",
+  "Vertical gap": "Celah vertikal",
+  "Opaque matte output": "Keluaran dengan latar buram"
 }

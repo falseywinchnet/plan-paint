@@ -914,5 +914,13 @@
   "Scale Y %": "Escala Y %",
   "CONV* point": "CONV* ponto",
   "CONV* minification": "CONV* redução",
-  "CONV* area": "CONV* área"
+  "CONV* area": "CONV* área",
+  "Toolbar strip": "Faixa de ícones",
+  "Image order (comma-separated numbers)": "Ordem das imagens (números separados por vírgulas)",
+  "Output format": "Formato de saída",
+  "Cell width": "Largura da célula",
+  "Cell height": "Altura da célula",
+  "Horizontal gap": "Espaço horizontal",
+  "Vertical gap": "Espaço vertical",
+  "Opaque matte output": "Saída com fundo opaco"
 }

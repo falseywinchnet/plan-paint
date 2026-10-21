@@ -111,6 +111,7 @@ void EditorDialog::initialize_icon_export() {
     error_ = gf::make_control<gf::Label>(gf::StableId("dialog-error"));
     (*error_).set_text_wrapping(gf::TextWrapping::word);
     put(error_, {20, 522, 800, 44});
+    const std::shared_ptr<gf::Button> strip = button("export-strip", tr("Toolbar strip"), {195,579,155,28});
     export_report_ = button("export-report", tr("Save report…"), {20, 579, 160, 28});
     export_run_ = button("export-run", tr("Export PNG…"), {365, 579, 160, 28});
     export_cancel_ = button("export-cancel", tr("Cancel"), {545, 579, 130, 28});
@@ -119,7 +120,7 @@ void EditorDialog::initialize_icon_export() {
     (*export_cancel_).set_enabled(false);
     (*export_report_).set_enabled(false);
     for (const std::shared_ptr<gf::Button>& control :
-         {export_folder_, export_review_, export_run_, export_cancel_, export_report_}) {
+         {export_folder_, export_review_, export_run_, export_cancel_, export_report_, strip}) {
         subscriptions_.push_back((*control).clicked().subscribe(
             *this,
             gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::icon_export_clicked>(*this)));
@@ -212,6 +213,10 @@ void EditorDialog::start_icon_export(bool execute) {
     for (const std::shared_ptr<gf::Control>& control : settings) {
         (*control).set_enabled(!execute);
     }
+    if (attached_window()) {
+        const gf::Control::Ptr strip = (*attached_window()).find("export-strip");
+        if (strip) { (*strip).set_enabled(!execute); }
+    }
     (*export_cancel_).set_enabled(true);
     (*export_status_).set_text(execute ? tr("Exporting…") : tr("Preparing preview…"));
     export_worker_ = std::thread(
@@ -263,6 +268,8 @@ void EditorDialog::deliver_icon_export() {
     (*export_report_).set_enabled(done && !published.entries.empty());
     (*export_cancel_).set_enabled(!done);
     if (done) {
+        const gf::Control::Ptr strip = (*attached_window()).find("export-strip");
+        if (strip) { (*strip).set_enabled(true); }
         (*export_scope_).set_enabled(true);
         (*export_collision_).set_enabled(true);
         (*export_prefix_).set_enabled(true);
@@ -272,13 +279,19 @@ void EditorDialog::deliver_icon_export() {
     }
 }
 void EditorDialog::icon_export_clicked(gf::ButtonBase& control) {
+    const std::shared_ptr<EditorDialog> keep_alive = std::static_pointer_cast<EditorDialog>(shared_from_this());
     const std::string id(control.stable_id().value());
     const std::shared_ptr<Editor> editor = editor_.lock();
     if (!editor) {
         return;
     }
     try {
-        if (id == "export-folder") {
+        if (id == "export-strip") {
+            if (export_job_ && (*export_job_).execute && !(*export_job_).done.load(std::memory_order_acquire)) { return; }
+            stop_icon_export();
+            (*editor).close_editor_dialog();
+            (*editor).execute("atlas-strip");
+        } else if (id == "export-folder") {
             const std::string folder = (*editor).choose_export_directory(export_directory_);
             if (!folder.empty()) {
                 (*export_destination_).set_text(folder);

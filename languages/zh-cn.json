@@ -914,5 +914,13 @@
   "Scale Y %": "Y 缩放 %",
   "CONV* point": "CONV* 点",
   "CONV* minification": "CONV* 缩小",
-  "CONV* area": "CONV* 面积"
+  "CONV* area": "CONV* 面积",
+  "Toolbar strip": "工具栏图带",
+  "Image order (comma-separated numbers)": "图像顺序（以逗号分隔的编号）",
+  "Output format": "输出格式",
+  "Cell width": "单元格宽度",
+  "Cell height": "单元格高度",
+  "Horizontal gap": "水平间距",
+  "Vertical gap": "垂直间距",
+  "Opaque matte output": "不透明底色输出"
 }

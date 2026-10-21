@@ -914,5 +914,13 @@
   "Scale Y %": "مقیاس Y %",
   "CONV* point": "CONV* نقطه",
   "CONV* minification": "CONV* کوچک‌سازی",
-  "CONV* area": "CONV* مساحت"
+  "CONV* area": "CONV* مساحت",
+  "Toolbar strip": "نوار ابزار",
+  "Image order (comma-separated numbers)": "ترتیب تصاویر (شماره‌ها با ویرگول جدا شوند)",
+  "Output format": "قالب خروجی",
+  "Cell width": "عرض خانه",
+  "Cell height": "ارتفاع خانه",
+  "Horizontal gap": "فاصلهٔ افقی",
+  "Vertical gap": "فاصلهٔ عمودی",
+  "Opaque matte output": "خروجی با پس‌زمینهٔ مات"
 }

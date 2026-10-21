@@ -1,5 +1,50 @@
 # Icon and cursor production
 
+## Toolbar strips from Atlas cells
+
+For a sprite sheet, **Atlas → Toolbar strip** uses the current Atlas cell grid.
+For an ICO or CUR, **Icon → Export → Toolbar strip** uses its representations.
+The owned popup captures the current frames, including edits synchronized from
+the active cell. Export does not change the source document, selected sequence,
+cell grid or Undo history. The source file and its existing filesystem aliases
+cannot be replaced by this export.
+
+The **Image order** field lists one-based frame numbers separated by commas.
+It starts with the Atlas selected sequence, or the first 256 frames when no
+sequence is selected. Change the list to reorder, omit or repeat frames; each
+occurrence produces one output cell. Empty entries, unavailable ordinals and
+more than 256 output cells are rejected.
+
+Cell width and height accept 1–4096 pixels; Columns accepts 1–256. A horizontal
+strip uses at least as many columns as listed images; one column produces a
+vertical strip. Other values produce a row-major grid. Horizontal and vertical
+gaps independently accept 0–256 pixels and occur only between cells. Incomplete
+last-row cells retain the selected output background. The output is bounded by
+32768 pixels per axis and 100 megapixels before allocation.
+
+By default, artwork keeps its original pixel dimensions and is centered in each
+cell, with an odd spare pixel on the right or bottom. Oversized artwork is
+rejected rather than clipped. Explicit **Fit image** scales each source to fit
+its cell while preserving aspect ratio, rounds the dimensions to the nearest
+integer and uses CONV area resizing. The manifest names every source ordinal,
+its destination position and dimensions, and marks any upscaling. Without
+resizing, transparent PNG output copies exact RGBA values, including RGB under
+zero alpha.
+
+Choose **PNG** with transparency or an opaque **Matte RGB** background. **BMP**
+requires opaque matte output: selecting it disables transparency and invalidates
+any existing proof. The editable hexadecimal matte defaults to the alternate
+color; its alpha is ignored. Artwork is composited onto the same matte shown in
+the preview and encoded in the file. Gaps and empty cells receive that matte.
+Legacy background-dependent XOR representations are rejected for both formats.
+
+**Preview** renders on a background worker and shows a fitted checkerboard proof
+plus the output manifest. Changing any input disables **Export** until another
+preview succeeds. Closing cancels the job. Export uses the reviewed pixels and
+requires a filename matching the reviewed PNG or BMP format; ordinary file-dialog
+overwrite confirmation and atomic publication apply. The checkerboard is a
+preview aid and is not written into transparent PNG files.
+
 ## Numeric transforms
 
 **Icon → Transform** and **Home → Rotate and flip → Transform** open the same

@@ -914,5 +914,13 @@
   "Scale Y %": "קנה מידה Y %",
   "CONV* point": "CONV* נקודה",
   "CONV* minification": "CONV* הקטנה",
-  "CONV* area": "CONV* שטח"
+  "CONV* area": "CONV* שטח",
+  "Toolbar strip": "רצועת כלים",
+  "Image order (comma-separated numbers)": "סדר תמונות (מספרים מופרדים בפסיקים)",
+  "Output format": "תבנית פלט",
+  "Cell width": "רוחב תא",
+  "Cell height": "גובה תא",
+  "Horizontal gap": "רווח אופקי",
+  "Vertical gap": "רווח אנכי",
+  "Opaque matte output": "פלט עם רקע אטום"
 }

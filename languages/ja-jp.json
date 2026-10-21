@@ -914,5 +914,13 @@
   "Scale Y %": "Y 拡大率 %",
   "CONV* point": "CONV* 点",
   "CONV* minification": "CONV* 縮小",
-  "CONV* area": "CONV* 面積"
+  "CONV* area": "CONV* 面積",
+  "Toolbar strip": "ツールバー画像",
+  "Image order (comma-separated numbers)": "画像の順序（カンマ区切りの番号）",
+  "Output format": "出力形式",
+  "Cell width": "セル幅",
+  "Cell height": "セル高さ",
+  "Horizontal gap": "横の間隔",
+  "Vertical gap": "縦の間隔",
+  "Opaque matte output": "不透明な背景で出力"
 }
