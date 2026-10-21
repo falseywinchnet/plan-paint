@@ -334,6 +334,44 @@ To make room, close the shadow preview, explicitly apply **Fit artwork within
 image**, then reopen Shadow. Shadow never automatically shrinks or expands the
 artwork or canvas.
 
+### Advanced adjustments and filters
+
+Check **Advanced** in Effects to extend the effect chooser with Gamma, Levels,
+Invert, Find edges, Enhance edges, Contour and Emboss. Unchecking it while an
+advanced effect is selected restores neutral Brightness / contrast. It never
+applies the dismissed preview. These filters use the same fixed current-image
+scope, preview, cancellation and single-Undo Apply transaction as the basic set.
+
+**Repeat effect…** recalls the last successfully applied effect, including its
+parameters and shadow color, into a preview of the current image. It enables
+Advanced when needed. Review and press Apply to repeat it; recalling settings
+alone changes no pixels. The saved settings survive Undo and document changes
+within the running editor. Canceled or invalid previews do not replace them,
+and they are not persisted across application restarts.
+
+| Advanced effect | Controls and independently defined numerical behavior |
+| --- | --- |
+| Gamma | 0.10…10.00 in steps of 0.01, default 1.00. Each encoded channel maps to `255 × (channel/255)^(1/gamma)`. Values above one brighten intermediate tones. |
+| Levels | Input black 0…254, input white 1…255, gamma 0.10…10.00, output black and white 0…255. Defaults are 0, 255, 1, 0, 255. Input black must be less than input white; output black must not exceed output white. Normalize and clamp `v = (channel − inputBlack)/(inputWhite − inputBlack)` to 0…1, then map to `outputBlack + (outputWhite − outputBlack) × v^(1/gamma)`. Equal output endpoints produce a constant tone. |
+| Invert | Each nontransparent pixel's RGB maps to `255 − channel`; alpha is retained. Applying twice restores the original pixels exactly. |
+| Find edges | Encoded luminance `0.2126R + 0.7152G + 0.0722B`, Sobel horizontal kernel `[-1,0,1; -2,0,2; -1,0,1]` and its transpose vertically. The grayscale target is `hypot(gx,gy)/4`, clamped to 0…255. Flat regions are black at 100% strength. |
+| Enhance edges | For each RGB channel, add `strength/100 × (4 × center − north − south − east − west)`. A flat field is unchanged. |
+| Contour | Grayscale target `255 − abs(4 × center luminance − north − south − east − west luminance)`, clamped to 0…255. At 100%, transitions are dark on a white field. |
+| Emboss | Grayscale target `128 + southeast luminance − northwest luminance`, clamped to 0…255. At 100%, flat regions are gray; increasing brightness toward the southeast produces a lighter relief. |
+
+All four neighborhood filters expose strength 0…300%, default 100%. Find edges,
+Contour and Emboss interpolate each original RGB channel toward their clamped
+grayscale target by `strength/100`; values above 100% extrapolate before final
+clamping. Zero strength is exact identity. The image border repeats the nearest
+pixel. A neighboring sample contributes `sampleRGB × sampleAlpha/255 +
+centerRGB × (1 − sampleAlpha/255)`, so hidden RGB in transparent neighbors cannot
+create colored fringes. Each output keeps the original center alpha byte;
+fully transparent center pixels retain their stored RGB unchanged. Arithmetic
+uses double precision, and channels are rounded to bytes only at the output.
+
+These formulas specify Plan Paint's implementation. Observing another editor's
+menu entries does not establish identical algorithms or pixel output.
+
 ## Comparison and contact sheets
 
 Open an ICO or CUR and choose **Atlas → Compare…**. The owned comparison window

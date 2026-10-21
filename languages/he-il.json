@@ -943,5 +943,17 @@
   "File unavailable on disk.": "הקובץ אינו זמין בדיסק.",
   "Reload and discard local edits? Save a copy first to keep them.": "לטעון מחדש ולבטל עריכות מקומיות? יש לשמור עותק תחילה כדי לשמור אותן.",
   "Reload from disk…": "טעינה מחדש מהדיסק…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "הקובץ השתנה או אינו זמין בדיסק. להחליף אותו בציור המקומי?"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "הקובץ השתנה או אינו זמין בדיסק. להחליף אותו בציור המקומי?",
+  "Advanced": "מתקדם",
+  "Gamma": "גאמה",
+  "Levels": "רמות",
+  "Find edges": "זיהוי קצוות",
+  "Enhance edges": "חיזוק קצוות",
+  "Contour": "קווי מתאר",
+  "Emboss": "תבליט",
+  "Input black": "שחור בקלט",
+  "Input white": "לבן בקלט",
+  "Output black": "שחור בפלט",
+  "Output white": "לבן בפלט",
+  "Repeat effect…": "חזרה על אפקט…"
 }

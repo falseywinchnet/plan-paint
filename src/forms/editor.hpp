@@ -213,6 +213,7 @@ class Editor final : public gui_forms::Control {
     bool show_rulers = false, show_grid = false, show_status = true, full_screen = false;
     void open_editor_dialog(EditorDialogKind kind, bool secondary = false);
     void close_editor_dialog();
+    std::optional<IconEffectSettings> last_icon_effect;
     bool export_toolbar_strip(const Image& image, bool bmp, const std::string& source_path);
     bool export_png_image(const Image& image, const std::string& suggested_name);
     std::string choose_export_directory(const std::string& initial_directory);

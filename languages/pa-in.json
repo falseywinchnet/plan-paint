@@ -943,5 +943,17 @@
   "File unavailable on disk.": "ਡਿਸਕ ਉੱਤੇ ਫ਼ਾਈਲ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।",
   "Reload and discard local edits? Save a copy first to keep them.": "ਮੁੜ ਲੋਡ ਕਰਕੇ ਸਥਾਨਕ ਸੋਧਾਂ ਛੱਡਣੀਆਂ ਹਨ? ਰੱਖਣ ਲਈ ਪਹਿਲਾਂ ਇੱਕ ਕਾਪੀ ਸੰਭਾਲੋ।",
   "Reload from disk…": "ਡਿਸਕ ਤੋਂ ਮੁੜ ਲੋਡ ਕਰੋ…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ਡਿਸਕ ਉੱਤੇ ਫ਼ਾਈਲ ਬਦਲ ਗਈ ਜਾਂ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਸਥਾਨਕ ਚਿੱਤਰ ਨਾਲ ਬਦਲਣਾ ਹੈ?"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ਡਿਸਕ ਉੱਤੇ ਫ਼ਾਈਲ ਬਦਲ ਗਈ ਜਾਂ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਸਥਾਨਕ ਚਿੱਤਰ ਨਾਲ ਬਦਲਣਾ ਹੈ?",
+  "Advanced": "ਉੱਨਤ",
+  "Gamma": "ਗਾਮਾ",
+  "Levels": "ਪੱਧਰ",
+  "Find edges": "ਕਿਨਾਰੇ ਲੱਭੋ",
+  "Enhance edges": "ਕਿਨਾਰੇ ਵਧਾਓ",
+  "Contour": "ਰੂਪਰੇਖਾ",
+  "Emboss": "ਉਭਾਰ",
+  "Input black": "ਇਨਪੁੱਟ ਕਾਲਾ",
+  "Input white": "ਇਨਪੁੱਟ ਚਿੱਟਾ",
+  "Output black": "ਆਉਟਪੁੱਟ ਕਾਲਾ",
+  "Output white": "ਆਉਟਪੁੱਟ ਚਿੱਟਾ",
+  "Repeat effect…": "ਪ੍ਰਭਾਵ ਦੁਹਰਾਓ…"
 }

@@ -943,5 +943,17 @@
   "File unavailable on disk.": "ڈسک اُتے فائل دستیاب نہیں اے۔",
   "Reload and discard local edits? Save a copy first to keep them.": "مُڑ لوڈ کرکے مقامی تبدیلیاں چھڈنیاں نیں؟ رکھن لئی پہلاں اک نقل محفوظ کرو۔",
   "Reload from disk…": "ڈسک توں مُڑ لوڈ کرو…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ڈسک اُتے فائل بدل گئی یا دستیاب نہیں رہی۔ مقامی تصویر نال بدلنا اے؟"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ڈسک اُتے فائل بدل گئی یا دستیاب نہیں رہی۔ مقامی تصویر نال بدلنا اے؟",
+  "Advanced": "اعلیٰ",
+  "Gamma": "گاما",
+  "Levels": "سطحاں",
+  "Find edges": "کنارے لبھو",
+  "Enhance edges": "کنارے ودھاؤ",
+  "Contour": "خاکہ",
+  "Emboss": "اُبھار",
+  "Input black": "اِن پُٹ کالا",
+  "Input white": "اِن پُٹ چِٹا",
+  "Output black": "آؤٹ پُٹ کالا",
+  "Output white": "آؤٹ پُٹ چِٹا",
+  "Repeat effect…": "اثر مُڑ لاؤ…"
 }

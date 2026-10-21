@@ -943,5 +943,17 @@
   "File unavailable on disk.": "Fichier indisponible sur le disque.",
   "Reload and discard local edits? Save a copy first to keep them.": "Recharger et abandonner les modifications locales ? Enregistrez une copie pour les conserver.",
   "Reload from disk…": "Recharger depuis le disque…",
-  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "Le fichier a changé ou est devenu indisponible. Le remplacer par le dessin local ?"
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "Le fichier a changé ou est devenu indisponible. Le remplacer par le dessin local ?",
+  "Advanced": "Avancé",
+  "Gamma": "Gamma",
+  "Levels": "Niveaux",
+  "Find edges": "Détecter les bords",
+  "Enhance edges": "Renforcer les bords",
+  "Contour": "Contour",
+  "Emboss": "Relief",
+  "Input black": "Noir en entrée",
+  "Input white": "Blanc en entrée",
+  "Output black": "Noir en sortie",
+  "Output white": "Blanc en sortie",
+  "Repeat effect…": "Répéter l’effet…"
 }
