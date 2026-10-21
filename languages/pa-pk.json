@@ -955,5 +955,10 @@
   "Input white": "اِن پُٹ چِٹا",
   "Output black": "آؤٹ پُٹ کالا",
   "Output white": "آؤٹ پُٹ چِٹا",
-  "Repeat effect…": "اثر مُڑ لاؤ…"
+  "Repeat effect…": "اثر مُڑ لاؤ…",
+  "Reveal in file manager": "فائل مینیجر وچ وکھاؤ",
+  "Revealing in file manager…": "فائل مینیجر وچ وکھایا جا رہیا اے…",
+  "Could not reveal the selected asset.": "چُنی چیز نہیں وکھائی جا سکی۔",
+  "Requested containing folder; file selection is unavailable.": "وڈے فولڈر دی درخواست کیتی؛ فائل چُننا دستیاب نہیں۔",
+  "Requested file selection in the file manager.": "فائل مینیجر وچ فائل چُنن دی درخواست کیتی۔"
 }

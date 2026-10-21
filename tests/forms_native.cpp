@@ -337,11 +337,11 @@ struct NativeExercise {
     }
     void inspect_frame(gf::Window& window) {
         if (external_file_review) { repaint_tree(*window.root()); }
-        if (icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
+        if (asset_browser_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
             repaint_tree(*window.root());
             repaint_tree(*window.find("editor-dialog"));
         }
-        const gf::Size size = external_file_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
+        const gf::Size size = asset_browser_review || external_file_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
         std::unique_ptr<gf::PaintFramebuffer> framebuffer = window.create_framebuffer(size, window.scale());
         if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
             throw std::runtime_error("Native framebuffer is unavailable");
@@ -499,6 +499,9 @@ struct NativeExercise {
             return;
         }
         if (asset_browser_review) {
+            const gf::Control::Ptr reveal=window.find("asset-reveal");
+            if (!reveal || !(*reveal).enabled() || (*reveal).absolute_bounds().right()>window.client_size().width ||
+                (*reveal).absolute_bounds().bottom()>window.client_size().height) { throw std::runtime_error("Native reveal control did not fit"); }
             if (!painted || !window.find("asset-stamp") || !(*window.find("asset-stamp")).enabled()) {
                 throw std::runtime_error("Native asset browser preview did not render");
             }
@@ -1239,7 +1242,7 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size = exercise.external_file_review || exercise.icon_export_review || exercise.icon_formats_review || exercise.icon_states_review ||
+        options.initial_size = exercise.asset_browser_review || exercise.external_file_review || exercise.icon_export_review || exercise.icon_formats_review || exercise.icon_states_review ||
                                        exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review || exercise.icon_sheet_review
                                    ? gf::Size{800, 520}
                                : exercise.compact ? gf::Size{800, 600}

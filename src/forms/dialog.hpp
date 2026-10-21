@@ -34,6 +34,7 @@ struct IconExportJob;
 struct IconBatchJob;
 struct NumericTransformJob;
 struct AssetBrowserWorker;
+struct AssetRevealJob;
 struct AssetBrowserResult;
 enum class EditorDialogKind {
     dither,
@@ -99,6 +100,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_icon_export();
     void deliver_icon_batch(const std::shared_ptr<IconBatchJob>& job);
     void deliver_numeric_transform(const std::shared_ptr<NumericTransformJob>& job);
+    void deliver_asset_reveal(std::shared_ptr<AssetRevealJob> job);
     void deliver_asset_browser(std::shared_ptr<const AssetBrowserResult> result);
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
@@ -211,6 +213,10 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::Button> state_export_, state_save_report_;
     void initialize_asset_browser();
     void stop_asset_browser();
+    void start_asset_reveal(const std::string& path);
+    void stop_asset_reveal();
+    std::shared_ptr<AssetRevealJob> asset_reveal_job_;
+    std::thread asset_reveal_thread_;
     void request_assets(bool scan);
     void asset_clicked(gui_forms::ButtonBase&);
     void asset_filter_changed(std::optional<std::size_t>);
@@ -233,7 +239,7 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::ComboBox> asset_filter_, asset_representations_, asset_bookmark_;
     std::shared_ptr<gui_forms::RasterCanvas> asset_canvas_;
     std::shared_ptr<gui_forms::Label> asset_status_;
-    std::shared_ptr<gui_forms::Button> asset_open_, asset_stamp_, asset_copy_, asset_batch_;
+    std::shared_ptr<gui_forms::Button> asset_open_, asset_stamp_, asset_copy_, asset_batch_, asset_reveal_;
     void initialize_icon_export();
     void review_icon_export();
     void stop_icon_export();

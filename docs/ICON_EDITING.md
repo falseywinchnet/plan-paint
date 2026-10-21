@@ -502,6 +502,31 @@ normal painting transaction and Undo. Background-dependent XOR images cannot
 be used as ordinary alpha stamps, and that action is visibly unavailable.
 **Copy path** copies the selected file or folder path.
 
+**Reveal in file manager** requests that the desktop file manager select the
+chosen file or folder in its parent directory. It does not open the artwork in
+another editor or change the Paint document. The action also works on a corrupt
+image that cannot be previewed. An item deleted since the folder scan produces
+an error before any desktop request. Symlinks retain their own identity rather
+than being resolved to their targets.
+
+Windows uses the public
+[SHOpenFolderAndSelectItems API](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shopenfolderandselectitems)
+and macOS uses
+[Finder selection through NSWorkspace](https://developer.apple.com/documentation/appkit/nsworkspace/activatefileviewerselecting(_:)).
+Linux first requests
+[FileManager1.ShowItems](https://wiki.freedesktop.org/www/Specifications/file-manager-interface/)
+through `dbus-send`, with a three-second reply timeout. If it is unavailable or
+fails, `xdg-open` receives the containing folder's file URI. The browser explicitly
+reports that fallback as a folder request with file selection unavailable. If
+neither service accepts the request, the failure remains visible in the browser.
+
+Requests run off the UI thread. Each uses the immutable selected path captured
+at the click; navigating elsewhere prevents its completion status from replacing
+the new selection's status. Closing cancels pending work and joins the request
+worker. A request already handed to the desktop cannot be recalled, so an opened
+file-manager window remains independent of Paint. Paths are passed as native
+filesystem paths or percent-encoded UTF-8 file URIs, never shell commands.
+
 Size and modification-time checks before/after decoding and before using a
 preview detect ordinary external changes. A changed or missing file requires a
 fresh preview. These checks are not a cryptographic guarantee against replacing
@@ -517,8 +542,10 @@ Missing folders remain in the bookmark list. There are at most 64 bookmarks;
 failed or malformed storage is reported and is not silently replaced.
 
 This browser currently provides a filename list and a selected-image preview.
-Thumbnail grids, multiple-asset job selection, metadata indexing and file-manager
-integration remain part of the broader production work.
+Thumbnail grids, multiple-asset job selection and metadata indexing remain
+part of the broader production work. **Add to batch** adds the selected file to
+the batch source list; multiple files can also be selected in Batch production's
+ordinary file picker.
 
 ## Inspecting and transferring opacity
 
