@@ -66,7 +66,7 @@ struct IconExportWork {
 };
 } // namespace
 void EditorDialog::initialize_icon_export() {
-    panel_ = {0, 0, 840, 620};
+    panel_ = {0, 0, 780, 510};
     const std::shared_ptr<Editor> editor = editor_.lock();
     const Document& document = (*editor).document;
     export_source_ = std::make_shared<const ImageContainer>(
@@ -84,11 +84,11 @@ void EditorDialog::initialize_icon_export() {
     label("export-prefix-label", tr("Filename prefix"), {20, 94, 135, 28});
     export_prefix_ = gf::make_control<gf::TextBox>(gf::StableId("export-prefix"));
     (*export_prefix_).set_text(icon_export_stem(document.filename));
-    put(export_prefix_, {165, 94, 440, 28});
-    export_folder_ = button("export-folder", tr("Choose folder…"), {620, 94, 200, 28});
+    put(export_prefix_, {165, 94, 380, 28});
+    export_folder_ = button("export-folder", tr("Choose folder…"), {560, 94, 200, 28});
     label("export-destination-label", tr("Destination folder"), {20, 136, 145, 28});
     export_destination_ = gf::make_control<gf::TextBox>(gf::StableId("export-destination"));
-    put(export_destination_, {175, 136, 645, 28});
+    put(export_destination_, {175, 136, 585, 28});
     label("export-collision-label", tr("Existing files"), {20, 180, 135, 28});
     export_collision_ = gf::make_control<gf::ComboBox>(gf::StableId("export-collision"));
     for (const std::string& name : {tr("Skip existing"), tr("Rename outputs"), tr("Replace existing")}) {
@@ -96,26 +96,26 @@ void EditorDialog::initialize_icon_export() {
     }
     (*export_collision_).set_selected_index(0);
     put(export_collision_, {165, 178, 300, 28});
-    export_review_ = button("export-review", tr("Review outputs"), {620, 178, 200, 28});
+    export_review_ = button("export-review", tr("Review outputs"), {560, 178, 200, 28});
     label("export-hint", tr("RGBA PNG at original dimensions. Cursor hotspots are not included."),
-          {20, 218, 800, 28});
+          {20, 218, 740, 28});
     export_manifest_ = gf::make_control<gf::TextBox>(gf::StableId("export-manifest"));
     (*export_manifest_).set_accessible_name(tr("Output manifest"));
     (*export_manifest_).set_multiline(true);
     (*export_manifest_).set_auto_scroll(true);
     (*export_manifest_).set_read_only(true);
     (*export_manifest_).set_word_wrap(false);
-    put(export_manifest_, {20, 254, 800, 225});
+    put(export_manifest_, {20, 254, 740, 126});
     export_status_ = gf::make_control<gf::Label>(gf::StableId("export-status"));
-    put(export_status_, {20, 488, 800, 28});
+    put(export_status_, {20, 386, 740, 24});
     error_ = gf::make_control<gf::Label>(gf::StableId("dialog-error"));
     (*error_).set_text_wrapping(gf::TextWrapping::word);
-    put(error_, {20, 522, 800, 44});
-    const std::shared_ptr<gf::Button> strip = button("export-strip", tr("Toolbar strip"), {195,579,155,28});
-    export_report_ = button("export-report", tr("Save report…"), {20, 579, 160, 28});
-    export_run_ = button("export-run", tr("Export PNG…"), {365, 579, 160, 28});
-    export_cancel_ = button("export-cancel", tr("Cancel"), {545, 579, 130, 28});
-    button("dialog-cancel", tr("Close"), {695, 579, 125, 28});
+    put(error_, {20, 414, 740, 44});
+    const std::shared_ptr<gf::Button> strip = button("export-strip", tr("Toolbar strip"), {185,474,145,28});
+    export_report_ = button("export-report", tr("Save report…"), {20, 474, 150, 28});
+    export_run_ = button("export-run", tr("Export PNG…"), {345, 474, 150, 28});
+    export_cancel_ = button("export-cancel", tr("Cancel"), {510, 474, 110, 28});
+    button("dialog-cancel", tr("Close"), {635, 474, 125, 28});
     (*export_run_).set_enabled(false);
     (*export_cancel_).set_enabled(false);
     (*export_report_).set_enabled(false);
