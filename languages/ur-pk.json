@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "پیش منظر رکھیں؛ پینٹ کرنے کے لیے لاگو کریں۔ Escape منسوخ کرتا ہے۔",
   "Opacity": "غیر شفافیت",
   "Sticky note": "چپکنے والا نوٹ",
-  "Sticky note…": "چپکنے والا نوٹ…",
-  "Edit note…": "نوٹ میں ترمیم…",
   "Paper texture": "کاغذ کی بناوٹ",
   "Book paper": "کتابی کاغذ",
   "Copy paper": "کاپی کا کاغذ",
@@ -978,14 +976,5 @@
   "Kraft paper": "کرافٹ کاغذ",
   "Night paper": "رات کا کاغذ",
   "Paper color": "کاغذ کا رنگ",
-  "Text color": "متن کا رنگ",
-  "Regular": "عام",
-  "Monospace": "یکساں چوڑائی",
-  "New paper": "نیا کاغذ",
-  "Place note": "نوٹ رکھیں",
-  "Padding must be less than half the note size.": "اندرونی حاشیہ نوٹ کے سائز کے نصف سے کم ہونا چاہیے۔",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "نوٹ کا متن بہت لمبا ہے (زیادہ سے زیادہ 8191 UTF-8 بائٹس)۔",
-  "The document changed. Open the note again.": "دستاویز بدل گئی ہے۔ نوٹ دوبارہ کھولیں۔",
-  "Text does not fit. Enlarge the note or reduce the font size.": "متن نہیں سما رہا۔ نوٹ بڑا کریں یا فونٹ چھوٹا کریں۔",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "نوٹ رکھیں، پھر کینوس پر لاگو کریں۔ لاگو کرنے تک نوٹ میں ترمیم کی جا سکتی ہے۔"
+  "New paper": "نیا کاغذ"
 }

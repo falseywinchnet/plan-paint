@@ -246,7 +246,6 @@ void EditorDialog::initialize_control_tree() {
         initialize_icon_states();
         return;
     }
-    if (kind_ == EditorDialogKind::sticky_note) { initialize_sticky_note(); return; }
     if (kind_ == EditorDialogKind::numeric_transform) {
         initialize_numeric_transform();
         return;
@@ -760,7 +759,7 @@ void EditorDialog::on_key_preview(gf::KeyEvent& event) {
         }
         event.handled = true;
     } else if (event.physical_key == gf::PhysicalKey::enter) {
-        if (kind_ == EditorDialogKind::sticky_note || kind_ == EditorDialogKind::icon_batch || kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_validation || kind_ == EditorDialogKind::toolbar_strip || kind_ == EditorDialogKind::icon_sheet ||
+        if (kind_ == EditorDialogKind::icon_batch || kind_ == EditorDialogKind::icon_export || kind_ == EditorDialogKind::icon_validation || kind_ == EditorDialogKind::toolbar_strip || kind_ == EditorDialogKind::icon_sheet ||
             kind_ == EditorDialogKind::asset_browser || kind_ == EditorDialogKind::alpha_tools ||
             kind_ == EditorDialogKind::icon_palette || kind_ == EditorDialogKind::icon_states || kind_ == EditorDialogKind::numeric_transform || kind_ == EditorDialogKind::icon_effects) {
             return; // The focused command owns Enter; never run a disk job implicitly.
@@ -817,8 +816,6 @@ std::string EditorDialog::title() const {
         return tr("Palette conversion");
     case EditorDialogKind::icon_states:
         return tr("Icon state variants");
-    case EditorDialogKind::sticky_note:
-        return tr("Sticky note");
     case EditorDialogKind::numeric_transform:
         return tr("Transform");
     case EditorDialogKind::icon_effects:

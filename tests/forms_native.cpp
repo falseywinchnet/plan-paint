@@ -361,10 +361,7 @@ struct NativeExercise {
         return image;
     }
     void inspect_frame(gf::Window& window) {
-        if (sticky_review) {
-            repaint_tree(*window.root());
-            repaint_tree(*window.find("editor-dialog"));
-        }
+        if (sticky_review) { repaint_tree(*window.root()); }
         if (opacity_review || external_file_review || stamp_placement_review) { repaint_tree(*window.root()); }
         if (asset_browser_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
             repaint_tree(*window.root());
@@ -381,26 +378,31 @@ struct NativeExercise {
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
         if (sticky_review) {
-            for (const char* id : {"sticky-text", "sticky-paper", "sticky-preview", "sticky-place", "dialog-cancel"}) {
+            for (const char* id : {"sticky-paper", "sticky-width", "sticky-height", "sticky-padding", "text-font", "text-place"}) {
                 const gf::Control::Ptr control = window.find(id);
                 if (!painted || !control || !(*control).visible() || !(*control).enabled()) {
-                    throw std::runtime_error("Native sticky dialog lost a required control");
+                    throw std::runtime_error("Native inline note ribbon lost a required control");
                 }
                 const gf::Rect bounds = (*control).absolute_bounds();
                 if (bounds.x < 0 || bounds.y < 0 || bounds.right() > size.width || bounds.bottom() > size.height) {
-                    throw std::runtime_error("Native sticky dialog does not fit the window");
+                    throw std::runtime_error("Native note ribbon does not fit the window");
                 }
             }
-            const gf::Rect preview = (*window.find("sticky-preview-canvas")).absolute_bounds();
+            if (window.find("editor-dialog") || !(*editor).text.active || !(*editor).text.note) {
+                throw std::runtime_error("Sticky note must be edited on canvas without a popup");
+            }
+            const paint::Rect note = (*editor).text.bounds;
+            const gf::Rect rectangle = (*editor).canvas().bitmap_to_client({note.x, note.y, note.w, note.h});
+            const gf::Point origin = (*editor).canvas().point_to_window({rectangle.x, rectangle.y});
             std::size_t paper = 0, ink = 0;
-            for (int y = static_cast<int>((preview.y + 20) * window.scale()); y < (preview.bottom() - 20) * window.scale(); ++y) {
-                for (int x = static_cast<int>((preview.x + 55) * window.scale()); x < (preview.right() - 55) * window.scale(); ++x) {
+            for (int y = static_cast<int>((origin.y + 4) * window.scale()); y < (origin.y + rectangle.height - 4) * window.scale(); ++y) {
+                for (int x = static_cast<int>((origin.x + 4) * window.scale()); x < (origin.x + rectangle.width - 4) * window.scale(); ++x) {
                     const paint::Color color = image.get(x, y);
                     if (color.r > 180 && color.g > 150 && color.b < 190) { ++paper; }
                     if (color.r < 100 && color.g < 100 && color.b < 100) { ++ink; }
                 }
             }
-            if (paper < 1000 || ink < 100) { throw std::runtime_error("Native paper and text preview did not render"); }
+            if (paper < 1000 || ink < 100) { throw std::runtime_error("Native inline paper and text did not render"); }
             return;
         }
         if (opacity_review) {
@@ -642,21 +644,12 @@ struct NativeExercise {
         window.perform_layout();
         paint::Document& document = (*editor).document;
         if (sticky_review) {
-            (*editor).sticky_note_settings.text = "Plan the next step\n\nMake something useful.";
             (*editor).execute("sticky-note");
-            const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-            while (!(*window.find("sticky-preview")).enabled()) {
-                static_cast<void>(window.drain_posted_work());
-                if (std::chrono::steady_clock::now() > deadline) { throw std::runtime_error("Native sticky preview timed out"); }
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
+            gf::TextInputEvent text{"Plan the next step\n\nMake something useful."};
+            (*editor).text_input(text);
             window.perform_layout();
             inspect_frame(window);
-            (*std::dynamic_pointer_cast<gf::Button>(window.find("sticky-place"))).perform_click();
-            if (!(*editor).sticky_note_placement() || !(*window.find("context-sticky-note")).visible()) {
-                throw std::runtime_error("Native sticky placement lacks Edit note");
-            }
-            (*editor).apply_stamp_placement();
+            (*editor).execute("text-place");
             document.saved_revision = document.revision;
             entered = true;
             if (!handle.request_close().accepted()) { throw std::runtime_error("Native sticky close failed"); }

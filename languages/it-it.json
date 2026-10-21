@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "Posiziona l’anteprima; Applica per dipingere. Esc annulla.",
   "Opacity": "Opacità",
   "Sticky note": "Nota adesiva",
-  "Sticky note…": "Nota adesiva…",
-  "Edit note…": "Modifica nota…",
   "Paper texture": "Trama della carta",
   "Book paper": "Carta da libro",
   "Copy paper": "Carta per copie",
@@ -978,14 +976,5 @@
   "Kraft paper": "Carta kraft",
   "Night paper": "Carta notturna",
   "Paper color": "Colore della carta",
-  "Text color": "Colore del testo",
-  "Regular": "Normale",
-  "Monospace": "Monospazio",
-  "New paper": "Nuova carta",
-  "Place note": "Posiziona nota",
-  "Padding must be less than half the note size.": "Il margine deve essere inferiore alla metà della dimensione della nota.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "Il testo è troppo lungo (massimo 8191 byte UTF-8).",
-  "The document changed. Open the note again.": "Il documento è cambiato. Riapri la nota.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "Il testo non entra. Ingrandisci la nota o riduci il carattere.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "Posiziona la nota, poi scegli Applica sulla tela. Puoi modificarla fino ad allora."
+  "New paper": "Nuova carta"
 }

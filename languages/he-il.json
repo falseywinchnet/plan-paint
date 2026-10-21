@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "מקם את התצוגה המקדימה; החל לציור. Escape מבטל.",
   "Opacity": "אטימות",
   "Sticky note": "פתק דביק",
-  "Sticky note…": "פתק דביק…",
-  "Edit note…": "עריכת פתק…",
   "Paper texture": "מרקם נייר",
   "Book paper": "נייר ספר",
   "Copy paper": "נייר צילום",
@@ -978,14 +976,5 @@
   "Kraft paper": "נייר קראפט",
   "Night paper": "נייר לילה",
   "Paper color": "צבע נייר",
-  "Text color": "צבע טקסט",
-  "Regular": "רגיל",
-  "Monospace": "רוחב קבוע",
-  "New paper": "נייר חדש",
-  "Place note": "מיקום פתק",
-  "Padding must be less than half the note size.": "השוליים חייבים להיות קטנים ממחצית גודל הפתק.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "טקסט הפתק ארוך מדי (עד 8191 בתי UTF-8).",
-  "The document changed. Open the note again.": "המסמך השתנה. יש לפתוח שוב את הפתק.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "הטקסט אינו נכנס. יש להגדיל את הפתק או להקטין את הגופן.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "מקמו את הפתק ואז בחרו החלה על הבד. אפשר לערוך את הפתק עד להחלה."
+  "New paper": "נייר חדש"
 }

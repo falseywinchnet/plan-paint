@@ -98,6 +98,14 @@ class Ribbon final : public gui_forms::Control {
     std::vector<std::string> font_paths_;
     void font_changed(std::optional<std::size_t> index);
     void add_options();
+    void initialize_sticky_ribbon();
+    void synchronize_sticky_ribbon();
+    bool sticky_visibility(const std::string& id, bool visible) const;
+    void sticky_paper_changed(std::optional<std::size_t> index);
+    void sticky_color_changed(const std::string& value);
+    std::shared_ptr<gui_forms::ComboBox> sticky_paper_;
+    std::shared_ptr<gui_forms::TextBox> sticky_color_;
+    std::shared_ptr<gui_forms::NumericUpDown> sticky_padding_, sticky_width_, sticky_height_;
     void initialize_gradient();
     void synchronize_gradient();
     bool gradient_clicked(const std::string& id);

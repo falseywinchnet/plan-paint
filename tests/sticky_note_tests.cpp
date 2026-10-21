@@ -1,4 +1,5 @@
 #include "sticky_note.hpp"
+#include "text_session.hpp"
 #include <iostream>
 #include <stdexcept>
 namespace {
@@ -102,11 +103,42 @@ void invalid_and_cancelled() {
     }
     require(cancelled, "cancelled note generation must not publish an image");
 }
+void inline_editing() {
+    paint::TextSession text;
+    text.begin({10, 20});
+    text.note = paint::StickyNoteSettings{};
+    text.resize({10, 20, 160, 120});
+    text.refresh({20, 30, 40, 255}, {255, 255, 255, 255});
+    const paint::Image blank = text.preview;
+    require(blank.get(0, 0).a == 255, "an empty inline note must still display paper");
+    text.replace("Plan\nPaint");
+    text.refresh({20, 30, 40, 255}, {255, 255, 255, 255});
+    require(!same(blank, text.preview) && paint::equal(blank.get(2, 2), text.preview.get(2, 2)),
+            "typing must update text while preserving the paper and inset");
+    const paint::Point caret = text.display_point({0, 0});
+    require(caret.x == 16 && caret.y == 16 && text.source_point(caret).x == 0 &&
+                text.source_point(caret).y == 0,
+            "paper padding must also offset caret and hit testing");
+    text.history(false);
+    text.refresh({20, 30, 40, 255}, {255, 255, 255, 255});
+    require(text.edit.content.empty() && same(blank, text.preview),
+            "inline Undo must preserve the note background");
+    text.history(true);
+    text.resize({40, 50, 180, 150});
+    text.refresh({20, 30, 40, 255}, {255, 255, 255, 255});
+    require(text.preview.width == 180 && text.preview.height == 150 && text.edit.content == "Plan\nPaint",
+            "moving and resizing must retain editable text and resize the paper");
+    text.clear();
+    text.begin({0, 0});
+    text.refresh({0, 0, 0, 255}, {255, 255, 255, 255});
+    require(!text.note && text.preview.get(0, 0).a == 0, "ordinary text must not inherit note paper");
+}
 } // namespace
 int main() {
     try {
         paper_and_text();
         invalid_and_cancelled();
+        inline_editing();
         std::cout << "Sticky paper, text, overflow and cancellation contracts passed\n";
         return 0;
     } catch (const std::exception& error) {

@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "Posisikan pratinjau; Terapkan untuk melukis. Escape membatalkan.",
   "Opacity": "Opasitas",
   "Sticky note": "Catatan tempel",
-  "Sticky note…": "Catatan tempel…",
-  "Edit note…": "Edit catatan…",
   "Paper texture": "Tekstur kertas",
   "Book paper": "Kertas buku",
   "Copy paper": "Kertas fotokopi",
@@ -978,14 +976,5 @@
   "Kraft paper": "Kertas kraft",
   "Night paper": "Kertas malam",
   "Paper color": "Warna kertas",
-  "Text color": "Warna teks",
-  "Regular": "Biasa",
-  "Monospace": "Lebar tetap",
-  "New paper": "Kertas baru",
-  "Place note": "Letakkan catatan",
-  "Padding must be less than half the note size.": "Margin harus kurang dari setengah ukuran catatan.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "Teks terlalu panjang (maksimum 8191 byte UTF-8).",
-  "The document changed. Open the note again.": "Dokumen berubah. Buka catatan lagi.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "Teks tidak muat. Perbesar catatan atau perkecil huruf.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "Letakkan catatan, lalu pilih Terapkan di kanvas. Catatan masih bisa diedit sebelum diterapkan."
+  "New paper": "Kertas baru"
 }

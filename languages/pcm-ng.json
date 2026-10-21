@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "Place preview; Apply go paint am. Escape go cancel.",
   "Opacity": "How solid e be",
   "Sticky note": "Sticky note",
-  "Sticky note…": "Sticky note…",
-  "Edit note…": "Edit note…",
   "Paper texture": "Paper texture",
   "Book paper": "Book paper",
   "Copy paper": "Copy paper",
@@ -978,14 +976,5 @@
   "Kraft paper": "Kraft paper",
   "Night paper": "Night paper",
   "Paper color": "Paper colour",
-  "Text color": "Text colour",
-  "Regular": "Regular",
-  "Monospace": "Same-width letters",
-  "New paper": "New paper",
-  "Place note": "Place note",
-  "Padding must be less than half the note size.": "Padding must small pass half of di note size.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "Di note text too long (8191 UTF-8 bytes na di highest).",
-  "The document changed. Open the note again.": "Di document don change. Open di note again.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "Di text no fit. Make di note bigger or di letters smaller.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "Place di note, then press Apply for canvas. You fit edit di note before you apply am."
+  "New paper": "New paper"
 }

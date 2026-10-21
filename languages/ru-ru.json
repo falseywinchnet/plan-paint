@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "Разместите образец; «Применить» рисует. Escape отменяет.",
   "Opacity": "Непрозрачность",
   "Sticky note": "Заметка",
-  "Sticky note…": "Заметка…",
-  "Edit note…": "Изменить заметку…",
   "Paper texture": "Текстура бумаги",
   "Book paper": "Книжная бумага",
   "Copy paper": "Бумага для копирования",
@@ -978,14 +976,5 @@
   "Kraft paper": "Крафт-бумага",
   "Night paper": "Ночная бумага",
   "Paper color": "Цвет бумаги",
-  "Text color": "Цвет текста",
-  "Regular": "Обычный",
-  "Monospace": "Моноширинный",
-  "New paper": "Новая бумага",
-  "Place note": "Разместить заметку",
-  "Padding must be less than half the note size.": "Отступ должен быть меньше половины размера заметки.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "Текст слишком длинный (не более 8191 байта UTF-8).",
-  "The document changed. Open the note again.": "Документ изменился. Откройте заметку заново.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "Текст не помещается. Увеличьте заметку или уменьшите шрифт.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "Разместите заметку, затем нажмите «Применить». До этого её можно редактировать."
+  "New paper": "Новая бумага"
 }

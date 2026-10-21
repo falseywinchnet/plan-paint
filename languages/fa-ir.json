@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "پیش‌نمایش را قرار دهید؛ برای رسم اعمال کنید. Escape لغو می‌کند.",
   "Opacity": "تیرگی",
   "Sticky note": "یادداشت چسبان",
-  "Sticky note…": "یادداشت چسبان…",
-  "Edit note…": "ویرایش یادداشت…",
   "Paper texture": "بافت کاغذ",
   "Book paper": "کاغذ کتاب",
   "Copy paper": "کاغذ کپی",
@@ -978,14 +976,5 @@
   "Kraft paper": "کاغذ کرافت",
   "Night paper": "کاغذ شب",
   "Paper color": "رنگ کاغذ",
-  "Text color": "رنگ متن",
-  "Regular": "معمولی",
-  "Monospace": "تک‌فاصله",
-  "New paper": "کاغذ تازه",
-  "Place note": "قرار دادن یادداشت",
-  "Padding must be less than half the note size.": "حاشیه باید کمتر از نصف اندازهٔ یادداشت باشد.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "متن یادداشت خیلی طولانی است (حداکثر 8191 بایت UTF-8).",
-  "The document changed. Open the note again.": "سند تغییر کرده است. یادداشت را دوباره باز کنید.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "متن جا نمی‌شود. یادداشت را بزرگ‌تر یا قلم را کوچک‌تر کنید.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "یادداشت را قرار دهید، سپس روی بوم اعمال کنید. تا پیش از اعمال می‌توانید آن را ویرایش کنید."
+  "New paper": "کاغذ تازه"
 }

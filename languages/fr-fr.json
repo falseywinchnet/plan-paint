@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "Placez l’aperçu ; Appliquer pour peindre. Échap annule.",
   "Opacity": "Opacité",
   "Sticky note": "Note adhésive",
-  "Sticky note…": "Note adhésive…",
-  "Edit note…": "Modifier la note…",
   "Paper texture": "Texture du papier",
   "Book paper": "Papier de livre",
   "Copy paper": "Papier de copie",
@@ -978,14 +976,5 @@
   "Kraft paper": "Papier kraft",
   "Night paper": "Papier de nuit",
   "Paper color": "Couleur du papier",
-  "Text color": "Couleur du texte",
-  "Regular": "Normal",
-  "Monospace": "Chasse fixe",
-  "New paper": "Nouveau papier",
-  "Place note": "Placer la note",
-  "Padding must be less than half the note size.": "La marge doit être inférieure à la moitié de la taille de la note.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "Le texte est trop long (8191 octets UTF-8 maximum).",
-  "The document changed. Open the note again.": "Le document a changé. Rouvrez la note.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "Le texte déborde. Agrandissez la note ou réduisez la taille de police.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "Placez la note, puis cliquez sur Appliquer. Modifier la note reste disponible jusque-là."
+  "New paper": "Nouveau papier"
 }

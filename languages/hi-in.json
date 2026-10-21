@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "पूर्वावलोकन रखें; चित्र बनाने के लिए लागू करें। Escape रद्द करता है।",
   "Opacity": "अपारदर्शिता",
   "Sticky note": "चिपकने वाला नोट",
-  "Sticky note…": "चिपकने वाला नोट…",
-  "Edit note…": "नोट संपादित करें…",
   "Paper texture": "कागज़ की बनावट",
   "Book paper": "किताब का कागज़",
   "Copy paper": "कॉपी का कागज़",
@@ -978,14 +976,5 @@
   "Kraft paper": "क्राफ्ट कागज़",
   "Night paper": "रात्रि कागज़",
   "Paper color": "कागज़ का रंग",
-  "Text color": "पाठ का रंग",
-  "Regular": "सामान्य",
-  "Monospace": "एकसमान चौड़ाई",
-  "New paper": "नया कागज़",
-  "Place note": "नोट रखें",
-  "Padding must be less than half the note size.": "अंदरूनी हाशिया नोट के आकार के आधे से कम होना चाहिए।",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "नोट का पाठ बहुत लंबा है (अधिकतम 8191 UTF-8 बाइट)।",
-  "The document changed. Open the note again.": "दस्तावेज़ बदल गया है। नोट दोबारा खोलें।",
-  "Text does not fit. Enlarge the note or reduce the font size.": "पाठ नहीं समाता। नोट बड़ा करें या फ़ॉन्ट छोटा करें।",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "नोट रखें, फिर कैनवास पर लागू करें चुनें। लागू करने तक नोट संपादित किया जा सकता है।"
+  "New paper": "नया कागज़"
 }

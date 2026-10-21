@@ -225,9 +225,8 @@ class Editor final : public gui_forms::Control {
     RevealHandler reveal_asset = &reveal_in_file_manager;
     void open_browser_asset(const AssetPreview& preview);
     void use_asset_stamp(Image image);
-    void use_sticky_note(Image image, const StickyNoteSettings& settings);
+    void insert_sticky_note();
     StickyNoteSettings sticky_note_settings;
-    bool sticky_note_placement() const { return sticky_placement_ && stamp_placement_; }
     bool stamp_placement_active() const { return stamp_placement_; }
     bool can_apply_stamp_placement() const;
     void apply_stamp_placement();
@@ -338,7 +337,7 @@ class Editor final : public gui_forms::Control {
     std::shared_ptr<const ConvWarpField> warp_field_, stamp_field_;
     Image stamp_preview_, hard_stamp_, stamp_basis_;
     bool adding_stamp_material_ = false;
-    bool stamp_placement_ = false, sticky_placement_ = false;
+    bool stamp_placement_ = false;
     Point stamp_placement_center_;
     std::uint64_t stamp_placement_revision_ = 0, stamp_placement_epoch_ = 0, stamp_preview_generation_ = 0;
     void composite_stamp(Image& target, const Image& base, Point point) const;

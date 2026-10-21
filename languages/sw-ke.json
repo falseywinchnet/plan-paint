@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "Weka hakiki; Tekeleza ili kuchora. Escape hughairi.",
   "Opacity": "Uwazi hafifu",
   "Sticky note": "Kumbuka ya kubandika",
-  "Sticky note…": "Kumbuka ya kubandika…",
-  "Edit note…": "Hariri kumbuka…",
   "Paper texture": "Umbile la karatasi",
   "Book paper": "Karatasi ya kitabu",
   "Copy paper": "Karatasi ya nakala",
@@ -978,14 +976,5 @@
   "Kraft paper": "Karatasi ya kraft",
   "Night paper": "Karatasi ya usiku",
   "Paper color": "Rangi ya karatasi",
-  "Text color": "Rangi ya maandishi",
-  "Regular": "Kawaida",
-  "Monospace": "Upana sawa",
-  "New paper": "Karatasi mpya",
-  "Place note": "Weka kumbuka",
-  "Padding must be less than half the note size.": "Pambizo lazima iwe chini ya nusu ya ukubwa wa kumbuka.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "Maandishi ni marefu sana (upeo wa baiti 8191 za UTF-8).",
-  "The document changed. Open the note again.": "Hati imebadilika. Fungua kumbuka tena.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "Maandishi hayatoshi. Panua kumbuka au punguza ukubwa wa herufi.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "Weka kumbuka, kisha chagua Tumia kwenye turubai. Unaweza kuihariri kabla ya kutumia."
+  "New paper": "Karatasi mpya"
 }

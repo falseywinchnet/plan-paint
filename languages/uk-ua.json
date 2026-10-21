@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "Розмістіть зразок; «Застосувати» малює. Escape скасовує.",
   "Opacity": "Непрозорість",
   "Sticky note": "Наліпка",
-  "Sticky note…": "Наліпка…",
-  "Edit note…": "Змінити наліпку…",
   "Paper texture": "Текстура паперу",
   "Book paper": "Книжковий папір",
   "Copy paper": "Папір для копіювання",
@@ -978,14 +976,5 @@
   "Kraft paper": "Крафт-папір",
   "Night paper": "Нічний папір",
   "Paper color": "Колір паперу",
-  "Text color": "Колір тексту",
-  "Regular": "Звичайний",
-  "Monospace": "Моноширинний",
-  "New paper": "Новий папір",
-  "Place note": "Розмістити наліпку",
-  "Padding must be less than half the note size.": "Відступ має бути меншим за половину розміру наліпки.",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "Текст задовгий (максимум 8191 байт UTF-8).",
-  "The document changed. Open the note again.": "Документ змінився. Відкрийте наліпку знову.",
-  "Text does not fit. Enlarge the note or reduce the font size.": "Текст не вміщується. Збільште наліпку або зменште шрифт.",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "Розмістіть наліпку й натисніть «Застосувати». До цього її можна редагувати."
+  "New paper": "Новий папір"
 }

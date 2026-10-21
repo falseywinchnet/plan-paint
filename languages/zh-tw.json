@@ -964,8 +964,6 @@
   "Position preview; Apply to paint. Escape cancels.": "放置預覽，點擊套用繪製。Escape 取消。",
   "Opacity": "不透明度",
   "Sticky note": "便利貼",
-  "Sticky note…": "便利貼…",
-  "Edit note…": "編輯便利貼…",
   "Paper texture": "紙張紋理",
   "Book paper": "書籍紙",
   "Copy paper": "影印紙",
@@ -978,14 +976,5 @@
   "Kraft paper": "牛皮紙",
   "Night paper": "夜色紙",
   "Paper color": "紙張色彩",
-  "Text color": "文字色彩",
-  "Regular": "一般",
-  "Monospace": "等寬",
-  "New paper": "更換紙張",
-  "Place note": "放置便利貼",
-  "Padding must be less than half the note size.": "內距必須小於便利貼尺寸的一半。",
-  "Note text is too long (8191 UTF-8 bytes maximum).": "便利貼文字過長（最多 8191 個 UTF-8 位元組）。",
-  "The document changed. Open the note again.": "文件已變更，請重新開啟便利貼。",
-  "Text does not fit. Enlarge the note or reduce the font size.": "文字放不下，請增大便利貼或縮小字級。",
-  "Place the note, then Apply on the canvas. Edit note remains available until Apply.": "放置便利貼後，在畫布上選擇「套用」。套用之前仍可編輯便利貼。"
+  "New paper": "更換紙張"
 }

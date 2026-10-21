@@ -39,7 +39,7 @@ gf::SemanticDescriptor PaintCanvas::semantic_descriptor() const {
     }
     gf::SemanticDescriptor descriptor;
     descriptor.role = gf::SemanticRole::text_box;
-    descriptor.name = tr("Canvas text");
+    descriptor.name = (*editor).text.note ? tr("Sticky note") : tr("Canvas text");
     descriptor.value = (*editor).text.edit.content;
     descriptor.description = tr("Editable text box. Control or Command + Enter places it; Escape cancels.");
     descriptor.actions = {gf::SemanticAction::focus, gf::SemanticAction::set_value};
@@ -132,11 +132,30 @@ void Editor::text_input(gf::TextInputEvent& event) {
     reset_text_caret();
     refresh();
 }
+void Editor::insert_sticky_note() {
+    finish_controls();
+    choose_tool(Tool::Text);
+    const Point origin = canvas().visible_paste_origin(sticky_note_settings.width, sticky_note_settings.height);
+    text.begin(origin);
+    text.note = sticky_note_settings;
+    text.style = sticky_note_settings.font;
+    text.resize({static_cast<int>(origin.x), static_cast<int>(origin.y),
+                 sticky_note_settings.width, sticky_note_settings.height});
+    if (window()) { static_cast<void>((*window()).request_focus(canvas_)); }
+    reset_text_caret();
+    (*ribbon_).show_tool_context();
+    refresh();
+}
 void Editor::finish_text(bool place) {
     if (!text.active) {
         return;
     }
-    if (place && !text.edit.content.empty()) {
+    if (text.note) {
+        sticky_note_settings = *text.note;
+        sticky_note_settings.width = text.bounds.w; sticky_note_settings.height = text.bounds.h;
+        sticky_note_settings.font = text.style;
+    }
+    if (place && (!text.edit.content.empty() || text.note)) {
         text.refresh(document.ink.primary, document.ink.secondary);
         document.settle_selection();
         document.checkpoint();
@@ -160,7 +179,7 @@ bool Editor::text_command(const std::string& command) {
         finish_text(false);
     } else if (command == "text-fit") {
         text.refresh(document.ink.primary, document.ink.secondary);
-        text.resize({text.bounds.x, text.bounds.y, text.bounds.w, text.layout.height + 4});
+        text.resize({text.bounds.x, text.bounds.y, text.bounds.w, text.layout.height + 2 * text.inset() + 4});
         refresh();
     } else if (command == "undo" || command == "redo") {
         text.history(command == "redo");
@@ -302,8 +321,9 @@ void Editor::text_pointer(const gf::PointerEvent& event, Point point) {
             }
         }
         if (text_drag_ == -3) {
+            const bool note = text.note.has_value();
             finish_text(true);
-            begin(point, false);
+            if (!note) { begin(point, false); }
             return;
         }
         (*canvas_).set_pointer_capture(true);
@@ -337,8 +357,9 @@ void Editor::text_pointer(const gf::PointerEvent& event, Point point) {
             if (i == 4 || i == 5 || i == 6) {
                 bounds.h += dy;
             }
-            bounds.w = std::clamp(bounds.w, 24, 8192);
-            bounds.h = std::clamp(bounds.h, 24, std::min(8192, 16000000 / bounds.w));
+            const int maximum = text.note ? 4096 : 8192;
+            bounds.w = std::clamp(bounds.w, 24, maximum);
+            bounds.h = std::clamp(bounds.h, 24, std::min(maximum, 16000000 / bounds.w));
             if (i == 0 || i == 6 || i == 7) {
                 bounds.x = text_drag_bounds_.x + text_drag_bounds_.w - bounds.w;
             }
