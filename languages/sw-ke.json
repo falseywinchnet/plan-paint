@@ -977,5 +977,10 @@
   "Night paper": "Karatasi ya usiku",
   "Paper color": "Rangi ya karatasi",
   "New paper": "Karatasi mpya",
-  "Corner radius (px)": "Kipenyo-nusu cha kona (px)"
+  "Corner radius (px)": "Kipenyo-nusu cha kona (px)",
+  "Stroke style": "Mtindo wa mstari",
+  "Dashed": "Mistari mifupi",
+  "Dotted": "Vitone",
+  "Organic": "Asilia",
+  "Vary": "Badilisha"
 }

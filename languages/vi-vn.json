@@ -977,5 +977,10 @@
   "Night paper": "Giấy đêm",
   "Paper color": "Màu giấy",
   "New paper": "Giấy mới",
-  "Corner radius (px)": "Bán kính góc (px)"
+  "Corner radius (px)": "Bán kính góc (px)",
+  "Stroke style": "Kiểu nét",
+  "Dashed": "Nét đứt",
+  "Dotted": "Nét chấm",
+  "Organic": "Tự nhiên",
+  "Vary": "Biến đổi"
 }

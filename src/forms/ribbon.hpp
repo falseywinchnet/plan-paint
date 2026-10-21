@@ -85,7 +85,9 @@ class Ribbon final : public gui_forms::Control {
     std::vector<int> option_pages_;
     std::vector<std::shared_ptr<gui_forms::CheckBox>> checks_;
     std::shared_ptr<gui_forms::NumericUpDown> grain_, tooth_, load_, angle_, tool_size_, text_size_;
-    std::shared_ptr<gui_forms::NumericUpDown> corner_radius_;
+    std::shared_ptr<gui_forms::NumericUpDown> corner_radius_, geometry_organic_;
+    std::shared_ptr<gui_forms::ComboBox> geometry_stroke_;
+    void geometry_stroke_changed(std::optional<std::size_t> index);
     std::shared_ptr<gui_forms::NumericUpDown> stamp_width_, stamp_height_, stamp_scale_, stamp_angle_,
         rotation_, mesh_spacing_;
     std::shared_ptr<gui_forms::ComboBox> font_, word_art_, picker_mode_, mix_effect_, eraser_mode_, render_quality_;

@@ -977,5 +977,10 @@
   "Night paper": "रात्रि कागज़",
   "Paper color": "कागज़ का रंग",
   "New paper": "नया कागज़",
-  "Corner radius (px)": "कोने की त्रिज्या (px)"
+  "Corner radius (px)": "कोने की त्रिज्या (px)",
+  "Stroke style": "रेखा शैली",
+  "Dashed": "डैश वाली",
+  "Dotted": "बिंदुओं वाली",
+  "Organic": "प्राकृतिक",
+  "Vary": "बदलें"
 }

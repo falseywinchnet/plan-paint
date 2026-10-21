@@ -977,5 +977,10 @@
   "Night paper": "کاغذ شب",
   "Paper color": "رنگ کاغذ",
   "New paper": "کاغذ تازه",
-  "Corner radius (px)": "شعاع گوشه (پیکسل)"
+  "Corner radius (px)": "شعاع گوشه (پیکسل)",
+  "Stroke style": "سبک خط",
+  "Dashed": "خط‌چین",
+  "Dotted": "نقطه‌چین",
+  "Organic": "طبیعی",
+  "Vary": "تنوع"
 }

@@ -977,5 +977,10 @@
   "Night paper": "夜色の紙",
   "Paper color": "紙の色",
   "New paper": "新しい紙",
-  "Corner radius (px)": "角の半径 (px)"
+  "Corner radius (px)": "角の半径 (px)",
+  "Stroke style": "線のスタイル",
+  "Dashed": "破線",
+  "Dotted": "点線",
+  "Organic": "自然な揺らぎ",
+  "Vary": "変化"
 }

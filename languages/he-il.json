@@ -977,5 +977,10 @@
   "Night paper": "נייר לילה",
   "Paper color": "צבע נייר",
   "New paper": "נייר חדש",
-  "Corner radius (px)": "רדיוס פינה (פיקסלים)"
+  "Corner radius (px)": "רדיוס פינה (פיקסלים)",
+  "Stroke style": "סגנון קו",
+  "Dashed": "מקווקו",
+  "Dotted": "מנוקד",
+  "Organic": "אורגני",
+  "Vary": "גיוון"
 }

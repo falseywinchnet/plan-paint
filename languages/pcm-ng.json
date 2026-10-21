@@ -977,5 +977,10 @@
   "Night paper": "Night paper",
   "Paper color": "Paper colour",
   "New paper": "New paper",
-  "Corner radius (px)": "Corner radius (px)"
+  "Corner radius (px)": "Corner radius (px)",
+  "Stroke style": "Stroke style",
+  "Dashed": "Dash line",
+  "Dotted": "Dot line",
+  "Organic": "Organic",
+  "Vary": "Change am"
 }

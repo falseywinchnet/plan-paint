@@ -977,5 +977,10 @@
   "Night paper": "ورق ليلي",
   "Paper color": "لون الورق",
   "New paper": "ورق جديد",
-  "Corner radius (px)": "نصف قطر الزوايا (بكسل)"
+  "Corner radius (px)": "نصف قطر الزوايا (بكسل)",
+  "Stroke style": "نمط الخط",
+  "Dashed": "متقطع",
+  "Dotted": "منقط",
+  "Organic": "عضوي",
+  "Vary": "تنويع"
 }

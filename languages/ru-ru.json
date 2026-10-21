@@ -977,5 +977,10 @@
   "Night paper": "Ночная бумага",
   "Paper color": "Цвет бумаги",
   "New paper": "Новая бумага",
-  "Corner radius (px)": "Радиус углов (пкс)"
+  "Corner radius (px)": "Радиус углов (пкс)",
+  "Stroke style": "Стиль линии",
+  "Dashed": "Штриховая",
+  "Dotted": "Пунктирная",
+  "Organic": "Органичность",
+  "Vary": "Варьировать"
 }

@@ -977,5 +977,10 @@
   "Night paper": "رات دا کاغذ",
   "Paper color": "کاغذ دا رنگ",
   "New paper": "نواں کاغذ",
-  "Corner radius (px)": "کونے دا رداس (px)"
+  "Corner radius (px)": "کونے دا رداس (px)",
+  "Stroke style": "لکیر دا انداز",
+  "Dashed": "ڈیش والی",
+  "Dotted": "نقطیاں والی",
+  "Organic": "قدرتی",
+  "Vary": "بدلو"
 }

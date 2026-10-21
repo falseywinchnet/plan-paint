@@ -977,5 +977,10 @@
   "Night paper": "Carta notturna",
   "Paper color": "Colore della carta",
   "New paper": "Nuova carta",
-  "Corner radius (px)": "Raggio angoli (px)"
+  "Corner radius (px)": "Raggio angoli (px)",
+  "Stroke style": "Stile tratto",
+  "Dashed": "Tratteggiato",
+  "Dotted": "Puntinato",
+  "Organic": "Organico",
+  "Vary": "Varia"
 }

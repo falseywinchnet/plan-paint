@@ -792,6 +792,17 @@ void Ribbon::add_options() {
     building_page_ = 8;
     check("continuous-path", tr("Continuous path"), {12, 65, 210, 25});
     corner_radius_ = number("geometry-corners", tr("Corner radius (px)"), {480, 36, 330, 28}, 0, 4096, 0, 1);
+    geometry_organic_ = number("geometry-organic", tr("Organic"), {840, 36, 260, 28}, 0, 3, 0, 2);
+    button("geometry-vary", tr("Vary"), -1, {1120, 36, 140, 28});
+    const std::shared_ptr<gf::Label> stroke_label = gf::make_control<gf::Label>(
+        gf::StableId("geometry-stroke-label"), tr("Stroke style"));
+    option(stroke_label, {480, 79, 165, 28});
+    geometry_stroke_ = gf::make_control<gf::ComboBox>(gf::StableId("geometry-stroke"));
+    (*geometry_stroke_).set_items({tr("Solid"), tr("Dashed"), tr("Dotted")});
+    (*geometry_stroke_).set_accessible_name(tr("Stroke style"));
+    option(geometry_stroke_, {645, 79, 165, 28});
+    subscriptions_.push_back((*geometry_stroke_).selected_index_changed().subscribe(
+        *this, gf::Delegate<std::optional<std::size_t>>::bind<Ribbon, &Ribbon::geometry_stroke_changed>(*this)));
     check("edit-path-nodes", tr("Edit nodes"), {244, 65, 210, 25});
     check("outline", tr("Edge"), {12, 94, 90, 25});
     check("fill", tr("Fill"), {116, 94, 100, 25});
@@ -1049,6 +1060,9 @@ void Ribbon::show_page() {
             if (id.starts_with("guide-")) {
                 visible = tool == Tool::Guide;
             }
+            if (id.starts_with("geometry-")) {
+                visible = tool == Tool::Shape || tool == Tool::Path || tool == Tool::Freehand;
+            }
             if (id == "carpet-settings") {
                 visible = tool == Tool::Brush && (*editor).brush_family == BrushFamily::Carpet;
             }
@@ -1178,6 +1192,15 @@ void Ribbon::render_quality_changed(std::optional<std::size_t> index) {
         (*editor).execute(commands[*index]);
     }
 }
+void Ribbon::geometry_stroke_changed(std::optional<std::size_t> index) {
+    const std::shared_ptr<Editor> editor = editor_.lock();
+    if (!synchronizing_ && editor && index && *index < 3) {
+        (*editor).document.ink.geometry.stroke = static_cast<StrokeStyle>(*index);
+        (*editor).document.sync_curve();
+        (*editor).document.sync_path();
+        (*editor).refresh();
+    }
+}
 void Ribbon::picker_mode_changed(std::optional<std::size_t> index) {
     const std::shared_ptr<Editor> editor = editor_.lock();
     if (!synchronizing_ && editor) {
@@ -1216,6 +1239,7 @@ void Ribbon::options_changed(double) {
     (*editor).spiro.refresh_peg((*editor).spiro.selected_peg);
     (*editor).document.ink.size = static_cast<int>((*tool_size_).value());
     (*editor).document.ink.geometry.corner_radius = (*corner_radius_).value();
+    (*editor).document.ink.geometry.organic = (*geometry_organic_).value();
     if ((*editor).text.note) {
         (*(*editor).text.note).padding = static_cast<int>((*sticky_padding_).value());
         const Rect bounds = (*editor).text.bounds;
@@ -1258,6 +1282,8 @@ void Ribbon::apply_choice(const std::string& id) {
     Document& document = (*editor).document;
     if (id.starts_with("r-pattern-")) {
         select_pattern(document.ink, static_cast<Pattern>(std::stoi(id.substr(10))));
+    } else if (id == "geometry-vary") {
+        ++document.ink.geometry.seed;
     } else if (id.starts_with("stamp-shape-")) {
         document.stamp_shape = static_cast<StampShape>(std::stoi(id.substr(12)));
     } else if (id == "stamp-transparent") {
@@ -1911,6 +1937,8 @@ void Ribbon::synchronize() {
     (*angle_).set_value(material.material_angle);
     (*tool_size_).set_value(document.ink.size);
     (*corner_radius_).set_value(document.ink.geometry.corner_radius);
+    (*geometry_organic_).set_value(document.ink.geometry.organic);
+    (*geometry_stroke_).set_selected_index(static_cast<std::size_t>(document.ink.geometry.stroke));
     (*render_quality_).set_selected_index(!document.ink.smooth ? 0 : document.ink.supersample ? 2 : 1);
     (*picker_mode_).set_selected_index(static_cast<std::size_t>((*editor).picker_mode));
     (*text_size_).set_value((*editor).text.style.size);

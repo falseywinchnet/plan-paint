@@ -977,5 +977,10 @@
   "Night paper": "夜色紙",
   "Paper color": "紙張色彩",
   "New paper": "更換紙張",
-  "Corner radius (px)": "圓角半徑 (px)"
+  "Corner radius (px)": "圓角半徑 (px)",
+  "Stroke style": "描邊樣式",
+  "Dashed": "虛線",
+  "Dotted": "點線",
+  "Organic": "自然感",
+  "Vary": "變換"
 }

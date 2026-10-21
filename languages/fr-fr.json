@@ -977,5 +977,10 @@
   "Night paper": "Papier de nuit",
   "Paper color": "Couleur du papier",
   "New paper": "Nouveau papier",
-  "Corner radius (px)": "Rayon des coins (px)"
+  "Corner radius (px)": "Rayon des coins (px)",
+  "Stroke style": "Style de trait",
+  "Dashed": "Tirets",
+  "Dotted": "Pointillés",
+  "Organic": "Organique",
+  "Vary": "Varier"
 }

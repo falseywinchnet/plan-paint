@@ -39,6 +39,7 @@ struct NativeExercise {
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
          corners_review = false, sticky_review = false, opacity_review = false, stamp_placement_review = false, advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
+    bool geometry_styles_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
     std::unique_ptr<gf::Timer> resize_timer;
@@ -378,6 +379,16 @@ struct NativeExercise {
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
         if (corners_review) {
+            if (geometry_styles_review) {
+                const std::shared_ptr<gf::ComboBox> style = std::dynamic_pointer_cast<gf::ComboBox>(window.find("geometry-stroke"));
+                const std::shared_ptr<gf::NumericUpDown> organic = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("geometry-organic"));
+                if (!style || !organic || !(*style).visible() || !(*organic).visible() ||
+                    (*style).selected_index() != 2 || (*organic).value() != 3 ||
+                    (*organic).absolute_bounds().right() > size.width ||
+                    (*window.find("geometry-vary")).absolute_bounds().right() > size.width) {
+                    throw std::runtime_error("Native geometry style controls are missing or clipped");
+                }
+            }
             const std::shared_ptr<gf::NumericUpDown> radius = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("geometry-corners"));
             if (!painted || !radius || !(*radius).visible() || (*radius).value() != 40 ||
                 (*radius).absolute_bounds().right() > size.width) {
@@ -661,14 +672,23 @@ struct NativeExercise {
             ink.size = 3; ink.supersample = true;
             paint::TextStyle label; label.size = 16;
             const double radii[] = {0, 16, 40};
+            const char* styles[] = {"Solid / Organic 0", "Dashed / Organic 1.5", "Dotted / Organic 3"};
             for (int index = 0; index < 3; ++index) {
                 ink.geometry.corner_radius = radii[index];
+                if (geometry_styles_review) {
+                    ink.geometry.stroke = static_cast<paint::StrokeStyle>(index);
+                    ink.geometry.organic = index * 1.5;
+                }
                 paint::draw_shape(document.image, paint::Shape::Rectangle,
                     {20.0 + index * 210, 35}, {190.0 + index * 210, 205}, ink, true, true);
                 paint::draw_text(document.image, {20.0 + index * 210, 226},
-                    std::to_string(static_cast<int>(radii[index])) + " px", label, {20, 40, 80, 255}, {}, "");
+                    geometry_styles_review ? styles[index] : std::to_string(static_cast<int>(radii[index])) + " px", label, {20, 40, 80, 255}, {}, "");
             }
             document.ink.geometry.corner_radius = 40;
+            if (geometry_styles_review) {
+                document.ink.geometry.stroke = paint::StrokeStyle::Dotted;
+                document.ink.geometry.organic = 3;
+            }
             (*editor).choose_shape(paint::Shape::Rectangle);
             (*std::dynamic_pointer_cast<gf::Button>(window.find("tool-tab"))).perform_click();
             (*editor).refresh(); window.perform_layout(); inspect_frame(window);
@@ -1387,6 +1407,8 @@ int main(int argc, char** argv) {
         exercise.opacity_review = argc > 1 && (std::string(argv[1]) == "--opacity" || std::string(argv[1]) == "--opacity-compact");
         exercise.sticky_review = argc > 1 && (std::string(argv[1]) == "--sticky" || std::string(argv[1]) == "--sticky-compact");
         exercise.corners_review = argc > 1 && (std::string(argv[1]) == "--corners" || std::string(argv[1]) == "--corners-compact");
+        exercise.geometry_styles_review = argc > 1 && (std::string(argv[1]) == "--geometry-styles" || std::string(argv[1]) == "--geometry-styles-compact");
+        exercise.corners_review = exercise.corners_review || exercise.geometry_styles_review;
         exercise.stamp_placement_review = argc > 1 && std::string(argv[1]) == "--stamp-placement";
         exercise.external_file_review = argc > 1 && std::string(argv[1]) == "--external-file";
         exercise.icon_validation_review = argc > 1 && std::string(argv[1]) == "--icon-validation";
@@ -1415,6 +1437,7 @@ int main(int argc, char** argv) {
         if (exercise.interface_review && argc > 2) {
             exercise.backing = std::clamp(std::stoi(argv[2]), 0, paint::canvas_backing_count - 1);
         }
+        exercise.compact = exercise.compact || (argc > 1 && std::string(argv[1]) == "--geometry-styles-compact");
         if (exercise.interface_review && argc > 3) { exercise.hue = std::clamp(std::stoi(argv[3]), 0, 359); }
         exercise.materials = argc > 1 && std::string(argv[1]) == "--materials";
         exercise.view_review = argc > 1 && std::string(argv[1]) == "--view";

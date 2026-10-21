@@ -83,6 +83,8 @@ void path_history() {
     paint::Document document;
     document.new_image(100, 100);
     document.ink.geometry.corner_radius = 15;
+    document.ink.geometry.organic = 1.5;
+    document.ink.geometry.stroke = paint::StrokeStyle::Dashed;
     document.shape_fill = true;
     document.continuous_path = false;
     document.add_path_node({10, 10});
@@ -103,6 +105,8 @@ void path_history() {
             "moving retained rounded geometry must redraw its pixels");
     document.undo();
     require(document.path.runs.front().ink.geometry.corner_radius == 15 &&
+                document.path.runs.front().ink.geometry.organic == 1.5 &&
+                document.path.runs.front().ink.geometry.stroke == paint::StrokeStyle::Dashed &&
                 std::equal(original.pixels.begin(), original.pixels.end(), document.image.pixels.begin(),
                            paint::equal),
             "undo must restore rounded path style and its original pixels");
@@ -110,12 +114,94 @@ void path_history() {
     require(std::equal(moved.pixels.begin(), moved.pixels.end(), document.image.pixels.begin(), paint::equal),
             "redo must restore the rounded node edit exactly");
 }
+void outline_styles() {
+    const std::vector<paint::Point> bent{{0, 0}, {10, 0}, {10, 30}};
+    const std::vector<paint::StrokeSegment> dashed =
+        paint::styled_outline(bent, paint::StrokeStyle::Dashed, 4, false);
+    require(dashed.size() == 3 && near(dashed[1].first, {10, 0}) && near(dashed[1].last, {10, 6}) &&
+                near(dashed[2].first, {10, 18}),
+            "dash phase must continue across a corner");
+    const std::vector<paint::StrokeSegment> dotted =
+        paint::styled_outline(bent, paint::StrokeStyle::Dotted, 2, false);
+    require(dotted.size() == 7 && near(dotted[2].first, {10, 2}),
+            "dot spacing must continue across a corner");
+    for (const paint::StrokeSegment& segment : dotted) {
+        require(near(segment.first, segment.last), "a dot must use one brush footprint");
+    }
+    for (bool supersample : {false, true}) {
+        paint::Ink ink;
+        ink.size = 4;
+        ink.primary = {30, 80, 190, 128};
+        ink.supersample = supersample;
+        for (paint::StrokeStyle style : {paint::StrokeStyle::Dashed, paint::StrokeStyle::Dotted}) {
+            ink.geometry.stroke = style;
+            paint::Image image, subdivided;
+            image.reset(140, 40, {0, 0, 0, 0});
+            subdivided = image;
+            paint::polygon(image, {{10, 20}, {122, 20}}, ink, true, false, false);
+            paint::polygon(subdivided, {{10, 20}, {23, 20}, {53, 20}, {122, 20}}, ink, true, false, false);
+            require(
+                std::equal(image.pixels.begin(), image.pixels.end(), subdivided.pixels.begin(), paint::equal),
+                "adding collinear path nodes changed stroke spacing or opacity");
+            require(image.get(10, 20).a == 128 &&
+                        image.get(style == paint::StrokeStyle::Dashed ? 32 : 16, 20).a == 0,
+                    "styled outline lost its mark or its gap");
+            for (paint::Color pixel : image.pixels) {
+                require(pixel.a <= 128, "styled outline compounded opacity at joins");
+            }
+        }
+    }
+    paint::Ink ink;
+    ink.geometry.stroke = paint::StrokeStyle::Dotted;
+    ink.size = 4;
+    ink.secondary = {30, 80, 190, 128};
+    paint::Image image;
+    image.reset(100, 100, {0, 0, 0, 0});
+    paint::draw_shape(image, paint::Shape::Rectangle, {10, 10}, {90, 90}, ink, true, true);
+    require(image.get(50, 50).a == 128, "outline style must not dash the interior fill");
+}
+void organic_geometry() {
+    const std::vector<paint::Point> line{{10, 20}, {210, 20}};
+    const std::vector<paint::Point> straight = paint::organic_contour(line, 0, 1, false);
+    require(straight.size() == line.size() && near(straight.front(), line.front()),
+            "zero Organic must preserve the original contour exactly");
+    const std::vector<paint::Point> first = paint::organic_contour(line, 1.5, 1, false);
+    const std::vector<paint::Point> repeated = paint::organic_contour(line, 1.5, 1, false);
+    const std::vector<paint::Point> different = paint::organic_contour(line, 1.5, 2, false);
+    const std::vector<paint::Point> shifted = paint::organic_contour({{60, 90}, {260, 90}}, 1.5, 1, false);
+    bool changed = false, varied = false;
+    require(near(first.front(), line.front()) && near(first.back(), line.back()),
+            "Organic must preserve open endpoints");
+    for (std::size_t index = 0; index < first.size(); ++index) {
+        require(near(first[index], repeated[index]), "Organic must be deterministic for a retained seed");
+        require(near({first[index].x + 50, first[index].y + 70}, shifted[index]),
+                "moving geometry must not change its Organic appearance");
+        require(std::abs(first[index].y - 20) <= 3, "Organic exceeded its bounded variation");
+        changed = changed || std::abs(first[index].y - 20) > 0.1;
+        varied = varied || !near(first[index], different[index]);
+    }
+    require(changed && varied, "Organic amount and variation must affect the contour");
+    const std::vector<paint::Point> square{{20, 20}, {100, 20}, {100, 100}, {20, 100}};
+    const std::vector<paint::Point> closed = paint::organic_contour(square, 3, 1, true);
+    require(std::hypot(closed.front().x - closed.back().x, closed.front().y - closed.back().y) < 6,
+            "closed Organic contour has a discontinuous seam");
+    paint::Ink ink;
+    ink.geometry.organic = 3;
+    ink.secondary = {30, 80, 190, 128};
+    ink.supersample = true;
+    paint::Image image;
+    image.reset(120, 120, {0, 0, 0, 0});
+    paint::polygon(image, square, ink, false, true, true);
+    require(image.get(60, 60).a == 128, "Organic must preserve the fill's interior opacity");
+}
 } // namespace
 int main() {
     try {
         corner_geometry();
         filled_geometry();
         path_history();
+        outline_styles();
+        organic_geometry();
         std::cout << "Corner geometry and raster contracts passed\n";
         return 0;
     } catch (const std::exception& error) {
