@@ -977,5 +977,10 @@
   "Night paper": "ਰਾਤ ਦਾ ਕਾਗਜ਼",
   "Paper color": "ਕਾਗਜ਼ ਦਾ ਰੰਗ",
   "New paper": "ਨਵਾਂ ਕਾਗਜ਼",
-  "Corner radius (px)": "ਕੋਨੇ ਦਾ ਅਰਧ-ਵਿਆਸ (px)"
+  "Corner radius (px)": "ਕੋਨੇ ਦਾ ਅਰਧ-ਵਿਆਸ (px)",
+  "Stroke style": "ਰੇਖਾ ਦੀ ਸ਼ੈਲੀ",
+  "Dashed": "ਡੈਸ਼ ਵਾਲੀ",
+  "Dotted": "ਬਿੰਦੀਆਂ ਵਾਲੀ",
+  "Organic": "ਕੁਦਰਤੀ",
+  "Vary": "ਬਦਲੋ"
 }

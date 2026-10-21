@@ -977,5 +977,10 @@
   "Night paper": "Nachtpapier",
   "Paper color": "Papierfarbe",
   "New paper": "Neues Papier",
-  "Corner radius (px)": "Eckenradius (px)"
+  "Corner radius (px)": "Eckenradius (px)",
+  "Stroke style": "Linienstil",
+  "Dashed": "Gestrichelt",
+  "Dotted": "Gepunktet",
+  "Organic": "Organisch",
+  "Vary": "Variieren"
 }

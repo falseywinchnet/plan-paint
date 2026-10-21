@@ -397,20 +397,16 @@ static void polygon_native(Image& image, const std::vector<Point>& points, const
         material_fill(image, points, fill_ink, fill_brush, outline ? &boundary : nullptr, space);
     }
     if (outline) {
+        const std::vector<StrokeSegment> segments = styled_outline(points, ink.geometry.stroke,
+                                                                   std::max(1, ink.size), closed);
         if (ink.brush == Brush::Round || textured_brush(ink.brush)) {
             MaterialStroke coat(&boundary);
-            for (std::size_t i = 1; i < points.size(); ++i) {
-                coat.segment(image, points[i - 1], points[i], ink, space);
-            }
-            if (closed && points.size() > 2) {
-                coat.segment(image, points.back(), points.front(), ink, space);
+            for (const StrokeSegment& segment : segments) {
+                coat.segment(image, segment.first, segment.last, ink, space);
             }
         } else {
-            for (std::size_t i = 1; i < points.size(); ++i) {
-                stroke(image, points[i - 1], points[i], ink, space);
-            }
-            if (closed && points.size() > 2) {
-                stroke(image, points.back(), points.front(), ink, space);
+            for (const StrokeSegment& segment : segments) {
+                stroke(image, segment.first, segment.last, ink, space);
             }
         }
     }
@@ -429,7 +425,11 @@ void polygon(Image& image, const std::vector<Point>& vertices, const Ink& ink, b
     const std::vector<Point> rounded = ink.geometry.corner_radius > 0
         ? soften_corners(vertices, ink.geometry.corner_radius, closed, ink.supersample ? 0.03125 : 0.125)
         : std::vector<Point>{};
-    const std::vector<Point>& points = ink.geometry.corner_radius > 0 ? rounded : vertices;
+    const std::vector<Point>& corners = ink.geometry.corner_radius > 0 ? rounded : vertices;
+    const std::vector<Point> varied = ink.geometry.organic > 0
+        ? organic_contour(corners, ink.geometry.organic, ink.geometry.seed, closed)
+        : std::vector<Point>{};
+    const std::vector<Point>& points = ink.geometry.organic > 0 ? varied : corners;
     if (!ink.smooth || !ink.supersample || points.empty()) {
         polygon_native(image, points, ink, outline, fill, closed, fill_brush, fill_material, {});
         return;

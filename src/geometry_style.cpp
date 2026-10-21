@@ -7,6 +7,58 @@ double distance(Point a, Point b) {
     return std::hypot(a.x - b.x, a.y - b.y);
 }
 } // namespace
+std::vector<StrokeSegment> styled_outline(const std::vector<Point>& points, StrokeStyle style, double width,
+                                          bool closed) {
+    std::vector<StrokeSegment> result;
+    if (points.size() < 2 || !std::isfinite(width) || width <= 0) {
+        return result;
+    }
+    width = std::max(1.0, width);
+    for (Point point : points) {
+        if (!std::isfinite(point.x) || !std::isfinite(point.y)) {
+            return {};
+        }
+    }
+    const double period = width * (style == StrokeStyle::Dotted ? 3 : 7);
+    const double dash = width * 4;
+    double distance_along = 0, next_dot = 0;
+    const std::size_t edges = points.size() - 1 + (closed && points.size() > 2 ? 1 : 0);
+    for (std::size_t edge = 0; edge < edges; ++edge) {
+        const Point first = points[edge], last = points[(edge + 1) % points.size()];
+        const double length = distance(first, last);
+        if (!std::isfinite(length)) {
+            return {};
+        }
+        if (style == StrokeStyle::Solid) {
+            result.push_back({first, last});
+        } else if (length > 1e-9) {
+            const Point direction{(last.x - first.x) / length, (last.y - first.y) / length};
+            if (style == StrokeStyle::Dotted) {
+                while (next_dot <= distance_along + length + 1e-9) {
+                    const double step = std::clamp(next_dot - distance_along, 0.0, length);
+                    const Point dot{first.x + direction.x * step, first.y + direction.y * step};
+                    result.push_back({dot, dot});
+                    next_dot += period;
+                }
+            } else {
+                double step = 0;
+                while (step < length - 1e-9) {
+                    const double phase = std::fmod(distance_along + step, period);
+                    const bool painted = phase < dash;
+                    const double remaining = (painted ? dash : period) - phase;
+                    const double end = std::min(length, step + std::max(remaining, 1e-9));
+                    if (painted) {
+                        result.push_back({{first.x + direction.x * step, first.y + direction.y * step},
+                                          {first.x + direction.x * end, first.y + direction.y * end}});
+                    }
+                    step = end;
+                }
+            }
+        }
+        distance_along += length;
+    }
+    return result;
+}
 std::vector<Point> soften_corners(const std::vector<Point>& points, double radius, bool closed,
                                   double tolerance) {
     if (!std::isfinite(radius) || radius <= 0 || points.size() < 3) {

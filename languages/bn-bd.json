@@ -977,5 +977,10 @@
   "Night paper": "রাতের কাগজ",
   "Paper color": "কাগজের রং",
   "New paper": "নতুন কাগজ",
-  "Corner radius (px)": "কোণার ব্যাসার্ধ (px)"
+  "Corner radius (px)": "কোণার ব্যাসার্ধ (px)",
+  "Stroke style": "রেখার ধরন",
+  "Dashed": "ড্যাশযুক্ত",
+  "Dotted": "বিন্দুযুক্ত",
+  "Organic": "স্বাভাবিক ভঙ্গি",
+  "Vary": "বদলান"
 }

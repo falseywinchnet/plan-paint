@@ -2404,6 +2404,35 @@ void geometry_corner_controls() {
     open_tab(window, "tool-tab");
     require((*radius).visible(), "paths must expose corner softening too");
 }
+void geometry_style_controls() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    editor.choose_shape(paint::Shape::Line);
+    editor.document.ink.size = 4;
+    open_tab(window, "tool-tab");
+    const std::shared_ptr<gf::ComboBox> style = std::dynamic_pointer_cast<gf::ComboBox>(window.find("geometry-stroke"));
+    const std::shared_ptr<gf::NumericUpDown> organic = std::dynamic_pointer_cast<gf::NumericUpDown>(window.find("geometry-organic"));
+    require(style && organic && (*style).visible() && (*organic).visible(), "geometry ribbon lost style controls");
+    (*style).set_selected_index(1);
+    fixture.drag(10, 30, 110, 30);
+    require(!white(editor.document.image.get(20, 30)) && white(editor.document.image.get(32, 30)),
+            "ribbon dashed style did not render a mark followed by a gap");
+    editor.execute("undo");
+    (*style).set_selected_index(2);
+    fixture.drag(10, 30, 110, 30);
+    require(!white(editor.document.image.get(10, 30)) && white(editor.document.image.get(16, 30)),
+            "ribbon dotted style did not render a dot followed by a gap");
+    (*organic).set_value(1.5);
+    require(editor.document.ink.geometry.organic == 1.5, "ribbon Organic did not update geometry");
+    const std::uint32_t seed = editor.document.ink.geometry.seed;
+    (*std::dynamic_pointer_cast<gf::Button>(window.find("geometry-vary"))).perform_click();
+    require(editor.document.ink.geometry.seed != seed, "Vary must select new Organic geometry");
+    editor.choose_tool(paint::Tool::Pencil);
+    open_tab(window, "tool-tab");
+    require(!(*style).visible() && !(*organic).visible() && !(*window.find("geometry-vary")).visible(),
+            "geometry styling must not appear in the pencil ribbon");
+}
 void sticky_note_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5911,6 +5940,7 @@ int main(int argc, char** argv) {
         canvas_controls_without_dragging();
         sticky_note_contracts();
         geometry_corner_controls();
+        geometry_style_controls();
         custom_pattern_canvas_is_independent();
         tool_cursor_routes();
         freehand_wand_picker_and_size();

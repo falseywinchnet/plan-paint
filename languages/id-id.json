@@ -977,5 +977,10 @@
   "Night paper": "Kertas malam",
   "Paper color": "Warna kertas",
   "New paper": "Kertas baru",
-  "Corner radius (px)": "Radius sudut (px)"
+  "Corner radius (px)": "Radius sudut (px)",
+  "Stroke style": "Gaya garis",
+  "Dashed": "Putus-putus",
+  "Dotted": "Titik-titik",
+  "Organic": "Organik",
+  "Vary": "Variasikan"
 }

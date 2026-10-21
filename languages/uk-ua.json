@@ -977,5 +977,10 @@
   "Night paper": "Нічний папір",
   "Paper color": "Колір паперу",
   "New paper": "Новий папір",
-  "Corner radius (px)": "Радіус кутів (пкс)"
+  "Corner radius (px)": "Радіус кутів (пкс)",
+  "Stroke style": "Стиль лінії",
+  "Dashed": "Штрихова",
+  "Dotted": "Крапкова",
+  "Organic": "Органічність",
+  "Vary": "Змінити"
 }
