@@ -4424,6 +4424,41 @@ void spirograph_guide_dismissal() {
                            editor.document.image.pixels.begin(), paint::equal),
             "Cut on temporary apparatus cuts the canvas instead of dismissing the guide");
 }
+void opacity_indicator_contracts() {
+    const paint::Color color{240, 30, 80, 128};
+    const paint::forms::OpacityIndicator indicator = paint::forms::opacity_indicator(color);
+    require(indicator.text == "50%" && paint::equal(indicator.foreground, {15, 225, 175, 255}),
+            "opacity indicator must use the opaque RGB complement, not the composited swatch color");
+    require(paint::forms::opacity_indicator({0, 0, 0, 255}).text.empty() &&
+                paint::forms::opacity_indicator({0, 0, 0, 0}).text == "0%" &&
+                paint::forms::opacity_indicator({0, 0, 0, 1}).text == "1%" &&
+                paint::forms::opacity_indicator({0, 0, 0, 254}).text == "99%",
+            "opacity endpoints must distinguish transparent, translucent and opaque colors");
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    const std::uint64_t revision = editor.document.revision;
+    const std::size_t history = editor.document.undo_history.size();
+    editor.document.ink.primary = color;
+    editor.document.ink.secondary = {128, 128, 128, 64};
+    editor.refresh();
+    require((*window.find("primary")).accessible_description() == "Opacity: 50% (128/255)" &&
+                (*window.find("secondary")).accessible_description() == "Opacity: 25% (64/255)",
+            "Primary and Alt opacity descriptions must update independently");
+    editor.document.ink.pattern = paint::Pattern::None;
+    editor.refresh();
+    editor.document.ink.primary.a = 254;
+    editor.document.ink.secondary.a = 0;
+    editor.refresh();
+    require((*window.find("primary")).accessible_description() == "Opacity: 99% (254/255)" &&
+                (*window.find("secondary")).accessible_description() == "Opacity: 0% (0/255)",
+            "opacity must update even when No color leaves the material preview unchanged");
+    editor.document.ink.primary.a = 255;
+    editor.refresh();
+    require((*window.find("primary")).accessible_description() == "Opacity: 100% (255/255)" &&
+                editor.document.revision == revision && editor.document.undo_history.size() == history,
+            "swatch feedback must not edit artwork or create Undo entries");
+}
 void independent_color_materials_and_no_color() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5871,6 +5906,7 @@ int main(int argc, char** argv) {
         rendering_quality_controls();
         spirograph_apparatus_and_ink();
         spirograph_guide_dismissal();
+        opacity_indicator_contracts();
         independent_color_materials_and_no_color();
         select_all_delete_without_drag();
         ribbon_collapse_and_reopen();

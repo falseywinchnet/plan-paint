@@ -37,7 +37,7 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_svg_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         stamp_placement_review = false, advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
+         opacity_review = false, stamp_placement_review = false, advanced_effects_review = false, external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
@@ -335,13 +335,7 @@ struct NativeExercise {
     void repaint_tree(gf::Control& control) {
         control.invalidate_subtree(gf::Dirty::paint);
     }
-    void inspect_frame(gf::Window& window) {
-        if (external_file_review || stamp_placement_review) { repaint_tree(*window.root()); }
-        if (asset_browser_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
-            repaint_tree(*window.root());
-            repaint_tree(*window.find("editor-dialog"));
-        }
-        const gf::Size size = asset_browser_review || external_file_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
+    paint::Image render_snapshot(gf::Window& window, gf::Size size, bool& painted) {
         std::unique_ptr<gf::PaintFramebuffer> framebuffer = window.create_framebuffer(size, window.scale());
         if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
             throw std::runtime_error("Native framebuffer is unavailable");
@@ -350,7 +344,7 @@ struct NativeExercise {
         // Offscreen inspection must render even while the native window is occluded.
         const bool occluded = window.occluded();
         window.set_occluded(false, gf::FrameClock::now());
-        const bool painted = window.paint((*framebuffer).painter(), {0, 0, size.width, size.height}).has_value();
+        painted = window.paint((*framebuffer).painter(), {0, 0, size.width, size.height}).has_value();
         window.set_occluded(occluded, gf::FrameClock::now());
         (*framebuffer).end();
         const bool bgra = (*framebuffer).channel_order() == gf::FramebufferChannelOrder::bgra;
@@ -364,6 +358,17 @@ struct NativeExercise {
                     std::to_integer<std::uint8_t>(row[x * 4 + (bgra ? 0 : 2)]), 255});
             }
         }
+        return image;
+    }
+    void inspect_frame(gf::Window& window) {
+        if (opacity_review || external_file_review || stamp_placement_review) { repaint_tree(*window.root()); }
+        if (asset_browser_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
+            repaint_tree(*window.root());
+            repaint_tree(*window.find("editor-dialog"));
+        }
+        const gf::Size size = opacity_review || asset_browser_review || external_file_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
+        bool painted = false;
+        paint::Image image = render_snapshot(window, size, painted);
         const gf::Rect pixel = (*editor).canvas().bitmap_to_client({120, 120, 1, 1});
         const gf::Point sample = (*editor).canvas().point_to_window(
             {pixel.x + pixel.width / 2, pixel.y + pixel.height / 2});
@@ -371,6 +376,39 @@ struct NativeExercise {
                                               static_cast<int>(sample.y * window.scale()));
         const char* capture = std::getenv("PAINT_NATIVE_CAPTURE");
         if (capture && *capture) { paint::save_image(image, capture); }
+        if (opacity_review) {
+            const std::shared_ptr<paint::forms::SwatchButton> primary =
+                std::dynamic_pointer_cast<paint::forms::SwatchButton>(window.find("primary"));
+            const std::shared_ptr<paint::forms::SwatchButton> alternate =
+                std::dynamic_pointer_cast<paint::forms::SwatchButton>(window.find("secondary"));
+            if (!painted || !primary || !alternate) { throw std::runtime_error("Native color swatches missing"); }
+            (*primary).set_show_opacity(false);
+            (*alternate).set_show_opacity(false);
+            repaint_tree(*window.root());
+            bool baseline_painted = false;
+            const paint::Image baseline = render_snapshot(window, size, baseline_painted);
+            const gf::Rect primary_bounds = (*primary).absolute_bounds(), alt_bounds = (*alternate).absolute_bounds();
+            std::size_t changes[2] = {0, 0};
+            for (int y = 0; y < image.height; ++y) {
+                for (int x = 0; x < image.width; ++x) {
+                    if (paint::equal(image.get(x, y), baseline.get(x, y))) { continue; }
+                    const double px = (x + 0.5) / window.scale(), py = (y + 0.5) / window.scale();
+                    const int index = px >= primary_bounds.x && px < primary_bounds.right() ? 0 : 1;
+                    const gf::Rect box = index == 0 ? primary_bounds : alt_bounds;
+                    if (px < box.x + 1 || px >= box.right() - 1 || py < box.y + 16 || py >= box.y + 38) {
+                        throw std::runtime_error("Opacity indicator changed pixels outside the swatch's lower corner");
+                    }
+                    ++changes[index];
+                }
+            }
+            if (!baseline_painted || (changes[0] > 0) != ((*editor).document.ink.primary.a < 255) ||
+                (changes[1] > 0) != ((*editor).document.ink.secondary.a < 255)) {
+                throw std::runtime_error("Native opacity badges did not follow Primary/Alt alpha independently");
+            }
+            (*primary).set_show_opacity(true);
+            (*alternate).set_show_opacity(true);
+            return;
+        }
         if (stamp_placement_review) {
             const gf::Control::Ptr apply = window.find("context-stamp-apply");
             const gf::Control::Ptr cancel = window.find("context-stamp-cancel");
@@ -576,6 +614,22 @@ struct NativeExercise {
         (*editor).refresh();
         window.perform_layout();
         paint::Document& document = (*editor).document;
+        if (opacity_review) {
+            const paint::Color primary_colors[] = {{240, 30, 80, 128}, {0, 0, 0, 0},
+                {255, 255, 255, 255}, {128, 128, 128, 254}, {128, 128, 128, 128}};
+            const paint::Color alt_colors[] = {{128, 128, 128, 255}, {255, 255, 255, 1},
+                {0, 0, 0, 255}, {240, 30, 80, 64}, {32, 100, 220, 64}};
+            for (std::size_t index = 0; index < std::size(primary_colors); ++index) {
+                document.ink.primary = primary_colors[index];
+                document.ink.secondary = alt_colors[index];
+                (*editor).refresh();
+                window.perform_layout();
+                inspect_frame(window);
+            }
+            entered = true;
+            if (!handle.request_close().accepted()) { throw std::runtime_error("Native opacity review close failed"); }
+            return;
+        }
         if (icon_index_paint_review) {
             paint::IconFrame frame;
             frame.image.reset(128, 128, {30, 90, 170, 255});
@@ -1255,6 +1309,7 @@ int main(int argc, char** argv) {
             (argc > 1 && std::string(argv[1]) == "--icon-palette");
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
+        exercise.opacity_review = argc > 1 && (std::string(argv[1]) == "--opacity" || std::string(argv[1]) == "--opacity-compact");
         exercise.stamp_placement_review = argc > 1 && std::string(argv[1]) == "--stamp-placement";
         exercise.external_file_review = argc > 1 && std::string(argv[1]) == "--external-file";
         exercise.icon_validation_review = argc > 1 && std::string(argv[1]) == "--icon-validation";
@@ -1268,7 +1323,7 @@ int main(int argc, char** argv) {
         exercise.icon_batch_review = exercise.icon_batch_review || exercise.icon_stamp_review || exercise.icon_shared_review;
         exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
-        if (exercise.stamp_placement_review || exercise.external_file_review || exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
+        if (exercise.opacity_review || exercise.stamp_placement_review || exercise.external_file_review || exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
             exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
             exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {
@@ -1278,7 +1333,7 @@ int main(int argc, char** argv) {
                                          std::string(argv[1]) == "--features-compact");
         exercise.interface_review = argc > 1 && (std::string(argv[1]) == "--interface" ||
                                                  std::string(argv[1]) == "--interface-compact");
-        exercise.compact = argc > 1 && (std::string(argv[1]) == "--features-compact" ||
+        exercise.compact = argc > 1 && (std::string(argv[1]) == "--opacity-compact" || std::string(argv[1]) == "--features-compact" ||
                                         std::string(argv[1]) == "--interface-compact");
         if (exercise.interface_review && argc > 2) {
             exercise.backing = std::clamp(std::stoi(argv[2]), 0, paint::canvas_backing_count - 1);

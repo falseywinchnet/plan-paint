@@ -961,5 +961,6 @@
   "Could not reveal the selected asset.": "Не удалось показать выбранный ресурс.",
   "Requested containing folder; file selection is unavailable.": "Запрошена родительская папка; выбор файла недоступен.",
   "Requested file selection in the file manager.": "Запрошен выбор файла в файловом менеджере.",
-  "Position preview; Apply to paint. Escape cancels.": "Разместите образец; «Применить» рисует. Escape отменяет."
+  "Position preview; Apply to paint. Escape cancels.": "Разместите образец; «Применить» рисует. Escape отменяет.",
+  "Opacity": "Непрозрачность"
 }
