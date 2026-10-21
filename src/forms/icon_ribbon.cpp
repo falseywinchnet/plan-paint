@@ -13,10 +13,10 @@ IconPanel::IconPanel(gf::StableId id, std::weak_ptr<Editor> editor)
     : Control(std::move(id)), editor_(std::move(editor)) {}
 void IconPanel::initialize_control_tree() {
     const char* ids[] = {"sizes",   "gallery", "hotspot",  "palette", "alpha-tools", "states",
-                         "compare", "export",  "previous", "next",    "batch"};
+                         "compare", "export",  "previous", "next",    "batch",       "index-paint"};
     const std::string labels[] = {tr("Icon sizes…"),  tr("Gallery…"), tr("Hotspot…"), tr("Palette…"),
                                   tr("Alpha tools…"), tr("States…"),  tr("Compare…"), tr("Export…"),
-                                  tr("Previous"),     tr("Next"),     tr("Batch…")};
+                                  tr("Previous"),     tr("Next"),     tr("Batch…"),   tr("Index paint")};
     for (std::size_t index = 0; index < std::size(ids); ++index) {
         const std::shared_ptr<gf::Button> command =
             gf::make_control<gf::Button>(gf::StableId(std::string("icon-") + ids[index]), labels[index]);
@@ -60,6 +60,7 @@ void IconPanel::arrange(gf::Rect bounds) {
     set_child_layout(commands_[8], {bounds.width - 162, 96, 76, 20});
     set_child_layout(commands_[9], {bounds.width - 82, 96, 76, 20});
     set_child_layout(commands_[10], {348, 34, 102, 24});
+    set_child_layout(commands_[11], {120, 56, 102, 24});
     for (std::size_t index = 0; index < 3; ++index) {
         set_child_layout(groups_[index],
                          {index * command_width, 80, index == 2 ? command_width * 2 : command_width, 15});
@@ -83,7 +84,14 @@ void IconPanel::clicked(gf::ButtonBase& control) {
     const std::string id(control.stable_id().value());
     const std::string action = id.substr(5);
     const bool cursor = (*editor).document.atlas.kind == AtlasKind::Cursor;
-    if (action == "batch") {
+    if (action == "index-paint") {
+        (*editor).icon_index_paint = !(*editor).icon_index_paint;
+        if ((*editor).icon_index_paint) {
+            (*editor).choose_icon_index((*editor).icon_primary_index, false);
+            (*editor).choose_tool(Tool::Pencil);
+        }
+        (*editor).refresh();
+    } else if (action == "batch") {
         (*editor).execute("icon-batch");
     } else {
         (*editor).execute(action == "sizes" ? cursor ? "atlas-cursors" : "atlas-icons" : "atlas-" + action);
@@ -125,16 +133,29 @@ void IconPanel::synchronize() {
     (*commands_[0]).set_text(sizes);
     (*commands_[0]).set_accessible_name(sizes);
     (*commands_[2]).set_enabled(cursor && count > 0);
+    const bool indexed = (*editor).icon_palette_available();
+    (*commands_[11]).set_enabled(indexed || (*editor).icon_index_paint);
+    (*commands_[11]).set_selected((*editor).icon_index_paint);
+    if (indexed) {
+        const unsigned capacity = static_cast<unsigned>((*atlas.icons[atlas.active].source).palette.size());
+        (*editor).icon_primary_index = std::min((*editor).icon_primary_index, capacity - 1);
+        (*editor).icon_alt_index = std::min((*editor).icon_alt_index, capacity - 1);
+    }
     (*status_).set_text("");
     (*status_).set_accessible_name("");
     if (icon && atlas.active >= 0 && atlas.active < count) {
         const IconFrame& frame = atlas.icons[atlas.active];
         const ContainerKind kind = cursor ? ContainerKind::Cursor : ContainerKind::Icon;
-        const std::string status = tr("Frame ") + std::to_string(atlas.active + 1) + "/" +
-                                   std::to_string(count) + " · " + std::to_string(frame.image.width) + " × " +
-                                   std::to_string(frame.image.height) + " · " + tr("Source: ") +
-                                   icon_format_name(frame.source ? (*frame.source).format : IconFormat{}) +
-                                   " · " + tr("Save: ") + icon_format_name(icon_output_format(frame, kind));
+        std::string status = tr("Frame ") + std::to_string(atlas.active + 1) + "/" + std::to_string(count) +
+                             " · " + std::to_string(frame.image.width) + " × " +
+                             std::to_string(frame.image.height) + " · " + tr("Source: ") +
+                             icon_format_name(frame.source ? (*frame.source).format : IconFormat{}) + " · " +
+                             tr("Save: ") + icon_format_name(icon_output_format(frame, kind));
+        if ((*editor).icon_index_paint) {
+            status = tr("Index paint") + " · " + tr("Primary") + " #" +
+                     std::to_string((*editor).icon_primary_index) + " · " + tr("Alt") + " #" +
+                     std::to_string((*editor).icon_alt_index) + " · " + status;
+        }
         (*status_).set_text(status);
         (*status_).set_accessible_name(status);
         if (active_ != atlas.active) {

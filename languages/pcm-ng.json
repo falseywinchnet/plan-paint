@@ -878,5 +878,7 @@
   "Fit image": "Fit picture",
   "Import palette…": "Import palette…",
   "Export palette…": "Export palette…",
-  "Shared palette": "Palette wey all go use"
+  "Shared palette": "Palette wey all go use",
+  "Index paint": "Paint with index",
+  "Other painting tools return this image to RGBA output.": "Other painting tools go return this image to RGBA output."
 }

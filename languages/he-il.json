@@ -878,5 +878,7 @@
   "Fit image": "התאמה לתמונה",
   "Import palette…": "ייבוא לוח צבעים…",
   "Export palette…": "ייצוא לוח צבעים…",
-  "Shared palette": "לוח צבעים משותף"
+  "Shared palette": "לוח צבעים משותף",
+  "Index paint": "ציור לפי אינדקס",
+  "Other painting tools return this image to RGBA output.": "כלי ציור אחרים מחזירים תמונה זו לפלט RGBA."
 }

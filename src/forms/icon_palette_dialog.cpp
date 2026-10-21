@@ -63,6 +63,9 @@ void EditorDialog::initialize_icon_palette() {
     (*palette_rgb_).set_accessible_name("RGB");
     (*palette_rgb_).set_text(entries.empty() ? "#000000" : to_hex((*palette_source_.source).palette[0]));
     put(palette_rgb_, {565, 88, 195, 28});
+    palette_primary_ =
+        button("palette-primary", tr("Primary") + " · " + tr("Index paint"), {20, 128, 355, 28});
+    palette_alt_ = button("palette-alt", tr("Alt") + " · " + tr("Index paint"), {405, 128, 355, 28});
     palette_entry_controls_.assign(controls_.begin() + first_entry, controls_.end());
     for (const std::shared_ptr<gf::Control>& control : palette_entry_controls_) {
         (*control).set_visible(false);
@@ -81,14 +84,15 @@ void EditorDialog::initialize_icon_palette() {
     (*palette_status_).set_auto_scroll(true);
     (*palette_status_).set_accessible_name(tr("Palette conversion"));
     put(palette_status_, {20, 363, 740, 68});
-    label("palette-contract", tr("Current image only. Further painting returns it to RGBA output."),
+    label("palette-contract", tr("Other painting tools return this image to RGBA output."),
           {20, 432, 740, 20});
     error_ = gf::make_control<gf::Label>(gf::StableId("dialog-error"));
     put(error_, {20, 453, 740, 20});
     const std::shared_ptr<gf::Button> import_button =
         button("palette-import", tr("Import palette…"), {20, 474, 160, 28});
     palette_export_ = button("palette-export", tr("Export palette…"), {190, 474, 160, 28});
-    for (const std::shared_ptr<gf::Button>& control : {import_button, palette_export_}) {
+    for (const std::shared_ptr<gf::Button>& control :
+         {import_button, palette_export_, palette_primary_, palette_alt_}) {
         subscriptions_.push_back((*control).clicked().subscribe(
             *this,
             gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::palette_file_clicked>(*this)));
@@ -161,6 +165,8 @@ void EditorDialog::render_icon_palette() {
     palette_result_ = {};
     (*palette_apply_).set_enabled(false);
     (*palette_export_).set_enabled(false);
+    (*palette_primary_).set_enabled(false);
+    (*palette_alt_).set_enabled(false);
     (*error_).set_text("");
     (*palette_status_).set_text("");
     publish_image(render_asset_preview(palette_source_, 355, 164), *palette_before_);
@@ -174,6 +180,9 @@ void EditorDialog::render_icon_palette() {
             const unsigned entry = static_cast<unsigned>((*palette_entry_).selected_index().value_or(0));
             palette_result_ = edit_icon_palette_entry(palette_source_, entry, color);
             (*palette_export_).set_enabled(true);
+            const bool unchanged = palette_result_.source == palette_source_.source;
+            (*palette_primary_).set_enabled(unchanged);
+            (*palette_alt_).set_enabled(unchanged);
             publish_image(render_asset_preview(palette_result_, 355, 164), *palette_after_);
             const std::vector<unsigned>& indices = (*palette_source_.source).indices;
             std::ostringstream status;
@@ -230,7 +239,21 @@ void EditorDialog::palette_file_clicked(gf::ButtonBase& control) {
         return;
     }
     try {
-        if (control.stable_id().value() == "palette-import") {
+        if (control.stable_id().value() == "palette-primary" ||
+            control.stable_id().value() == "palette-alt") {
+            if (!control.enabled()) {
+                return;
+            }
+            if ((*editor).document.revision != palette_revision_ ||
+                (*editor).document.atlas_epoch != palette_epoch_ ||
+                (*editor).document.atlas.active != palette_current_) {
+                throw std::runtime_error(tr("Image changed. Reopen Palette conversion."));
+            }
+            (*editor).choose_icon_index(static_cast<unsigned>((*palette_entry_).selected_index().value_or(0)),
+                                        control.stable_id().value() == "palette-alt");
+            (*editor).close_editor_dialog();
+            (*editor).choose_tool(Tool::Pencil);
+        } else if (control.stable_id().value() == "palette-import") {
             const std::string path = (*editor).choose_palette_file();
             if (path.empty()) {
                 return;

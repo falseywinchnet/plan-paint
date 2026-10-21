@@ -878,5 +878,7 @@
   "Fit image": "छवि में फ़िट करें",
   "Import palette…": "पैलेट आयात करें…",
   "Export palette…": "पैलेट निर्यात करें…",
-  "Shared palette": "साझा पैलेट"
+  "Shared palette": "साझा पैलेट",
+  "Index paint": "इंडेक्स पेंट",
+  "Other painting tools return this image to RGBA output.": "अन्य पेंटिंग टूल इस छवि को RGBA आउटपुट में वापस लाते हैं।"
 }

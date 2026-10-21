@@ -878,5 +878,7 @@
   "Fit image": "ছবিতে মানানসই করুন",
   "Import palette…": "প্যালেট আমদানি…",
   "Export palette…": "প্যালেট রপ্তানি…",
-  "Shared palette": "যৌথ প্যালেট"
+  "Shared palette": "যৌথ প্যালেট",
+  "Index paint": "সূচক দিয়ে আঁকা",
+  "Other painting tools return this image to RGBA output.": "অন্যান্য আঁকার সরঞ্জাম এই ছবিকে RGBA আউটপুটে ফেরায়।"
 }

@@ -878,5 +878,7 @@
   "Fit image": "Adapter à l’image",
   "Import palette…": "Importer une palette…",
   "Export palette…": "Exporter la palette…",
-  "Shared palette": "Palette partagée"
+  "Shared palette": "Palette partagée",
+  "Index paint": "Peinture indexée",
+  "Other painting tools return this image to RGBA output.": "Les autres outils de peinture rétablissent la sortie RGBA de cette image."
 }

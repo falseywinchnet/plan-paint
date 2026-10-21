@@ -878,5 +878,7 @@
   "Fit image": "برازش در تصویر",
   "Import palette…": "وارد کردن پالت…",
   "Export palette…": "صادر کردن پالت…",
-  "Shared palette": "پالت مشترک"
+  "Shared palette": "پالت مشترک",
+  "Index paint": "نقاشی با نمایه",
+  "Other painting tools return this image to RGBA output.": "ابزارهای دیگر نقاشی این تصویر را به خروجی RGBA برمی‌گردانند."
 }

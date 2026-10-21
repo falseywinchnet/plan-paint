@@ -878,5 +878,7 @@
   "Fit image": "Уписати в зображення",
   "Import palette…": "Імпорт палітри…",
   "Export palette…": "Експорт палітри…",
-  "Shared palette": "Спільна палітра"
+  "Shared palette": "Спільна палітра",
+  "Index paint": "Малювання індексами",
+  "Other painting tools return this image to RGBA output.": "Інші інструменти малювання повертають це зображення до виводу RGBA."
 }

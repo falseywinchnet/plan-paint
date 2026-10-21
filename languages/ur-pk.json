@@ -878,5 +878,7 @@
   "Fit image": "تصویر میں فٹ کریں",
   "Import palette…": "پیلیٹ درآمد کریں…",
   "Export palette…": "پیلیٹ برآمد کریں…",
-  "Shared palette": "مشترکہ پیلیٹ"
+  "Shared palette": "مشترکہ پیلیٹ",
+  "Index paint": "انڈیکس پینٹ",
+  "Other painting tools return this image to RGBA output.": "دیگر پینٹنگ ٹولز اس تصویر کو RGBA آؤٹ پٹ میں واپس لاتے ہیں۔"
 }

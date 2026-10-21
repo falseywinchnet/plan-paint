@@ -1644,6 +1644,103 @@ void icon_states_contracts() {
     editor.close_editor_dialog();
     std::filesystem::remove_all(root);
 }
+void indexed_canvas_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    paint::IconFrame frame;
+    frame.image.reset(32, 32, {180, 30, 60, 255});
+    paint::IconPaletteOptions options;
+    options.bits_per_pixel = 4;
+    options.fixed_palette = {{180, 30, 60, 255}, {180, 30, 60, 255}, {0, 0, 0, 255}, {20, 70, 200, 255}};
+    frame = paint::convert_icon_palette(frame, options).frame;
+    frame.hotspot_x = 4;
+    editor.document.replace_container({paint::ContainerKind::Cursor, {frame}}, "indexed.cur");
+    editor.refresh();
+    editor.canvas().set_zoom(8);
+    editor.execute("atlas-palette");
+    const std::shared_ptr<gf::ComboBox> entry = std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-entry"));
+    (*entry).set_selected_index(1);
+    routed_button(window, "palette-primary");
+    require(editor.icon_index_paint && editor.icon_primary_index == 1 && editor.document.undo_history.empty(),
+            "palette chooser selects an exact paint index without editing artwork");
+    fixture.drag(5.5, 6.5, 12.5, 6.5);
+    const paint::IconFrame& painted = editor.document.atlas.icons[0];
+    require(paint::has_icon_palette(painted) && (*painted.source).indices[6 * 32 + 9] == 1 &&
+            paint::equal(editor.document.image.get(9, 6), frame.image.get(9, 6)) && editor.document.undo_history.size() == 1,
+            "pencil changes duplicate-color identity and records one gesture");
+    editor.execute("undo");
+    require((*editor.document.atlas.icons[0].source).indices[6 * 32 + 9] == 0, "Undo restores index identity");
+    editor.execute("redo");
+    require((*editor.document.atlas.icons[0].source).indices[6 * 32 + 9] == 1, "Redo restores index identity");
+    editor.choose_tool(paint::Tool::Picker);
+    fixture.click(9.5, 6.5);
+    require(editor.icon_primary_index == 1, "picker samples stored index instead of equal RGB");
+    editor.choose_icon_index(3, false);
+    editor.choose_tool(paint::Tool::Fill);
+    fixture.click(9.5, 6.5);
+    require(paint::equal(editor.document.image.get(9, 6), {20, 70, 200, 255}) &&
+            (*editor.document.atlas.icons[0].source).indices[5 * 32 + 9] == 0,
+            "fill matches connected indices and does not flood equal-colored different entries");
+    editor.choose_tool(paint::Tool::Pencil);
+    editor.choose_icon_index(1, true);
+    fixture.pointer(gf::PointerAction::down, 8.5, 8.5, gf::PointerButton::secondary);
+    fixture.pointer(gf::PointerAction::up, 8.5, 8.5, gf::PointerButton::secondary);
+    require((*editor.document.atlas.icons[0].source).indices[8 * 32 + 8] == 1, "secondary click uses alternate index");
+    editor.choose_tool(paint::Tool::Eraser);
+    editor.document.ink.size = 1;
+    fixture.click(8.5, 8.5);
+    require(editor.document.image.get(8, 8).a == 0 && (*editor.document.atlas.icons[0].source).indices[8 * 32 + 8] == 2,
+            "indexed eraser writes first black entry and a separate transparency mask");
+    editor.atlas_preserve_alpha = true;
+    editor.choose_tool(paint::Tool::Pencil);
+    const std::size_t history = editor.document.undo_history.size();
+    fixture.click(8.5, 8.5);
+    require(editor.document.image.get(8, 8).a == 0 && editor.document.undo_history.size() == history,
+            "alpha protection leaves transparent indices untouched with no empty undo");
+    editor.atlas_preserve_alpha = false;
+    editor.atlas_wrap = true;
+    fixture.drag(30.5, 10.5, 33.5, 10.5);
+    require((*editor.document.atlas.icons[0].source).indices[10 * 32] == 3, "indexed pencil wraps at image edges");
+    editor.atlas_wrap = false;
+    editor.choose_tool(paint::Tool::Select);
+    editor.document.select({5, 14, 4, 4});
+    editor.choose_tool(paint::Tool::Pencil);
+    require(editor.document.selection.on_canvas, "switching from Select settles the canvas mask");
+    fixture.drag(2.5, 15.5, 12.5, 15.5);
+    require((*editor.document.atlas.icons[0].source).indices[15 * 32 + 6] == 3 &&
+            (*editor.document.atlas.icons[0].source).indices[15 * 32 + 3] == 0 &&
+            (*editor.document.atlas.icons[0].source).indices[15 * 32 + 11] == 0,
+            "indexed gesture respects canvas selection boundaries");
+    editor.document.commit_selection();
+    editor.guide.nodes = {{14, 14}, {20, 14}, {20, 20}, {14, 20}};
+    editor.guide.closed = true;
+    editor.guide.fill = true;
+    fixture.drag(12.5, 16.5, 22.5, 16.5);
+    require((*editor.document.atlas.icons[0].source).indices[16 * 32 + 16] == 0 &&
+            (*editor.document.atlas.icons[0].source).indices[16 * 32 + 12] == 3,
+            "indexed paint respects protected guide body without generating extra colors");
+    editor.choose_tool(paint::Tool::Select);
+    paint::SelectionMask feathered;
+    feathered.bounds = {3, 22, 3, 1};
+    feathered.coverage = {127, 128, 255};
+    editor.document.select_mask(feathered);
+    editor.choose_tool(paint::Tool::Pencil);
+    fixture.drag(2.5, 22.5, 7.5, 22.5);
+    require((*editor.document.atlas.icons[0].source).indices[22 * 32 + 3] == 0 &&
+            (*editor.document.atlas.icons[0].source).indices[22 * 32 + 4] == 3,
+            "feathered selection uses an explicit half-coverage threshold without blending palette colors");
+    editor.document.commit_selection();
+    const paint::ImageContainer result = editor.document.output_container(true);
+    const std::vector<std::uint8_t> bytes = paint::encode_icon_container(result);
+    const paint::ImageContainer saved = paint::decode_icon_container(bytes.data(), bytes.size());
+    require(paint::has_icon_palette(saved.frames[0]) && (*saved.frames[0].source).format.bits_per_pixel == 4 &&
+            (*saved.frames[0].source).indices == (*result.frames[0].source).indices && saved.frames[0].hotspot_x == 4,
+            "canvas edits roundtrip exact indices, depth and hotspot");
+    editor.document.new_image(32, 32);
+    editor.refresh();
+    require(!editor.icon_index_paint, "leaving icon documents restores ordinary painting");
+}
 void icon_palette_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -4970,6 +5067,7 @@ void icon_production_contracts() {
         asset_browser_contracts();
         alpha_tools_contracts();
         icon_palette_contracts();
+        indexed_canvas_contracts();
         icon_ribbon_contracts();
         icon_states_contracts();
         icon_batch_contracts();
