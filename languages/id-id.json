@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "Entri PNG memerlukan aplikasi ikon yang mendukung PNG.",
   "Partial alpha and legacy XOR depend on the target consumer.": "Alfa sebagian dan XOR lama bergantung pada aplikasi tujuan.",
   "Test custom dimensions and cursor hotspots in the target application.": "Uji dimensi khusus dan titik aktif kursor pada aplikasi tujuan.",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Pratinjau pembuatan, efek, dan strip melaporkan pembesaran dan pemotongan; piksel tersimpan tidak menyimpan riwayat itu."
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Pratinjau pembuatan, efek, dan strip melaporkan pembesaran dan pemotongan; piksel tersimpan tidak menyimpan riwayat itu.",
+  "File changed outside Plan Paint.": "Berkas berubah di luar Plan Paint.",
+  "File changed while reading. Try again.": "Berkas berubah saat dibaca. Coba lagi.",
+  "File missing from disk.": "Berkas tidak ada di disk.",
+  "File unavailable on disk.": "Berkas tidak tersedia di disk.",
+  "Reload and discard local edits? Save a copy first to keep them.": "Muat ulang dan buang suntingan lokal? Simpan salinan dahulu untuk mempertahankannya.",
+  "Reload from disk…": "Muat ulang dari disk…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "Berkas berubah atau tidak tersedia di disk. Timpa dengan gambar lokal?"
 }

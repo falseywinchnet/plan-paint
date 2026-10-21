@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "PNG এন্ট্রির জন্য PNG সমর্থিত আইকন অ্যাপ প্রয়োজন।",
   "Partial alpha and legacy XOR depend on the target consumer.": "আংশিক আলফা এবং পুরোনো XOR গন্তব্য অ্যাপের ওপর নির্ভর করে।",
   "Test custom dimensions and cursor hotspots in the target application.": "গন্তব্য অ্যাপে নিজস্ব মাপ এবং কার্সরের হটস্পট পরীক্ষা করুন।",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "তৈরি, প্রভাব এবং স্ট্রিপের পূর্বরূপ বড় করা ও ছাঁটাই দেখায়; সংরক্ষিত পিক্সেল সেই ইতিহাস রাখে না।"
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "তৈরি, প্রভাব এবং স্ট্রিপের পূর্বরূপ বড় করা ও ছাঁটাই দেখায়; সংরক্ষিত পিক্সেল সেই ইতিহাস রাখে না।",
+  "File changed outside Plan Paint.": "Plan Paint-এর বাইরে ফাইল বদলেছে।",
+  "File changed while reading. Try again.": "পড়ার সময় ফাইল বদলেছে। আবার চেষ্টা করুন।",
+  "File missing from disk.": "ডিস্কে ফাইল নেই।",
+  "File unavailable on disk.": "ডিস্কে ফাইল উপলব্ধ নয়।",
+  "Reload and discard local edits? Save a copy first to keep them.": "আবার লোড করে স্থানীয় সম্পাদনা বাদ দেবেন? রাখতে আগে একটি অনুলিপি সংরক্ষণ করুন।",
+  "Reload from disk…": "ডিস্ক থেকে আবার লোড…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ডিস্কে ফাইল বদলেছে বা অনুপলব্ধ হয়েছে। স্থানীয় ছবি দিয়ে প্রতিস্থাপন করবেন?"
 }

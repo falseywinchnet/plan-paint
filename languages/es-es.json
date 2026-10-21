@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "Las entradas PNG requieren aplicaciones de iconos compatibles con PNG.",
   "Partial alpha and legacy XOR depend on the target consumer.": "El alfa parcial y XOR heredado dependen de la aplicación de destino.",
   "Test custom dimensions and cursor hotspots in the target application.": "Pruebe las dimensiones personalizadas y los puntos activos del cursor en la aplicación de destino.",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Las vistas previas de generación, efectos y tiras indican ampliación y recorte; los píxeles guardados no conservan ese historial."
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Las vistas previas de generación, efectos y tiras indican ampliación y recorte; los píxeles guardados no conservan ese historial.",
+  "File changed outside Plan Paint.": "Archivo modificado fuera de Plan Paint.",
+  "File changed while reading. Try again.": "El archivo cambió durante la lectura. Inténtalo de nuevo.",
+  "File missing from disk.": "Falta el archivo en el disco.",
+  "File unavailable on disk.": "Archivo no disponible en el disco.",
+  "Reload and discard local edits? Save a copy first to keep them.": "¿Recargar y descartar los cambios locales? Guarda primero una copia para conservarlos.",
+  "Reload from disk…": "Recargar desde el disco…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "El archivo cambió o dejó de estar disponible. ¿Sobrescribirlo con el dibujo local?"
 }

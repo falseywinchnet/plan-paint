@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "PNG エントリには PNG 対応のアイコン利用アプリが必要です。",
   "Partial alpha and legacy XOR depend on the target consumer.": "半透明アルファと従来の XOR の表示は対象アプリによって異なります。",
   "Test custom dimensions and cursor hotspots in the target application.": "カスタムサイズとカーソルのホットスポットを対象アプリで確認してください。",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "生成・効果・画像帯のプレビューは拡大と切り抜きを報告します。保存されたピクセルにその履歴は残りません。"
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "生成・効果・画像帯のプレビューは拡大と切り抜きを報告します。保存されたピクセルにその履歴は残りません。",
+  "File changed outside Plan Paint.": "Plan Paint の外部でファイルが変更されました。",
+  "File changed while reading. Try again.": "読み込み中にファイルが変更されました。再試行してください。",
+  "File missing from disk.": "ディスクにファイルがありません。",
+  "File unavailable on disk.": "ディスク上のファイルを利用できません。",
+  "Reload and discard local edits? Save a copy first to keep them.": "再読み込みしてローカルの編集を破棄しますか？残すには先にコピーを保存してください。",
+  "Reload from disk…": "ディスクから再読み込み…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "ファイルが変更されたか、利用できなくなりました。ローカルの画像で上書きしますか？"
 }

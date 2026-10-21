@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "Записи PNG потребують підтримки PNG у програмі значків.",
   "Partial alpha and legacy XOR depend on the target consumer.": "Часткова прозорість і старий XOR залежать від цільової програми.",
   "Test custom dimensions and cursor hotspots in the target application.": "Перевірте нестандартні розміри й активні точки курсора в цільовій програмі.",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Попередній перегляд створення, ефектів і смуг показує збільшення та обрізання; збережені пікселі не містять цієї історії."
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Попередній перегляд створення, ефектів і смуг показує збільшення та обрізання; збережені пікселі не містять цієї історії.",
+  "File changed outside Plan Paint.": "Файл змінено поза Plan Paint.",
+  "File changed while reading. Try again.": "Файл змінився під час читання. Спробуйте ще раз.",
+  "File missing from disk.": "Файл відсутній на диску.",
+  "File unavailable on disk.": "Файл на диску недоступний.",
+  "Reload and discard local edits? Save a copy first to keep them.": "Перезавантажити й відкинути локальні зміни? Щоб зберегти їх, спочатку збережіть копію.",
+  "Reload from disk…": "Перезавантажити з диска…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "Файл змінився або став недоступним. Перезаписати його локальним малюнком?"
 }

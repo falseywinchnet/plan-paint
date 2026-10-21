@@ -6,6 +6,7 @@
 #include "forms/display.hpp"
 #include "localization.hpp"
 #include "platform.hpp"
+#include "paths.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -157,6 +158,13 @@ void Editor::initialize_control_tree() {
     (*menu_).set_item_padding(17);
     rebuild_file_menu();
     add_child(menu_);
+    file_notice_label_ = gf::make_control<gf::Label>(gf::StableId("file-change-notice"));
+    (*file_notice_label_).set_font({gf::FontRole::control, 13, 600, false});
+    add_child(file_notice_label_);
+    file_reload_ = gf::make_control<gf::Button>(gf::StableId("file-reload"), tr("Reload from disk…"));
+    subscriptions_.push_back((*file_reload_).clicked().subscribe(
+        *this, gf::Delegate<gf::ButtonBase&>::bind<Editor, &Editor::reload_clicked>(*this)));
+    add_child(file_reload_);
     status_ = gf::make_control<gf::Label>(gf::StableId("status"));
     cursor_status_ = gf::make_control<gf::Label>(gf::StableId("cursor-status"));
     dimensions_status_ = gf::make_control<gf::Label>(gf::StableId("dimensions-status"));
@@ -222,6 +230,7 @@ void Editor::rebuild_file_menu() {
         }
         items.push_back(std::move(recent_menu));
     }
+    items.push_back(menu_item("reload", tr("Reload from disk…")));
     items.push_back(menu_item("save", tr("Save")));
     items.push_back(menu_item("save-as", tr("Save as…")));
     items.push_back(menu_item("print-preview", tr("Print preview…")));
@@ -256,6 +265,16 @@ void Editor::arrange(gf::Rect bounds) {
     }
     set_child_layout(ribbon_, {0, 0, bounds.width, ribbon_height});
     set_child_layout(menu_, {0, 0, 56, 27});
+    const bool file_notice_visible = !file_notice_.empty() && !pattern_editing;
+    (*file_notice_label_).set_visible(file_notice_visible);
+    (*file_reload_).set_visible(file_notice_visible);
+    (*file_reload_).set_enabled(disk_stamp_.availability == FileAvailability::Available);
+    (*file_notice_label_).set_text(file_notice_);
+    if (file_notice_visible) {
+        set_child_layout(file_notice_label_, {12, ribbon_height + 2, std::max(1.0, bounds.width - 200), 26});
+        set_child_layout(file_reload_, {bounds.width - 180, ribbon_height + 2, 168, 26});
+        ribbon_height += 30;
+    }
     double ruler = show_rulers ? 20 : 0;
     double footer = show_status ? 30 : 0;
     const double controls_height = settings.canvas_controls && !pattern_editing ? 132 : 0;
@@ -292,8 +311,8 @@ void Editor::on_paint(gf::Painter& painter, gf::Rect) {
     gf::Rect bounds = committed_arranged_bounds();
     painter.fill_rect({0, 0, bounds.width, bounds.height}, interface_color(*this, gf::Color::rgba(232, 240, 249)));
     if (show_rulers) {
-        double ribbon_height = (*ribbon_).ribbon_height();
         gf::Rect area = (*canvas_).committed_arranged_bounds();
+        const double ribbon_height = area.y - 20;
         gui_drawing::PointF origin = (*canvas_).view_origin();
         double scale = (*canvas_).zoom();
         double step = 1;
@@ -481,11 +500,17 @@ bool Editor::help_shortcut() {
     return true;
 }
 void Editor::on_attached_to_window() {
+    file_timer_ = std::make_unique<gf::Timer>(*attached_window(), std::chrono::seconds(1));
+    file_subscription_ = (*file_timer_).tick().subscribe(
+        *this, gf::Delegate<>::bind<Editor, &Editor::file_watch_tick>(*this));
+    (*file_timer_).start();
     help_accelerator_ = (*attached_window())
                             .register_accelerator(*this, {gf::PhysicalKey::f1, gf::Modifier::none},
                                                   std::bind(&Editor::help_shortcut, this));
 }
 void Editor::on_detaching_from_window(gf::Window& former_window) noexcept {
+    file_subscription_.disconnect();
+    file_timer_.reset();
     recovery_subscription.disconnect();
     recovery_timer.reset();
     clear_transform_preview();
@@ -1722,7 +1747,14 @@ bool Editor::can_replace() {
     }
 }
 void Editor::open_file(const std::string& path) {
-    open_container(load_container(path), path);
+    const FileStamp before = file_stamp(path);
+    ImageContainer loaded = load_container(path);
+    if (before.availability != FileAvailability::Available || file_stamp(path) != before) {
+        throw std::runtime_error(tr("File changed while reading. Try again."));
+    }
+    open_container(std::move(loaded), path);
+    watched_stamp_ = before;
+    disk_stamp_ = before;
 }
 void Editor::open_container(ImageContainer image, const std::string& path) {
     finish_controls();
@@ -1731,6 +1763,7 @@ void Editor::open_container(ImageContainer image, const std::string& path) {
     reference_frame = -1;
     healing_brush_.clear();
     document.replace_container(std::move(image), path);
+    reset_file_watch();
     spiro = {};
     if (document.tool == Tool::Spirograph) {
         document.tool = Tool::Pencil;
@@ -1793,8 +1826,7 @@ bool Editor::save(bool save_as) {
         pending_save_path = path;
         return false;
     }
-    save_path(path);
-    return true;
+    return save_path(path);
 }
 std::string Editor::choose_export_directory(const std::string& initial_directory) {
     const gf::HostPathDialogResult result = std::get<gf::HostPathDialogResult>(
@@ -1896,7 +1928,14 @@ bool Editor::export_png_image(const Image& image, const std::string& suggested_n
     save_image(image, path);
     return true;
 }
-void Editor::save_path(const std::string& path) {
+bool Editor::save_path(const std::string& path) {
+    std::error_code path_error;
+    const bool same_file = path == watched_path_ || (!watched_path_.empty() &&
+        std::filesystem::equivalent(path_from_utf8(path), path_from_utf8(watched_path_), path_error));
+    if (same_file && !watched_path_.empty() && file_stamp(watched_path_) != watched_stamp_ &&
+        !confirm_disk_action(tr("The file changed or became unavailable on disk. Overwrite it with local artwork?"))) {
+        return false;
+    }
     document.sync_curve();
     document.sync_path();
     // Saving a selection or retained curve must not release its editing session.
@@ -1908,6 +1947,7 @@ void Editor::save_path(const std::string& path) {
     }
     document.filename = path;
     document.saved_revision = document.revision;
+    reset_file_watch();
     try {
         settle_recovery();
         if (recovery_session) { (*recovery_session).discard(); }
@@ -1918,6 +1958,7 @@ void Editor::save_path(const std::string& path) {
     recent.remember(path);
     rebuild_file_menu();
     refresh();
+    return true;
 }
 void Editor::copy_alpha_image(const Image& source) {
     const Image image = alpha_image(source);
@@ -2070,6 +2111,7 @@ void Editor::execute(const std::string& command) {
         return;
     }
     try {
+        if (command == "reload") { reload_file(); return; }
         if (command == "guide-edit") {
             edit_guide();
             return;
@@ -2223,6 +2265,7 @@ void Editor::execute(const std::string& command) {
                 reference_frame = -1;
                 healing_brush_.clear();
                 document.new_image();
+                reset_file_watch();
                 reset_recovery(true);
                 spiro = {};
                 if (document.tool == Tool::Spirograph) {

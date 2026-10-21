@@ -1,6 +1,7 @@
 #pragma once
 #include "carpet.hpp"
 #include "recovery.hpp"
+#include "file_change.hpp"
 #include <future>
 #include <gui_forms/timer.hpp>
 #include "forms/interface_theme.hpp"
@@ -252,7 +253,8 @@ class Editor final : public gui_forms::Control {
     void open_container(ImageContainer image, const std::string& path);
     void open_generated_image(Image image);
     bool save(bool save_as);
-    void save_path(const std::string& path);
+    bool save_path(const std::string& path);
+    void file_watch_tick();
     std::string pending_save_path, deferred_command, deferred_open_path;
     Image deferred_generated_image;
     void complete_deferred_save();
@@ -270,6 +272,18 @@ class Editor final : public gui_forms::Control {
     void canvas_control_action(int action);
 
   private:
+    void reset_file_watch();
+    void reload_file();
+    void reload_clicked(gui_forms::ButtonBase& button);
+    bool confirm_disk_action(const std::string& message);
+    std::string watched_path_, file_notice_;
+    FileStamp watched_stamp_, disk_stamp_;
+    std::uint64_t file_watch_generation_ = 0, file_check_generation_ = 0;
+    std::future<FileStamp> file_check_;
+    std::unique_ptr<gui_forms::Timer> file_timer_;
+    gui_forms::SubscriptionToken file_subscription_;
+    std::shared_ptr<gui_forms::Label> file_notice_label_;
+    std::shared_ptr<gui_forms::Button> file_reload_;
     void initialize_canvas_controls();
     void install_generated_image(Image image);
     void arrange_canvas_controls(gui_forms::Rect area);

@@ -936,5 +936,12 @@
   "PNG entries require PNG-aware icon consumers.": "Các mục PNG cần ứng dụng biểu tượng hỗ trợ PNG.",
   "Partial alpha and legacy XOR depend on the target consumer.": "Alpha một phần và XOR cũ phụ thuộc vào ứng dụng đích.",
   "Test custom dimensions and cursor hotspots in the target application.": "Hãy kiểm tra kích thước tùy chỉnh và điểm nóng con trỏ trong ứng dụng đích.",
-  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Xem trước tạo ảnh, hiệu ứng và dải ảnh báo phóng lớn và cắt xén; điểm ảnh đã lưu không giữ lịch sử đó."
+  "Generation, effects and strip previews report upscaling and clipping; saved pixels do not retain that history.": "Xem trước tạo ảnh, hiệu ứng và dải ảnh báo phóng lớn và cắt xén; điểm ảnh đã lưu không giữ lịch sử đó.",
+  "File changed outside Plan Paint.": "Tệp đã thay đổi bên ngoài Plan Paint.",
+  "File changed while reading. Try again.": "Tệp thay đổi trong khi đọc. Hãy thử lại.",
+  "File missing from disk.": "Không có tệp trên đĩa.",
+  "File unavailable on disk.": "Tệp trên đĩa không khả dụng.",
+  "Reload and discard local edits? Save a copy first to keep them.": "Tải lại và bỏ các chỉnh sửa cục bộ? Lưu một bản sao trước để giữ lại.",
+  "Reload from disk…": "Tải lại từ đĩa…",
+  "The file changed or became unavailable on disk. Overwrite it with local artwork?": "Tệp đã thay đổi hoặc không còn khả dụng. Ghi đè bằng hình cục bộ?"
 }

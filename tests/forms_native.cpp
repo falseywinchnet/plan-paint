@@ -37,7 +37,7 @@ struct NativeExercise {
          materials = false, interface_review = false, view_review = false, guide_review = false,
          healing_review = false, icon_production_review = false, icon_svg_review = false, icon_formats_review = false,
          icon_sheet_review = false, icon_export_review = false, asset_browser_review = false,
-         icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
+         external_file_review = false, icon_validation_review = false, toolbar_strip_review = false, numeric_transform_review = false, icon_effects_review = false, alpha_tools_review = false, icon_palette_review = false, icon_states_review = false,
          icon_ribbon_review = false, icon_batch_review = false, icon_stamp_review = false, icon_indexed_review = false, icon_shared_review = false, icon_index_paint_review = false;
     int backing = 0, hue = 220;
     gf::Window* resize_window = nullptr;
@@ -336,11 +336,12 @@ struct NativeExercise {
         control.invalidate_subtree(gf::Dirty::paint);
     }
     void inspect_frame(gf::Window& window) {
+        if (external_file_review) { repaint_tree(*window.root()); }
         if (icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review) {
             repaint_tree(*window.root());
             repaint_tree(*window.find("editor-dialog"));
         }
-        const gf::Size size = icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
+        const gf::Size size = external_file_review || icon_effects_review || numeric_transform_review || toolbar_strip_review || icon_validation_review || icon_export_review ? window.client_size() : gf::Size{1280,820};
         std::unique_ptr<gf::PaintFramebuffer> framebuffer = window.create_framebuffer(size, window.scale());
         if (!framebuffer || !(*framebuffer).begin(window.image_resources(), {0, 0, size.width, size.height})) {
             throw std::runtime_error("Native framebuffer is unavailable");
@@ -404,6 +405,17 @@ struct NativeExercise {
                 if ((*manifest).text().find("SVG") == std::string::npos || (*manifest).text().find("Upscaling") != std::string::npos) {
                     throw std::runtime_error("Native SVG generation preview lost vector provenance");
                 }
+            }
+            return;
+        }
+        if (external_file_review) {
+            const std::shared_ptr<gf::Label> notice = std::dynamic_pointer_cast<gf::Label>(window.find("file-change-notice"));
+            const gf::Control::Ptr reload = window.find("file-reload");
+            if (!painted || !notice || !reload || !(*reload).visible() || !(*reload).enabled() ||
+                (*notice).text() != "File changed outside Plan Paint." ||
+                (*reload).absolute_bounds().right() > window.client_size().width ||
+                (*notice).absolute_bounds().bottom() > (*editor).canvas().absolute_bounds().y) {
+                throw std::runtime_error("Native external-file notice did not render or fit");
             }
             return;
         }
@@ -652,6 +664,28 @@ struct NativeExercise {
             if (!handle.request_close().accepted()) {
                 throw std::runtime_error("Native batch close failed");
             }
+            return;
+        }
+        if (external_file_review) {
+            NativeRecoveryDirectory files("external");
+            const std::string path = (files.path / "sample.ico").string();
+            paint::ImageContainer source; source.kind = paint::ContainerKind::Icon;
+            paint::IconFrame frame; frame.image.reset(32,32,{35,120,210,255}); source.frames.push_back(frame);
+            paint::save_container(source,path); (*editor).open_file(path);
+            frame.image.reset(48,48,{180,40,150,255}); source.frames.push_back(frame);
+            paint::save_container(source,path);
+            const std::chrono::steady_clock::time_point deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+            const std::shared_ptr<gf::Label> notice=std::dynamic_pointer_cast<gf::Label>(window.find("file-change-notice"));
+            while ((*notice).text() != "File changed outside Plan Paint.") {
+                (*editor).file_watch_tick(); window.perform_layout();
+                if (std::chrono::steady_clock::now()>deadline) { throw std::runtime_error("Native file notice timed out"); }
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+            inspect_frame(window);
+            (*editor).execute("reload");
+            if ((*editor).document.atlas.icons.size()!=2) { throw std::runtime_error("Native reload failed"); }
+            entered=true;
+            if (!handle.request_close().accepted()) { throw std::runtime_error("Native external-file close failed"); }
             return;
         }
         if (icon_validation_review) {
@@ -1153,6 +1187,7 @@ int main(int argc, char** argv) {
             (argc > 1 && std::string(argv[1]) == "--icon-palette");
         exercise.icon_states_review = argc > 1 && std::string(argv[1]) == "--icon-states";
         exercise.icon_ribbon_review = argc > 1 && std::string(argv[1]) == "--icon-ribbon";
+        exercise.external_file_review = argc > 1 && std::string(argv[1]) == "--external-file";
         exercise.icon_validation_review = argc > 1 && std::string(argv[1]) == "--icon-validation";
         exercise.toolbar_strip_review = argc > 1 && std::string(argv[1]) == "--toolbar-strip";
         exercise.numeric_transform_review = argc > 1 && std::string(argv[1]) == "--numeric-transform";
@@ -1163,7 +1198,7 @@ int main(int argc, char** argv) {
         exercise.icon_batch_review = exercise.icon_batch_review || exercise.icon_stamp_review || exercise.icon_shared_review;
         exercise.alpha_tools_review = argc > 1 && std::string(argv[1]) == "--alpha-tools";
         exercise.asset_browser_review = argc > 1 && std::string(argv[1]) == "--asset-browser";
-        if (exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
+        if (exercise.external_file_review || exercise.healing_review || exercise.icon_production_review || exercise.icon_formats_review ||
             exercise.icon_sheet_review || exercise.icon_export_review || exercise.asset_browser_review ||
             exercise.alpha_tools_review || exercise.icon_palette_review || exercise.icon_states_review ||
             exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_index_paint_review) {
@@ -1188,7 +1223,7 @@ int main(int argc, char** argv) {
         (*exercise.editor).recovery_root = recovery.path;
         gf::ApplicationWindowOptions options;
         options.title = "Plan Paint — GUI.Forms native interaction check";
-        options.initial_size = exercise.icon_export_review || exercise.icon_formats_review || exercise.icon_states_review ||
+        options.initial_size = exercise.external_file_review || exercise.icon_export_review || exercise.icon_formats_review || exercise.icon_states_review ||
                                        exercise.icon_validation_review || exercise.toolbar_strip_review || exercise.numeric_transform_review || exercise.icon_effects_review || exercise.icon_ribbon_review || exercise.icon_batch_review || exercise.icon_production_review || exercise.icon_sheet_review
                                    ? gf::Size{800, 520}
                                : exercise.compact ? gf::Size{800, 600}

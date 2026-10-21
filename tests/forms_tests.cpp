@@ -1967,6 +1967,86 @@ void await_validation(gf::Window& window) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
+void await_file_notice(Fixture& fixture, const std::string& expected) {
+    const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    const std::shared_ptr<gf::Label> notice = std::dynamic_pointer_cast<gf::Label>((*fixture.window).find("file-change-notice"));
+    do {
+        (*fixture.editor).file_watch_tick();
+        (*fixture.window).perform_layout();
+        if ((*notice).text() == expected) { return; }
+        require(std::chrono::steady_clock::now() < deadline, "file watcher reaches expected state");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    } while (true);
+}
+void external_file_reload() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    TestServices services;
+    gf::HostSession session(*fixture.window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(), "reload host attaches");
+    const std::filesystem::path root = std::filesystem::temp_directory_path() /
+        ("paint-reload-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directory(root);
+    const std::string path = (root / "source.ico").string();
+    paint::ImageContainer source; source.kind = paint::ContainerKind::Icon;
+    paint::IconFrame frame; frame.image.reset(16, 16, {30, 80, 210, 170}); source.frames.push_back(frame);
+    paint::save_container(source, path);
+    editor.open_file(path);
+    editor.file_watch_tick(); // A pending result must not become the next document's baseline.
+    const paint::FileStamp original = paint::file_stamp(path);
+    frame.image.reset(24, 24, {100, 220, 30, 255}); source.frames.push_back(frame);
+    paint::save_container(source, path);
+    std::filesystem::last_write_time(path, original.modified);
+    require(paint::file_stamp(path) != original, "size detects changes even when timestamp is unchanged");
+    await_file_notice(fixture, "File changed outside Plan Paint.");
+    require(editor.document.atlas.icons.size() == 1 && !editor.document.dirty(), "external edit never replaces artwork automatically");
+    editor.document.checkpoint(); editor.document.image.set(2, 3, {240, 20, 80, 255});
+    editor.execute("select-all");
+    const std::uint64_t local_revision = editor.document.revision;
+    services.choice = gf::HostDialogChoice::no;
+    editor.execute("reload");
+    require(editor.document.revision == local_revision && editor.document.selection.image.get(2, 3).r == 240 &&
+                editor.document.selection.active,
+            "declined reload retains local edits and history");
+    require(!editor.save(false) && editor.document.dirty() && paint::load_container(path).frames.size() == 2,
+            "declined overwrite preserves external file and dirty state");
+    services.choice = gf::HostDialogChoice::yes;
+    editor.execute("reload");
+    require(editor.document.atlas.icons.size() == 2 && !editor.document.dirty() &&
+                editor.document.image.get(2, 3).r == 100 && editor.document.atlas.icons[0].image.get(2, 3).r == 30,
+            "explicit reload replaces all icon representations and resets dirty state");
+    await_file_notice(fixture, "");
+    // A successful save becomes the new baseline without a false external-change notice.
+    editor.document.checkpoint(); editor.document.image.set(2, 3, {80, 40, 20, 255});
+    require(editor.save(false), "ordinary save succeeds");
+    await_file_notice(fixture, "");
+    std::filesystem::remove(path);
+    await_file_notice(fixture, "File missing from disk.");
+    require(!(*(*fixture.window).find("file-reload")).enabled(), "missing file disables notice reload");
+    editor.execute("reload");
+    require(editor.document.image.get(2, 3).r == 80, "failed missing-file reload leaves artwork intact");
+    std::filesystem::create_directory(path);
+    await_file_notice(fixture, "File unavailable on disk.");
+    std::filesystem::remove(path);
+    const std::vector<std::uint8_t> corrupt{0, 2, 1, 3};
+    paint::write_file_atomic(corrupt, path, "Cannot write corrupt fixture");
+    await_file_notice(fixture, "File changed outside Plan Paint.");
+    editor.execute("reload");
+    require(editor.document.image.get(2, 3).r == 80 && editor.document.atlas.icons.size() == 2,
+            "corrupt reload leaves the full document intact");
+    editor.document.checkpoint();
+    require(editor.save(false), "explicit overwrite can repair externally corrupted source");
+    require(paint::load_container(path).frames.size() == 2 && !editor.document.dirty(), "confirmed overwrite writes local artwork");
+    editor.file_watch_tick();
+    editor.execute("new");
+    await_file_notice(fixture, "");
+    require(editor.document.filename.empty(), "new document retires previous file watcher");
+    // Drain an obsolete sample before deleting this test's files.
+    for (int i = 0; i < 5; ++i) { editor.file_watch_tick(); std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+    (*fixture.window).perform_layout();
+    require(!(*(*fixture.window).find("file-change-notice")).visible(), "obsolete result cannot show a notice on new artwork");
+    std::filesystem::remove_all(root);
+}
 void icon_validation_controls() {
     Fixture fixture;
     paint::forms::Editor& editor=*fixture.editor; gf::Window& window=*fixture.window;
@@ -5455,6 +5535,7 @@ void icon_production_contracts() {
         icon_representation_export();
         asset_browser_contracts();
         alpha_tools_contracts();
+        external_file_reload();
         icon_validation_controls();
         toolbar_strip_controls();
         numeric_transform_controls();
