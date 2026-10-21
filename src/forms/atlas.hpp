@@ -3,6 +3,7 @@
 #include <gui_forms/basic_controls.hpp>
 #include <gui_forms/controls/scrollable_control/container_control/flow_layout_panel/flow_layout_panel.hpp>
 namespace paint::forms {
+std::string icon_format_name(IconFormat format);
 class Editor;
 class AtlasThumbnail final : public gui_forms::Button {
   public:

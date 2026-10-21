@@ -4,6 +4,7 @@
 #include "fixtures/icon_reference.hpp"
 #include "forms/display.hpp"
 #include "forms/editor.hpp"
+#include "icon_palette.hpp"
 #include "localization.hpp"
 #include <chrono>
 #include <cmath>
@@ -108,9 +109,10 @@ gf::HostCapabilities service_capabilities() {
 class TestServices final : public gf::HostServices {
   public:
     TestServices() : HostServices(service_capabilities()) {}
-    std::string path, message;
+    std::string path, message, suggested_name;
     gf::HostDialogChoice choice = gf::HostDialogChoice::cancel;
     bool fail_dialogs = false;
+    bool cancel_paths = false;
     std::vector<std::uint64_t> dialog_ids;
     gf::HostImage clipboard;
     std::vector<std::string> clipboard_files;
@@ -165,7 +167,14 @@ class TestServices final : public gf::HostServices {
                     request.request_id,
                     gf::HostColorDialogResult{gf::HostDialogOutcome::accepted, 0x0f284180}};
         }
-        return {{}, request.request_id, gf::HostPathDialogResult{gf::HostDialogOutcome::accepted, {path}}};
+        if (std::holds_alternative<gf::HostSaveFileDialogRequest>(request.payload)) {
+            suggested_name = std::get<gf::HostSaveFileDialogRequest>(request.payload).suggested_name;
+        }
+        return {{},
+                request.request_id,
+                gf::HostPathDialogResult{cancel_paths ? gf::HostDialogOutcome::cancelled
+                                                      : gf::HostDialogOutcome::accepted,
+                                         {path}}};
     }
 };
 void dialog_clipboard_and_close_contracts() {
@@ -1271,6 +1280,152 @@ void await_assets(gf::Window& window) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     window.perform_layout();
+}
+void await_icon_states(gui_forms::Window& window) {
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (!(*window.find("state-save-report")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        const std::shared_ptr<gui_forms::Label> error =
+            std::dynamic_pointer_cast<gui_forms::Label>(window.find("dialog-error"));
+        if (!(*error).text().empty()) {
+            break;
+        }
+        require(std::chrono::steady_clock::now() < deadline, "state preview worker finishes");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    window.perform_layout();
+}
+void icon_states_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(), "states host attaches");
+    const std::filesystem::path root = std::filesystem::temp_directory_path() /
+                                       ("plan-paint-states-" + std::to_string(paint::recovery_time_ms()));
+    require(std::filesystem::create_directory(root), "isolated state output folder created");
+    paint::IconFrame first, second;
+    first.image.reset(32, 32, {255, 0, 0, 128});
+    first.hotspot_x = 7;
+    first.hotspot_y = 9;
+    second.image.reset(16, 16, {0, 255, 0, 255});
+    const paint::ImageContainer source{paint::ContainerKind::Cursor, {first, second}};
+    const std::string original = (root / "family.cur").string();
+    paint::save_container(source, original);
+    editor.document.replace_container(source, original);
+    editor.document.atlas.sequence.clear();
+    editor.refresh();
+    const std::uint64_t revision = editor.document.revision;
+    const std::size_t history = editor.document.undo_history.size();
+    open_tab(window, "atlas-tab");
+    routed_button(window, "atlas-states");
+    await_icon_states(window);
+    require((*window.find("state-export")).enabled(), "state snapshot is ready to export");
+    const gf::Rect close = (*window.find("dialog-cancel")).absolute_bounds();
+    require(close.x >= 0 && close.y >= 0 && close.right() <= 800 && close.bottom() <= 520,
+            "state dialog fits minimum window");
+    const std::shared_ptr<gf::TextBox> report =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("state-report"));
+    require((*report).read_only() && (*report).text().find("#2") != std::string::npos,
+            "state report accounts for both source representations");
+    const std::shared_ptr<gf::ComboBox> preset =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("state-preset"));
+    (*preset).set_selected_index(0);
+    (*preset).set_selected_index(1);
+    (*preset).set_selected_index(2);
+    await_icon_states(window);
+    services.path = (root / "family-disabled.cur").string();
+    routed_button(window, "state-export");
+    require(services.suggested_name == "family-disabled.cur", "state filename retains source family name");
+    const paint::ImageContainer exported = paint::load_container(services.path);
+    require(exported.kind == paint::ContainerKind::Cursor && exported.frames.size() == 2 &&
+                exported.frames[0].hotspot_x == 7 && exported.frames[0].hotspot_y == 9 &&
+                paint::equal(exported.frames[0].image.get(0, 0), {54, 54, 54, 70}),
+            "latest recipe exports all cursor images and hotspots");
+    services.path = original;
+    routed_button(window, "state-export");
+    require(paint::equal(paint::load_container(original).frames[0].image.get(0, 0), {255, 0, 0, 128}),
+            "variant exporter refuses the original source path");
+    const std::filesystem::path alias = root / "source-alias.cur";
+    std::filesystem::create_hard_link(original, alias);
+    services.path = alias.string();
+    routed_button(window, "state-export");
+    require(paint::equal(paint::load_container(original).frames[0].image.get(0, 0), {255, 0, 0, 128}),
+            "variant exporter refuses hard-link aliases of source");
+    services.path = (root / "wrong.ico").string();
+    routed_button(window, "state-export");
+    require(!std::filesystem::exists(services.path), "cursor export rejects wrong extension");
+    routed_button(window, "state-save-report");
+    require(!std::filesystem::exists(services.path), "JSON report rejects image extension");
+    services.path = (root / "states.json").string();
+    routed_button(window, "state-save-report");
+    require(std::filesystem::file_size(services.path) > 100, "state report is saved separately");
+    require(editor.document.revision == revision && editor.document.undo_history.size() == history &&
+                paint::equal(editor.document.image.get(0, 0), {255, 0, 0, 128}),
+            "recipe previews and exports do not modify source or Undo history");
+    const std::shared_ptr<gf::ComboBox> scope =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("state-scope"));
+    (*scope).set_selected_index(2);
+    await_icon_states(window);
+    require(!(*window.find("state-export")).enabled(), "empty selected sequence blocks export");
+    (*scope).set_selected_index(0);
+    await_icon_states(window);
+    editor.document.image.set(0, 0, {0, 0, 255, 255});
+    services.path = (root / "snapshot.cur").string();
+    routed_button(window, "state-export");
+    require(paint::equal(paint::load_container(services.path).frames[0].image.get(0, 0), {54, 54, 54, 70}),
+            "preview and exported bytes use the same frozen source");
+    (*preset).set_selected_index(1);
+    editor.close_editor_dialog();
+    static_cast<void>(window.drain_posted_work());
+    require(!window.find("state-after"), "closing cancels worker and late delivery cannot reopen dialog");
+
+    paint::IconPaletteOptions indexed_options;
+    indexed_options.bits_per_pixel = 4;
+    const paint::IconFrame indexed = paint::convert_icon_palette(first, indexed_options).frame;
+    paint::IconFrame legacy = second;
+    legacy.image.set(0, 0, {255, 255, 255, 0});
+    legacy.xor_pixels.resize(256, {255, 255, 255, 255});
+    editor.document.replace_container({paint::ContainerKind::Icon, {first, indexed, legacy}}, "");
+    editor.document.atlas.sequence = {1, 0, 1};
+    editor.refresh();
+    routed_button(window, "atlas-states");
+    await_icon_states(window);
+    const std::shared_ptr<gf::TextBox> failed_report =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("state-report"));
+    require(!(*window.find("state-export")).enabled() && (*window.find("state-save-report")).enabled() &&
+                (*failed_report).text().find("XOR") != std::string::npos,
+            "one failed representation blocks family export and remains reportable");
+    const std::shared_ptr<gf::ComboBox> image =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("state-image"));
+    (*image).set_selected_index(2);
+    const std::shared_ptr<gf::RasterCanvas> preview =
+        std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("state-after"));
+    require(!(*preview).bitmap(), "failed representation does not show another image's output");
+    const std::shared_ptr<gf::ComboBox> selected =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("state-scope"));
+    const std::shared_ptr<gf::ComboBox> policy =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("state-policy"));
+    (*selected).set_selected_index(2);
+    (*policy).set_selected_index(1);
+    await_icon_states(window);
+    require((*window.find("state-export")).enabled(), "explicit scope can omit unsupported artwork");
+    services.path = (root / "ordered-family").string();
+    services.cancel_paths = true;
+    routed_button(window, "state-export");
+    require(!std::filesystem::exists(services.path + ".ico"), "cancelled save writes no variant");
+    services.cancel_paths = false;
+    routed_button(window, "state-export");
+    const paint::ImageContainer family = paint::load_container(services.path + ".ico");
+    require(family.kind == paint::ContainerKind::Icon && family.frames.size() == 3 &&
+                paint::icon_output_format(family.frames[0], family.kind).bits_per_pixel == 4 &&
+                paint::icon_output_format(family.frames[1], family.kind).bits_per_pixel == 32 &&
+                paint::icon_output_format(family.frames[2], family.kind).bits_per_pixel == 4,
+            "ICO export appends extension and preserves mixed depths, order and duplicate selections");
+    editor.close_editor_dialog();
+    std::filesystem::remove_all(root);
 }
 void icon_palette_contracts() {
     Fixture fixture;
@@ -4626,6 +4781,7 @@ int main() {
         asset_browser_contracts();
         alpha_tools_contracts();
         icon_palette_contracts();
+        icon_states_contracts();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

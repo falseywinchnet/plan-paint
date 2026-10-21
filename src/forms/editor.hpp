@@ -217,7 +217,10 @@ class Editor final : public gui_forms::Control {
     void open_browser_asset(const AssetPreview& preview);
     void use_asset_stamp(Image image);
     std::string asset_directory, asset_bookmark_path;
-    bool save_export_report(const std::string& report);
+    bool save_export_report(const std::string& report,
+                            const std::string& suggested_name = "icon-export-report.json");
+    bool export_icon_variant(const std::vector<std::uint8_t>& bytes, bool cursor,
+                             const std::string& suggested_name, const std::string& source_path);
     void arrange(gui_forms::Rect bounds) override;
     void on_paint(gui_forms::Painter& painter, gui_forms::Rect damage) override;
     void paint_canvas_overlay(gui_forms::Painter& painter, gui_forms::Rect damage);

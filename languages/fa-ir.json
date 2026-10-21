@@ -832,5 +832,22 @@
   "Transparent pixels": "پیکسل‌های شفاف",
   "Partial alpha converted": "آلفای جزئی تبدیل‌شده",
   "Image changed. Reopen Palette conversion.": "تصویر تغییر کرده است. تبدیل پالت را دوباره باز کنید.",
-  "Palette…": "پالت…"
+  "Palette…": "پالت…",
+  "States…": "حالت‌ها…",
+  "Icon state variants": "گونه‌های حالت نماد",
+  "Preset": "پیش‌تنظیم",
+  "Normal": "عادی",
+  "Hot": "برجسته",
+  "Disabled": "غیرفعال",
+  "Saturation %": "اشباع %",
+  "Brightness %": "روشنایی %",
+  "Opacity %": "تیرگی %",
+  "Output": "خروجی",
+  "Indexed sources → DIB": "منابع نمایه‌دار → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "نمایه‌دار: 1/4/8 بیت؛ 2→4. آلفا <128 شفاف؛ وگرنه زمینهٔ سفید.",
+  "Preview snapshot; source images stay unchanged.": "پیش‌نمایش تصویر ثابت؛ تصاویر منبع تغییر نمی‌کنند.",
+  "Variant exported.": "گونه صادر شد.",
+  "Choose an ICO/CUR filename matching this export.": "نام فایل ICO/CUR متناسب با این خروجی را انتخاب کنید.",
+  "Export to a separate file; the source cannot be replaced.": "در فایلی جداگانه صادر کنید؛ منبع قابل جایگزینی نیست.",
+  "Choose a JSON filename for this report.": "نام فایل JSON را برای این گزارش انتخاب کنید."
 }

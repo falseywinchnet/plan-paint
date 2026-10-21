@@ -832,5 +832,22 @@
   "Transparent pixels": "Прозрачные пиксели",
   "Partial alpha converted": "Преобразован частичный альфа",
   "Image changed. Reopen Palette conversion.": "Изображение изменено. Откройте преобразование палитры заново.",
-  "Palette…": "Палитра…"
+  "Palette…": "Палитра…",
+  "States…": "Состояния…",
+  "Icon state variants": "Варианты состояний значков",
+  "Preset": "Набор настроек",
+  "Normal": "Обычный",
+  "Hot": "Подсвеченный",
+  "Disabled": "Отключённый",
+  "Saturation %": "Насыщенность %",
+  "Brightness %": "Яркость %",
+  "Opacity %": "Непрозрачность %",
+  "Output": "Вывод",
+  "Indexed sources → DIB": "Индексированные → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "Индекс: 1/4/8 бит; 2→4. Альфа <128 — прозрачно, иначе белая подложка.",
+  "Preview snapshot; source images stay unchanged.": "Просмотр снимка; исходные изображения не изменяются.",
+  "Variant exported.": "Вариант экспортирован.",
+  "Choose an ICO/CUR filename matching this export.": "Выберите имя файла ICO/CUR, соответствующее этому экспорту.",
+  "Export to a separate file; the source cannot be replaced.": "Экспортируйте в отдельный файл; исходный файл нельзя заменить.",
+  "Choose a JSON filename for this report.": "Выберите имя файла JSON для этого отчёта."
 }

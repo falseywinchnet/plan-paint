@@ -832,5 +832,22 @@
   "Transparent pixels": "Pikseli wazi",
   "Partial alpha converted": "Alfa nusu iliyobadilishwa",
   "Image changed. Reopen Palette conversion.": "Picha imebadilika. Fungua ubadilishaji wa paleti tena.",
-  "Palette…": "Paleti…"
+  "Palette…": "Paleti…",
+  "States…": "Hali…",
+  "Icon state variants": "Matoleo ya hali za aikoni",
+  "Preset": "Mpangilio awali",
+  "Normal": "Kawaida",
+  "Hot": "Imeangaziwa",
+  "Disabled": "Imezimwa",
+  "Saturation %": "Ukolezi %",
+  "Brightness %": "Mwangaza %",
+  "Opacity %": "Uwazi hafifu %",
+  "Output": "Matokeo",
+  "Indexed sources → DIB": "Vyanzo vya faharasa → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "Faharasa: biti 1/4/8; 2→4. Alfa <128 wazi; vingine vina mandharinyuma meupe.",
+  "Preview snapshot; source images stay unchanged.": "Hakiki nakala tuli; picha za chanzo hazibadiliki.",
+  "Variant exported.": "Toleo limehamishwa.",
+  "Choose an ICO/CUR filename matching this export.": "Chagua jina la faili la ICO/CUR linalolingana na uhamishaji huu.",
+  "Export to a separate file; the source cannot be replaced.": "Hamisha kwenye faili tofauti; chanzo hakiwezi kubadilishwa.",
+  "Choose a JSON filename for this report.": "Chagua jina la faili la JSON kwa ripoti hii."
 }

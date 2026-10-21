@@ -832,5 +832,22 @@
   "Transparent pixels": "透明像素",
   "Partial alpha converted": "已转换的半透明像素",
   "Image changed. Reopen Palette conversion.": "图像已更改。请重新打开调色板转换。",
-  "Palette…": "调色板…"
+  "Palette…": "调色板…",
+  "States…": "状态…",
+  "Icon state variants": "图标状态变体",
+  "Preset": "预设",
+  "Normal": "正常",
+  "Hot": "高亮",
+  "Disabled": "禁用",
+  "Saturation %": "饱和度 %",
+  "Brightness %": "亮度 %",
+  "Opacity %": "不透明度 %",
+  "Output": "输出",
+  "Indexed sources → DIB": "索引色源图 → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "索引色：1/4/8 位；2→4。Alpha <128 为透明，否则使用白色底色。",
+  "Preview snapshot; source images stay unchanged.": "预览固定快照；源图像保持不变。",
+  "Variant exported.": "变体已导出。",
+  "Choose an ICO/CUR filename matching this export.": "请选择与本次导出匹配的 ICO/CUR 文件名。",
+  "Export to a separate file; the source cannot be replaced.": "请导出到单独文件；不能替换源文件。",
+  "Choose a JSON filename for this report.": "请为此报告选择 JSON 文件名。"
 }

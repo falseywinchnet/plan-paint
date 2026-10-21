@@ -173,6 +173,8 @@ Icon and cursor size generation defaults to adding missing sizes while preservin
 
 **Atlas → Alpha tools…** inspects the current icon or cursor image's opacity, copies it as a grayscale image, and previews a pasted replacement mask. Resizing a mismatched mask requires an explicit choice. Apply changes alpha while preserving RGB, including hidden colors, with one Undo step; other representations stay intact.
 
+**Atlas → States…** previews normal, hot and disabled icon families with adjustable saturation, brightness and opacity. Choose all images, the current image or a selected sequence; compare each result and export a separate ICO or CUR without changing the source. Optional indexed output reports alpha conversion per image. Unsupported representations remain visible in the report and block incomplete family exports. See the [state recipe and export contract](docs/ICON_EDITING.md#normal-hot-and-disabled-icon-families).
+
 **Atlas → Palette…** previews 1-, 4-, and 8-bit conversion with an explicit alpha threshold, matte color and optional Floyd–Steinberg dithering. Apply changes only the current representation with one Undo step. Its indexed DIB payload survives saving until further painting returns that image to RGBA output.
 
 Atlas uses flat canvases with a maximum of 4096 grid cells. Filename tokens such as `sprite`, `spritesheet`, `atlas`, `tileset`, `walk` and `idle` automatically offer grid setup; any picture can use Atlas manually. Rows and columns come first, with optional margins and spacing. Unused edge pixels are preserved. Grid setup and navigation do not change the picture, and edits participate in undo/redo across frames. Leave grid to resize or crop the whole sheet.

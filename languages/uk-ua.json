@@ -832,5 +832,22 @@
   "Transparent pixels": "Прозорі пікселі",
   "Partial alpha converted": "Перетворено частковий альфа",
   "Image changed. Reopen Palette conversion.": "Зображення змінено. Відкрийте перетворення палітри знову.",
-  "Palette…": "Палітра…"
+  "Palette…": "Палітра…",
+  "States…": "Стани…",
+  "Icon state variants": "Варіанти станів піктограм",
+  "Preset": "Набір налаштувань",
+  "Normal": "Звичайний",
+  "Hot": "Підсвічений",
+  "Disabled": "Вимкнений",
+  "Saturation %": "Насиченість %",
+  "Brightness %": "Яскравість %",
+  "Opacity %": "Непрозорість %",
+  "Output": "Вивід",
+  "Indexed sources → DIB": "Індексовані → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "Індекс: 1/4/8 біт; 2→4. Альфа <128 — прозоро, інакше біле тло.",
+  "Preview snapshot; source images stay unchanged.": "Перегляд знімка; початкові зображення не змінюються.",
+  "Variant exported.": "Варіант експортовано.",
+  "Choose an ICO/CUR filename matching this export.": "Виберіть ім’я файлу ICO/CUR, що відповідає цьому експорту.",
+  "Export to a separate file; the source cannot be replaced.": "Експортуйте в окремий файл; початковий файл не можна замінити.",
+  "Choose a JSON filename for this report.": "Виберіть ім’я файлу JSON для цього звіту."
 }

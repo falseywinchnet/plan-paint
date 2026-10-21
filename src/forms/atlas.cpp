@@ -5,7 +5,6 @@
 #include <cmath>
 namespace paint::forms {
 namespace gf = gui_forms;
-namespace {
 std::string icon_format_name(IconFormat format) {
     if (format.storage == IconStorage::Unknown) {
         return "RGBA";
@@ -13,6 +12,7 @@ std::string icon_format_name(IconFormat format) {
     return std::to_string(format.bits_per_pixel) + " bpp " +
            (format.storage == IconStorage::Png ? "PNG" : "DIB");
 }
+namespace {
 std::string icon_source_name(const IconFrame& frame) {
     return icon_format_name(frame.source ? (*frame.source).format : IconFormat{});
 }
@@ -191,12 +191,12 @@ void AtlasPanel::initialize_control_tree() {
     const char* ids[] = {"atlas-grid",    "atlas-icons",    "atlas-cursors", "atlas-whole",
                          "atlas-leave",   "atlas-previous", "atlas-next",    "atlas-hotspot",
                          "atlas-gallery", "atlas-compare",  "atlas-export",  "atlas-alpha-tools",
-                         "atlas-palette"};
+                         "atlas-palette", "atlas-states"};
     const std::string labels[] = {
         tr("Sprite grid…"), tr("Icon sizes…"),  tr("Cursor sizes…"), tr("Whole sheet"), tr("Leave atlas"),
         tr("Previous"),     tr("Next"),         tr("Hotspot…"),      tr("Gallery…"),    tr("Compare…"),
-        tr("Export…"),      tr("Alpha tools…"), tr("Palette…")};
-    for (int i = 0; i < 13; ++i) {
+        tr("Export…"),      tr("Alpha tools…"), tr("Palette…"),      tr("States…")};
+    for (int i = 0; i < 14; ++i) {
         std::shared_ptr<gf::Button> control = gf::make_control<gf::Button>(
             gf::StableId(std::string(gallery_ ? "gallery-" : "") + ids[i]), labels[i]);
         (*control).set_theme_override(ribbon_theme());
@@ -313,6 +313,7 @@ void AtlasPanel::synchronize() {
     (*buttons_[10]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
     (*buttons_[11]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
     (*buttons_[12]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
+    (*buttons_[13]).set_enabled(atlas.kind == AtlasKind::Icon || atlas.kind == AtlasKind::Cursor);
     (*buttons_[3]).set_enabled(atlas.kind == AtlasKind::Sheet);
     (*buttons_[4]).set_enabled(atlas.kind != AtlasKind::None);
     (*buttons_[5]).set_enabled(count_ > 0);

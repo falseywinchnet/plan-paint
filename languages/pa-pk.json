@@ -832,5 +832,22 @@
   "Transparent pixels": "شفاف پکسل",
   "Partial alpha converted": "بدلیا جزوی الفا",
   "Image changed. Reopen Palette conversion.": "تصویر بدل گئی۔ پیلیٹ تبدیلی فیر کھولو۔",
-  "Palette…": "پیلیٹ…"
+  "Palette…": "پیلیٹ…",
+  "States…": "حالتاں…",
+  "Icon state variants": "آئیکن دی حالت دے روپ",
+  "Preset": "پری سیٹ",
+  "Normal": "عام",
+  "Hot": "نمایاں",
+  "Disabled": "غیر فعال",
+  "Saturation %": "رنگ دی گہرائی %",
+  "Brightness %": "چمک %",
+  "Opacity %": "غیر شفافیت %",
+  "Output": "آؤٹ پٹ",
+  "Indexed sources → DIB": "فہرست والے ماخذ → DIB",
+  "Indexed: 1/4/8 bpp; 2→4. Alpha <128 transparent; otherwise white matte.": "فہرست: 1/4/8 بٹ؛ 2→4۔ الفا <128 شفاف؛ نہیں تے چٹا پس منظر۔",
+  "Preview snapshot; source images stay unchanged.": "پکی نقل دا پیش منظر؛ ماخذ تصویراں نہیں بدلدیاں۔",
+  "Variant exported.": "روپ برآمد ہو گیا۔",
+  "Choose an ICO/CUR filename matching this export.": "ایس برآمد نال میل کھاندا ICO/CUR فائل ناں چنو۔",
+  "Export to a separate file; the source cannot be replaced.": "وکھری فائل وچ برآمد کرو؛ ماخذ نوں بدلیا نہیں جا سکدا۔",
+  "Choose a JSON filename for this report.": "ایس رپورٹ لئی JSON فائل ناں چنو."
 }
