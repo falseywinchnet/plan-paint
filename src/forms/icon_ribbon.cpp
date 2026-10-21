@@ -7,16 +7,16 @@ namespace paint::forms {
 namespace gf = gui_forms;
 namespace {
 constexpr double command_width = 114;
-constexpr double command_plane_width = command_width * 3;
+constexpr double command_plane_width = command_width * 4;
 } // namespace
 IconPanel::IconPanel(gf::StableId id, std::weak_ptr<Editor> editor)
     : Control(std::move(id)), editor_(std::move(editor)) {}
 void IconPanel::initialize_control_tree() {
-    const char* ids[] = {"sizes",  "gallery", "hotspot", "palette",  "alpha-tools",
-                         "states", "compare", "export",  "previous", "next"};
+    const char* ids[] = {"sizes",   "gallery", "hotspot",  "palette", "alpha-tools", "states",
+                         "compare", "export",  "previous", "next",    "batch"};
     const std::string labels[] = {tr("Icon sizes…"),  tr("Gallery…"), tr("Hotspot…"), tr("Palette…"),
                                   tr("Alpha tools…"), tr("States…"),  tr("Compare…"), tr("Export…"),
-                                  tr("Previous"),     tr("Next")};
+                                  tr("Previous"),     tr("Next"),     tr("Batch…")};
     for (std::size_t index = 0; index < std::size(ids); ++index) {
         const std::shared_ptr<gf::Button> command =
             gf::make_control<gf::Button>(gf::StableId(std::string("icon-") + ids[index]), labels[index]);
@@ -50,24 +50,26 @@ void IconPanel::initialize_control_tree() {
 }
 void IconPanel::arrange(gf::Rect bounds) {
     arrange_self(bounds);
-    // Representation management, color/alpha and production each own one column.
-    const gf::Rect placements[] = {{6, 4, 102, 24},    {6, 30, 102, 24},   {6, 56, 102, 24},
-                                   {120, 4, 102, 24},  {120, 30, 102, 24}, {234, 4, 102, 24},
-                                   {234, 30, 102, 24}, {234, 56, 102, 24}};
+    // Production spans two columns; the remaining width belongs to image selection.
+    const gf::Rect placements[] = {{6, 4, 102, 24},   {6, 30, 102, 24},   {6, 56, 102, 24},
+                                   {120, 4, 102, 24}, {120, 30, 102, 24}, {234, 4, 102, 24},
+                                   {348, 4, 102, 24}, {234, 34, 102, 24}};
     for (std::size_t index = 0; index < std::size(placements); ++index) {
         set_child_layout(commands_[index], placements[index]);
     }
     set_child_layout(commands_[8], {bounds.width - 162, 96, 76, 20});
     set_child_layout(commands_[9], {bounds.width - 82, 96, 76, 20});
+    set_child_layout(commands_[10], {348, 34, 102, 24});
     for (std::size_t index = 0; index < 3; ++index) {
-        set_child_layout(groups_[index], {index * command_width, 80, command_width, 15});
+        set_child_layout(groups_[index],
+                         {index * command_width, 80, index == 2 ? command_width * 2 : command_width, 15});
     }
     const double strip_width = std::max(1.0, bounds.width - command_plane_width - 12);
     set_child_layout(strip_, {command_plane_width + 6, 4, strip_width, 90});
     set_child_layout(status_, {6, 96, std::max(1.0, bounds.width - 174), 20});
 }
 void IconPanel::on_paint(gf::Painter& painter, gf::Rect) {
-    for (int index = 1; index <= 3; ++index) {
+    for (const int index : {1, 2, 4}) {
         const double x = index * command_width;
         painter.draw_line({x, 5}, {x, 92}, interface_color(*this, gf::Color::rgba(109, 141, 183)), 1);
         painter.draw_line({x + 1, 5}, {x + 1, 92}, interface_color(*this, gf::Color::rgba(245, 250, 255)), 1);
@@ -81,7 +83,11 @@ void IconPanel::clicked(gf::ButtonBase& control) {
     const std::string id(control.stable_id().value());
     const std::string action = id.substr(5);
     const bool cursor = (*editor).document.atlas.kind == AtlasKind::Cursor;
-    (*editor).execute(action == "sizes" ? cursor ? "atlas-cursors" : "atlas-icons" : "atlas-" + action);
+    if (action == "batch") {
+        (*editor).execute("icon-batch");
+    } else {
+        (*editor).execute(action == "sizes" ? cursor ? "atlas-cursors" : "atlas-icons" : "atlas-" + action);
+    }
 }
 void IconPanel::synchronize() {
     const std::shared_ptr<Editor> editor = editor_.lock();

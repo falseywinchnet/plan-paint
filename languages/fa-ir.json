@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "نام فایل JSON را برای این گزارش انتخاب کنید.",
   "Icon": "آیکون",
   "Color & alpha": "رنگ و آلفا",
-  "Production": "تولید"
+  "Production": "تولید",
+  "Batch production": "پردازش دسته‌ای",
+  "Add files…": "افزودن فایل‌ها…",
+  "Add to batch": "افزودن به دسته",
+  "Convert to ICO": "تبدیل به ICO",
+  "Normalize sizes": "یکسان‌سازی اندازه‌ها",
+  "Operation": "عملیات",
+  "Run": "اجرا",
+  "Source files": "فایل‌های مبدأ",
+  "Batch…": "دسته…",
+  "Batch production…": "پردازش دسته‌ای…"
 }

@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "ایس رپورٹ لئی JSON فائل ناں چنو.",
   "Icon": "آئیکن",
   "Color & alpha": "رنگ تے الفا",
-  "Production": "پیداوار"
+  "Production": "پیداوار",
+  "Batch production": "بیچ کارروائی",
+  "Add files…": "فائلاں شامل کرو…",
+  "Add to batch": "بیچ وچ شامل کرو",
+  "Convert to ICO": "ICO وچ بدلو",
+  "Normalize sizes": "سائز یکساں کرو",
+  "Operation": "کارروائی",
+  "Run": "چلاؤ",
+  "Source files": "اصل فائلاں",
+  "Batch…": "بیچ…",
+  "Batch production…": "بیچ کارروائی…"
 }

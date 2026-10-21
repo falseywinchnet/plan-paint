@@ -2,6 +2,7 @@
 #include "asset_browser.hpp"
 #include "carpet.hpp"
 #include "color_tools.hpp"
+#include "icon_batch.hpp"
 #include "icon_export.hpp"
 #include "icon_sheet.hpp"
 #include "icon_states.hpp"
@@ -24,6 +25,7 @@ struct DitherRenderJob;
 struct IconSheetJob;
 struct IconStateJob;
 struct IconExportJob;
+struct IconBatchJob;
 struct AssetBrowserWorker;
 struct AssetBrowserResult;
 enum class EditorDialogKind {
@@ -41,6 +43,7 @@ enum class EditorDialogKind {
     atlas_gallery,
     icon_sheet,
     icon_export,
+    icon_batch,
     asset_browser,
     alpha_tools,
     icon_palette,
@@ -81,6 +84,7 @@ class EditorDialog final : public gui_forms::Control {
     void deliver_icon_sheet();
     void deliver_icon_states(const std::shared_ptr<IconStateJob>& job);
     void deliver_icon_export();
+    void deliver_icon_batch(const std::shared_ptr<IconBatchJob>& job);
     void deliver_asset_browser(std::shared_ptr<const AssetBrowserResult> result);
     static constexpr bool initialize_tree_after_construction = true;
     void initialize_control_tree();
@@ -98,6 +102,28 @@ class EditorDialog final : public gui_forms::Control {
     bool mosaic = false;
 
   private:
+    void initialize_icon_batch();
+    void stop_icon_batch();
+    void start_icon_batch(bool execute);
+    void batch_clicked(gui_forms::ButtonBase&);
+    void batch_choice_changed(std::optional<std::size_t>);
+    void batch_preset_changed(std::optional<std::size_t>);
+    void batch_number_changed(double);
+    void batch_text_changed(const std::string&);
+    void batch_checked(bool);
+    void invalidate_batch();
+    void update_batch_controls();
+    void refresh_batch_sources();
+    std::shared_ptr<IconBatchJob> batch_job_;
+    std::thread batch_worker_;
+    std::shared_ptr<gui_forms::ListBox> batch_sources_;
+    std::shared_ptr<gui_forms::ComboBox> batch_operation_, batch_policy_, batch_preset_, batch_collision_;
+    std::vector<std::shared_ptr<gui_forms::CheckBox>> batch_sizes_;
+    std::shared_ptr<gui_forms::NumericUpDown> batch_saturation_, batch_brightness_, batch_opacity_;
+    std::shared_ptr<gui_forms::TextBox> batch_destination_, batch_manifest_;
+    std::shared_ptr<gui_forms::Label> batch_status_;
+    std::shared_ptr<gui_forms::Button> batch_run_, batch_cancel_, batch_report_;
+    std::vector<std::shared_ptr<gui_forms::Control>> batch_settings_;
     void initialize_icon_states();
     void stop_icon_states();
     void render_icon_states();
@@ -142,7 +168,7 @@ class EditorDialog final : public gui_forms::Control {
     std::shared_ptr<gui_forms::ComboBox> asset_filter_, asset_representations_, asset_bookmark_;
     std::shared_ptr<gui_forms::RasterCanvas> asset_canvas_;
     std::shared_ptr<gui_forms::Label> asset_status_;
-    std::shared_ptr<gui_forms::Button> asset_open_, asset_stamp_, asset_copy_;
+    std::shared_ptr<gui_forms::Button> asset_open_, asset_stamp_, asset_copy_, asset_batch_;
     void initialize_icon_export();
     void review_icon_export();
     void stop_icon_export();

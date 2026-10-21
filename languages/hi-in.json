@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "इस रिपोर्ट के लिए JSON फ़ाइल नाम चुनें।",
   "Icon": "आइकन",
   "Color & alpha": "रंग और अल्फ़ा",
-  "Production": "उत्पादन"
+  "Production": "उत्पादन",
+  "Batch production": "बैच प्रसंस्करण",
+  "Add files…": "फ़ाइलें जोड़ें…",
+  "Add to batch": "बैच में जोड़ें",
+  "Convert to ICO": "ICO में बदलें",
+  "Normalize sizes": "आकार मानकीकृत करें",
+  "Operation": "क्रिया",
+  "Run": "चलाएँ",
+  "Source files": "स्रोत फ़ाइलें",
+  "Batch…": "बैच…",
+  "Batch production…": "बैच प्रसंस्करण…"
 }

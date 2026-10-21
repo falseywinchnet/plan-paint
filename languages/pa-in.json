@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "ਇਸ ਰਿਪੋਰਟ ਲਈ JSON ਫਾਈਲ ਨਾਮ ਚੁਣੋ।",
   "Icon": "ਆਈਕਨ",
   "Color & alpha": "ਰੰਗ ਅਤੇ ਅਲਫ਼ਾ",
-  "Production": "ਉਤਪਾਦਨ"
+  "Production": "ਉਤਪਾਦਨ",
+  "Batch production": "ਬੈਚ ਪ੍ਰਕਿਰਿਆ",
+  "Add files…": "ਫ਼ਾਈਲਾਂ ਜੋੜੋ…",
+  "Add to batch": "ਬੈਚ ਵਿੱਚ ਜੋੜੋ",
+  "Convert to ICO": "ICO ਵਿੱਚ ਬਦਲੋ",
+  "Normalize sizes": "ਆਕਾਰ ਇਕਸਾਰ ਕਰੋ",
+  "Operation": "ਕਾਰਵਾਈ",
+  "Run": "ਚਲਾਓ",
+  "Source files": "ਸਰੋਤ ਫ਼ਾਈਲਾਂ",
+  "Batch…": "ਬੈਚ…",
+  "Batch production…": "ਬੈਚ ਪ੍ਰਕਿਰਿਆ…"
 }

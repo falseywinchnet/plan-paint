@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "יש לבחור שם קובץ JSON לדוח זה.",
   "Icon": "סמל",
   "Color & alpha": "צבע ואלפא",
-  "Production": "הפקה"
+  "Production": "הפקה",
+  "Batch production": "עיבוד באצווה",
+  "Add files…": "הוספת קבצים…",
+  "Add to batch": "הוספה לאצווה",
+  "Convert to ICO": "המרה ל־ICO",
+  "Normalize sizes": "אחידות גדלים",
+  "Operation": "פעולה",
+  "Run": "הפעלה",
+  "Source files": "קובצי מקור",
+  "Batch…": "אצווה…",
+  "Batch production…": "עיבוד באצווה…"
 }

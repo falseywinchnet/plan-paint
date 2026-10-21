@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "Elija un nombre de archivo JSON para este informe.",
   "Icon": "Icono",
   "Color & alpha": "Color y alfa",
-  "Production": "Producción"
+  "Production": "Producción",
+  "Batch production": "Producción por lotes",
+  "Add files…": "Añadir archivos…",
+  "Add to batch": "Añadir al lote",
+  "Convert to ICO": "Convertir a ICO",
+  "Normalize sizes": "Normalizar tamaños",
+  "Operation": "Operación",
+  "Run": "Ejecutar",
+  "Source files": "Archivos de origen",
+  "Batch…": "Lote…",
+  "Batch production…": "Producción por lotes…"
 }

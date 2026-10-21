@@ -113,6 +113,7 @@ class TestServices final : public gf::HostServices {
     gf::HostDialogChoice choice = gf::HostDialogChoice::cancel;
     bool fail_dialogs = false;
     bool cancel_paths = false;
+    bool multi_file_requested = false;
     std::vector<std::uint64_t> dialog_ids;
     gf::HostImage clipboard;
     std::vector<std::string> clipboard_files;
@@ -169,6 +170,9 @@ class TestServices final : public gf::HostServices {
         }
         if (std::holds_alternative<gf::HostSaveFileDialogRequest>(request.payload)) {
             suggested_name = std::get<gf::HostSaveFileDialogRequest>(request.payload).suggested_name;
+        }
+        if (std::holds_alternative<gf::HostOpenFileDialogRequest>(request.payload)) {
+            multi_file_requested = std::get<gf::HostOpenFileDialogRequest>(request.payload).allow_multiple;
         }
         return {{},
                 request.request_id,
@@ -1304,7 +1308,7 @@ void icon_ribbon_contracts() {
     const gf::Rect panel = (*window.find("icon-panel")).absolute_bounds();
     const char* commands[] = {"icon-sizes",       "icon-gallery", "icon-hotspot", "icon-palette",
                               "icon-alpha-tools", "icon-states",  "icon-compare", "icon-export",
-                              "icon-previous",    "icon-next"};
+                              "icon-previous",    "icon-next",    "icon-batch"};
     for (const char* id : commands) {
         const gf::Rect bounds = (*window.find(id)).absolute_bounds();
         require(bounds.x >= panel.x && bounds.y >= panel.y && bounds.right() <= panel.right() &&
@@ -1313,6 +1317,11 @@ void icon_ribbon_contracts() {
     }
     require((*window.find("icon-frames")).absolute_bounds().width >= 330,
             "Icon ribbon retains room for multiple labeled representations");
+    routed_button(window, "icon-batch");
+    require(window.find("batch-add") && window.find("batch-review"),
+            "Icon batch command opens the production window");
+    editor.close_editor_dialog();
+    window.perform_layout();
     const gf::Rect strip = (*window.find("icon-frames")).absolute_bounds();
     const gf::Rect thumbnail = (*window.find("icon-frame-0")).absolute_bounds();
     require(thumbnail.y >= strip.y && thumbnail.bottom() + 16 <= strip.bottom(),
@@ -1353,6 +1362,73 @@ void icon_ribbon_contracts() {
             "leaving an icon document dismisses the contextual page and selects Home");
     open_tab(window, "atlas-tab");
     require((*window.find("atlas-grid")).visible(), "sprite-grid tools remain available in Atlas");
+}
+void await_batch(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline =
+        std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    while ((*window.find("batch-cancel")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now() < deadline, "batch worker finishes");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    window.perform_layout();
+}
+void icon_batch_contracts() {
+    Fixture fixture;
+    paint::forms::Editor& editor = *fixture.editor;
+    gf::Window& window = *fixture.window;
+    TestServices services;
+    gf::HostSession session(window, service_capabilities(), &services);
+    require(session.dispatch({1, 0, gf::HostAttachEvent{{800, 520}, 1}}).accepted(), "batch host attaches");
+    const std::filesystem::path root = std::filesystem::temp_directory_path() /
+                                       ("plan-paint-batch-ui-" + std::to_string(paint::recovery_time_ms()));
+    require(std::filesystem::create_directory(root), "batch output folder created");
+    const std::filesystem::path repository = std::filesystem::path(__FILE__).parent_path().parent_path();
+    services.path = (repository / "assets/app-icon.png").string();
+    editor.execute("icon-batch");
+    routed_button(window, "batch-add");
+    require(services.multi_file_requested && editor.batch_sources.size() == 1,
+            "batch uses native multi-file picker");
+    const std::shared_ptr<gf::TextBox> destination =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("batch-destination"));
+    (*destination).set_text(root.string());
+    routed_button(window, "batch-review");
+    await_batch(window);
+    require((*window.find("batch-run")).enabled() && std::filesystem::is_empty(root),
+            "batch review authorizes outputs without writing");
+    window.request_focus(destination);
+    window.dispatch_key({gf::KeyAction::down, gf::PhysicalKey::enter});
+    require(window.find("batch-run") && std::filesystem::is_empty(root),
+            "Enter in batch settings cannot execute the job");
+    const std::shared_ptr<gf::ComboBox> operation =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("batch-operation"));
+    (*operation).set_selected_index(2);
+    require(!(*window.find("batch-run")).enabled() && (*window.find("batch-preset")).enabled() &&
+                !(*window.find("batch-size-16")).enabled(),
+            "operation invalidates review and switches applicable fields");
+    (*operation).set_selected_index(0);
+    routed_button(window, "batch-review");
+    await_batch(window);
+    const std::uint64_t revision = editor.document.revision;
+    const std::size_t history = editor.document.undo_history.size();
+    routed_button(window, "batch-run");
+    require(!(*operation).enabled(), "running batch freezes reviewed settings");
+    await_batch(window);
+    require(std::filesystem::exists(root / "app-icon-1-icon.ico") && !(*window.find("batch-run")).enabled() &&
+                !(*window.find("batch-preset")).enabled(),
+            "completed job requires another review and restores applicable fields");
+    require(editor.document.revision == revision && editor.document.undo_history.size() == history,
+            "file production never enters document Undo");
+    services.path = (root / "report.json").string();
+    routed_button(window, "batch-report");
+    require(std::filesystem::exists(root / "report.json"),
+            "batch result report saves through the native dialog");
+    routed_button(window, "batch-review");
+    editor.close_editor_dialog();
+    static_cast<void>(window.drain_posted_work());
+    require(!window.find("batch-run"), "late batch delivery cannot reopen a closed window");
+    std::error_code error;
+    std::filesystem::remove_all(root, error);
 }
 void await_icon_states(gui_forms::Window& window) {
     const std::chrono::steady_clock::time_point deadline =
@@ -1705,10 +1781,15 @@ void asset_browser_contracts() {
         std::dynamic_pointer_cast<gf::RasterCanvas>(window.find("asset-preview"));
     require((*preview).bitmap() && (*window.find("asset-stamp")).enabled(),
             "asset selection did not render preview");
+    routed_button(window, "asset-batch");
+    require(editor.batch_sources.size() == 1 &&
+                std::filesystem::equivalent(editor.batch_sources.front(), root / "sample.png"),
+            "asset browser queues the selected source for production");
     const std::shared_ptr<gf::TextBox> search =
         std::dynamic_pointer_cast<gf::TextBox>(window.find("asset-search"));
     (*search).set_text("missing");
-    require(!(*list).enabled() && !(*window.find("asset-stamp")).enabled(),
+    require(!(*list).enabled() && !(*window.find("asset-stamp")).enabled() &&
+                !(*window.find("asset-batch")).enabled(),
             "query edit retained stale actions");
     routed_button(window, "asset-refresh");
     await_assets(window);
@@ -1717,6 +1798,7 @@ void asset_browser_contracts() {
     routed_button(window, "asset-refresh");
     await_assets(window);
     (*list).select_index(0);
+    require(!(*window.find("asset-batch")).enabled(), "folders cannot be added as batch input files");
     routed_button(window, "asset-open");
     await_assets(window);
     require((*list).items().empty(), "folder navigation failed");
@@ -4856,6 +4938,7 @@ int main() {
         icon_palette_contracts();
         icon_ribbon_contracts();
         icon_states_contracts();
+        icon_batch_contracts();
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

@@ -390,6 +390,67 @@ Changing the document after opening the window does not change the captured
 snapshot: reopen States to capture newer artwork. Closing the window cancels
 pending work, and late results cannot replace a newer recipe preview.
 
+## Multi-file batch production
+
+Open **File → Batch production…** or **Icon → Batch…**. **Add files…** uses the
+native multi-file picker. **Add to batch** in the asset browser queues the selected
+file for this same window. The source list stays available while Plan Paint is
+open. It identifies duplicate selections by ordinal; selecting a file twice
+deliberately produces two separately named outputs.
+
+Choose one of four operations:
+
+- **Convert to ICO** creates one ICO per source, with the checked sizes. It uses
+  the largest-area source image, choosing the first representation on an area tie.
+  Rectangular artwork is scaled proportionally and centered on a transparent
+  square. The manifest identifies the chosen source, padding and any upscaling.
+- **Normalize sizes** accepts ICO and CUR. Add missing keeps existing images;
+  Replace chosen replaces matching images while retaining other sizes; Exact
+  profile lists and removes images outside the profile. Retained images keep their
+  original payloads, including duplicate representations. Generated CUR images
+  scale their hotspots with the artwork and include the centering offset.
+- **Icon state variants** creates a separate normal, hot or disabled ICO/CUR
+  family using the displayed saturation, brightness and opacity recipe. It
+  processes every representation into RGBA output. A failed representation blocks
+  that family's export rather than silently producing an incomplete file.
+- **Export representations** writes each decoded image to its own PNG. Source
+  and representation ordinals keep duplicate dimensions and repeated inputs
+  distinct. Background-dependent legacy XOR cannot be converted to PNG.
+
+Choose an existing destination folder and **Skip existing**, **Rename outputs**
+or **Replace existing**, then select **Review outputs**. Review decodes and
+validates the sources and prepares names without writing files. The manifest
+shows each input-to-output relationship, state and diagnostic. Changing any job
+setting invalidates the review. **Run** is enabled only for a review with at least
+one ready output and no failed or cancelled entries; Enter in a settings field
+does not run the job.
+
+Names include the source ordinal: `open-1-icon.ico`,
+`open-1-normalized.cur`, `open-1-disabled.ico`, or `open-1-image-2.png`.
+Rename appends `-copy2`, `-copy3`, and so on. The review discloses replacement of
+existing regular files. Outputs cannot replace any batch source or an existing
+filesystem alias of one. Newly occupied destinations are skipped under Skip or
+reported as failed under the other policies; Run never silently chooses a new
+name that was absent from the review.
+
+Processing reads one source at a time. A job accepts up to 256 source files and
+uses the asset decoder's 32 MiB encoded-file limit. File size and modification
+time are checked against the review and after processing; this detects ordinary
+external edits but is not a content hash. Changing a source requires a new
+review. Changing the canonical destination path also fails the affected output.
+
+**Cancel** preserves completed files and records unstarted outputs as cancelled.
+Publication is atomic per output file; a batch is not a filesystem-wide
+transaction. The document and its Undo history are unchanged. Closing the window
+cancels and joins its worker, and late results cannot reopen it. Settings are
+unavailable during processing. After completion, another run requires review.
+
+**Save report…** writes JSON with the operation, destination, collision policy,
+size policy, requested sizes, state recipe and per-output identity, result and
+diagnostic. Ordinals are one-based. `representationOrdinal` is null for whole
+container output. Full source paths are retained in the report even when the
+compact manifest shows only the filename.
+
 The broader [icon production interview](icon-editor-study/mockups.html) covers
 additional palette, alpha, batch and asset-browsing capabilities. Its recommendations
 remain candidate designs; implemented features do not establish owner answers

@@ -140,6 +140,8 @@ void EditorDialog::initialize_asset_browser() {
     asset_stamp_ = button("asset-stamp", tr("Use as stamp"), {160, 460, 160, 28});
     asset_copy_ = button("asset-copy", tr("Copy path"), {330, 460, 140, 28});
     buttons.insert(buttons.end(), {asset_open_, asset_stamp_, asset_copy_});
+    asset_batch_ = button("asset-batch", tr("Add to batch"), {480, 460, 160, 28});
+    buttons.push_back(asset_batch_);
     button("dialog-cancel", tr("Close"), {650, 460, 110, 28});
     for (const std::shared_ptr<gf::Button>& control : buttons) {
         subscriptions_.push_back((*control).clicked().subscribe(
@@ -218,6 +220,7 @@ void EditorDialog::clear_asset_preview() {
     (*asset_open_).set_enabled(false);
     (*asset_stamp_).set_enabled(false);
     (*asset_copy_).set_enabled(false);
+    (*asset_batch_).set_enabled(false);
 }
 void EditorDialog::request_assets(bool scan) {
     if (!attached_window()) {
@@ -308,6 +311,7 @@ void EditorDialog::deliver_asset_browser(std::shared_ptr<const AssetBrowserResul
             (*asset_representations_).set_selected_index((*asset_preview_).preferred);
             synchronizing_ = false;
             show_asset_representation();
+            (*asset_batch_).set_enabled(true);
             (*asset_open_).set_enabled(true);
             (*asset_copy_).set_enabled(true);
             (*asset_status_)
@@ -380,6 +384,7 @@ void EditorDialog::asset_selected(const gf::ListSelectionChange& selection) {
         } else {
             request_assets(false);
             (*asset_copy_).set_enabled(true);
+            (*asset_batch_).set_enabled(true);
         }
     }
 }
@@ -391,6 +396,7 @@ void EditorDialog::asset_activated(std::size_t index) {
         request_assets(false);
         asset_open_after_preview_ = true;
         (*asset_copy_).set_enabled(true);
+        (*asset_batch_).set_enabled(true);
     } else {
         asset_clicked(*asset_open_);
     }
@@ -460,6 +466,13 @@ void EditorDialog::asset_clicked(gf::ButtonBase& control) {
             const AssetEntry entry = asset_listing_.entries[*selected];
             if (id == "asset-copy") {
                 (*editor).copy_asset_path(entry.path);
+            } else if (id == "asset-batch" && entry.kind != AssetKind::Folder) {
+                if ((*editor).batch_sources.size() >= 256) {
+                    throw std::runtime_error("Choose at most 256 source files.");
+                }
+                (*editor).batch_sources.push_back(entry.path);
+                (*asset_status_)
+                    .set_text(tr("Batch production") + ": " + std::to_string((*editor).batch_sources.size()));
             } else if (id == "asset-open" && entry.kind == AssetKind::Folder) {
                 synchronizing_ = true;
                 (*asset_location_).set_text(entry.path);

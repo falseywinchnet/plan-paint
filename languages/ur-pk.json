@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "اس رپورٹ کے لیے JSON فائل کا نام منتخب کریں۔",
   "Icon": "آئیکن",
   "Color & alpha": "رنگ اور الفا",
-  "Production": "پیداوار"
+  "Production": "پیداوار",
+  "Batch production": "بیچ پراسیسنگ",
+  "Add files…": "فائلیں شامل کریں…",
+  "Add to batch": "بیچ میں شامل کریں",
+  "Convert to ICO": "ICO میں تبدیل کریں",
+  "Normalize sizes": "سائز یکساں کریں",
+  "Operation": "عمل",
+  "Run": "چلائیں",
+  "Source files": "ماخذ فائلیں",
+  "Batch…": "بیچ…",
+  "Batch production…": "بیچ پراسیسنگ…"
 }

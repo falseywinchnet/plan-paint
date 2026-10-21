@@ -211,6 +211,7 @@ void Editor::rebuild_file_menu() {
     commands_.clear();
     std::vector<gf::MenuItemSpec> items = {menu_item("new", tr("New")), menu_item("open", tr("Open…"))};
     items.push_back(menu_item("browse-assets", tr("Browse assets…")));
+    items.push_back(menu_item("icon-batch", tr("Batch production…")));
     if (!recent.paths.empty()) {
         gf::MenuItemSpec recent_menu;
         recent_menu.stable_id = "recent-files";
@@ -2148,6 +2149,8 @@ void Editor::execute(const std::string& command) {
             } else if (!pending_save_path.empty()) {
                 deferred_command = "new";
             }
+        } else if (command == "icon-batch") {
+            open_editor_dialog(EditorDialogKind::icon_batch);
         } else if (command == "browse-assets") {
             open_editor_dialog(EditorDialogKind::asset_browser);
         } else if (command == "open") {

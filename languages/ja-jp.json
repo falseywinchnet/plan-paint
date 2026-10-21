@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "このレポートの JSON ファイル名を選んでください。",
   "Icon": "アイコン",
   "Color & alpha": "色とアルファ",
-  "Production": "制作"
+  "Production": "制作",
+  "Batch production": "一括処理",
+  "Add files…": "ファイルを追加…",
+  "Add to batch": "一括処理に追加",
+  "Convert to ICO": "ICO に変換",
+  "Normalize sizes": "サイズを統一",
+  "Operation": "操作",
+  "Run": "実行",
+  "Source files": "元のファイル",
+  "Batch…": "一括処理…",
+  "Batch production…": "一括処理…"
 }

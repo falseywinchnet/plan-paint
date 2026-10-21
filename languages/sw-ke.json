@@ -852,5 +852,15 @@
   "Choose a JSON filename for this report.": "Chagua jina la faili la JSON kwa ripoti hii.",
   "Icon": "Aikoni",
   "Color & alpha": "Rangi na alfa",
-  "Production": "Uzalishaji"
+  "Production": "Uzalishaji",
+  "Batch production": "Uchakataji wa kundi",
+  "Add files…": "Ongeza faili…",
+  "Add to batch": "Ongeza kwenye kundi",
+  "Convert to ICO": "Badilisha kuwa ICO",
+  "Normalize sizes": "Sawazisha ukubwa",
+  "Operation": "Operesheni",
+  "Run": "Endesha",
+  "Source files": "Faili chanzo",
+  "Batch…": "Kundi…",
+  "Batch production…": "Uchakataji wa kundi…"
 }
