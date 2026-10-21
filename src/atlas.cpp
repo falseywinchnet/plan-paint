@@ -116,7 +116,9 @@ std::size_t AtlasState::bytes() const {
         if (icons[i].source) {
             const IconSource& source = *icons[i].source;
             result += source.payload.size() +
-                      (source.image.pixels.size() + source.xor_pixels.size()) * sizeof(Color);
+                      (source.image.pixels.size() + source.xor_pixels.size() + source.palette.size()) *
+                          sizeof(Color) +
+                      source.indices.size() * sizeof(unsigned);
         }
     }
     return result;

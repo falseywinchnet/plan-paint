@@ -1692,6 +1692,37 @@ void icon_palette_contracts() {
     require(paint::icon_output_format(editor.document.atlas.icons[0], output.kind).bits_per_pixel == 4,
             "Redo restores indexed payload");
     editor.execute("atlas-palette");
+    const std::shared_ptr<gf::ComboBox> mode =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-mode"));
+    (*mode).set_selected_index(1);
+    require(!(*window.find("palette-depth")).visible() && (*window.find("palette-entry")).visible(),
+            "entry editing replaces conversion controls");
+    const std::shared_ptr<gf::ComboBox> entry =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-entry"));
+    const std::shared_ptr<gf::TextBox> rgb =
+        std::dynamic_pointer_cast<gf::TextBox>(window.find("palette-rgb"));
+    (*entry).set_selected_index(1);
+    (*rgb).set_text("not-rgb");
+    require(!(*window.find("palette-apply")).enabled(), "invalid entry RGB disables Apply");
+    (*rgb).set_text("#A02050");
+    require((*window.find("palette-apply")).enabled() &&
+                paint::equal(editor.document.image.get(1, 0), {30, 45, 90, 255}),
+            "palette entry preview leaves live pixels intact");
+    routed_button(window, "palette-apply");
+    require(paint::equal(editor.document.image.get(1, 0), {160, 32, 80, 255}) &&
+                editor.document.image.get(0, 0).a == 0 &&
+                paint::icon_output_format(editor.document.atlas.icons[0], output.kind).bits_per_pixel == 4,
+            "entry Apply recolors matching indices while preserving mask and indexed output");
+    editor.execute("undo");
+    require(paint::equal(editor.document.image.get(1, 0), {30, 45, 90, 255}),
+            "entry edit Undo restores original palette and pixels");
+    editor.execute("redo");
+    require(paint::equal(editor.document.image.get(1, 0), {160, 32, 80, 255}),
+            "entry edit Redo restores the palette change");
+    editor.execute("atlas-palette");
+    const std::shared_ptr<gf::ComboBox> conversion_mode =
+        std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-mode"));
+    (*conversion_mode).set_selected_index(0);
     const std::shared_ptr<gf::ComboBox> depth =
         std::dynamic_pointer_cast<gf::ComboBox>(window.find("palette-depth"));
     (*depth).set_selected_index(2);
@@ -4886,8 +4917,28 @@ void canvas_controls_without_dragging() {
     }
 
 }
-int main() {
+void icon_production_contracts() {
+        icon_generation_review_and_cancel();
+        icon_representation_identity();
+        icon_sheet_preview_and_export();
+        icon_representation_export();
+        asset_browser_contracts();
+        alpha_tools_contracts();
+        icon_palette_contracts();
+        icon_ribbon_contracts();
+        icon_states_contracts();
+        icon_batch_contracts();
+}
+int main(int argc, char** argv) {
     try {
+        if (argc == 2 && std::string(argv[1]) == "--icon-production") {
+            icon_production_contracts();
+            std::cout << "Icon production forms contracts passed\n";
+            return 0;
+        }
+        if (argc > 2 || (argc == 2 && std::string(argv[1]) != "--general")) {
+            throw std::runtime_error("Unknown forms test suite.");
+        }
         canvas_controls_without_dragging();
         custom_pattern_canvas_is_independent();
         tool_cursor_routes();
@@ -4972,16 +5023,9 @@ int main() {
         crop_and_help_actions();
         stamp_reset_and_recapture();
         atlas_grid_frames_and_cursor_save();
-        icon_generation_review_and_cancel();
-        icon_representation_identity();
-        icon_sheet_preview_and_export();
-        icon_representation_export();
-        asset_browser_contracts();
-        alpha_tools_contracts();
-        icon_palette_contracts();
-        icon_ribbon_contracts();
-        icon_states_contracts();
-        icon_batch_contracts();
+        if (argc == 1) {
+            icon_production_contracts();
+        }
         desktop_transactions_drop_and_handles();
         transforms_preview_before_release();
         selection_handles_repaint_during_capture();

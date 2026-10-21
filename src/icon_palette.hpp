@@ -16,4 +16,10 @@ struct IconPaletteResult {
 // Independent weighted median-cut in encoded RGB; see docs/ICON_EDITING.md.
 // Builds an indexed DIB snapshot retained until the result's pixels are edited.
 IconPaletteResult convert_icon_palette(const IconFrame& source, const IconPaletteOptions& options);
+// Editing uses retained indices, never an RGB-to-index guess. Ordinary RGBA
+// changes invalidate this identity until an explicit conversion is performed.
+bool has_icon_palette(const IconFrame& frame);
+IconFrame edit_icon_palette_entry(const IconFrame& source, unsigned entry, Color color);
+IconFrame paint_icon_indices(const IconFrame& source, const std::vector<std::size_t>& pixels, unsigned entry,
+                             bool transparent = false);
 } // namespace paint

@@ -30,7 +30,7 @@ format, such as **1 bpp DIB** or **2 bpp PNG**. Same-size images remain separate
 representations. The strip status distinguishes **Source** from **Save**: Source
 describes the imported encoding; Save describes the encoding that the current
 image would use if saved now. Newly generated images show RGBA as their source.
-Painting always edits RGBA pixels; these labels do not imply palette-index editing.
+Home painting edits RGBA pixels. The Palette window separately edits retained indexed DIB entries by their exact index.
 
 An untouched imported representation retains its original standard PNG or DIB
 payload when saved to ICO or CUR. Editing a different representation does not
@@ -331,7 +331,32 @@ The public Windows bitmap layout is described by Microsoft's
 and [bitmap header types](https://learn.microsoft.com/en-us/windows/win32/gdi/bitmap-header-types).
 Palette construction and dithering above are Plan Paint behavior, not a claim
 to reproduce another editor's numerical output. Shared batch palettes, palette
-file interchange, and direct palette-entry editing remain separate capabilities.
+file interchange, and index-aware canvas painting remain separate capabilities.
+
+## Editing indexed palette entries
+
+For an imported or converted 1-, 4-, or 8-bit DIB representation, **Icon → Palette…**
+(or **Atlas → Palette…**) opens in **Palette entries** mode. Choose the numbered
+entry, enter its RGB color, inspect the original and recolored previews, then
+**Apply**. The status reports the selected index and the number of pixels using it.
+Choose **Palette conversion** in Operation to change depth or quantize again.
+
+The decoder retains exact table order and pixel indices. Two entries with the
+same RGB remain distinct: editing entry 7 affects only pixels whose stored index
+is 7. Applying a palette edit retains bit depth, dimensions, mask, representation
+identity and cursor hotspot, with one Undo entry. Unused entries can also be
+edited. An unchanged RGB leaves Apply disabled and preserves the original bytes.
+Changed results use the same documented indexed DIB layout as conversion above.
+
+Palette RGB is opaque; transparency uses the separate ICO/CUR AND mask. A black
+entry referenced by transparent pixels must remain black, because making its
+masked color nonblack would create background-dependent XOR behavior. Such a
+change is rejected before Apply. Existing legacy XOR representations require an
+explicit conversion to ordinary artwork before entry editing. Indexed PNG
+representations and images changed through ordinary RGBA painting require
+explicit palette conversion before using this mode; indices are never guessed
+from equal pixel colors. Changing a preview leaves the document untouched, and
+an intervening document edit prevents a stale Apply.
 
 ## Normal, hot and disabled icon families
 

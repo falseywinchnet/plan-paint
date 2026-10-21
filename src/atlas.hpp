@@ -13,6 +13,9 @@ struct IconSource {
     Image image;
     std::vector<Color> xor_pixels;
     std::vector<std::uint8_t> payload;
+    // Exact indexed DIB identities; equal RGB entries remain distinct.
+    std::vector<Color> palette;
+    std::vector<unsigned> indices;
 };
 struct IconFrame {
     Image image;

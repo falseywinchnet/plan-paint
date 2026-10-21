@@ -76,7 +76,7 @@ std::uint8_t component(std::uint32_t value, std::uint32_t mask, std::uint8_t fal
     }
     return static_cast<std::uint8_t>((std::uint64_t((value & mask) >> shift) * 255 + maximum / 2) / maximum);
 }
-IconFrame decode_dib(Bytes bytes, int width, int height, IconFormat& format) {
+IconFrame decode_dib(Bytes bytes, int width, int height, IconSource& retained) {
     unsigned header = bytes.u32(0);
     if (header != 12 && header != 40 && header != 52 && header != 56 && header != 108 && header != 124) {
         throw std::runtime_error("Unsupported ICO/CUR bitmap header.");
@@ -134,6 +134,10 @@ IconFrame decode_dib(Bytes bytes, int width, int height, IconFormat& format) {
     }
     IconFrame result;
     result.image.reset(width, height, {0, 0, 0, 0});
+    if (bpp <= 8) {
+        retained.palette = palette;
+        retained.indices.resize(result.image.pixels.size());
+    }
     bool has_alpha = false;
     for (int y = 0; y < height; ++y) {
         int row = dib_height < 0 ? y : height - 1 - y;
@@ -148,6 +152,7 @@ IconFrame decode_dib(Bytes bytes, int width, int height, IconFormat& format) {
                     throw std::runtime_error("ICO/CUR palette index is invalid.");
                 }
                 color = palette[index];
+                retained.indices[static_cast<std::size_t>(y) * width + x] = index;
             } else if (bpp == 24) {
                 color = {source[x * 3 + 2], source[x * 3 + 1], source[x * 3], 255};
             } else {
@@ -186,7 +191,7 @@ IconFrame decode_dib(Bytes bytes, int width, int height, IconFormat& format) {
             }
         }
     }
-    format = {IconStorage::Dib, bpp, bpp <= 8 ? palette_count : 0};
+    retained.format = {IconStorage::Dib, bpp, bpp <= 8 ? palette_count : 0};
     return result;
 }
 std::vector<std::uint8_t> encode_dib(const IconFrame& frame) {
@@ -272,16 +277,16 @@ ImageContainer decode_icon_container(const void* data, std::size_t size) {
         }
         retained_payload_bytes += length;
         IconFrame frame;
-        IconFormat format;
+        std::shared_ptr<IconSource> source = std::make_shared<IconSource>();
         const unsigned char png[8] = {137, 80, 78, 71, 13, 10, 26, 10};
         if (std::memcmp(bytes.data + offset, png, 8) == 0) {
             frame.image = decode_image(bytes.data + offset, length);
             if (frame.image.width != width || frame.image.height != height) {
                 throw std::runtime_error("ICO/CUR PNG dimensions disagree with its directory.");
             }
-            format = png_format({bytes.data + offset, length});
+            (*source).format = png_format({bytes.data + offset, length});
         } else {
-            frame = decode_dib({bytes.data + offset, length}, width, height, format);
+            frame = decode_dib({bytes.data + offset, length}, width, height, *source);
         }
         if (result.kind == ContainerKind::Cursor) {
             frame.hotspot_x = bytes.u16(entry + 4);
@@ -290,8 +295,6 @@ ImageContainer decode_icon_container(const void* data, std::size_t size) {
                 throw std::runtime_error("CUR hotspot is outside its image.");
             }
         }
-        std::shared_ptr<IconSource> source = std::make_shared<IconSource>();
-        (*source).format = format;
         (*source).image = frame.image;
         (*source).xor_pixels = frame.xor_pixels;
         (*source).payload.assign(bytes.data + offset, bytes.data + offset + length);
