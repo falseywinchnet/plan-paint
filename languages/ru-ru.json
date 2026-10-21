@@ -955,5 +955,10 @@
   "Input white": "Белый на входе",
   "Output black": "Чёрный на выходе",
   "Output white": "Белый на выходе",
-  "Repeat effect…": "Повторить эффект…"
+  "Repeat effect…": "Повторить эффект…",
+  "Reveal in file manager": "Показать в файлах",
+  "Revealing in file manager…": "Открытие в файловом менеджере…",
+  "Could not reveal the selected asset.": "Не удалось показать выбранный ресурс.",
+  "Requested containing folder; file selection is unavailable.": "Запрошена родительская папка; выбор файла недоступен.",
+  "Requested file selection in the file manager.": "Запрошен выбор файла в файловом менеджере."
 }

@@ -955,5 +955,10 @@
   "Input white": "ਇਨਪੁੱਟ ਚਿੱਟਾ",
   "Output black": "ਆਉਟਪੁੱਟ ਕਾਲਾ",
   "Output white": "ਆਉਟਪੁੱਟ ਚਿੱਟਾ",
-  "Repeat effect…": "ਪ੍ਰਭਾਵ ਦੁਹਰਾਓ…"
+  "Repeat effect…": "ਪ੍ਰਭਾਵ ਦੁਹਰਾਓ…",
+  "Reveal in file manager": "ਫ਼ਾਈਲ ਮੈਨੇਜਰ ਵਿੱਚ ਦਿਖਾਓ",
+  "Revealing in file manager…": "ਫ਼ਾਈਲ ਮੈਨੇਜਰ ਵਿੱਚ ਦਿਖਾਇਆ ਜਾ ਰਿਹਾ ਹੈ…",
+  "Could not reveal the selected asset.": "ਚੁਣੀ ਸਮੱਗਰੀ ਨਹੀਂ ਦਿਖਾਈ ਜਾ ਸਕੀ।",
+  "Requested containing folder; file selection is unavailable.": "ਮੁੱਖ ਫੋਲਡਰ ਲਈ ਬੇਨਤੀ ਕੀਤੀ; ਫ਼ਾਈਲ ਚੋਣ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।",
+  "Requested file selection in the file manager.": "ਫ਼ਾਈਲ ਮੈਨੇਜਰ ਵਿੱਚ ਫ਼ਾਈਲ ਚੋਣ ਲਈ ਬੇਨਤੀ ਕੀਤੀ।"
 }

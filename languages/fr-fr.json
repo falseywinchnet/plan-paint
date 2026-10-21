@@ -955,5 +955,10 @@
   "Input white": "Blanc en entrée",
   "Output black": "Noir en sortie",
   "Output white": "Blanc en sortie",
-  "Repeat effect…": "Répéter l’effet…"
+  "Repeat effect…": "Répéter l’effet…",
+  "Reveal in file manager": "Afficher dans les fichiers",
+  "Revealing in file manager…": "Affichage dans les fichiers…",
+  "Could not reveal the selected asset.": "Impossible d’afficher la ressource sélectionnée.",
+  "Requested containing folder; file selection is unavailable.": "Dossier parent demandé ; sélection du fichier indisponible.",
+  "Requested file selection in the file manager.": "Sélection du fichier demandée au gestionnaire de fichiers."
 }

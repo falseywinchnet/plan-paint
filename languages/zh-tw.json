@@ -955,5 +955,10 @@
   "Input white": "輸入白點",
   "Output black": "輸出黑點",
   "Output white": "輸出白點",
-  "Repeat effect…": "重複效果…"
+  "Repeat effect…": "重複效果…",
+  "Reveal in file manager": "在檔案管理員中顯示",
+  "Revealing in file manager…": "正在檔案管理員中顯示…",
+  "Could not reveal the selected asset.": "無法顯示所選素材。",
+  "Requested containing folder; file selection is unavailable.": "已要求開啟所在資料夾；無法選取檔案。",
+  "Requested file selection in the file manager.": "已要求檔案管理員選取檔案。"
 }

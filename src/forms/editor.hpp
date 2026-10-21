@@ -2,6 +2,7 @@
 #include "carpet.hpp"
 #include "recovery.hpp"
 #include "file_change.hpp"
+#include "file_reveal.hpp"
 #include <future>
 #include <gui_forms/timer.hpp>
 #include "forms/interface_theme.hpp"
@@ -221,6 +222,7 @@ class Editor final : public gui_forms::Control {
     void copy_alpha_image(const Image& source);
     Image read_alpha_mask();
     void copy_asset_path(const std::string& path);
+    RevealHandler reveal_asset = &reveal_in_file_manager;
     void open_browser_asset(const AssetPreview& preview);
     void use_asset_stamp(Image image);
     std::string asset_directory, asset_bookmark_path;

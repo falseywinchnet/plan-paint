@@ -955,5 +955,10 @@
   "Input white": "أبيض الإدخال",
   "Output black": "أسود الإخراج",
   "Output white": "أبيض الإخراج",
-  "Repeat effect…": "تكرار التأثير…"
+  "Repeat effect…": "تكرار التأثير…",
+  "Reveal in file manager": "إظهار في مدير الملفات",
+  "Revealing in file manager…": "جارٍ الإظهار في مدير الملفات…",
+  "Could not reveal the selected asset.": "تعذر إظهار العنصر المحدد.",
+  "Requested containing folder; file selection is unavailable.": "تم طلب فتح المجلد الحاوي؛ تحديد الملف غير متاح.",
+  "Requested file selection in the file manager.": "تم طلب تحديد الملف في مدير الملفات."
 }

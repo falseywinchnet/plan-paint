@@ -955,5 +955,10 @@
   "Input white": "Trắng đầu vào",
   "Output black": "Đen đầu ra",
   "Output white": "Trắng đầu ra",
-  "Repeat effect…": "Lặp lại hiệu ứng…"
+  "Repeat effect…": "Lặp lại hiệu ứng…",
+  "Reveal in file manager": "Hiện trong quản lý tệp",
+  "Revealing in file manager…": "Đang hiện trong trình quản lý tệp…",
+  "Could not reveal the selected asset.": "Không thể hiện tài nguyên đã chọn.",
+  "Requested containing folder; file selection is unavailable.": "Đã yêu cầu thư mục chứa; không thể chọn tệp.",
+  "Requested file selection in the file manager.": "Đã yêu cầu chọn tệp trong trình quản lý tệp."
 }

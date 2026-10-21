@@ -2357,6 +2357,71 @@ void alpha_tools_contracts() {
     routed_button(window, "dialog-cancel");
     require(editor.document.revision == before_close, "Close has no alpha edit");
 }
+struct RevealProbe {
+    std::string path;
+    int calls=0;
+    bool fail=false;
+    std::atomic<bool> wait_for_cancel{false}, entered{false};
+    paint::RevealOutcome result=paint::RevealOutcome::SelectionRequested;
+    paint::RevealOutcome operator()(const std::string& selected,const std::atomic<bool>* cancel) {
+        path=selected; ++calls; entered.store(true);
+        while (wait_for_cancel.load() && !(*cancel).load()) { std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
+        if ((*cancel).load()) { return paint::RevealOutcome::Cancelled; }
+        if (fail) { throw std::runtime_error("Desktop unavailable"); }
+        return result;
+    }
+};
+void await_reveal(gf::Window& window) {
+    const std::chrono::steady_clock::time_point deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+    while (!(*window.find("asset-reveal")).enabled()) {
+        static_cast<void>(window.drain_posted_work());
+        require(std::chrono::steady_clock::now()<deadline,"reveal worker delivery timeout");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+void asset_reveal_contracts() {
+    RevealProbe probe;
+    Fixture fixture;
+    paint::forms::Editor& editor=*fixture.editor;
+    gf::Window& window=*fixture.window;
+    editor.reveal_asset=std::ref(probe);
+    const std::filesystem::path root=std::filesystem::temp_directory_path()/
+        ("paint-reveal-ui-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directory(root); std::filesystem::create_directory(root/"folder");
+    const std::string path=(root/"broken.png").string();
+    paint::write_file_atomic({1,2,3},path,"reveal fixture failed");
+    editor.asset_directory=root.string(); editor.execute("browse-assets"); await_assets(window);
+    const std::uint64_t revision=editor.document.revision;
+    const std::shared_ptr<gf::ListBox> list=std::dynamic_pointer_cast<gf::ListBox>(window.find("asset-list"));
+    require(!(*window.find("asset-reveal")).enabled(),"reveal requires a selected item");
+    (*list).select_index(0); routed_button(window,"asset-reveal"); await_reveal(window);
+    require(probe.path==(root/"folder").string(),"folder reveal selects the folder itself");
+    (*list).select_index(1); await_assets(window);
+    require(!(*window.find("asset-open")).enabled() && (*window.find("asset-reveal")).enabled(),"corrupt assets still support reveal");
+    routed_button(window,"asset-reveal"); await_reveal(window);
+    const std::shared_ptr<gf::Label> status=std::dynamic_pointer_cast<gf::Label>(window.find("asset-status"));
+    require(probe.path==path && (*status).text()=="Requested file selection in the file manager.","reveal dispatches selected path and reports request accurately");
+    probe.result=paint::RevealOutcome::FolderRequested;
+    routed_button(window,"asset-reveal"); await_reveal(window);
+    require((*status).text().find("selection is unavailable")!=std::string::npos,"fallback explains missing file selection");
+    probe.fail=true; routed_button(window,"asset-reveal"); await_reveal(window);
+    const std::shared_ptr<gf::Label> error=std::dynamic_pointer_cast<gf::Label>(window.find("dialog-error"));
+    require((*error).text()=="Desktop unavailable","desktop failure remains visible");
+    const int calls=probe.calls; std::filesystem::remove(path);
+    routed_button(window,"asset-reveal"); await_reveal(window);
+    require(probe.calls==calls && (*status).text()=="Could not reveal the selected asset.","deleted item is rejected before desktop dispatch");
+    require(editor.document.revision==revision,"reveal never edits artwork");
+    (*list).select_index(0); probe.fail=false; probe.wait_for_cancel.store(true); probe.entered.store(false);
+    routed_button(window,"asset-reveal");
+    const std::chrono::steady_clock::time_point deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+    while (!probe.entered.load()) {
+        require(std::chrono::steady_clock::now()<deadline,"reveal worker starts");
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    editor.close_editor_dialog(); static_cast<void>(window.drain_posted_work());
+    require(!window.find("asset-reveal"),"closing cancels and joins the worker without reviving the popup");
+    std::filesystem::remove_all(root);
+}
 void asset_browser_contracts() {
     Fixture fixture;
     paint::forms::Editor& editor = *fixture.editor;
@@ -5578,6 +5643,7 @@ void icon_production_contracts() {
         icon_sheet_new_document();
         icon_representation_export();
         asset_browser_contracts();
+        asset_reveal_contracts();
         alpha_tools_contracts();
         external_file_reload();
         icon_validation_controls();

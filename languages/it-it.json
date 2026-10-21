@@ -955,5 +955,10 @@
   "Input white": "Bianco in ingresso",
   "Output black": "Nero in uscita",
   "Output white": "Bianco in uscita",
-  "Repeat effect…": "Ripeti effetto…"
+  "Repeat effect…": "Ripeti effetto…",
+  "Reveal in file manager": "Mostra nel gestore file",
+  "Revealing in file manager…": "Apertura nel gestore file…",
+  "Could not reveal the selected asset.": "Impossibile mostrare la risorsa selezionata.",
+  "Requested containing folder; file selection is unavailable.": "Richiesta la cartella contenitrice; selezione del file non disponibile.",
+  "Requested file selection in the file manager.": "Richiesta la selezione del file nel gestore file."
 }

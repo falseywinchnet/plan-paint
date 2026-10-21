@@ -955,5 +955,10 @@
   "Input white": "Eingang Weiß",
   "Output black": "Ausgang Schwarz",
   "Output white": "Ausgang Weiß",
-  "Repeat effect…": "Effekt wiederholen…"
+  "Repeat effect…": "Effekt wiederholen…",
+  "Reveal in file manager": "Im Dateimanager zeigen",
+  "Revealing in file manager…": "Wird im Dateimanager gezeigt…",
+  "Could not reveal the selected asset.": "Das ausgewählte Objekt konnte nicht angezeigt werden.",
+  "Requested containing folder; file selection is unavailable.": "Übergeordneten Ordner angefordert; Dateiauswahl nicht verfügbar.",
+  "Requested file selection in the file manager.": "Dateiauswahl im Dateimanager angefordert."
 }

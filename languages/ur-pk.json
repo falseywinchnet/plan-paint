@@ -955,5 +955,10 @@
   "Input white": "ان پٹ سفید",
   "Output black": "آؤٹ پٹ سیاہ",
   "Output white": "آؤٹ پٹ سفید",
-  "Repeat effect…": "اثر دہرائیں…"
+  "Repeat effect…": "اثر دہرائیں…",
+  "Reveal in file manager": "فائل مینیجر میں دکھائیں",
+  "Revealing in file manager…": "فائل مینیجر میں دکھایا جا رہا ہے…",
+  "Could not reveal the selected asset.": "منتخب اثاثہ نہیں دکھایا جا سکا۔",
+  "Requested containing folder; file selection is unavailable.": "متعلقہ فولڈر کی درخواست کی گئی؛ فائل کا انتخاب دستیاب نہیں۔",
+  "Requested file selection in the file manager.": "فائل مینیجر میں فائل کے انتخاب کی درخواست کی گئی۔"
 }

@@ -955,5 +955,10 @@
   "Input white": "इनपुट सफेद",
   "Output black": "आउटपुट काला",
   "Output white": "आउटपुट सफेद",
-  "Repeat effect…": "प्रभाव दोहराएँ…"
+  "Repeat effect…": "प्रभाव दोहराएँ…",
+  "Reveal in file manager": "फ़ाइल प्रबंधक में दिखाएँ",
+  "Revealing in file manager…": "फ़ाइल प्रबंधक में दिखा रहे हैं…",
+  "Could not reveal the selected asset.": "चयनित संसाधन नहीं दिखाया जा सका।",
+  "Requested containing folder; file selection is unavailable.": "संबंधित फ़ोल्डर का अनुरोध किया गया; फ़ाइल चयन उपलब्ध नहीं है।",
+  "Requested file selection in the file manager.": "फ़ाइल प्रबंधक में फ़ाइल चयन का अनुरोध किया गया।"
 }

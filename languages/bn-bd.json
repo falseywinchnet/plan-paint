@@ -955,5 +955,10 @@
   "Input white": "ইনপুট সাদা",
   "Output black": "আউটপুট কালো",
   "Output white": "আউটপুট সাদা",
-  "Repeat effect…": "প্রভাব পুনরাবৃত্তি…"
+  "Repeat effect…": "প্রভাব পুনরাবৃত্তি…",
+  "Reveal in file manager": "ফাইল ম্যানেজারে দেখান",
+  "Revealing in file manager…": "ফাইল ম্যানেজারে দেখানো হচ্ছে…",
+  "Could not reveal the selected asset.": "নির্বাচিত উপাদান দেখানো যায়নি।",
+  "Requested containing folder; file selection is unavailable.": "ধারক ফোল্ডার খোলার অনুরোধ হয়েছে; ফাইল নির্বাচন উপলব্ধ নয়।",
+  "Requested file selection in the file manager.": "ফাইল ম্যানেজারে ফাইল নির্বাচনের অনুরোধ হয়েছে।"
 }

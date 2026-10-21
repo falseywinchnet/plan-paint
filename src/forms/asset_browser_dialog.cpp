@@ -136,13 +136,15 @@ void EditorDialog::initialize_asset_browser() {
     buttons.push_back(button("asset-refresh", tr("Search / refresh"), {550, 88, 210, 28}));
     buttons.push_back(button("asset-bookmark-add", tr("Bookmark folder"), {475, 128, 150, 28}));
     buttons.push_back(button("asset-bookmark-remove", tr("Remove bookmark"), {635, 128, 125, 28}));
-    asset_open_ = button("asset-open", tr("Open"), {20, 460, 130, 28});
-    asset_stamp_ = button("asset-stamp", tr("Use as stamp"), {160, 460, 160, 28});
-    asset_copy_ = button("asset-copy", tr("Copy path"), {330, 460, 140, 28});
+    asset_open_ = button("asset-open", tr("Open"), {20, 460, 80, 28});
+    asset_stamp_ = button("asset-stamp", tr("Use as stamp"), {108, 460, 135, 28});
+    asset_copy_ = button("asset-copy", tr("Copy path"), {251, 460, 100, 28});
     buttons.insert(buttons.end(), {asset_open_, asset_stamp_, asset_copy_});
-    asset_batch_ = button("asset-batch", tr("Add to batch"), {480, 460, 160, 28});
+    asset_batch_ = button("asset-batch", tr("Add to batch"), {359, 460, 120, 28});
     buttons.push_back(asset_batch_);
-    button("dialog-cancel", tr("Close"), {650, 460, 110, 28});
+    asset_reveal_ = button("asset-reveal", tr("Reveal in file manager"), {487, 460, 175, 28});
+    buttons.push_back(asset_reveal_);
+    button("dialog-cancel", tr("Close"), {670, 460, 90, 28});
     for (const std::shared_ptr<gf::Button>& control : buttons) {
         subscriptions_.push_back((*control).clicked().subscribe(
             *this, gf::Delegate<gf::ButtonBase&>::bind<EditorDialog, &EditorDialog::asset_clicked>(*this)));
@@ -190,6 +192,7 @@ void EditorDialog::initialize_asset_browser() {
     clear_asset_preview();
 }
 void EditorDialog::stop_asset_browser() {
+    stop_asset_reveal();
     ++asset_generation_;
     if (!asset_worker_) {
         return;
@@ -220,6 +223,7 @@ void EditorDialog::clear_asset_preview() {
     (*asset_open_).set_enabled(false);
     (*asset_stamp_).set_enabled(false);
     (*asset_copy_).set_enabled(false);
+    (*asset_reveal_).set_enabled(false);
     (*asset_batch_).set_enabled(false);
 }
 void EditorDialog::request_assets(bool scan) {
@@ -386,6 +390,7 @@ void EditorDialog::asset_selected(const gf::ListSelectionChange& selection) {
             (*asset_copy_).set_enabled(true);
             (*asset_batch_).set_enabled(true);
         }
+        (*asset_reveal_).set_enabled(true);
     }
 }
 void EditorDialog::asset_activated(std::size_t index) {
@@ -464,7 +469,9 @@ void EditorDialog::asset_clicked(gf::ButtonBase& control) {
                 return;
             }
             const AssetEntry entry = asset_listing_.entries[*selected];
-            if (id == "asset-copy") {
+            if (id == "asset-reveal") {
+                start_asset_reveal(entry.path);
+            } else if (id == "asset-copy") {
                 (*editor).copy_asset_path(entry.path);
             } else if (id == "asset-batch" && entry.kind != AssetKind::Folder) {
                 if ((*editor).batch_sources.size() >= 256) {

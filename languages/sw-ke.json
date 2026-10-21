@@ -955,5 +955,10 @@
   "Input white": "Nyeupe ya ingizo",
   "Output black": "Nyeusi ya tokeo",
   "Output white": "Nyeupe ya tokeo",
-  "Repeat effect…": "Rudia athari…"
+  "Repeat effect…": "Rudia athari…",
+  "Reveal in file manager": "Onyesha katika faili",
+  "Revealing in file manager…": "Inaonyesha katika kidhibiti faili…",
+  "Could not reveal the selected asset.": "Imeshindwa kuonyesha rasilimali iliyochaguliwa.",
+  "Requested containing folder; file selection is unavailable.": "Folda inayohifadhi imeombwa; kuchagua faili hakupatikani.",
+  "Requested file selection in the file manager.": "Uchaguzi wa faili umeombwa katika kidhibiti faili."
 }

@@ -955,5 +955,10 @@
   "Input white": "Putih masukan",
   "Output black": "Hitam keluaran",
   "Output white": "Putih keluaran",
-  "Repeat effect…": "Ulangi efek…"
+  "Repeat effect…": "Ulangi efek…",
+  "Reveal in file manager": "Tampilkan di pengelola berkas",
+  "Revealing in file manager…": "Menampilkan di pengelola berkas…",
+  "Could not reveal the selected asset.": "Tidak dapat menampilkan aset yang dipilih.",
+  "Requested containing folder; file selection is unavailable.": "Folder induk diminta; pemilihan berkas tidak tersedia.",
+  "Requested file selection in the file manager.": "Pemilihan berkas diminta di pengelola berkas."
 }
